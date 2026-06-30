@@ -29,6 +29,7 @@ import { Route as AuthenticatedChatRouteImport } from './routes/_authenticated/c
 import { Route as AuthenticatedCasesRouteImport } from './routes/_authenticated/cases'
 import { Route as AuthenticatedCalendarRouteImport } from './routes/_authenticated/calendar'
 import { Route as AuthenticatedCasesIndexRouteImport } from './routes/_authenticated/cases.index'
+import { Route as ApiToolsPetitionRouteImport } from './routes/api/tools/petition'
 import { Route as AuthenticatedCasesNewRouteImport } from './routes/_authenticated/cases.new'
 import { Route as AuthenticatedCasesBulkRouteImport } from './routes/_authenticated/cases.bulk'
 import { Route as AuthenticatedCasesCaseIdRouteImport } from './routes/_authenticated/cases.$caseId'
@@ -135,6 +136,11 @@ const AuthenticatedCasesIndexRoute = AuthenticatedCasesIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AuthenticatedCasesRoute,
 } as any)
+const ApiToolsPetitionRoute = ApiToolsPetitionRouteImport.update({
+  id: '/api/tools/petition',
+  path: '/api/tools/petition',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedCasesNewRoute = AuthenticatedCasesNewRouteImport.update({
   id: '/new',
   path: '/new',
@@ -179,6 +185,7 @@ export interface FileRoutesByFullPath {
   '/cases/$caseId': typeof AuthenticatedCasesCaseIdRoute
   '/cases/bulk': typeof AuthenticatedCasesBulkRoute
   '/cases/new': typeof AuthenticatedCasesNewRoute
+  '/api/tools/petition': typeof ApiToolsPetitionRoute
   '/cases/': typeof AuthenticatedCasesIndexRoute
   '/api/public/google/callback': typeof ApiPublicGoogleCallbackRoute
 }
@@ -203,6 +210,7 @@ export interface FileRoutesByTo {
   '/cases/$caseId': typeof AuthenticatedCasesCaseIdRoute
   '/cases/bulk': typeof AuthenticatedCasesBulkRoute
   '/cases/new': typeof AuthenticatedCasesNewRoute
+  '/api/tools/petition': typeof ApiToolsPetitionRoute
   '/cases': typeof AuthenticatedCasesIndexRoute
   '/api/public/google/callback': typeof ApiPublicGoogleCallbackRoute
 }
@@ -230,6 +238,7 @@ export interface FileRoutesById {
   '/_authenticated/cases/$caseId': typeof AuthenticatedCasesCaseIdRoute
   '/_authenticated/cases/bulk': typeof AuthenticatedCasesBulkRoute
   '/_authenticated/cases/new': typeof AuthenticatedCasesNewRoute
+  '/api/tools/petition': typeof ApiToolsPetitionRoute
   '/_authenticated/cases/': typeof AuthenticatedCasesIndexRoute
   '/api/public/google/callback': typeof ApiPublicGoogleCallbackRoute
 }
@@ -257,6 +266,7 @@ export interface FileRouteTypes {
     | '/cases/$caseId'
     | '/cases/bulk'
     | '/cases/new'
+    | '/api/tools/petition'
     | '/cases/'
     | '/api/public/google/callback'
   fileRoutesByTo: FileRoutesByTo
@@ -281,6 +291,7 @@ export interface FileRouteTypes {
     | '/cases/$caseId'
     | '/cases/bulk'
     | '/cases/new'
+    | '/api/tools/petition'
     | '/cases'
     | '/api/public/google/callback'
   id:
@@ -307,6 +318,7 @@ export interface FileRouteTypes {
     | '/_authenticated/cases/$caseId'
     | '/_authenticated/cases/bulk'
     | '/_authenticated/cases/new'
+    | '/api/tools/petition'
     | '/_authenticated/cases/'
     | '/api/public/google/callback'
   fileRoutesById: FileRoutesById
@@ -316,6 +328,7 @@ export interface RootRouteChildren {
   AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
   AuthRoute: typeof AuthRoute
   InviteTokenRoute: typeof InviteTokenRoute
+  ApiToolsPetitionRoute: typeof ApiToolsPetitionRoute
   ApiPublicGoogleCallbackRoute: typeof ApiPublicGoogleCallbackRoute
 }
 
@@ -461,6 +474,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedCasesIndexRouteImport
       parentRoute: typeof AuthenticatedCasesRoute
     }
+    '/api/tools/petition': {
+      id: '/api/tools/petition'
+      path: '/api/tools/petition'
+      fullPath: '/api/tools/petition'
+      preLoaderRoute: typeof ApiToolsPetitionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_authenticated/cases/new': {
       id: '/_authenticated/cases/new'
       path: '/new'
@@ -554,6 +574,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRoute: AuthenticatedRouteWithChildren,
   AuthRoute: AuthRoute,
   InviteTokenRoute: InviteTokenRoute,
+  ApiToolsPetitionRoute: ApiToolsPetitionRoute,
   ApiPublicGoogleCallbackRoute: ApiPublicGoogleCallbackRoute,
 }
 export const routeTree = rootRouteImport

@@ -49,7 +49,8 @@ export const Route = createFileRoute("/api/tools/petition")({
             ],
           });
           const buffer = await Packer.toBuffer(doc);
-          return new Response(buffer, {
+          const body = new Uint8Array(buffer);
+          return new Response(body, {
             status: 200,
             headers: {
               "Content-Type":
