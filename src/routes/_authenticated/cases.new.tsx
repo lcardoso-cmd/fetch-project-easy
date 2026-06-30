@@ -1122,7 +1122,7 @@ function MatterKindBar({
         </>
       ) : (
         <>
-          <Badge variant="secondary" className="font-medium">
+          <Badge variant="default" className="text-sm font-semibold px-3 py-1">
             {MATTER_KIND_LABELS[matterKind]}
           </Badge>
           {fromProfile && (
