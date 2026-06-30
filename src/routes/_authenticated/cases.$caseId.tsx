@@ -265,6 +265,79 @@ function CaseDetailPage() {
         </Card>
       </div>
 
+      <div className="grid gap-6 lg:grid-cols-2">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <CalendarClock className="h-4 w-4" /> Prazos e eventos
+            </CardTitle>
+            <Button size="sm" variant="ghost" asChild>
+              <Link to="/calendar">Ver agenda</Link>
+            </Button>
+          </CardHeader>
+          <CardContent>
+            {events.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                Nenhum evento. O assistente pode criar usando a tool <code>create_event</code>.
+              </p>
+            ) : (
+              <ul className="divide-y">
+                {events.slice(0, 8).map((ev) => (
+                  <li key={ev.id} className="flex items-center justify-between py-2 text-sm">
+                    <span className="truncate">{ev.title}</span>
+                    <span className="text-xs text-muted-foreground shrink-0 ml-2">
+                      {new Date(ev.starts_at).toLocaleString("pt-BR", {
+                        day: "2-digit",
+                        month: "2-digit",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <ClipboardCheck className="h-4 w-4" /> Tarefas
+            </CardTitle>
+            <Button size="sm" variant="ghost" asChild>
+              <Link to="/my-tasks">Ver todas</Link>
+            </Button>
+          </CardHeader>
+          <CardContent>
+            {tasks.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Nenhuma tarefa para este caso.</p>
+            ) : (
+              <ul className="divide-y">
+                {tasks.slice(0, 8).map((t) => (
+                  <li key={t.id} className="flex items-center gap-2 py-2 text-sm">
+                    <Checkbox
+                      checked={t.status === "done"}
+                      onCheckedChange={async (c) => {
+                        await toggleTaskFn({ data: { id: t.id, done: Boolean(c) } });
+                        await queryClient.invalidateQueries({ queryKey: ["tasks", caseId] });
+                      }}
+                    />
+                    <span
+                      className={
+                        t.status === "done" ? "line-through text-muted-foreground" : ""
+                      }
+                    >
+                      {t.title}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
       {/* Chat */}
       <div>
         <h2 className="mb-3 text-xl font-bold tracking-tight text-foreground">
