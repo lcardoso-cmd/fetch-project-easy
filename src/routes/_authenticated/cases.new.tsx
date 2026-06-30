@@ -811,6 +811,87 @@ function NewCasePage() {
           </CardContent>
         </Card>
 
+        {/* Campos específicos: Perícia */}
+        {matterKind === "pericia" && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Dados da nomeação pericial</CardTitle>
+              <CardDescription>
+                Honorários, prazos e referência da nomeação.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="perito_nomination_ref">Referência da nomeação</Label>
+                <Input
+                  id="perito_nomination_ref"
+                  value={peritoNominationRef}
+                  onChange={(e) => setPeritoNominationRef(e.target.value)}
+                  placeholder="Ex.: despacho de 12/03/2026"
+                  maxLength={200}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="perito_fee">Honorários periciais (R$)</Label>
+                <Input
+                  id="perito_fee"
+                  value={peritoFee}
+                  onChange={(e) => setPeritoFee(e.target.value)}
+                  placeholder="Ex.: 3500,00"
+                  inputMode="decimal"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="perito_appointment_date">Data de nomeação</Label>
+                <Input
+                  id="perito_appointment_date"
+                  type="date"
+                  value={peritoAppointmentDate}
+                  onChange={(e) => setPeritoAppointmentDate(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="perito_deadline_date">Prazo para entrega do laudo</Label>
+                <Input
+                  id="perito_deadline_date"
+                  type="date"
+                  value={peritoDeadlineDate}
+                  onChange={(e) => setPeritoDeadlineDate(e.target.value)}
+                />
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Campos específicos: Assistência Técnica */}
+        {matterKind === "assistencia_tecnica" && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Dados da assistência</CardTitle>
+              <CardDescription>
+                Identifique qual parte do processo você está assistindo tecnicamente.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="assisted_party_name">Parte assistida *</Label>
+                <Input
+                  id="assisted_party_name"
+                  value={assistedPartyName}
+                  onChange={(e) => setAssistedPartyName(e.target.value)}
+                  placeholder="Nome da parte contratante"
+                  maxLength={200}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Isso aparece nos pareceres técnicos gerados pelo JurisMind.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+
+
         {/* Partes */}
         <Card
           className={
