@@ -153,7 +153,7 @@ export const getOrCreateCaseConversation = createServerFn({ method: "POST" })
     }
 
     // Compute desired participants: case owner + accepted invited members
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    // (supabaseAdmin already imported above)
     const memberIds = (caseRow.team_member_ids as string[]) ?? [];
     const linkedUserIds = new Set<string>([caseRow.user_id]);
     if (memberIds.length > 0) {
