@@ -26,6 +26,7 @@ import {
   Users,
   FileText,
   CheckCircle2,
+  AlertTriangle,
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -85,6 +86,11 @@ function NewCasePage() {
   const [uploaded, setUploaded] = useState<UploadedDoc | null>(null);
   const [extracting, setExtracting] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+
+  // review state — exibido só quando houve extração via documento
+  const [missingFields, setMissingFields] = useState<string[]>([]);
+  const [extractionWarnings, setExtractionWarnings] = useState<string[]>([]);
+  const [reviewConfirmed, setReviewConfirmed] = useState(false);
 
   // quick add team
   const [newMemberName, setNewMemberName] = useState("");
@@ -146,6 +152,9 @@ function NewCasePage() {
         description: "descrição",
       };
       const missingLabels = (res.missing ?? []).map((f) => FIELD_LABELS[f] ?? f);
+      setMissingFields(missingLabels);
+      setExtractionWarnings(res.warnings ?? []);
+      setReviewConfirmed(false);
       if (missingLabels.length) {
         toast.warning("Alguns dados não foram identificados", {
           description: `Preencha manualmente: ${missingLabels.join(", ")}.`,
@@ -168,6 +177,9 @@ function NewCasePage() {
       await supabase.storage.from("documents").remove([uploaded.storage_path]).catch(() => {});
     }
     setUploaded(null);
+    setMissingFields([]);
+    setExtractionWarnings([]);
+    setReviewConfirmed(false);
   };
 
   const addParty = () => setParties([...parties, { role: "", name: "" }]);
@@ -185,10 +197,17 @@ function NewCasePage() {
       prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
     );
 
+  const needsReview =
+    !!uploaded && (missingFields.length > 0 || extractionWarnings.length > 0);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) {
       toast.error("Informe um título para o caso");
+      return;
+    }
+    if (needsReview && !reviewConfirmed) {
+      toast.error("Revise os avisos da extração e confirme antes de criar o caso");
       return;
     }
     setSubmitting(true);
@@ -331,6 +350,56 @@ function NewCasePage() {
             )}
           </CardContent>
         </Card>
+
+        {/* Revisão da extração — aparece quando o documento gerou avisos */}
+        {uploaded && (missingFields.length > 0 || extractionWarnings.length > 0) && (
+          <Card
+            data-testid="extraction-review"
+            className="border-amber-500/40 bg-amber-50/40 dark:bg-amber-950/10"
+          >
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2 text-amber-700 dark:text-amber-400">
+                <AlertTriangle className="h-5 w-5" /> Revise os dados extraídos
+              </CardTitle>
+              <CardDescription>
+                A IA não conseguiu preencher tudo com segurança. Confira os pontos
+                abaixo antes de criar o caso.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {missingFields.length > 0 && (
+                <div data-testid="review-missing">
+                  <p className="text-sm font-medium">Campos não identificados:</p>
+                  <ul className="list-disc pl-5 text-sm text-muted-foreground">
+                    {missingFields.map((f) => (
+                      <li key={f}>{f}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {extractionWarnings.length > 0 && (
+                <div data-testid="review-warnings">
+                  <p className="text-sm font-medium">Avisos da extração:</p>
+                  <ul className="list-disc pl-5 text-sm text-muted-foreground">
+                    {extractionWarnings.map((w, i) => (
+                      <li key={i}>{w}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              <label className="flex items-start gap-2 rounded-md border bg-background p-3 cursor-pointer">
+                <Checkbox
+                  id="confirm-review"
+                  checked={reviewConfirmed}
+                  onCheckedChange={(v) => setReviewConfirmed(v === true)}
+                />
+                <span className="text-sm">
+                  Revisei os dados acima e confirmo que estão corretos para criar o caso.
+                </span>
+              </label>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Dados do caso */}
         <Card>
@@ -565,7 +634,7 @@ function NewCasePage() {
           <Button type="button" variant="ghost" asChild>
             <Link to="/cases">Cancelar</Link>
           </Button>
-          <Button type="submit" disabled={submitting}>
+          <Button type="submit" disabled={submitting || (needsReview && !reviewConfirmed)}>
             {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Criar caso
           </Button>
