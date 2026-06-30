@@ -48,7 +48,7 @@ export function ChatPanel({ caseId }: { caseId?: string }) {
       const res = await askFn({ data: { case_id: caseId, question: q, history } });
       setMessages([
         ...next,
-        { role: "assistant", content: res.answer, citations: res.citations },
+        { role: "assistant", content: res.answer, citations: res.citations, steps: res.steps },
       ]);
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
