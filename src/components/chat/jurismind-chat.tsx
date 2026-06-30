@@ -405,6 +405,59 @@ export function JurisMindChat({
                     )}
                   >
                     {m.content}
+                    {m.images && m.images.length > 0 && (
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {m.images.map((src, idx) => (
+                          <img
+                            key={idx}
+                            src={src}
+                            alt={`anexo ${idx + 1}`}
+                            className="h-24 w-24 rounded border object-cover"
+                          />
+                        ))}
+                      </div>
+                    )}
+                    {m.steps?.map((s, idx) => {
+                      try {
+                        const r = JSON.parse(s.result_json) as {
+                          kind?: string;
+                          titulo?: string;
+                          conteudo?: string;
+                          rows?: Array<Record<string, unknown>>;
+                          title?: string;
+                          subtitle?: string;
+                          slides?: Array<{ title?: string; content?: string[] }>;
+                        };
+                        if (r.kind === "petition")
+                          return (
+                            <PetitionCard
+                              key={idx}
+                              titulo={r.titulo ?? "Petição"}
+                              conteudo={r.conteudo ?? ""}
+                            />
+                          );
+                        if (r.kind === "table")
+                          return (
+                            <TableCard
+                              key={idx}
+                              titulo={r.titulo ?? "Tabela"}
+                              rows={r.rows ?? []}
+                            />
+                          );
+                        if (r.kind === "presentation")
+                          return (
+                            <PresentationCard
+                              key={idx}
+                              title={r.title ?? "Apresentação"}
+                              subtitle={r.subtitle}
+                              slides={r.slides ?? []}
+                            />
+                          );
+                      } catch {
+                        // ignore
+                      }
+                      return null;
+                    })}
                     {m.citations && m.citations.length > 0 && (
                       <div className="mt-3 space-y-1 border-t border-border/40 pt-2">
                         <p className="text-xs font-semibold opacity-70">Fontes:</p>
@@ -451,7 +504,46 @@ export function JurisMindChat({
           </div>
 
           <div className="border-t p-3">
+            {images.length > 0 && (
+              <div className="mb-2 flex flex-wrap gap-2">
+                {images.map((src, idx) => (
+                  <div key={idx} className="relative">
+                    <img src={src} alt="" className="h-16 w-16 rounded border object-cover" />
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setImages((prev) => prev.filter((_, i) => i !== idx))
+                      }
+                      className="absolute -right-1 -top-1 rounded-full bg-background p-0.5 shadow"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
             <div className="flex gap-2">
+              <input
+                ref={fileRef}
+                type="file"
+                accept="image/*"
+                multiple
+                hidden
+                onChange={(e) => {
+                  onPickImages(e.target.files);
+                  e.target.value = "";
+                }}
+              />
+              <Button
+                type="button"
+                size="icon"
+                variant="outline"
+                onClick={() => fileRef.current?.click()}
+                disabled={busy || images.length >= 6}
+                title="Anexar imagens"
+              >
+                <ImagePlus className="h-4 w-4" />
+              </Button>
               <Textarea
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
@@ -461,14 +553,14 @@ export function JurisMindChat({
                     send();
                   }
                 }}
-                placeholder="Ex.: Qual o prazo de defesa neste caso?"
+                placeholder="Pergunte, peça uma minuta de petição, planilha ou apresentação…"
                 rows={2}
                 className="resize-none"
                 disabled={busy}
               />
               <Button
                 onClick={send}
-                disabled={busy || !input.trim()}
+                disabled={busy || (!input.trim() && images.length === 0)}
                 size="icon"
                 className="h-auto"
               >
