@@ -340,6 +340,13 @@ function CaseDetailPage() {
         </Card>
       </div>
 
+      {/* Quesitos — apenas para perícia / assistência técnica */}
+      {caseData.matter_kind && caseData.matter_kind !== "processo" && (
+        <QuesitosCard caseId={caseId} matterKind={caseData.matter_kind as MatterKind} />
+      )}
+
+
+
       {/* Chat */}
       <div>
         <h2 className="mb-3 text-xl font-bold tracking-tight text-foreground">
