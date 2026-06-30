@@ -925,14 +925,14 @@ function NewCasePage() {
                       ? "border-accent bg-accent text-accent-foreground"
                       : "border-border text-muted-foreground hover:border-accent/50"
                   }`}
-                  title="Marcar como parte representada"
+                  title={`Marcar como parte que você ${labels.representVerb.toLowerCase()}`}
                 >
                   {representedIdx === i ? (
                     <>
-                      <CheckCircle2 className="h-3.5 w-3.5" /> Represento
+                      <CheckCircle2 className="h-3.5 w-3.5" /> {labels.representVerb}
                     </>
                   ) : (
-                    "Represento"
+                    labels.representVerb
                   )}
                 </button>
                 <Input
