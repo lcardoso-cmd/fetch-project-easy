@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { getCases, deleteCase } from "@/lib/cases.functions";
 import { Plus, Trash2, Upload } from "lucide-react";
 
-export const Route = createFileRoute("/_authenticated/cases")({
+export const Route = createFileRoute("/_authenticated/cases/")({
   component: CasesPage,
 });
 
