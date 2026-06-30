@@ -89,7 +89,30 @@ export function JurisMindChat({
   const [busy, setBusy] = useState(false);
   const [search, setSearch] = useState("");
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
+  const [images, setImages] = useState<string[]>([]);
+  const fileRef = useRef<HTMLInputElement>(null);
   const endRef = useRef<HTMLDivElement>(null);
+
+  const onPickImages = async (files: FileList | null) => {
+    if (!files) return;
+    const list: string[] = [];
+    for (const f of Array.from(files).slice(0, 6 - images.length)) {
+      if (!f.type.startsWith("image/")) continue;
+      if (f.size > 8 * 1024 * 1024) {
+        toast.error(`${f.name} maior que 8MB`);
+        continue;
+      }
+      list.push(
+        await new Promise<string>((resolve, reject) => {
+          const r = new FileReader();
+          r.onerror = () => reject(r.error);
+          r.onload = () => resolve(String(r.result));
+          r.readAsDataURL(f);
+        }),
+      );
+    }
+    setImages((prev) => [...prev, ...list]);
+  };
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
