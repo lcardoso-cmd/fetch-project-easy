@@ -77,7 +77,7 @@ export const askWithRag = createServerFn({ method: "POST" })
       : "(Nenhum trecho relevante encontrado nos documentos indexados.)";
 
     // 2. Tools disponíveis para o modelo
-    const tools: (typeof ToolDef extends never ? never : import("./ai.server").ToolDef)[] = [
+    const tools: ToolDef[] = [
       {
         type: "function",
         function: {
