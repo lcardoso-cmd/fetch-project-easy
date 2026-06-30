@@ -72,13 +72,13 @@
   --secondary-foreground: oklch(0.143 0.13 278);
   --muted: oklch(0.95 0.008 250);
   --muted-foreground: oklch(0.5 0.04 275);
-  --accent: oklch(0.91 0.155 195);          /* #00FFFF cyan */
+  --accent: oklch(0.94 0.03 278);           /* navy tint for hover/focus */
   --accent-foreground: oklch(0.143 0.13 278);
   --destructive: oklch(0.55 0.22 25);
   --destructive-foreground: oklch(1 0 0);
   --border: oklch(0.91 0.01 250);
   --input: oklch(0.91 0.01 250);
-  --ring: oklch(0.91 0.155 195);
+  --ring: oklch(0.143 0.13 278);            /* navy focus ring */
   --chart-1: oklch(0.143 0.13 278);
   --chart-2: oklch(0.91 0.155 195);
   --chart-3: oklch(0.6 0.12 220);
@@ -107,13 +107,13 @@
   --secondary-foreground: oklch(0.98 0.003 250);
   --muted: oklch(0.26 0.13 278);
   --muted-foreground: oklch(0.75 0.03 220);
-  --accent: oklch(0.91 0.155 195);
-  --accent-foreground: oklch(0.16 0.13 278);
+  --accent: oklch(0.30 0.13 278);           /* lighter navy for hover on dark */
+  --accent-foreground: oklch(0.98 0.003 250);
   --destructive: oklch(0.65 0.22 25);
   --destructive-foreground: oklch(1 0 0);
   --border: oklch(1 0 0 / 12%);
   --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.91 0.155 195);
+  --ring: oklch(0.55 0.13 278);             /* navy focus ring on dark */
   --chart-1: oklch(0.91 0.155 195);
   --chart-2: oklch(0.75 0.14 220);
   --chart-3: oklch(0.6 0.12 240);
