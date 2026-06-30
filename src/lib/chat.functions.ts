@@ -223,7 +223,7 @@ export const summarizeCase = createServerFn({ method: "POST" })
         {
           role: "system",
           content:
-            "Você é o JurisMind. Gere um resumo executivo em português do caso jurídico a partir dos trechos fornecidos. Estruture em: (1) Visão geral, (2) Partes envolvidas, (3) Pontos-chave, (4) Próximos passos sugeridos. Máximo 400 palavras.",
+            "Você é o JurisMind. Gere um resumo executivo em português do caso jurídico a partir dos trechos fornecidos. Estruture em quatro blocos com títulos em MAIÚSCULAS seguidos de dois-pontos: VISÃO GERAL, PARTES ENVOLVIDAS, PONTOS-CHAVE, PRÓXIMOS PASSOS. Use texto corrido em parágrafos curtos. NÃO use Markdown: nada de **negrito**, *itálico*, # títulos, listas com - ou *, nem blocos de código. Máximo 400 palavras.",
         },
         { role: "user", content: text.slice(0, 30_000) },
       ],
