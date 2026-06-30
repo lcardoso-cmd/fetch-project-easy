@@ -7,6 +7,7 @@ import {
   markConversationRead,
   uploadConversationAttachment,
   createTaskFromMessage,
+  listConversationParticipants,
 } from "@/lib/conversations.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -51,6 +52,7 @@ export function ConversationView({
   const sendFn = useServerFn(sendMessage);
   const markReadFn = useServerFn(markConversationRead);
   const uploadFn = useServerFn(uploadConversationAttachment);
+  const listParticipantsFn = useServerFn(listConversationParticipants);
 
   const { data: messagesRaw = [], isLoading } = useQuery({
     queryKey: ["conversation-messages", conversationId],
@@ -58,11 +60,31 @@ export function ConversationView({
   });
   const messages = messagesRaw as unknown as Message[];
 
+  const { data: participants = [] } = useQuery({
+    queryKey: ["conversation-participants", conversationId],
+    queryFn: () => listParticipantsFn({ data: { conversation_id: conversationId } }),
+  });
+  const participantList = participants as Array<{ id: string; name: string }>;
+
   const [body, setBody] = useState("");
   const [pending, setPending] = useState<Attachment[]>([]);
   const [busy, setBusy] = useState(false);
+  // mention autocomplete state
+  const [mentionQuery, setMentionQuery] = useState<string | null>(null);
+  const [mentionIndex, setMentionIndex] = useState(0);
+  // resolved mentions in current draft: name -> userId
+  const [mentionMap, setMentionMap] = useState<Record<string, string>>({});
   const fileRef = useRef<HTMLInputElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const endRef = useRef<HTMLDivElement>(null);
+
+  const mentionCandidates = useMemo(() => {
+    if (mentionQuery === null) return [];
+    const q = mentionQuery.toLowerCase();
+    return participantList
+      .filter((p) => p.id !== user?.id && p.name.toLowerCase().includes(q))
+      .slice(0, 6);
+  }, [mentionQuery, participantList, user?.id]);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -122,6 +144,50 @@ export function ConversationView({
     }
   }
 
+  function handleBodyChange(value: string) {
+    setBody(value);
+    const caret = textareaRef.current?.selectionStart ?? value.length;
+    const upto = value.slice(0, caret);
+    const m = upto.match(/(?:^|\s)@([\p{L}\p{N}._-]{0,30})$/u);
+    if (m) {
+      setMentionQuery(m[1]);
+      setMentionIndex(0);
+    } else {
+      setMentionQuery(null);
+    }
+  }
+
+  function insertMention(p: { id: string; name: string }) {
+    const ta = textareaRef.current;
+    if (!ta) return;
+    const caret = ta.selectionStart ?? body.length;
+    const upto = body.slice(0, caret);
+    const after = body.slice(caret);
+    const replaced = upto.replace(/@([\p{L}\p{N}._-]{0,30})$/u, `@${p.name} `);
+    const next = replaced + after;
+    setBody(next);
+    setMentionMap((mm) => ({ ...mm, [p.name]: p.id }));
+    setMentionQuery(null);
+    requestAnimationFrame(() => {
+      ta.focus();
+      const pos = replaced.length;
+      ta.setSelectionRange(pos, pos);
+    });
+  }
+
+  function resolveMentionIds(text: string): string[] {
+    const ids = new Set<string>();
+    for (const [name, id] of Object.entries(mentionMap)) {
+      // word-boundary-ish: ensure @name still present
+      const re = new RegExp(
+        `(?:^|\\s)@${name.replace(/[.*+?^${}()|[\]\\]/g, "\\\\$&")}(?=\\s|$|[,.;:!?])`,
+        "u",
+      );
+      if (re.test(text)) ids.add(id);
+    }
+    return Array.from(ids);
+  }
+
   async function handleSend() {
     if (!body.trim() && pending.length === 0) return;
     setBusy(true);
@@ -131,11 +197,13 @@ export function ConversationView({
           conversation_id: conversationId,
           body,
           attachments: pending,
-          mention_user_ids: [],
+          mention_user_ids: resolveMentionIds(body),
         },
       });
       setBody("");
       setPending([]);
+      setMentionMap({});
+      setMentionQuery(null);
       queryClient.invalidateQueries({ queryKey: ["conversation-messages", conversationId] });
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Falha ao enviar");
@@ -191,7 +259,7 @@ export function ConversationView({
         </div>
       )}
 
-      <div className="flex items-end gap-2 border-t p-3">
+      <div className="relative flex items-end gap-2 border-t p-3">
         <Button
           type="button"
           variant="ghost"
@@ -208,24 +276,111 @@ export function ConversationView({
           className="hidden"
           onChange={(e) => handleAttach(e.target.files)}
         />
-        <Textarea
-          value={body}
-          onChange={(e) => setBody(e.target.value)}
-          placeholder="Escreva uma mensagem…"
-          rows={2}
-          className="min-h-[44px] resize-none"
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && !e.shiftKey) {
-              e.preventDefault();
-              handleSend();
-            }
-          }}
-        />
+        <div className="relative flex-1">
+          {mentionQuery !== null && mentionCandidates.length > 0 && (
+            <div className="absolute bottom-full left-0 z-20 mb-1 w-64 overflow-hidden rounded-md border bg-popover shadow-lg">
+              <div className="px-3 py-1.5 text-[10px] uppercase tracking-wider text-muted-foreground">
+                Mencionar
+              </div>
+              {mentionCandidates.map((p, i) => (
+                <button
+                  type="button"
+                  key={p.id}
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    insertMention(p);
+                  }}
+                  onMouseEnter={() => setMentionIndex(i)}
+                  className={`flex w-full items-center gap-2 px-3 py-2 text-left text-sm ${
+                    i === mentionIndex ? "bg-accent text-accent-foreground" : "hover:bg-muted"
+                  }`}
+                >
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-[10px] font-semibold uppercase text-primary">
+                    {p.name.slice(0, 2)}
+                  </span>
+                  <span className="truncate">{p.name}</span>
+                </button>
+              ))}
+            </div>
+          )}
+          <Textarea
+            ref={textareaRef}
+            value={body}
+            onChange={(e) => handleBodyChange(e.target.value)}
+            onKeyUp={(e) => {
+              // re-check after caret moves
+              if (["ArrowLeft", "ArrowRight", "Home", "End"].includes(e.key)) {
+                handleBodyChange(body);
+              }
+            }}
+            placeholder="Escreva uma mensagem… use @ para mencionar"
+            rows={2}
+            className="min-h-[44px] resize-none"
+            onKeyDown={(e) => {
+              if (mentionQuery !== null && mentionCandidates.length > 0) {
+                if (e.key === "ArrowDown") {
+                  e.preventDefault();
+                  setMentionIndex((i) => (i + 1) % mentionCandidates.length);
+                  return;
+                }
+                if (e.key === "ArrowUp") {
+                  e.preventDefault();
+                  setMentionIndex(
+                    (i) => (i - 1 + mentionCandidates.length) % mentionCandidates.length,
+                  );
+                  return;
+                }
+                if (e.key === "Enter" || e.key === "Tab") {
+                  e.preventDefault();
+                  insertMention(mentionCandidates[mentionIndex]);
+                  return;
+                }
+                if (e.key === "Escape") {
+                  e.preventDefault();
+                  setMentionQuery(null);
+                  return;
+                }
+              }
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                handleSend();
+              }
+            }}
+          />
+        </div>
         <Button onClick={handleSend} disabled={busy} size="icon">
           {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
         </Button>
       </div>
     </div>
+  );
+}
+
+function renderBodyWithMentions(text: string, mine: boolean) {
+  const parts: Array<string | { mention: string }> = [];
+  const re = /(^|\s)@([\p{L}\p{N}._-]+(?:\s[\p{L}\p{N}._-]+){0,3})/gu;
+  let last = 0;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(text)) !== null) {
+    const start = m.index + m[1].length;
+    if (start > last) parts.push(text.slice(last, start));
+    parts.push({ mention: m[2] });
+    last = start + 1 + m[2].length;
+  }
+  if (last < text.length) parts.push(text.slice(last));
+  return parts.map((p, i) =>
+    typeof p === "string" ? (
+      <span key={i}>{p}</span>
+    ) : (
+      <span
+        key={i}
+        className={`rounded px-1 font-medium ${
+          mine ? "bg-primary-foreground/20" : "bg-primary/10 text-primary"
+        }`}
+      >
+        @{p.mention}
+      </span>
+    ),
   );
 }
 
@@ -245,7 +400,9 @@ function MessageBubble({ message, mine }: { message: Message; mine: boolean }) {
             mine ? "bg-primary text-primary-foreground" : "bg-muted text-foreground"
           }`}
         >
-          {message.body && <div className="whitespace-pre-wrap break-words">{message.body}</div>}
+          {message.body && (
+            <div className="whitespace-pre-wrap break-words">{renderBodyWithMentions(message.body, mine)}</div>
+          )}
           {message.attachments?.length > 0 && (
             <div className="mt-2 flex flex-col gap-1">
               {message.attachments.map((a, i) => (

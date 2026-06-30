@@ -239,6 +239,30 @@ export const getOrCreateDM = createServerFn({ method: "POST" })
     return ins.data;
   });
 
+export const listConversationParticipants = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((i: unknown) =>
+    z.object({ conversation_id: z.string().uuid() }).parse(i),
+  )
+  .handler(async ({ data, context }) => {
+    await assertParticipant(context.supabase, data.conversation_id, context.userId);
+    const { data: parts, error } = await context.supabase
+      .from("conversation_participants")
+      .select("user_id")
+      .eq("conversation_id", data.conversation_id);
+    if (error) throw error;
+    const ids = (parts ?? []).map((p) => p.user_id);
+    if (ids.length === 0) return [] as Array<{ id: string; name: string }>;
+    const { data: profiles } = await context.supabase
+      .from("profiles")
+      .select("id, full_name")
+      .in("id", ids);
+    return (profiles ?? []).map((p) => ({
+      id: p.id,
+      name: p.full_name ?? "Usuário",
+    }));
+  });
+
 export const listMessages = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((i: unknown) =>
