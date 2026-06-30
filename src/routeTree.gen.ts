@@ -24,6 +24,7 @@ import { Route as AuthenticatedDashboardRouteImport } from './routes/_authentica
 import { Route as AuthenticatedChatRouteImport } from './routes/_authenticated/chat'
 import { Route as AuthenticatedCasesRouteImport } from './routes/_authenticated/cases'
 import { Route as AuthenticatedCalendarRouteImport } from './routes/_authenticated/calendar'
+import { Route as AuthenticatedCasesNewRouteImport } from './routes/_authenticated/cases.new'
 import { Route as AuthenticatedCasesCaseIdRouteImport } from './routes/_authenticated/cases.$caseId'
 import { Route as ApiPublicGoogleCallbackRouteImport } from './routes/api/public/google/callback'
 
@@ -102,6 +103,11 @@ const AuthenticatedCalendarRoute = AuthenticatedCalendarRouteImport.update({
   path: '/calendar',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedCasesNewRoute = AuthenticatedCasesNewRouteImport.update({
+  id: '/new',
+  path: '/new',
+  getParentRoute: () => AuthenticatedCasesRoute,
+} as any)
 const AuthenticatedCasesCaseIdRoute =
   AuthenticatedCasesCaseIdRouteImport.update({
     id: '/$caseId',
@@ -130,6 +136,7 @@ export interface FileRoutesByFullPath {
   '/proposal': typeof AuthenticatedProposalRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/cases/$caseId': typeof AuthenticatedCasesCaseIdRoute
+  '/cases/new': typeof AuthenticatedCasesNewRoute
   '/api/public/google/callback': typeof ApiPublicGoogleCallbackRoute
 }
 export interface FileRoutesByTo {
@@ -148,6 +155,7 @@ export interface FileRoutesByTo {
   '/proposal': typeof AuthenticatedProposalRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/cases/$caseId': typeof AuthenticatedCasesCaseIdRoute
+  '/cases/new': typeof AuthenticatedCasesNewRoute
   '/api/public/google/callback': typeof ApiPublicGoogleCallbackRoute
 }
 export interface FileRoutesById {
@@ -168,6 +176,7 @@ export interface FileRoutesById {
   '/_authenticated/proposal': typeof AuthenticatedProposalRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/_authenticated/cases/$caseId': typeof AuthenticatedCasesCaseIdRoute
+  '/_authenticated/cases/new': typeof AuthenticatedCasesNewRoute
   '/api/public/google/callback': typeof ApiPublicGoogleCallbackRoute
 }
 export interface FileRouteTypes {
@@ -188,6 +197,7 @@ export interface FileRouteTypes {
     | '/proposal'
     | '/settings'
     | '/cases/$caseId'
+    | '/cases/new'
     | '/api/public/google/callback'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -206,6 +216,7 @@ export interface FileRouteTypes {
     | '/proposal'
     | '/settings'
     | '/cases/$caseId'
+    | '/cases/new'
     | '/api/public/google/callback'
   id:
     | '__root__'
@@ -225,6 +236,7 @@ export interface FileRouteTypes {
     | '/_authenticated/proposal'
     | '/_authenticated/settings'
     | '/_authenticated/cases/$caseId'
+    | '/_authenticated/cases/new'
     | '/api/public/google/callback'
   fileRoutesById: FileRoutesById
 }
@@ -342,6 +354,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedCalendarRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/cases/new': {
+      id: '/_authenticated/cases/new'
+      path: '/new'
+      fullPath: '/cases/new'
+      preLoaderRoute: typeof AuthenticatedCasesNewRouteImport
+      parentRoute: typeof AuthenticatedCasesRoute
+    }
     '/_authenticated/cases/$caseId': {
       id: '/_authenticated/cases/$caseId'
       path: '/$caseId'
@@ -361,10 +380,12 @@ declare module '@tanstack/react-router' {
 
 interface AuthenticatedCasesRouteChildren {
   AuthenticatedCasesCaseIdRoute: typeof AuthenticatedCasesCaseIdRoute
+  AuthenticatedCasesNewRoute: typeof AuthenticatedCasesNewRoute
 }
 
 const AuthenticatedCasesRouteChildren: AuthenticatedCasesRouteChildren = {
   AuthenticatedCasesCaseIdRoute: AuthenticatedCasesCaseIdRoute,
+  AuthenticatedCasesNewRoute: AuthenticatedCasesNewRoute,
 }
 
 const AuthenticatedCasesRouteWithChildren =
