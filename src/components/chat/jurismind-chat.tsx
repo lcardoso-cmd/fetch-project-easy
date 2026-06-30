@@ -459,32 +459,16 @@ export function JurisMindChat({
                       return null;
                     })}
                     {m.citations && m.citations.length > 0 && (
-                      <div className="mt-3 space-y-1 border-t border-border/40 pt-2">
-                        <p className="text-xs font-semibold opacity-70">Fontes:</p>
-                        {m.citations.map((c, idx) => (
-                          <div
-                            key={idx}
-                            className="flex items-start gap-2 text-xs opacity-80"
-                          >
-                            <FileText className="mt-0.5 h-3 w-3 shrink-0" />
-                            <span>
-                              [{idx + 1}] {c.filename}
-                              <span className="ml-1 opacity-60">
-                                ({Math.round(c.similarity * 100)}%)
-                              </span>
-                            </span>
-                          </div>
-                        ))}
-                      </div>
+                      <SourcesBlock citations={m.citations} />
                     )}
                     {m.steps && m.steps.length > 0 && (
                       <div className="mt-3 space-y-1 border-t border-border/40 pt-2">
                         <p className="text-xs font-semibold opacity-70">
-                          Ações executadas:
+                          Ferramentas usadas:
                         </p>
                         {m.steps.map((s, idx) => (
                           <div key={idx} className="text-xs opacity-80">
-                            ⚡ <span className="font-mono">{s.name}</span>
+                            ✓ {friendlyToolName(s.name)}
                           </div>
                         ))}
                       </div>
