@@ -243,7 +243,8 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
         </nav>
 
         {/* Desktop topbar */}
-        <header className="hidden h-16 items-center justify-end border-b bg-card px-6 lg:flex">
+        <header className="hidden h-16 items-center justify-end gap-3 border-b bg-card px-6 lg:flex">
+          <NotificationBell />
           <div className="text-xs text-muted-foreground">{user?.email}</div>
         </header>
 
