@@ -1117,6 +1117,46 @@ function NewCasePage() {
           </div>
         </div>
       </form>
+
+      <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
+        <DialogContent className="max-w-5xl h-[85vh] flex flex-col p-0">
+          <DialogHeader className="px-6 pt-6 pb-3 border-b">
+            <DialogTitle className="truncate pr-8">
+              {uploaded?.filename ?? "Documento"}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="flex-1 min-h-0 bg-muted/30">
+            {previewLoading || !previewUrl ? (
+              <div className="h-full flex items-center justify-center text-sm text-muted-foreground">
+                <Loader2 className="h-5 w-5 animate-spin mr-2" /> Carregando documento...
+              </div>
+            ) : uploaded?.file_type?.startsWith("image/") ? (
+              <div className="h-full overflow-auto flex items-start justify-center p-4">
+                <img src={previewUrl} alt={uploaded.filename} className="max-w-full" />
+              </div>
+            ) : uploaded?.file_type === "application/pdf" ||
+              uploaded?.filename.toLowerCase().endsWith(".pdf") ? (
+              <iframe
+                src={previewUrl}
+                title={uploaded?.filename}
+                className="w-full h-full border-0"
+              />
+            ) : (
+              <div className="h-full flex flex-col items-center justify-center gap-3 p-6 text-center">
+                <FileText className="h-10 w-10 text-muted-foreground" />
+                <p className="text-sm text-muted-foreground">
+                  Pré-visualização não disponível para este formato.
+                </p>
+                <Button asChild variant="outline" size="sm">
+                  <a href={previewUrl} target="_blank" rel="noreferrer">
+                    Abrir em nova aba
+                  </a>
+                </Button>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
