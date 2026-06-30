@@ -208,17 +208,30 @@ export const askWithRag = createServerFn({ method: "POST" })
     const systemPrompt = `Você é o JurisMind, assistente jurídico em português brasileiro.
 Use EXCLUSIVAMENTE o contexto fornecido para responder à pergunta. Cite as fontes ao final no formato [n] indicando o número entre colchetes do trecho.
 Se o contexto for insuficiente, diga claramente.
-Você possui ferramentas: use-as quando o usuário pedir ação concreta (criar prazo, consultar agenda, listar casos).
+Você possui ferramentas: use-as quando o usuário pedir ação concreta (criar prazo, listar casos, redigir uma peça/petição, montar planilha, criar apresentação). Para create_petition, create_table e create_presentation, NÃO descreva o resultado em texto — chame a tool com o conteúdo completo e depois apenas confirme em uma frase curta que o arquivo está pronto para baixar.
+Se o usuário enviar imagens, analise o que está visível nelas (documento fotografado, print de processo, identidade, foto de local etc.) e leve isso em conta.
 
 IMPORTANTE: Responda em TEXTO CORRIDO, sem Markdown. NÃO use **negrito**, *itálico*, # títulos, listas com - ou *, nem blocos de código. Use parágrafos simples e, quando necessário, títulos em MAIÚSCULAS seguidos de dois-pontos.
 
 CONTEXTO DOS DOCUMENTOS:
 ${contextBlock}`;
 
+    // Mensagem do usuário (multimodal se houver imagens)
+    const userContent =
+      data.images && data.images.length > 0
+        ? ([
+            { type: "text", text: data.question },
+            ...data.images.map((url) => ({
+              type: "image_url" as const,
+              image_url: { url },
+            })),
+          ] as unknown as string)
+        : data.question;
+
     const messages = [
       { role: "system" as const, content: systemPrompt },
       ...(data.history ?? []).map((h) => ({ role: h.role, content: h.content })),
-      { role: "user" as const, content: data.question },
+      { role: "user" as const, content: userContent },
     ];
 
     const executor = async (name: string, args: Record<string, unknown>) => {
@@ -261,6 +274,28 @@ ${contextBlock}`;
           .lte("starts_at", until)
           .order("starts_at", { ascending: true });
         return { events: evs ?? [] };
+      }
+      if (name === "create_petition") {
+        return {
+          kind: "petition",
+          titulo: String(args.titulo ?? "Petição"),
+          conteudo: String(args.conteudo ?? ""),
+        };
+      }
+      if (name === "create_table") {
+        return {
+          kind: "table",
+          titulo: String(args.titulo ?? "Tabela"),
+          rows: Array.isArray(args.rows) ? args.rows : [],
+        };
+      }
+      if (name === "create_presentation") {
+        return {
+          kind: "presentation",
+          title: String(args.title ?? "Apresentação"),
+          subtitle: args.subtitle ? String(args.subtitle) : undefined,
+          slides: Array.isArray(args.slides) ? args.slides : [],
+        };
       }
       return { error: `Tool desconhecida: ${name}` };
     };
