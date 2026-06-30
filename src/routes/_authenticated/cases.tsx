@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { getCases, deleteCase } from "@/lib/cases.functions";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, Upload } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/cases")({
   component: CasesPage,
@@ -34,10 +34,16 @@ function CasesPage() {
           <h1 className="text-3xl font-bold tracking-tight text-foreground">Casos</h1>
           <p className="mt-1 text-muted-foreground">Gerencie seus processos e clientes.</p>
         </div>
-        <Button onClick={() => navigate({ to: "/cases/new" })}>
-          <Plus className="mr-2 h-4 w-4" />
-          Novo caso
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => navigate({ to: "/cases/bulk" })}>
+            <Upload className="mr-2 h-4 w-4" />
+            Upload em lote
+          </Button>
+          <Button onClick={() => navigate({ to: "/cases/new" })}>
+            <Plus className="mr-2 h-4 w-4" />
+            Novo caso
+          </Button>
+        </div>
       </div>
 
       {isLoading ? (
