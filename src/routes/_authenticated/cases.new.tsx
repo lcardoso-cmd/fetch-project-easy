@@ -394,10 +394,12 @@ function NewCasePage() {
     setSubmitting(true);
     try {
       const cleanParties = parties.filter((p) => p.name.trim() || p.role.trim());
-      const represented =
-        representedIdx !== null && cleanParties[representedIdx]
-          ? cleanParties[representedIdx]
-          : null;
+      const repRel = representedRelationFor(matterKind);
+      const represented = repRel
+        ? cleanParties.find((p) => p.relation === repRel) ?? null
+        : null;
+      const assistedFromParties =
+        matterKind === "assistencia_tecnica" ? represented?.name ?? null : null;
 
       const feeReais = parseFloat(peritoFee.replace(",", "."));
       const feeCents =
@@ -422,8 +424,7 @@ function NewCasePage() {
               : matterKind === "assistencia_tecnica"
                 ? "assistente_tecnico"
                 : "advogado",
-          assisted_party_name:
-            matterKind === "assistencia_tecnica" ? assistedPartyName.trim() || null : null,
+          assisted_party_name: assistedFromParties,
           perito_fee_cents: matterKind === "pericia" ? feeCents : null,
           perito_appointment_date:
             matterKind === "pericia" ? peritoAppointmentDate || null : null,
