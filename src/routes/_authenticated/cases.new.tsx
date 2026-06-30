@@ -634,7 +634,7 @@ function NewCasePage() {
           <Button type="button" variant="ghost" asChild>
             <Link to="/cases">Cancelar</Link>
           </Button>
-          <Button type="submit" disabled={submitting}>
+          <Button type="submit" disabled={submitting || (needsReview && !reviewConfirmed)}>
             {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Criar caso
           </Button>
