@@ -24,9 +24,11 @@ export type Database = {
           id: string
           jurisdiction: string | null
           parties: Json | null
+          represented_party: Json | null
           status: string
           summary: string | null
           summary_updated_at: string | null
+          team_member_ids: string[]
           title: string
           updated_at: string
           user_id: string
@@ -40,9 +42,11 @@ export type Database = {
           id?: string
           jurisdiction?: string | null
           parties?: Json | null
+          represented_party?: Json | null
           status?: string
           summary?: string | null
           summary_updated_at?: string | null
+          team_member_ids?: string[]
           title: string
           updated_at?: string
           user_id: string
@@ -56,9 +60,11 @@ export type Database = {
           id?: string
           jurisdiction?: string | null
           parties?: Json | null
+          represented_party?: Json | null
           status?: string
           summary?: string | null
           summary_updated_at?: string | null
+          team_member_ids?: string[]
           title?: string
           updated_at?: string
           user_id?: string
@@ -346,6 +352,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      team_members: {
+        Row: {
+          color: string | null
+          created_at: string
+          email: string | null
+          id: string
+          name: string
+          role: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          name: string
+          role?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          color?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          name?: string
+          role?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
     }
     Views: {
