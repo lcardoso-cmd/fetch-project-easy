@@ -46,6 +46,17 @@ type Draft = {
   saveError?: string;
   caseId?: string;
   data: ExtractedCaseData;
+  missing: string[];
+  warnings: string[];
+};
+
+const FIELD_LABELS: Record<string, string> = {
+  client_name: "Cliente",
+  case_number: "Número do processo",
+  jurisdiction: "Vara/Jurisdição",
+  case_type: "Tipo do caso",
+  parties: "Partes",
+  description: "Descrição",
 };
 
 const emptyExtracted = (filename: string): ExtractedCaseData => ({
@@ -87,6 +98,8 @@ function BulkUploadPage() {
       extractStatus: "pending",
       saveStatus: "idle",
       data: emptyExtracted(f.name),
+      missing: [],
+      warnings: [],
     }));
     setDrafts((prev) => [...prev, ...next]);
   };
@@ -118,7 +131,7 @@ function BulkUploadPage() {
 
         update(d.id, { storagePath: path, extractStatus: "extracting" });
         // eslint-disable-next-line no-await-in-loop
-        const { extracted } = await extractFn({
+        const { extracted, missing, warnings } = await extractFn({
           data: {
             storage_path: path,
             filename: d.file.name,
@@ -126,7 +139,12 @@ function BulkUploadPage() {
             file_size: d.file.size,
           },
         });
-        update(d.id, { extractStatus: "ready", data: extracted });
+        update(d.id, {
+          extractStatus: "ready",
+          data: extracted,
+          missing: missing ?? [],
+          warnings: warnings ?? [],
+        });
       } catch (e) {
         console.error(e);
         update(d.id, {
@@ -450,6 +468,29 @@ function DraftCard({
           </Button>
         )}
       </div>
+
+      {(draft.missing.length > 0 || draft.warnings.length > 0) &&
+        draft.extractStatus === "ready" && (
+          <div className="mb-4 space-y-2">
+            {draft.missing.length > 0 && (
+              <div className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+                <strong>Não identificado pela IA:</strong>{" "}
+                {draft.missing
+                  .map((f) => FIELD_LABELS[f] ?? f)
+                  .join(", ")}
+                . Preencha manualmente abaixo.
+              </div>
+            )}
+            {draft.warnings.map((w, i) => (
+              <div
+                key={i}
+                className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900"
+              >
+                {w}
+              </div>
+            ))}
+          </div>
+        )}
 
       {draft.extractStatus === "error" ? (
         <p className="text-sm text-muted-foreground">

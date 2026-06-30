@@ -161,6 +161,65 @@ export type ExtractedCaseData = {
   description: string;
 };
 
+const CASE_TYPES = [
+  "Cível",
+  "Trabalhista",
+  "Família",
+  "Penal",
+  "Tributário",
+  "Empresarial",
+  "Consumidor",
+  "Previdenciário",
+  "Administrativo",
+  "Constitucional",
+] as const;
+
+// CNJ: NNNNNNN-DD.YYYY.J.TR.OOOO
+const CNJ_REGEX = /\b\d{7}-?\d{2}\.?\d{4}\.?\d\.?\d{2}\.?\d{4}\b/;
+
+function normalizeCaseNumber(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  const cleaned = raw.replace(/\s+/g, "");
+  const digits = cleaned.replace(/\D/g, "");
+  if (digits.length === 20) {
+    return `${digits.slice(0, 7)}-${digits.slice(7, 9)}.${digits.slice(9, 13)}.${digits.slice(13, 14)}.${digits.slice(14, 16)}.${digits.slice(16, 20)}`;
+  }
+  // keep original short form if it looks like an internal protocol
+  return cleaned.length >= 4 && cleaned.length <= 60 ? cleaned : null;
+}
+
+function normalizeCaseType(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  const lower = raw.trim().toLowerCase();
+  const match = CASE_TYPES.find((t) => lower.includes(t.toLowerCase()));
+  if (match) return match;
+  // common keyword mapping
+  if (/(trabalh|clt|reclama)/.test(lower)) return "Trabalhista";
+  if (/(famil|divorc|alimentos|guarda)/.test(lower)) return "Família";
+  if (/(penal|crim|denuncia)/.test(lower)) return "Penal";
+  if (/(tribut|fiscal|icms|iss|imposto)/.test(lower)) return "Tributário";
+  if (/(consumi|cdc)/.test(lower)) return "Consumidor";
+  if (/(previd|inss|aposenta)/.test(lower)) return "Previdenciário";
+  if (/(empres|societ|comercial)/.test(lower)) return "Empresarial";
+  if (/(administ|servidor)/.test(lower)) return "Administrativo";
+  if (/civ/.test(lower)) return "Cível";
+  return raw.trim().slice(0, 80);
+}
+
+function cleanJurisdiction(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  const v = raw.replace(/\s+/g, " ").trim();
+  if (!v || /^(n\/?a|não\s*identif|desconhec|none|null)$/i.test(v)) return null;
+  return v.slice(0, 200);
+}
+
+function cleanString(raw: string | null | undefined, max = 200): string | null {
+  if (!raw) return null;
+  const v = raw.replace(/\s+/g, " ").trim();
+  if (!v || /^(n\/?a|não\s*identif|desconhec|none|null|-+)$/i.test(v)) return null;
+  return v.slice(0, max);
+}
+
 /** Extrai dados do documento sem salvar. Retorna a estrutura + texto bruto. */
 export const extractCaseDataFromDocument = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -177,19 +236,27 @@ export const extractCaseDataFromDocument = createServerFn({ method: "POST" })
     const text = (fullText || "").trim();
     if (!text) throw new Error("Não foi possível extrair texto do documento");
 
+    // Fallback regex pra CNJ direto no texto — reforça o que a IA achar
+    const cnjFromText = text.match(CNJ_REGEX)?.[0] ?? null;
+
     const snippet = text.slice(0, 15000);
     const system =
-      "Você é um assistente jurídico brasileiro. A partir do texto de uma petição, contrato ou processo, extraia os dados estruturados do caso. Responda APENAS com JSON válido no formato pedido, sem markdown nem comentários.";
-    const userMsg = `Analise o documento abaixo e devolva JSON com as chaves:
+      "Você é um assistente jurídico brasileiro especialista em ler petições, contratos e processos. Extraia APENAS o que estiver explícito no documento. Quando um campo não estiver claramente identificado, devolva null — NUNCA invente nomes, números, varas ou tipos. Responda apenas com JSON válido, sem markdown.";
+    const userMsg = `Analise o documento abaixo e devolva JSON com EXATAMENTE estas chaves:
 {
-  "title": string (título curto e descritivo do caso, máx 120 chars),
-  "client_name": string|null (nome do cliente principal, se identificável),
-  "case_number": string|null (número do processo, se houver),
-  "jurisdiction": string|null (vara/tribunal/comarca),
-  "case_type": string|null (ex: Cível, Trabalhista, Família, Penal, Tributário),
-  "parties": [{"role": string, "name": string}] (autor, réu, advogado, terceiros etc),
-  "description": string (resumo objetivo do caso em 2-4 frases)
+  "title": string,          // título curto e descritivo (máx 120 chars). Se não houver assunto claro, use a natureza da ação.
+  "client_name": string|null, // nome do cliente principal (autor/requerente/contratante). null se não identificado.
+  "case_number": string|null, // número CNJ no formato NNNNNNN-DD.AAAA.J.TR.OOOO se houver. Se houver outro protocolo, devolva como está. null se não houver.
+  "jurisdiction": string|null,// vara/tribunal/comarca completos (ex: "2ª Vara Cível de São Paulo - TJSP"). null se não houver.
+  "case_type": string|null,   // UM destes: ${CASE_TYPES.join(", ")}. null se não der pra classificar com segurança.
+  "parties": [{"role": string, "name": string}], // partes explícitas. role em minúsculas: autor, réu, requerente, requerido, advogado, terceiro. [] se nenhuma identificada.
+  "description": string       // resumo objetivo em 2-4 frases. Se documento ilegível/incompleto, descreva isso.
 }
+
+Regras:
+- Nunca preencha campos com "N/A", "desconhecido", "—" ou frases. Use null.
+- Não confunda o nome do escritório/advogado com o cliente.
+- O número do processo tem 20 dígitos no padrão CNJ. Confira antes de devolver.
 
 Documento:
 """
@@ -201,7 +268,7 @@ ${snippet}
         { role: "system", content: system },
         { role: "user", content: userMsg },
       ],
-      { temperature: 0.2 },
+      { temperature: 0.1 },
     );
 
     let parsed: Partial<ExtractedCaseData> = {};
@@ -212,18 +279,51 @@ ${snippet}
       parsed = {};
     }
 
+    const normalizedNumber =
+      normalizeCaseNumber(parsed.case_number ?? null) ?? normalizeCaseNumber(cnjFromText);
+
     const result: ExtractedCaseData = {
-      title: (parsed.title || data.filename.replace(/\.[^.]+$/, "")).slice(0, 200),
-      client_name: parsed.client_name ?? null,
-      case_number: parsed.case_number ?? null,
-      jurisdiction: parsed.jurisdiction ?? null,
-      case_type: parsed.case_type ?? null,
-      parties: Array.isArray(parsed.parties) ? parsed.parties : [],
-      description: parsed.description ?? "",
+      title: (cleanString(parsed.title, 200) || data.filename.replace(/\.[^.]+$/, "")).slice(
+        0,
+        200,
+      ),
+      client_name: cleanString(parsed.client_name, 200),
+      case_number: normalizedNumber,
+      jurisdiction: cleanJurisdiction(parsed.jurisdiction),
+      case_type: normalizeCaseType(parsed.case_type),
+      parties: Array.isArray(parsed.parties)
+        ? parsed.parties
+            .filter((p) => p && typeof p === "object" && p.name)
+            .map((p) => ({
+              role: cleanString(p.role, 80) ?? "parte",
+              name: cleanString(p.name, 200) ?? "",
+            }))
+            .filter((p) => p.name)
+        : [],
+      description: cleanString(parsed.description, 4000) ?? "",
     };
 
-    return { extracted: result, text_length: text.length };
+    const missing: string[] = [];
+    if (!result.client_name) missing.push("client_name");
+    if (!result.case_number) missing.push("case_number");
+    if (!result.jurisdiction) missing.push("jurisdiction");
+    if (!result.case_type) missing.push("case_type");
+    if (result.parties.length === 0) missing.push("parties");
+    if (!result.description) missing.push("description");
+
+    const warnings: string[] = [];
+    if (parsed.case_number && !normalizedNumber) {
+      warnings.push(
+        `Número do processo "${parsed.case_number}" não parece estar no padrão CNJ.`,
+      );
+    }
+    if (cnjFromText && parsed.case_number && cnjFromText !== parsed.case_number) {
+      warnings.push("Número detectado no texto difere do extraído pela IA — confira.");
+    }
+
+    return { extracted: result, text_length: text.length, missing, warnings };
   });
+
 
 /** Após criar o caso, anexa o documento já enviado e devolve o id pra indexar. */
 export const attachDocumentToCase = createServerFn({ method: "POST" })
