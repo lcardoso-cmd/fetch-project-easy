@@ -727,15 +727,25 @@ function NewCasePage() {
         </Card>
 
         {/* Partes */}
-        <Card className={uploaded && fieldHasIssue("parties") ? "border-amber-500" : ""}>
+        <Card
+          className={
+            showError("parties") || showError("represented")
+              ? "border-destructive"
+              : uploaded && fieldHasIssue("parties")
+                ? "border-amber-500"
+                : ""
+          }
+        >
           <CardHeader>
-            <CardTitle className="text-lg">Partes envolvidas</CardTitle>
+            <CardTitle className="text-lg">Partes envolvidas *</CardTitle>
             <CardDescription>
-              Marque a parte que você representa.
+              Adicione ao menos uma parte e marque qual você representa.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             <FieldIssue field="parties" />
+            <ErrorMsg k="parties" />
+            <ErrorMsg k="represented" />
             {parties.length === 0 && (
               <p className="text-sm text-muted-foreground">Nenhuma parte ainda.</p>
             )}
