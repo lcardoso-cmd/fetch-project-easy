@@ -130,6 +130,8 @@ Use EXCLUSIVAMENTE o contexto fornecido para responder à pergunta. Cite as font
 Se o contexto for insuficiente, diga claramente.
 Você possui ferramentas: use-as quando o usuário pedir ação concreta (criar prazo, consultar agenda, listar casos).
 
+IMPORTANTE: Responda em TEXTO CORRIDO, sem Markdown. NÃO use **negrito**, *itálico*, # títulos, listas com - ou *, nem blocos de código. Use parágrafos simples e, quando necessário, títulos em MAIÚSCULAS seguidos de dois-pontos.
+
 CONTEXTO DOS DOCUMENTOS:
 ${contextBlock}`;
 
