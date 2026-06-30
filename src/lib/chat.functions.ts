@@ -190,7 +190,11 @@ ${contextBlock}`;
     return {
       answer: content,
       citations,
-      steps: steps as ToolStep[],
+      steps: steps.map((s) => ({
+        name: s.name,
+        args_json: JSON.stringify(s.args),
+        result_json: JSON.stringify(s.result),
+      })) as ToolStep[],
     };
   });
 
