@@ -1,56 +1,82 @@
-## Contexto
+# Plano: Replicar JurisMind fielmente no Lovable
 
-Seu repositório `lcardoso-cmd/jurismind` é um **Next.js + Firebase + Genkit/OpenAI** com mais de 30 telas (admin, dashboard, agenda, marketing, propostas, monitoring, tasks, integrations…). O projeto Lovable atual já tem a base correta no stack suportado: **TanStack Start + Lovable Cloud (Supabase) + Lovable AI**, com tabelas `cases`, `documents`, `document_chunks` (pgvector) e `events` já criadas e RLS ativa.
+## Objetivo
+Reproduzir o protótipo do GitHub (`lcardoso-cmd/jurismind`) com **mesma UI, mesmo fluxo e mesmas funcionalidades**, adaptando do stack original (Next.js + Firebase + OpenAI + Genkit) para o stack do Lovable (TanStack Start + Lovable Cloud/Supabase + Lovable AI Gateway).
 
-Não dá pra copiar 1:1 — o que vou fazer é **reescrever as features no stack atual**, em fases. Começo pelo núcleo que faz sentido pra um RAG jurídico.
+Sem dados de exemplo — apenas estrutura e código funcional.
 
-## Fase 1 — MVP (vamos começar por aqui)
+---
 
-Funcionalidades essenciais do Jurismind, adaptadas:
+## Sobre as chaves de API (boa notícia)
+Você **não precisa fornecer chave de OpenAI nem Gemini**. O Lovable já inclui o **Lovable AI Gateway**, que dá acesso direto a:
+- `google/gemini-2.5-pro` / `gemini-3-flash` (chat, raciocínio, tool-calling)
+- `openai/gpt-5`, `gpt-5-mini` (alternativas)
+- `google/gemini-embedding-001` (embeddings pro RAG)
+- Geração de imagem
 
-1. **Identidade visual** — copio cores, fontes e textos do `globals.css` + landing do repo
-2. **Casos** (já existe estrutura) — expandir com os campos do tipo `Case` original: número do processo, jurisdição, tipo (Arbitragem/Contencioso), partes, advogados da equipe, contato, resumo gerado por IA
-3. **Upload de documentos** — drag&drop, salva no bucket `documents`, registra em `documents`
-4. **Pipeline RAG** — server function que:
-   - extrai texto (PDF/DOCX/TXT)
-   - chunka
-   - gera embeddings via Lovable AI Gateway (`text-embedding-3-small`)
-   - grava em `document_chunks` (já tem `vector(1536)` + função `match_chunks`)
-5. **Chat com IA** por caso — usa `match_chunks` pra recuperar trechos e responde com Gemini/GPT via Lovable AI, citando os documentos
-6. **Resumo automático do caso** — botão que gera resumo via IA a partir dos documentos indexados
+Custo é debitado dos créditos do workspace. **Só precisarei pedir chaves se você quiser integrações externas** (Google Drive OAuth, Gamma.app).
 
-## Fase 2 (depois do MVP, sob demanda)
+---
 
-- Agenda / prazos (tabela `events` já existe)
-- Tasks / Kanban
-- Propostas
-- Marketing / Monitoring / Integrations
-- Admin (tenants/clientes) — exige roles e multi-tenancy
+## Escopo do trabalho (em ondas)
 
-## Arquivos que vou criar/editar na Fase 1
+### 🌊 Onda 1 — UI/Layout fiel ao original
+Replicar visualmente o app: sidebar, header, paleta, tipografia, navegação, dashboard principal. O que você vê hoje (cara genérica) vira **a cara real do JurisMind**.
+- Sidebar com todas as seções: Dashboard, Casos, Agenda, My Files, My Tasks, Marketing, Proposal, Monitoring, Integrations, Settings, Admin
+- Layout do dashboard com cards de visão geral
+- Cores, espaçamento, fontes idênticas ao original
 
-```text
-src/styles.css                              # importar identidade do globals.css
-src/routes/index.tsx                        # landing inspirada no /app/page.tsx
-src/routes/_authenticated/cases.$id.tsx     # detalhe do caso (novo)
-src/routes/_authenticated/chat.tsx          # chat RAG (reescrever)
-src/components/cases/case-detail.tsx        # campos extras
-src/components/documents/upload-zone.tsx    # drag&drop
-src/components/chat/chat-panel.tsx          # interface de chat
-src/lib/documents.functions.ts              # upload + listagem
-src/lib/rag.functions.ts                    # pipeline embeddings + busca
-src/lib/chat.functions.ts                   # streaming chat com RAG
-supabase/migrations/...                     # adicionar colunas em `cases` (case_number, jurisdiction, case_type, parties jsonb, summary, etc.)
-```
+### 🌊 Onda 2 — Núcleo RAG (igual ao original)
+Já temos a base (`document_chunks` + pgvector + `match_chunks`). Falta refinar pra ficar **igual ao fluxo original**:
+- Upload com extração de texto (PDF/DOCX) e chunking inteligente
+- Embeddings via Lovable AI (Gemini embedding) ou OpenAI (sua escolha)
+- Chat por caso com **tool-calling** (criar tabela, gerar resumo, etc — igual `chat-tools.ts` original)
+- Chat global cruzando todos os documentos do usuário
+- Resumo automático de caso após upload (campo `summary` já existe na tabela `cases`)
+- Citações com trecho + nome do arquivo
 
-## Detalhes técnicos
+### 🌊 Onda 3 — Módulos de produtividade (telas que estão vazias)
+- **Casos**: detalhe completo com timeline, partes envolvidas, documentos, prazos
+- **Agenda**: calendário com prazos e audiências (tabela `events` já existe)
+- **My Files**: visão global de todos os documentos
+- **My Tasks**: tarefas (criar tabela)
+- **Settings**: perfil, OAB, telefone, preferências
 
-- **AI**: uso exclusivamente o **Lovable AI Gateway** (já temos `LOVABLE_API_KEY`) — embeddings via `openai/text-embedding-3-small`, chat via `google/gemini-2.5-flash`. Não preciso de chave do usuário.
-- **Parsing PDF**: como o runtime é Cloudflare Workers (sem `pdf-parse`/`sharp`), uso `unpdf` (puro JS, edge-compatible) ou recebo texto extraído no cliente.
-- **RAG**: chunks de ~500 tokens com overlap de 50, embedding 1536-dim, busca por similaridade cosseno via `match_chunks` (já existe).
-- **Firebase → Supabase**: `users` → `auth.users` + `profiles`, `cases` collection → `cases` table, `documents` subcollection → `documents` table, Firestore listeners → TanStack Query.
-- **Genkit → Lovable AI**: chamo direto via `fetch` ao AI Gateway nas server functions.
+### 🌊 Onda 4 — Geradores com IA (replicar actions originais)
+- **Proposal**: gerador de propostas comerciais com IA
+- **Marketing**: chat especializado em marketing jurídico
+- **Export**: gerar Word (.docx) e PowerPoint (.pptx) de resumos/petições — bibliotecas `docx` e `pptxgenjs` rodam no edge runtime do TanStack
+- **Geração de imagem** para materiais visuais
 
-## Pergunta antes de implementar
+### 🌊 Onda 5 — Admin / Multi-tenant
+- Tabela `user_roles` (admin/lawyer/client) com RLS
+- Telas `/admin/clients` e `/admin/tenants` se for multi-escritório
+- Gerenciamento de permissões
 
-Quer que eu **comece a Fase 1 inteira** (~bastante trabalho, vários arquivos), ou prefere que eu faça **só um pedaço primeiro** (ex.: só identidade visual + landing, ou só o pipeline RAG) pra você validar antes?
+### 🌊 Onda 6 — Integrações externas (precisam chave/credencial)
+- **Google Drive** (per-user OAuth): listar arquivos do Drive do usuário e importar pro caso. Requer você criar OAuth Client no Google Cloud Console e me passar Client ID + Secret.
+- **Gamma.app** (apresentações automáticas): requer GAMMA_API_KEY
+- **Monitoring de processos**: depende de qual fonte (API de tribunal, scraping, ou input manual)
+
+---
+
+## Decisões técnicas chave
+
+| Original (Firebase/Next) | No Lovable |
+|---|---|
+| Firebase Auth | Supabase Auth (já configurado) |
+| Firestore | Postgres + RLS (já temos tabelas) |
+| Firebase Storage | Supabase Storage (bucket `documents` já existe) |
+| OpenAI direto (chave do usuário) | Lovable AI Gateway (sem chave) |
+| Genkit flows | `createServerFn` + AI SDK + tool-calling |
+| Next.js server actions | TanStack server functions |
+| Per-user Google OAuth | Implementar manualmente (você cria OAuth app) |
+
+---
+
+## Como vamos trabalhar
+Cada onda é um ciclo de implementação. Eu sugiro começar pela **Onda 1 (UI fiel)** porque é o que mais incomoda você visualmente agora — depois disso o app já "parece" o JurisMind. Em seguida Onda 2 (RAG completo) que é o coração técnico.
+
+**Você aprova esse plano e começo pela Onda 1?**
+
+Se quiser começar por outra onda ou priorizar algo específico (ex.: "Drive primeiro porque é o mais doloroso"), me diz antes de aprovar.
