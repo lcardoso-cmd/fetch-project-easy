@@ -7,11 +7,11 @@ export const Route = createFileRoute("/")({
   component: LandingPage,
   head: () => ({
     meta: [
-      { title: "JurisMind — IA jurídica para advogados" },
+      { title: "JurisMind — Inteligência jurídica para advogados" },
       {
         name: "description",
         content:
-          "JurisMind: plataforma de IA com RAG para análise de documentos jurídicos, resumos automáticos e chat sobre seus casos.",
+          "JurisMind: plataforma com RAG para análise de documentos jurídicos, resumos automáticos e chat sobre seus casos.",
       },
     ],
   }),
@@ -22,7 +22,7 @@ const features = [
     icon: BrainCircuit,
     title: "Chat com seus documentos",
     description:
-      "Pergunte qualquer coisa sobre seus processos. A IA busca trechos relevantes e responde citando as fontes.",
+      "Pergunte qualquer coisa sobre seus processos. O JurisMind busca trechos relevantes e responde citando as fontes.",
   },
   {
     icon: FileText,
@@ -157,7 +157,7 @@ function LandingPage() {
             Pronto para experimentar?
           </h2>
           <p className="mt-3 text-muted-foreground">
-            Crie sua conta gratuita, suba seus primeiros documentos e converse com a IA.
+            Crie sua conta gratuita, suba seus primeiros documentos e converse com o JurisMind.
           </p>
           <Button size="lg" asChild className="mt-6">
             <Link to={user ? "/dashboard" : "/auth"}>
