@@ -94,6 +94,7 @@ function NewCasePage() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const qc = useQueryClient();
+  const { data: profile } = useProfile();
 
   const createCaseFn = useServerFn(createCase);
   const extractFn = useServerFn(extractCaseDataFromDocument);
@@ -107,6 +108,15 @@ function NewCasePage() {
     queryFn: () => listTeamFn(),
   });
 
+  // matter_kind herda do perfil mas é editável por caso.
+  const defaultKind = defaultMatterKindFor(profile?.practice_type ?? null);
+  const [matterKind, setMatterKind] = useState<MatterKind>(defaultKind);
+  useEffect(() => {
+    // Sincroniza quando o perfil chega depois do mount inicial.
+    setMatterKind(defaultMatterKindFor(profile?.practice_type ?? null));
+  }, [profile?.practice_type]);
+  const labels = labelsForMatter(matterKind);
+
   // form state
   const [title, setTitle] = useState("");
   const [clientName, setClientName] = useState("");
@@ -117,6 +127,13 @@ function NewCasePage() {
   const [parties, setParties] = useState<Party[]>([]);
   const [representedIdx, setRepresentedIdx] = useState<number | null>(null);
   const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
+
+  // Campos extras de perícia / assistência técnica
+  const [assistedPartyName, setAssistedPartyName] = useState("");
+  const [peritoFee, setPeritoFee] = useState(""); // em reais (string), convertido em cents na submissão
+  const [peritoAppointmentDate, setPeritoAppointmentDate] = useState("");
+  const [peritoDeadlineDate, setPeritoDeadlineDate] = useState("");
+  const [peritoNominationRef, setPeritoNominationRef] = useState("");
 
   // upload state
   const fileInputRef = useRef<HTMLInputElement>(null);
