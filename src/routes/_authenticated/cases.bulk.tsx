@@ -46,6 +46,17 @@ type Draft = {
   saveError?: string;
   caseId?: string;
   data: ExtractedCaseData;
+  missing: string[];
+  warnings: string[];
+};
+
+const FIELD_LABELS: Record<string, string> = {
+  client_name: "Cliente",
+  case_number: "Número do processo",
+  jurisdiction: "Vara/Jurisdição",
+  case_type: "Tipo do caso",
+  parties: "Partes",
+  description: "Descrição",
 };
 
 const emptyExtracted = (filename: string): ExtractedCaseData => ({
