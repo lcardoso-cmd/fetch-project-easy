@@ -177,6 +177,14 @@ export function NotificationBell() {
             ))
           )}
         </div>
+        <div className="border-t px-3 py-2 text-center">
+          <Link
+            to="/notifications"
+            className="text-xs font-medium text-primary hover:underline"
+          >
+            Ver todas as notificações
+          </Link>
+        </div>
       </PopoverContent>
     </Popover>
   );
