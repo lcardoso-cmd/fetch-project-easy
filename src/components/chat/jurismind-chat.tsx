@@ -54,6 +54,7 @@ interface ToolStep {
 interface Msg {
   role: "user" | "assistant";
   content: string;
+  images?: string[];
   citations?: Citation[];
   steps?: ToolStep[];
 }
