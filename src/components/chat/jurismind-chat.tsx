@@ -557,3 +557,63 @@ export function JurisMindChat({
     </div>
   );
 }
+
+const TOOL_LABELS: Record<string, string> = {
+  create_petition: "Minuta de petição",
+  create_table: "Planilha gerada",
+  create_presentation: "Apresentação gerada",
+  search_documents: "Busca em documentos",
+  create_task: "Tarefa criada",
+};
+
+function friendlyToolName(name: string) {
+  return TOOL_LABELS[name] ?? name.replace(/_/g, " ");
+}
+
+function SourcesBlock({
+  citations,
+}: {
+  citations: Array<{ filename: string; similarity: number }>;
+}) {
+  const [open, setOpen] = useState(false);
+  // Dedupe by filename, keep highest similarity
+  const unique = Array.from(
+    citations
+      .reduce((acc, c) => {
+        const prev = acc.get(c.filename);
+        if (!prev || prev.similarity < c.similarity) acc.set(c.filename, c);
+        return acc;
+      }, new Map<string, { filename: string; similarity: number }>())
+      .values(),
+  );
+  return (
+    <div className="mt-3 border-t border-border/40 pt-2">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center justify-between text-xs font-semibold opacity-70 hover:opacity-100"
+      >
+        <span>
+          Fontes ({unique.length}
+          {unique.length !== citations.length ? ` · ${citations.length} trechos` : ""})
+        </span>
+        <span>{open ? "−" : "+"}</span>
+      </button>
+      {open && (
+        <div className="mt-1.5 space-y-1">
+          {unique.map((c, idx) => (
+            <div key={idx} className="flex items-start gap-2 text-xs opacity-80">
+              <FileText className="mt-0.5 h-3 w-3 shrink-0" />
+              <span className="min-w-0 flex-1 truncate">
+                {c.filename}
+                <span className="ml-1 opacity-60">
+                  ({Math.round(c.similarity * 100)}%)
+                </span>
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
