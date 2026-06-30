@@ -174,7 +174,11 @@ function CaseDetailPage() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={openEdit}>
+          <Button
+            variant="outline"
+            onClick={openEdit}
+            className="bg-red-600 text-white hover:bg-red-700"
+          >
             Editar dados
           </Button>
           <Sheet>

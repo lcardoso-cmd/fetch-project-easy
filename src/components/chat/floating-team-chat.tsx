@@ -90,6 +90,7 @@ export function FloatingTeamChat({ caseId }: { caseId: string }) {
   const openDM = async (other: { id: string; name: string }) => {
     try {
       const conv = await getDMFn({ data: { other_user_id: other.id } });
+      if (!conv) return;
       openChat({
         key: `dm-${conv.id}`,
         conversationId: conv.id,
