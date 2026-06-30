@@ -696,7 +696,9 @@ function NewCasePage() {
         <Card>
           <CardHeader>
             <CardTitle className="text-lg">
-              {uploaded ? "Dados do caso — edite o que precisar" : "Dados do caso"}
+              {uploaded
+                ? `Dados ${matterKind === "processo" ? "do caso" : "da " + labels.entitySingular.toLowerCase()} — edite o que precisar`
+                : `Dados ${matterKind === "processo" ? "do caso" : "da " + labels.entitySingular.toLowerCase()}`}
             </CardTitle>
             {uploaded && (
               <CardDescription>
@@ -720,7 +722,7 @@ function NewCasePage() {
               <ErrorMsg k="title" />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="client">Cliente *</Label>
+              <Label htmlFor="client">{labels.clientLabel} *</Label>
               <Input
                 id="client"
                 value={clientName}
