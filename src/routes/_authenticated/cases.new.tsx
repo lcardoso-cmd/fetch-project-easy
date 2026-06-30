@@ -264,9 +264,9 @@ function NewCasePage() {
       setExtractionWarnings(res.warnings ?? []);
       setReviewConfirmed(false);
       if (missingRaw.length) {
-        const labels = missingRaw.map((f) => FIELD_LABELS[f] ?? f);
+        const missingLabels = missingRaw.map((f) => FIELD_LABELS[f] ?? f);
         toast.warning("Alguns dados não foram identificados", {
-          description: `Preencha manualmente: ${labels.join(", ")}.`,
+          description: `Preencha manualmente: ${missingLabels.join(", ")}.`,
         });
       } else {
         toast.success("Dados extraídos do documento");
