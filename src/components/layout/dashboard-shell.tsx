@@ -2,6 +2,9 @@ import { useEffect, useState } from "react";
 import { Link, useLocation } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
+import { useProfile } from "@/hooks/use-profile";
+import { labelsForPractice } from "@/lib/practice-labels";
+import type { PracticeType } from "@/lib/profile.functions";
 import {
   Home,
   FolderKanban,
@@ -28,28 +31,46 @@ type NavItem =
   | { type: "separator" }
   | { type: "link"; to: string; label: string; icon: LucideIcon; match?: "exact" | "startsWith" };
 
-const NAV: NavItem[] = [
-  { type: "label", label: "Principal" },
-  { type: "link", to: "/dashboard", label: "Painel", icon: Home, match: "exact" },
-  { type: "link", to: "/cases", label: "Casos", icon: FolderKanban, match: "startsWith" },
-  { type: "link", to: "/my-tasks", label: "Minhas Tarefas", icon: ClipboardCheck },
-  { type: "link", to: "/calendar", label: "Agenda", icon: CalendarDays },
-  { type: "link", to: "/my-files", label: "Meus Documentos", icon: FileArchive },
-  { type: "separator" },
-  { type: "label", label: "Gestão" },
-  { type: "link", to: "/monitoring", label: "Publicações", icon: FileSearch },
-  { type: "link", to: "/drafter", label: "Peças Jurídicas", icon: Scale },
-  { type: "link", to: "/proposal", label: "Proposta Comercial", icon: Handshake },
-  { type: "link", to: "/marketing", label: "Marketing", icon: Megaphone },
-  { type: "separator" },
-  { type: "label", label: "Sistema" },
-  { type: "link", to: "/integrations", label: "Integrações", icon: Puzzle },
-  { type: "link", to: "/settings", label: "Configurações", icon: Settings2 },
-];
+function buildNav(practice: PracticeType | null | undefined): NavItem[] {
+  const labels = labelsForPractice(practice);
+  const isLawyer = !practice || practice === "advogado";
+  return [
+    { type: "label", label: "Principal" },
+    { type: "link", to: "/dashboard", label: "Painel", icon: Home, match: "exact" },
+    {
+      type: "link",
+      to: "/cases",
+      label: isLawyer ? "Casos" : labels.entityPlural,
+      icon: FolderKanban,
+      match: "startsWith",
+    },
+    { type: "link", to: "/my-tasks", label: "Minhas Tarefas", icon: ClipboardCheck },
+    { type: "link", to: "/calendar", label: "Agenda", icon: CalendarDays },
+    { type: "link", to: "/my-files", label: "Meus Documentos", icon: FileArchive },
+    { type: "separator" },
+    { type: "label", label: "Gestão" },
+    { type: "link", to: "/monitoring", label: "Publicações", icon: FileSearch },
+    {
+      type: "link",
+      to: "/drafter",
+      label: isLawyer ? "Peças Jurídicas" : labels.outputLabel,
+      icon: Scale,
+    },
+    { type: "link", to: "/proposal", label: "Proposta Comercial", icon: Handshake },
+    { type: "link", to: "/marketing", label: "Marketing", icon: Megaphone },
+    { type: "separator" },
+    { type: "label", label: "Sistema" },
+    { type: "link", to: "/integrations", label: "Integrações", icon: Puzzle },
+    { type: "link", to: "/settings", label: "Configurações", icon: Settings2 },
+  ];
+}
+
 
 export function DashboardShell({ children }: { children: React.ReactNode }) {
   const { pathname } = useLocation();
   const { user, signOut } = useAuth();
+  const { data: profile } = useProfile();
+  const NAV = buildNav((profile?.practice_type as PracticeType | undefined) ?? null);
   const [collapsed, setCollapsed] = useState(false);
 
   useEffect(() => {

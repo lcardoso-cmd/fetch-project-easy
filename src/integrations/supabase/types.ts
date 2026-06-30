@@ -14,8 +14,53 @@ export type Database = {
   }
   public: {
     Tables: {
+      case_quesitos: {
+        Row: {
+          answer: string | null
+          case_id: string
+          created_at: string
+          id: string
+          number: number | null
+          question: string
+          source: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          answer?: string | null
+          case_id: string
+          created_at?: string
+          id?: string
+          number?: number | null
+          question: string
+          source: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          answer?: string | null
+          case_id?: string
+          created_at?: string
+          id?: string
+          number?: number | null
+          question?: string
+          source?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "case_quesitos_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cases: {
         Row: {
+          assisted_party_name: string | null
           case_number: string | null
           case_type: string | null
           client_name: string | null
@@ -23,7 +68,13 @@ export type Database = {
           description: string | null
           id: string
           jurisdiction: string | null
+          matter_kind: string
           parties: Json | null
+          perito_appointment_date: string | null
+          perito_deadline_date: string | null
+          perito_fee_cents: number | null
+          perito_nomination_ref: string | null
+          practice_type: string | null
           represented_party: Json | null
           status: string
           summary: string | null
@@ -34,6 +85,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          assisted_party_name?: string | null
           case_number?: string | null
           case_type?: string | null
           client_name?: string | null
@@ -41,7 +93,13 @@ export type Database = {
           description?: string | null
           id?: string
           jurisdiction?: string | null
+          matter_kind?: string
           parties?: Json | null
+          perito_appointment_date?: string | null
+          perito_deadline_date?: string | null
+          perito_fee_cents?: number | null
+          perito_nomination_ref?: string | null
+          practice_type?: string | null
           represented_party?: Json | null
           status?: string
           summary?: string | null
@@ -52,6 +110,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          assisted_party_name?: string | null
           case_number?: string | null
           case_type?: string | null
           client_name?: string | null
@@ -59,7 +118,13 @@ export type Database = {
           description?: string | null
           id?: string
           jurisdiction?: string | null
+          matter_kind?: string
           parties?: Json | null
+          perito_appointment_date?: string | null
+          perito_deadline_date?: string | null
+          perito_fee_cents?: number | null
+          perito_nomination_ref?: string | null
+          practice_type?: string | null
           represented_party?: Json | null
           status?: string
           summary?: string | null
@@ -282,7 +347,10 @@ export type Database = {
           full_name: string | null
           id: string
           oab_number: string | null
+          onboarding_completed: boolean
           phone: string | null
+          practice_type: string
+          specialty: string | null
           updated_at: string
         }
         Insert: {
@@ -290,7 +358,10 @@ export type Database = {
           full_name?: string | null
           id: string
           oab_number?: string | null
+          onboarding_completed?: boolean
           phone?: string | null
+          practice_type?: string
+          specialty?: string | null
           updated_at?: string
         }
         Update: {
@@ -298,7 +369,10 @@ export type Database = {
           full_name?: string | null
           id?: string
           oab_number?: string | null
+          onboarding_completed?: boolean
           phone?: string | null
+          practice_type?: string
+          specialty?: string | null
           updated_at?: string
         }
         Relationships: []

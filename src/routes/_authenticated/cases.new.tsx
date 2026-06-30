@@ -31,6 +31,13 @@ import {
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
+import { useProfile } from "@/hooks/use-profile";
+import {
+  defaultMatterKindFor,
+  labelsForMatter,
+  MATTER_KIND_LABELS,
+  type MatterKind,
+} from "@/lib/practice-labels";
 import {
   createCase,
   extractCaseDataFromDocument,
@@ -87,6 +94,7 @@ function NewCasePage() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const qc = useQueryClient();
+  const { data: profile } = useProfile();
 
   const createCaseFn = useServerFn(createCase);
   const extractFn = useServerFn(extractCaseDataFromDocument);
@@ -100,6 +108,19 @@ function NewCasePage() {
     queryFn: () => listTeamFn(),
   });
 
+  // matter_kind herda do perfil mas é editável por caso.
+  const profilePractice = (profile?.practice_type ?? null) as
+    | "advogado"
+    | "perito_judicial"
+    | "assistente_tecnico"
+    | null;
+  const defaultKind = defaultMatterKindFor(profilePractice);
+  const [matterKind, setMatterKind] = useState<MatterKind>(defaultKind);
+  useEffect(() => {
+    setMatterKind(defaultMatterKindFor(profilePractice));
+  }, [profilePractice]);
+  const labels = labelsForMatter(matterKind);
+
   // form state
   const [title, setTitle] = useState("");
   const [clientName, setClientName] = useState("");
@@ -110,6 +131,13 @@ function NewCasePage() {
   const [parties, setParties] = useState<Party[]>([]);
   const [representedIdx, setRepresentedIdx] = useState<number | null>(null);
   const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
+
+  // Campos extras de perícia / assistência técnica
+  const [assistedPartyName, setAssistedPartyName] = useState("");
+  const [peritoFee, setPeritoFee] = useState(""); // em reais (string), convertido em cents na submissão
+  const [peritoAppointmentDate, setPeritoAppointmentDate] = useState("");
+  const [peritoDeadlineDate, setPeritoDeadlineDate] = useState("");
+  const [peritoNominationRef, setPeritoNominationRef] = useState("");
 
   // upload state
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -229,16 +257,16 @@ function NewCasePage() {
       };
       setUploaded(meta);
 
-      const res = await extractFn({ data: meta });
+      const res = await extractFn({ data: { ...meta, matter_kind: matterKind } });
       applyExtracted(res.extracted);
       const missingRaw = res.missing ?? [];
       setMissingFields(missingRaw);
       setExtractionWarnings(res.warnings ?? []);
       setReviewConfirmed(false);
       if (missingRaw.length) {
-        const labels = missingRaw.map((f) => FIELD_LABELS[f] ?? f);
+        const missingLabels = missingRaw.map((f) => FIELD_LABELS[f] ?? f);
         toast.warning("Alguns dados não foram identificados", {
-          description: `Preencha manualmente: ${labels.join(", ")}.`,
+          description: `Preencha manualmente: ${missingLabels.join(", ")}.`,
         });
       } else {
         toast.success("Dados extraídos do documento");
@@ -293,7 +321,7 @@ function NewCasePage() {
     if (!title.trim()) errors.title = "Informe um título para o caso.";
     else if (title.trim().length < 3) errors.title = "O título precisa ter ao menos 3 caracteres.";
 
-    if (!clientName.trim()) errors.client_name = "Informe o nome do cliente.";
+    if (!clientName.trim()) errors.client_name = `Informe ${labels.clientLabel.toLowerCase()}.`;
 
     if (caseNumber.trim()) {
       const digits = caseNumber.replace(/\D/g, "");
@@ -309,7 +337,17 @@ function NewCasePage() {
     if (cleanParties.length === 0) {
       errors.parties = "Adicione ao menos uma parte com nome preenchido.";
     } else if (representedIdx === null || !parties[representedIdx]?.name.trim()) {
-      errors.represented = "Marque qual parte você representa.";
+      errors.represented = `Marque qual parte você ${labels.representVerb.toLowerCase()}.`;
+    }
+
+    if (matterKind === "assistencia_tecnica" && !assistedPartyName.trim()) {
+      errors.assisted_party_name = "Informe a parte assistida.";
+    }
+    if (matterKind === "pericia" && peritoFee.trim()) {
+      const reais = parseFloat(peritoFee.replace(",", "."));
+      if (isNaN(reais) || reais < 0) {
+        errors.perito_fee = "Honorários inválidos — use valor numérico em reais.";
+      }
     }
 
     return errors;
@@ -348,6 +386,10 @@ function NewCasePage() {
           ? cleanParties[representedIdx]
           : null;
 
+      const feeReais = parseFloat(peritoFee.replace(",", "."));
+      const feeCents =
+        !isNaN(feeReais) && peritoFee.trim() ? Math.round(feeReais * 100) : null;
+
       const newCase = await createCaseFn({
         data: {
           title: title.trim(),
@@ -360,6 +402,21 @@ function NewCasePage() {
           represented_party: represented,
           team_member_ids: selectedMembers,
           status: "active",
+          matter_kind: matterKind,
+          practice_type:
+            matterKind === "pericia"
+              ? "perito_judicial"
+              : matterKind === "assistencia_tecnica"
+                ? "assistente_tecnico"
+                : "advogado",
+          assisted_party_name:
+            matterKind === "assistencia_tecnica" ? assistedPartyName.trim() || null : null,
+          perito_fee_cents: matterKind === "pericia" ? feeCents : null,
+          perito_appointment_date:
+            matterKind === "pericia" ? peritoAppointmentDate || null : null,
+          perito_deadline_date: matterKind === "pericia" ? peritoDeadlineDate || null : null,
+          perito_nomination_ref:
+            matterKind === "pericia" ? peritoNominationRef.trim() || null : null,
         },
       });
 
@@ -458,13 +515,49 @@ function NewCasePage() {
             <ArrowLeft className="mr-1 h-4 w-4" /> Voltar
           </Link>
         </Button>
-        <h1 className="text-3xl font-bold font-heading tracking-tight">Novo caso</h1>
+        <h1 className="text-3xl font-bold font-heading tracking-tight">
+          Nova {labels.entitySingular.toLowerCase()}
+        </h1>
         <p className="mt-1 text-muted-foreground">
           Importe um documento para preencher automaticamente, ou preencha manualmente.
         </p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Tipo de matéria — define vocabulário e campos extras */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg">Tipo de matéria</CardTitle>
+            <CardDescription>
+              Define o vocabulário e os campos extras (perícia ou assistência técnica).
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-2 md:grid-cols-3">
+              {(Object.keys(MATTER_KIND_LABELS) as MatterKind[]).map((k) => {
+                const selected = matterKind === k;
+                return (
+                  <button
+                    key={k}
+                    type="button"
+                    onClick={() => setMatterKind(k)}
+                    className={`text-left rounded-lg border p-3 text-sm transition-colors ${
+                      selected
+                        ? "border-accent bg-accent/10 ring-1 ring-accent/40"
+                        : "border-border hover:border-accent/40"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium">{MATTER_KIND_LABELS[k]}</span>
+                      {selected && <CheckCircle2 className="h-4 w-4 text-accent" />}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Importar documento */}
         <Card>
           <CardHeader>
@@ -613,7 +706,9 @@ function NewCasePage() {
         <Card>
           <CardHeader>
             <CardTitle className="text-lg">
-              {uploaded ? "Dados do caso — edite o que precisar" : "Dados do caso"}
+              {uploaded
+                ? `Dados ${matterKind === "processo" ? "do caso" : "da " + labels.entitySingular.toLowerCase()} — edite o que precisar`
+                : `Dados ${matterKind === "processo" ? "do caso" : "da " + labels.entitySingular.toLowerCase()}`}
             </CardTitle>
             {uploaded && (
               <CardDescription>
@@ -637,7 +732,7 @@ function NewCasePage() {
               <ErrorMsg k="title" />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="client">Cliente *</Label>
+              <Label htmlFor="client">{labels.clientLabel} *</Label>
               <Input
                 id="client"
                 value={clientName}
@@ -726,6 +821,95 @@ function NewCasePage() {
           </CardContent>
         </Card>
 
+        {/* Campos específicos: Perícia */}
+        {matterKind === "pericia" && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Dados da nomeação pericial</CardTitle>
+              <CardDescription>
+                Honorários, prazos e referência da nomeação.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="perito_nomination_ref">Referência da nomeação</Label>
+                <Input
+                  id="perito_nomination_ref"
+                  value={peritoNominationRef}
+                  onChange={(e) => setPeritoNominationRef(e.target.value)}
+                  placeholder="Ex.: despacho de 12/03/2026"
+                  maxLength={200}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="perito_fee">Honorários periciais (R$)</Label>
+                <Input
+                  id="perito_fee"
+                  value={peritoFee}
+                  onChange={(e) => setPeritoFee(e.target.value)}
+                  onBlur={() => markTouched("perito_fee")}
+                  placeholder="Ex.: 3500,00"
+                  inputMode="decimal"
+                  aria-invalid={showError("perito_fee") || undefined}
+                  className={errorRing("perito_fee")}
+                />
+                <ErrorMsg k="perito_fee" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="perito_appointment_date">Data de nomeação</Label>
+                <Input
+                  id="perito_appointment_date"
+                  type="date"
+                  value={peritoAppointmentDate}
+                  onChange={(e) => setPeritoAppointmentDate(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="perito_deadline_date">Prazo para entrega do laudo</Label>
+                <Input
+                  id="perito_deadline_date"
+                  type="date"
+                  value={peritoDeadlineDate}
+                  onChange={(e) => setPeritoDeadlineDate(e.target.value)}
+                />
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Campos específicos: Assistência Técnica */}
+        {matterKind === "assistencia_tecnica" && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Dados da assistência</CardTitle>
+              <CardDescription>
+                Identifique qual parte do processo você está assistindo tecnicamente.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="assisted_party_name">Parte assistida *</Label>
+                <Input
+                  id="assisted_party_name"
+                  value={assistedPartyName}
+                  onChange={(e) => setAssistedPartyName(e.target.value)}
+                  onBlur={() => markTouched("assisted_party_name")}
+                  placeholder="Nome da parte contratante"
+                  maxLength={200}
+                  aria-invalid={showError("assisted_party_name") || undefined}
+                  className={errorRing("assisted_party_name")}
+                />
+                <ErrorMsg k="assisted_party_name" />
+                <p className="text-xs text-muted-foreground">
+                  Isso aparece nos pareceres técnicos gerados pelo JurisMind.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+
+
         {/* Partes */}
         <Card
           className={
@@ -759,14 +943,14 @@ function NewCasePage() {
                       ? "border-accent bg-accent text-accent-foreground"
                       : "border-border text-muted-foreground hover:border-accent/50"
                   }`}
-                  title="Marcar como parte representada"
+                  title={`Marcar como parte que você ${labels.representVerb.toLowerCase()}`}
                 >
                   {representedIdx === i ? (
                     <>
-                      <CheckCircle2 className="h-3.5 w-3.5" /> Represento
+                      <CheckCircle2 className="h-3.5 w-3.5" /> {labels.representVerb}
                     </>
                   ) : (
-                    "Represento"
+                    labels.representVerb
                   )}
                 </button>
                 <Input

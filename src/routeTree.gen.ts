@@ -14,6 +14,7 @@ import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
 import { Route as AuthenticatedProposalRouteImport } from './routes/_authenticated/proposal'
+import { Route as AuthenticatedOnboardingRouteImport } from './routes/_authenticated/onboarding'
 import { Route as AuthenticatedMyTasksRouteImport } from './routes/_authenticated/my-tasks'
 import { Route as AuthenticatedMyFilesRouteImport } from './routes/_authenticated/my-files'
 import { Route as AuthenticatedMonitoringRouteImport } from './routes/_authenticated/monitoring'
@@ -52,6 +53,11 @@ const AuthenticatedSettingsRoute = AuthenticatedSettingsRouteImport.update({
 const AuthenticatedProposalRoute = AuthenticatedProposalRouteImport.update({
   id: '/proposal',
   path: '/proposal',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedOnboardingRoute = AuthenticatedOnboardingRouteImport.update({
+  id: '/onboarding',
+  path: '/onboarding',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
 const AuthenticatedMyTasksRoute = AuthenticatedMyTasksRouteImport.update({
@@ -145,6 +151,7 @@ export interface FileRoutesByFullPath {
   '/monitoring': typeof AuthenticatedMonitoringRoute
   '/my-files': typeof AuthenticatedMyFilesRoute
   '/my-tasks': typeof AuthenticatedMyTasksRoute
+  '/onboarding': typeof AuthenticatedOnboardingRoute
   '/proposal': typeof AuthenticatedProposalRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/cases/$caseId': typeof AuthenticatedCasesCaseIdRoute
@@ -165,6 +172,7 @@ export interface FileRoutesByTo {
   '/monitoring': typeof AuthenticatedMonitoringRoute
   '/my-files': typeof AuthenticatedMyFilesRoute
   '/my-tasks': typeof AuthenticatedMyTasksRoute
+  '/onboarding': typeof AuthenticatedOnboardingRoute
   '/proposal': typeof AuthenticatedProposalRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/cases/$caseId': typeof AuthenticatedCasesCaseIdRoute
@@ -188,6 +196,7 @@ export interface FileRoutesById {
   '/_authenticated/monitoring': typeof AuthenticatedMonitoringRoute
   '/_authenticated/my-files': typeof AuthenticatedMyFilesRoute
   '/_authenticated/my-tasks': typeof AuthenticatedMyTasksRoute
+  '/_authenticated/onboarding': typeof AuthenticatedOnboardingRoute
   '/_authenticated/proposal': typeof AuthenticatedProposalRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/_authenticated/cases/$caseId': typeof AuthenticatedCasesCaseIdRoute
@@ -211,6 +220,7 @@ export interface FileRouteTypes {
     | '/monitoring'
     | '/my-files'
     | '/my-tasks'
+    | '/onboarding'
     | '/proposal'
     | '/settings'
     | '/cases/$caseId'
@@ -231,6 +241,7 @@ export interface FileRouteTypes {
     | '/monitoring'
     | '/my-files'
     | '/my-tasks'
+    | '/onboarding'
     | '/proposal'
     | '/settings'
     | '/cases/$caseId'
@@ -253,6 +264,7 @@ export interface FileRouteTypes {
     | '/_authenticated/monitoring'
     | '/_authenticated/my-files'
     | '/_authenticated/my-tasks'
+    | '/_authenticated/onboarding'
     | '/_authenticated/proposal'
     | '/_authenticated/settings'
     | '/_authenticated/cases/$caseId'
@@ -304,6 +316,13 @@ declare module '@tanstack/react-router' {
       path: '/proposal'
       fullPath: '/proposal'
       preLoaderRoute: typeof AuthenticatedProposalRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/onboarding': {
+      id: '/_authenticated/onboarding'
+      path: '/onboarding'
+      fullPath: '/onboarding'
+      preLoaderRoute: typeof AuthenticatedOnboardingRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/my-tasks': {
@@ -442,6 +461,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedMonitoringRoute: typeof AuthenticatedMonitoringRoute
   AuthenticatedMyFilesRoute: typeof AuthenticatedMyFilesRoute
   AuthenticatedMyTasksRoute: typeof AuthenticatedMyTasksRoute
+  AuthenticatedOnboardingRoute: typeof AuthenticatedOnboardingRoute
   AuthenticatedProposalRoute: typeof AuthenticatedProposalRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
 }
@@ -457,6 +477,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedMonitoringRoute: AuthenticatedMonitoringRoute,
   AuthenticatedMyFilesRoute: AuthenticatedMyFilesRoute,
   AuthenticatedMyTasksRoute: AuthenticatedMyTasksRoute,
+  AuthenticatedOnboardingRoute: AuthenticatedOnboardingRoute,
   AuthenticatedProposalRoute: AuthenticatedProposalRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
 }
