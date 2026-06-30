@@ -156,6 +156,7 @@ const FromDocSchema = z.object({
   filename: z.string().min(1).max(300),
   file_type: z.string().max(120),
   file_size: z.number().int().nonnegative(),
+  matter_kind: MatterKindEnum.optional().default("processo"),
 });
 
 async function extractTextFromBlob(blob: Blob, filename: string, fileType: string) {
