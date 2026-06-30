@@ -38,6 +38,9 @@ function CaseDetailPage() {
   const listDocsFn = useServerFn(listDocuments);
   const deleteDocFn = useServerFn(deleteDocument);
   const summarizeFn = useServerFn(summarizeCase);
+  const listEventsFn = useServerFn(listEvents);
+  const listTasksFn = useServerFn(listTasks);
+  const toggleTaskFn = useServerFn(toggleTask);
 
   const { data: caseData, isLoading } = useQuery({
     queryKey: ["case", caseId],
@@ -47,6 +50,14 @@ function CaseDetailPage() {
     queryKey: ["documents", caseId],
     queryFn: () => listDocsFn({ data: { case_id: caseId } }),
     refetchInterval: 5000,
+  });
+  const { data: events = [] } = useQuery({
+    queryKey: ["events", caseId],
+    queryFn: () => listEventsFn({ data: { case_id: caseId } }),
+  });
+  const { data: tasks = [] } = useQuery({
+    queryKey: ["tasks", caseId],
+    queryFn: () => listTasksFn({ data: { case_id: caseId, status: "all" } }),
   });
 
   const [summarizing, setSummarizing] = useState(false);
