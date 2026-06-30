@@ -197,10 +197,17 @@ function NewCasePage() {
       prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
     );
 
+  const needsReview =
+    !!uploaded && (missingFields.length > 0 || extractionWarnings.length > 0);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) {
       toast.error("Informe um título para o caso");
+      return;
+    }
+    if (needsReview && !reviewConfirmed) {
+      toast.error("Revise os avisos da extração e confirme antes de criar o caso");
       return;
     }
     setSubmitting(true);
