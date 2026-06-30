@@ -217,15 +217,17 @@ CONTEXTO DOS DOCUMENTOS:
 ${contextBlock}`;
 
     // Mensagem do usuário (multimodal se houver imagens)
-    const userContent =
+    const userContent:
+      | string
+      | Array<Record<string, unknown>> =
       data.images && data.images.length > 0
-        ? ([
+        ? [
             { type: "text", text: data.question },
             ...data.images.map((url) => ({
-              type: "image_url" as const,
+              type: "image_url",
               image_url: { url },
             })),
-          ] as unknown as string)
+          ]
         : data.question;
 
     const messages = [
