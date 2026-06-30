@@ -5,6 +5,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 const AskSchema = z.object({
   case_id: z.string().uuid().optional(),
   question: z.string().min(1).max(4000),
+  selected_doc_ids: z.array(z.string().uuid()).optional(),
   history: z
     .array(
       z.object({
