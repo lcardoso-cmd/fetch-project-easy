@@ -92,12 +92,12 @@ function LandingPage() {
         <div className="relative mx-auto max-w-6xl px-4 py-24 text-center">
           <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-accent/20 px-3 py-1 text-xs font-semibold text-accent">
             <Sparkles className="h-3 w-3" />
-            IA aplicada à advocacia
+            JurisMind aplicado à advocacia
           </div>
           <h1 className="font-heading text-5xl font-extrabold tracking-tight md:text-6xl">
             Sua mente jurídica,
             <br />
-            potencializada por IA.
+            potencializada por JurisMind.
           </h1>
           <p className="mx-auto mt-6 max-w-2xl text-lg text-primary-foreground/80">
             JurisMind transforma a forma como você lida com documentos: faça upload, pergunte,
