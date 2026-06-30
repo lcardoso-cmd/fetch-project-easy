@@ -360,8 +360,10 @@ function NewCasePage() {
                 <AlertTriangle className="h-5 w-5" /> Revisar dados extraídos
               </CardTitle>
               <CardDescription>
-                A IA preencheu os campos abaixo a partir do documento. Confira,
-                edite o que precisar e marque a confirmação para criar o caso.
+                A IA preencheu os campos do formulário abaixo a partir do documento.
+                <strong> Qualquer alteração que você fizer nos campos será salva
+                no caso</strong> — eles não são apenas visualização. Marque a
+                confirmação quando estiver satisfeito.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
@@ -404,10 +406,17 @@ function NewCasePage() {
         )}
 
 
-        {/* Dados do caso */}
+        {/* Dados do caso — editáveis; o que estiver aqui é o que será salvo */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">Dados do caso</CardTitle>
+            <CardTitle className="text-lg">
+              {uploaded ? "Dados do caso — edite o que precisar" : "Dados do caso"}
+            </CardTitle>
+            {uploaded && (
+              <CardDescription>
+                Estes são os valores que serão enviados ao confirmar.
+              </CardDescription>
+            )}
           </CardHeader>
           <CardContent className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2 md:col-span-2">
