@@ -152,6 +152,9 @@ function NewCasePage() {
         description: "descrição",
       };
       const missingLabels = (res.missing ?? []).map((f) => FIELD_LABELS[f] ?? f);
+      setMissingFields(missingLabels);
+      setExtractionWarnings(res.warnings ?? []);
+      setReviewConfirmed(false);
       if (missingLabels.length) {
         toast.warning("Alguns dados não foram identificados", {
           description: `Preencha manualmente: ${missingLabels.join(", ")}.`,
@@ -174,6 +177,9 @@ function NewCasePage() {
       await supabase.storage.from("documents").remove([uploaded.storage_path]).catch(() => {});
     }
     setUploaded(null);
+    setMissingFields([]);
+    setExtractionWarnings([]);
+    setReviewConfirmed(false);
   };
 
   const addParty = () => setParties([...parties, { role: "", name: "" }]);
