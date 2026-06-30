@@ -76,6 +76,49 @@ interface CaseSummary {
   represented_party?: { role: string; name: string } | null;
 }
 
+const QUICK_ACTIONS: Array<{ label: string; prompt: string }> = [
+  {
+    label: "Resumo do caso",
+    prompt:
+      "Faça um resumo executivo do caso em até 8 linhas: partes, objeto, pedidos, valor envolvido e estágio atual. Cite as fontes.",
+  },
+  {
+    label: "Linha do tempo",
+    prompt:
+      "Monte uma linha do tempo cronológica dos principais atos processuais e fatos relevantes, com datas (dd/mm/aaaa) e fonte de cada item.",
+  },
+  {
+    label: "Pontos críticos",
+    prompt:
+      "Liste os pontos críticos, riscos e teses adversas mais fortes contra a parte representada, com nível de risco (alto/médio/baixo) e citação das fontes.",
+  },
+  {
+    label: "Quesitos periciais",
+    prompt:
+      "Proponha 10 quesitos periciais técnicos pertinentes ao objeto da causa, organizados por tema e fundamentados nos documentos do caso.",
+  },
+  {
+    label: "Petição inicial",
+    prompt:
+      "Use a ferramenta create_petition para redigir uma petição inicial completa (qualificação, fatos, fundamentos, pedidos e valor da causa) a partir dos documentos selecionados.",
+  },
+  {
+    label: "Manifestação técnica",
+    prompt:
+      "Use create_petition para elaborar uma manifestação técnica respondendo aos pontos centrais do laudo, com tópicos e fundamentação técnica e jurídica.",
+  },
+  {
+    label: "Planilha de cálculo",
+    prompt:
+      "Use create_table para gerar uma planilha com os valores envolvidos no caso (rubrica, base de cálculo, índice, valor original, valor corrigido).",
+  },
+  {
+    label: "Apresentação",
+    prompt:
+      "Use create_presentation para preparar uma apresentação executiva com 8 slides cobrindo: contexto, partes, fatos, teses, pontos críticos, valores, estratégia e próximos passos.",
+  },
+];
+
 export function JurisMindChat({
   caseId,
   caseInfo,
