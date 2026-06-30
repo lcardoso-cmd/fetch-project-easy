@@ -127,8 +127,10 @@ export const getOrCreateCaseConversation = createServerFn({ method: "POST" })
     if (cErr) throw cErr;
     if (!caseRow) throw new Error("Caso não encontrado ou sem acesso.");
 
-    // Find or create conversation
-    const existing = await context.supabase
+    // Find or create conversation (use admin to bypass RLS chicken-and-egg:
+    // user must be a participant to SELECT, but participants are added after insert)
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const existing = await supabaseAdmin
       .from("conversations")
       .select("*")
       .eq("case_id", data.case_id)
@@ -136,7 +138,7 @@ export const getOrCreateCaseConversation = createServerFn({ method: "POST" })
       .maybeSingle();
     let conv = existing.data;
     if (!conv) {
-      const ins = await context.supabase
+      const ins = await supabaseAdmin
         .from("conversations")
         .insert({
           kind: "case",
@@ -151,7 +153,7 @@ export const getOrCreateCaseConversation = createServerFn({ method: "POST" })
     }
 
     // Compute desired participants: case owner + accepted invited members
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    // (supabaseAdmin already imported above)
     const memberIds = (caseRow.team_member_ids as string[]) ?? [];
     const linkedUserIds = new Set<string>([caseRow.user_id]);
     if (memberIds.length > 0) {
