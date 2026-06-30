@@ -87,10 +87,55 @@ function NewCasePage() {
   const [extracting, setExtracting] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  // review state — exibido só quando houve extração via documento
+  // review state — exibido só quando houve extração via documento.
+  // Persistido em localStorage para sobreviver a reload da página.
+  const REVIEW_STORAGE_KEY = user ? `jurismind:new-case-review:${user.id}` : null;
   const [missingFields, setMissingFields] = useState<string[]>([]);
   const [extractionWarnings, setExtractionWarnings] = useState<string[]>([]);
   const [reviewConfirmed, setReviewConfirmed] = useState(false);
+  const [hydratedReview, setHydratedReview] = useState(false);
+
+  // Carrega estado salvo ao montar
+  useEffect(() => {
+    if (!REVIEW_STORAGE_KEY) return;
+    try {
+      const raw = localStorage.getItem(REVIEW_STORAGE_KEY);
+      if (raw) {
+        const s = JSON.parse(raw) as {
+          uploaded?: UploadedDoc | null;
+          missingFields?: string[];
+          extractionWarnings?: string[];
+          reviewConfirmed?: boolean;
+        };
+        if (s.uploaded) setUploaded(s.uploaded);
+        if (Array.isArray(s.missingFields)) setMissingFields(s.missingFields);
+        if (Array.isArray(s.extractionWarnings)) setExtractionWarnings(s.extractionWarnings);
+        if (typeof s.reviewConfirmed === "boolean") setReviewConfirmed(s.reviewConfirmed);
+      }
+    } catch {
+      // ignora estado corrompido
+    } finally {
+      setHydratedReview(true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [REVIEW_STORAGE_KEY]);
+
+  // Persiste mudanças relevantes
+  useEffect(() => {
+    if (!REVIEW_STORAGE_KEY || !hydratedReview) return;
+    try {
+      if (!uploaded && missingFields.length === 0 && extractionWarnings.length === 0 && !reviewConfirmed) {
+        localStorage.removeItem(REVIEW_STORAGE_KEY);
+      } else {
+        localStorage.setItem(
+          REVIEW_STORAGE_KEY,
+          JSON.stringify({ uploaded, missingFields, extractionWarnings, reviewConfirmed }),
+        );
+      }
+    } catch {
+      // quota / indisponível — silencioso
+    }
+  }, [REVIEW_STORAGE_KEY, hydratedReview, uploaded, missingFields, extractionWarnings, reviewConfirmed]);
 
   // quick add team
   const [newMemberName, setNewMemberName] = useState("");
