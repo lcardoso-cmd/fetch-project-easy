@@ -40,6 +40,8 @@ function SettingsPage() {
   const listFn = useServerFn(listTeamMembers);
   const createFn = useServerFn(createTeamMember);
   const deleteFn = useServerFn(deleteTeamMember);
+  const updateProfileFn = useServerFn(updateMyProfile);
+  const { data: profile } = useProfile();
 
   const { data: team = [], isLoading } = useQuery({
     queryKey: ["team-members"],
@@ -49,6 +51,19 @@ function SettingsPage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [role, setRole] = useState("");
+
+  // Perfil profissional
+  const [practiceType, setPracticeType] = useState<PracticeType>("advogado");
+  const [specialty, setSpecialty] = useState("");
+  const [fullName, setFullName] = useState("");
+
+  useEffect(() => {
+    if (profile) {
+      setPracticeType((profile.practice_type as PracticeType) ?? "advogado");
+      setSpecialty(profile.specialty ?? "");
+      setFullName(profile.full_name ?? "");
+    }
+  }, [profile]);
 
   const createMut = useMutation({
     mutationFn: () => createFn({ data: { name: name.trim(), email: email.trim(), role: role.trim() } }),
@@ -71,12 +86,104 @@ function SettingsPage() {
     onError: (e: Error) => toast.error(e.message || "Falha ao remover"),
   });
 
+  const profileMut = useMutation({
+    mutationFn: () =>
+      updateProfileFn({
+        data: {
+          practice_type: practiceType,
+          specialty: practiceType === "advogado" ? null : specialty.trim() || null,
+          full_name: fullName.trim() || null,
+        },
+      }),
+    onSuccess: () => {
+      toast.success("Perfil atualizado");
+      qc.invalidateQueries({ queryKey: ["profile"] });
+    },
+    onError: (e: Error) => toast.error(e.message || "Falha ao salvar perfil"),
+  });
+
+  const needsSpecialty = practiceType !== "advogado";
+
   return (
     <div className="space-y-6 max-w-3xl">
       <div>
         <h1 className="text-3xl font-bold font-heading tracking-tight">Configurações</h1>
-        <p className="mt-1 text-muted-foreground">Gerencie sua equipe e preferências.</p>
+        <p className="mt-1 text-muted-foreground">Gerencie seu perfil profissional, equipe e preferências.</p>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg flex items-center gap-2">
+            <UserCog className="h-5 w-5" /> Perfil profissional
+          </CardTitle>
+          <CardDescription>
+            Define o vocabulário do app e os modelos de documento sugeridos.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-1">
+              <Label htmlFor="p-name">Nome</Label>
+              <Input
+                id="p-name"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                maxLength={160}
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="p-type">Atuação principal</Label>
+              <Select value={practiceType} onValueChange={(v) => setPracticeType(v as PracticeType)}>
+                <SelectTrigger id="p-type">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {PRACTICE_TYPES.map((p) => (
+                    <SelectItem key={p} value={p}>
+                      {PRACTICE_TYPE_LABELS[p]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          {needsSpecialty && (
+            <div className="space-y-1">
+              <Label htmlFor="p-specialty">Especialidade</Label>
+              <Input
+                id="p-specialty"
+                value={specialty}
+                onChange={(e) => setSpecialty(e.target.value)}
+                maxLength={120}
+                placeholder="Ex.: Contábil, Engenharia civil, Médica..."
+              />
+              <div className="flex flex-wrap gap-1.5 pt-1">
+                {SPECIALTY_SUGGESTIONS.map((s) => (
+                  <button
+                    key={s}
+                    type="button"
+                    onClick={() => setSpecialty(s)}
+                    className="text-xs rounded-full border border-border px-2.5 py-1 text-muted-foreground hover:border-accent/40"
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+          <div className="flex justify-end">
+            <Button
+              size="sm"
+              onClick={() => profileMut.mutate()}
+              disabled={profileMut.isPending}
+            >
+              {profileMut.isPending && <Loader2 className="mr-1 h-3 w-3 animate-spin" />}
+              Salvar perfil
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
 
       <Card>
         <CardHeader>
