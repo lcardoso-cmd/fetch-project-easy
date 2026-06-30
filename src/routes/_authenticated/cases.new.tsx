@@ -38,7 +38,7 @@ import {
   MATTER_KIND_LABELS,
   type MatterKind,
 } from "@/lib/practice-labels";
-import { PARTY_RELATIONS, representedRelationFor } from "@/lib/party-relations";
+import { PARTY_RELATIONS, representedRelationFor, guessRelation } from "@/lib/party-relations";
 import {
   createCase,
   extractCaseDataFromDocument,
