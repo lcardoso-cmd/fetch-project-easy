@@ -532,39 +532,12 @@ function NewCasePage() {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Tipo de matéria — define vocabulário e campos extras */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg">Tipo de matéria</CardTitle>
-            <CardDescription>
-              Define o vocabulário e os campos extras (perícia ou assistência técnica).
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-2 md:grid-cols-3">
-              {(Object.keys(MATTER_KIND_LABELS) as MatterKind[]).map((k) => {
-                const selected = matterKind === k;
-                return (
-                  <button
-                    key={k}
-                    type="button"
-                    onClick={() => setMatterKind(k)}
-                    className={`text-left rounded-lg border p-3 text-sm transition-colors ${
-                      selected
-                        ? "border-accent bg-accent/10 ring-1 ring-accent/40"
-                        : "border-border hover:border-accent/40"
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="font-medium">{MATTER_KIND_LABELS[k]}</span>
-                      {selected && <CheckCircle2 className="h-4 w-4 text-accent" />}
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </CardContent>
-        </Card>
+        {/* Tipo de matéria — compacto, default vindo do perfil, editável via "Trocar" */}
+        <MatterKindBar
+          matterKind={matterKind}
+          setMatterKind={setMatterKind}
+          fromProfile={!!profilePractice}
+        />
 
         {/* Importar documento */}
         <Card>
