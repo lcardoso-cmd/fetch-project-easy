@@ -132,6 +132,34 @@ export function CaseSummaryCard({
                   )}
                   Atualizar
                 </Button>
+                <Sheet open={expanded} onOpenChange={setExpanded}>
+                  <SheetTrigger asChild>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={busy || !summary}
+                    >
+                      <Maximize2 className="mr-2 h-4 w-4" />
+                      Expandir
+                    </Button>
+                  </SheetTrigger>
+                  <SheetContent
+                    side="right"
+                    className="flex w-full flex-col p-0 sm:max-w-3xl lg:max-w-4xl"
+                  >
+                    <SheetHeader className="border-b p-4">
+                      <SheetTitle className="flex items-center gap-2 truncate">
+                        <BookCopy className="h-5 w-5 text-primary" />
+                        Resumo do caso — {caseTitle}
+                      </SheetTitle>
+                    </SheetHeader>
+                    <ScrollArea className="min-h-0 flex-1 p-6">
+                      <p className="whitespace-pre-wrap text-sm leading-relaxed text-foreground">
+                        {summary ? stripMarkdown(summary) : "Nenhum resumo gerado."}
+                      </p>
+                    </ScrollArea>
+                  </SheetContent>
+                </Sheet>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button size="sm" variant="outline" disabled={!!exporting}>
