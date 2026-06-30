@@ -33,7 +33,8 @@ export const askWithRag = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((i: unknown) => AskSchema.parse(i))
   .handler(async ({ data, context }) => {
-    const { embedTexts, chatWithTools, type ToolDef } = await import("./ai.server");
+    const { embedTexts, chatWithTools } = await import("./ai.server");
+    type ToolDef = import("./ai.server").ToolDef;
 
     // 1. Embedding da pergunta + busca semântica
     const [qEmb] = await embedTexts([data.question]);
