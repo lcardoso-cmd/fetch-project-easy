@@ -58,6 +58,7 @@ export function CaseSummaryCard({
   const qc = useQueryClient();
   const [busy, setBusy] = useState(false);
   const [exporting, setExporting] = useState<"docx" | "pptx" | null>(null);
+  const [expanded, setExpanded] = useState(false);
 
   const generate = async () => {
     setBusy(true);
