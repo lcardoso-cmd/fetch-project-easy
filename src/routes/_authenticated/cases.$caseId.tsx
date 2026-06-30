@@ -172,6 +172,24 @@ function CaseDetailPage() {
               <Badge variant="secondary">{caseData.case_type}</Badge>
             )}
           </div>
+          {caseData.parties && caseData.parties.length > 0 && (
+            <div className="mt-3">
+              <p className="text-sm font-medium text-foreground">
+                Partes Envolvidas:
+              </p>
+              <ul className="mt-1 space-y-0.5">
+                {caseData.parties.map((party, i) => (
+                  <li key={i} className="text-sm text-muted-foreground">
+                    <span className="font-medium text-foreground">
+                      {party.role}:
+                    </span>{" "}
+                    {party.name}
+                    {party.relation ? ` (${party.relation})` : ""}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
         <div className="flex items-center gap-2">
           <Button
