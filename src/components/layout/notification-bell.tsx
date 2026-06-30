@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -176,6 +176,14 @@ export function NotificationBell() {
               </button>
             ))
           )}
+        </div>
+        <div className="border-t px-3 py-2 text-center">
+          <Link
+            to="/notifications"
+            className="text-xs font-medium text-primary hover:underline"
+          >
+            Ver todas as notificações
+          </Link>
         </div>
       </PopoverContent>
     </Popover>
