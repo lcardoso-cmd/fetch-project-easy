@@ -116,6 +116,9 @@ function NewCasePage() {
   const [uploaded, setUploaded] = useState<UploadedDoc | null>(null);
   const [extracting, setExtracting] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [attemptedSubmit, setAttemptedSubmit] = useState(false);
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
+  const markTouched = (k: string) => setTouched((t) => (t[k] ? t : { ...t, [k]: true }));
 
   // review state — exibido só quando houve extração via documento.
   // Persistido em localStorage para sobreviver a reload da página.
