@@ -25,6 +25,7 @@ import {
   BrainCircuit,
   CalendarIcon,
   FileText,
+  ImagePlus,
   Loader2,
   Search,
   Send,
@@ -32,6 +33,12 @@ import {
   X,
 } from "lucide-react";
 import type { DocItem } from "@/components/documents/document-list";
+import {
+  PetitionCard,
+  PresentationCard,
+  TableCard,
+} from "@/components/chat/artifact-cards";
+import { toast } from "sonner";
 
 interface Citation {
   document_id: string;
