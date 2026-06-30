@@ -148,6 +148,13 @@ function CaseDetailPage() {
             <CardTitle className="text-lg">Editar caso</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-3 md:grid-cols-2">
+            <div className="space-y-1 md:col-span-2">
+              <Label>Título do caso</Label>
+              <Input
+                value={form.title}
+                onChange={(e) => setForm({ ...form, title: e.target.value })}
+              />
+            </div>
             <div className="space-y-1">
               <Label>Cliente</Label>
               <Input
