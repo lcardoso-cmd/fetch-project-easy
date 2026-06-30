@@ -384,6 +384,7 @@ export const createTaskFromMessage = createServerFn({ method: "POST" })
         description: z.string().max(2000).optional().nullable(),
         due_date: z.string().optional().nullable(),
         assigned_to_user_id: z.string().uuid().optional().nullable(),
+        mention_user_ids: z.array(z.string().uuid()).optional().default([]),
       })
       .parse(i),
   )
@@ -401,6 +402,13 @@ export const createTaskFromMessage = createServerFn({ method: "POST" })
       (msg as unknown as { conversations: { case_id: string | null } | null }).conversations
         ?.case_id ?? null;
 
+    // If assignee not provided, default to first mentioned user (if any)
+    const assignee =
+      data.assigned_to_user_id ??
+      (data.mention_user_ids && data.mention_user_ids.length > 0
+        ? data.mention_user_ids[0]
+        : null);
+
     const taskIns = await context.supabase
       .from("tasks")
       .insert({
@@ -410,7 +418,7 @@ export const createTaskFromMessage = createServerFn({ method: "POST" })
         description: data.description ?? null,
         due_date: data.due_date ?? null,
         source_message_id: data.message_id,
-        assigned_to_user_id: data.assigned_to_user_id ?? null,
+        assigned_to_user_id: assignee,
       })
       .select("*")
       .single();
@@ -420,5 +428,21 @@ export const createTaskFromMessage = createServerFn({ method: "POST" })
       .from("message_tasks")
       .insert({ message_id: data.message_id, task_id: taskIns.data.id });
 
+    // Notify mentioned users by inserting message_mentions rows on source msg.
+    // Authors of the source message will already have their own mentions; we
+    // dedupe via UNIQUE(message_id, mentioned_user_id).
+    const uniqueMentions = Array.from(new Set(data.mention_user_ids ?? []));
+    if (uniqueMentions.length > 0) {
+      await context.supabase.from("message_mentions").upsert(
+        uniqueMentions.map((uid) => ({
+          message_id: data.message_id,
+          conversation_id: msg.conversation_id,
+          mentioned_user_id: uid,
+        })),
+        { onConflict: "message_id,mentioned_user_id", ignoreDuplicates: true },
+      );
+    }
+
     return taskIns.data;
   });
+
