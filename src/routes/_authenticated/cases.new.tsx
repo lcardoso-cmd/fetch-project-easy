@@ -116,6 +116,9 @@ function NewCasePage() {
   const [uploaded, setUploaded] = useState<UploadedDoc | null>(null);
   const [extracting, setExtracting] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [attemptedSubmit, setAttemptedSubmit] = useState(false);
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
+  const markTouched = (k: string) => setTouched((t) => (t[k] ? t : { ...t, [k]: true }));
 
   // review state — exibido só quando houve extração via documento.
   // Persistido em localStorage para sobreviver a reload da página.
@@ -283,10 +286,54 @@ function NewCasePage() {
   // independentemente de haver warnings ou campos faltantes.
   const needsReview = !!uploaded;
 
+  // Validação inline dos campos obrigatórios / formatos.
+  // Retorna mapa { campo -> mensagem } apenas para campos inválidos.
+  const validate = (): Record<string, string> => {
+    const errors: Record<string, string> = {};
+    if (!title.trim()) errors.title = "Informe um título para o caso.";
+    else if (title.trim().length < 3) errors.title = "O título precisa ter ao menos 3 caracteres.";
+
+    if (!clientName.trim()) errors.client_name = "Informe o nome do cliente.";
+
+    if (caseNumber.trim()) {
+      const digits = caseNumber.replace(/\D/g, "");
+      if (digits.length !== 20) {
+        errors.case_number =
+          "Número CNJ inválido — deve conter 20 dígitos (formato NNNNNNN-DD.AAAA.J.TR.OOOO).";
+      }
+    }
+
+    if (!caseType.trim()) errors.case_type = "Selecione o tipo do caso.";
+
+    const cleanParties = parties.filter((p) => p.name.trim());
+    if (cleanParties.length === 0) {
+      errors.parties = "Adicione ao menos uma parte com nome preenchido.";
+    } else if (representedIdx === null || !parties[representedIdx]?.name.trim()) {
+      errors.represented = "Marque qual parte você representa.";
+    }
+
+    return errors;
+  };
+
+  const errors = validate();
+  const showError = (k: string) => (attemptedSubmit || touched[k]) && !!errors[k];
+  const errorRing = (k: string) =>
+    showError(k) ? "border-destructive ring-1 ring-destructive/40 focus-visible:ring-destructive" : "";
+  const ErrorMsg = ({ k }: { k: string }) =>
+    showError(k) ? (
+      <p className="text-xs text-destructive flex items-start gap-1">
+        <AlertTriangle className="h-3 w-3 mt-0.5 shrink-0" />
+        {errors[k]}
+      </p>
+    ) : null;
+
+  const hasErrors = Object.keys(errors).length > 0;
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim()) {
-      toast.error("Informe um título para o caso");
+    setAttemptedSubmit(true);
+    if (hasErrors) {
+      toast.error("Corrija os campos destacados antes de criar o caso.");
       return;
     }
     if (needsReview && !reviewConfirmed) {
@@ -581,19 +628,26 @@ function NewCasePage() {
                 id="title"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
+                onBlur={() => markTouched("title")}
                 required
                 maxLength={200}
+                aria-invalid={showError("title") || undefined}
+                className={errorRing("title")}
               />
+              <ErrorMsg k="title" />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="client">Cliente</Label>
+              <Label htmlFor="client">Cliente *</Label>
               <Input
                 id="client"
                 value={clientName}
                 onChange={(e) => setClientName(e.target.value)}
+                onBlur={() => markTouched("client_name")}
                 maxLength={200}
-                className={fieldRing("client_name")}
+                aria-invalid={showError("client_name") || undefined}
+                className={`${fieldRing("client_name")} ${errorRing("client_name")}`.trim()}
               />
+              <ErrorMsg k="client_name" />
               <FieldIssue field="client_name" />
             </div>
             <div className="space-y-2">
@@ -602,9 +656,13 @@ function NewCasePage() {
                 id="case_number"
                 value={caseNumber}
                 onChange={(e) => setCaseNumber(e.target.value)}
+                onBlur={() => markTouched("case_number")}
+                placeholder="0000000-00.0000.0.00.0000"
                 maxLength={120}
-                className={fieldRing("case_number")}
+                aria-invalid={showError("case_number") || undefined}
+                className={`${fieldRing("case_number")} ${errorRing("case_number")}`.trim()}
               />
+              <ErrorMsg k="case_number" />
               <FieldIssue field="case_number" />
             </div>
             <div className="space-y-2">
@@ -620,9 +678,19 @@ function NewCasePage() {
               <FieldIssue field="jurisdiction" />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="case_type">Tipo</Label>
-              <Select value={caseType} onValueChange={setCaseType}>
-                <SelectTrigger id="case_type" className={fieldRing("case_type")}>
+              <Label htmlFor="case_type">Tipo *</Label>
+              <Select
+                value={caseType}
+                onValueChange={(v) => {
+                  setCaseType(v);
+                  markTouched("case_type");
+                }}
+              >
+                <SelectTrigger
+                  id="case_type"
+                  aria-invalid={showError("case_type") || undefined}
+                  className={`${fieldRing("case_type")} ${errorRing("case_type")}`.trim()}
+                >
                   <SelectValue placeholder="Selecione" />
                 </SelectTrigger>
                 <SelectContent>
@@ -640,6 +708,7 @@ function NewCasePage() {
                   <SelectItem value="Outro">Outro</SelectItem>
                 </SelectContent>
               </Select>
+              <ErrorMsg k="case_type" />
               <FieldIssue field="case_type" />
             </div>
             <div className="space-y-2 md:col-span-2">
@@ -658,15 +727,25 @@ function NewCasePage() {
         </Card>
 
         {/* Partes */}
-        <Card className={uploaded && fieldHasIssue("parties") ? "border-amber-500" : ""}>
+        <Card
+          className={
+            showError("parties") || showError("represented")
+              ? "border-destructive"
+              : uploaded && fieldHasIssue("parties")
+                ? "border-amber-500"
+                : ""
+          }
+        >
           <CardHeader>
-            <CardTitle className="text-lg">Partes envolvidas</CardTitle>
+            <CardTitle className="text-lg">Partes envolvidas *</CardTitle>
             <CardDescription>
-              Marque a parte que você representa.
+              Adicione ao menos uma parte e marque qual você representa.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             <FieldIssue field="parties" />
+            <ErrorMsg k="parties" />
+            <ErrorMsg k="represented" />
             {parties.length === 0 && (
               <p className="text-sm text-muted-foreground">Nenhuma parte ainda.</p>
             )}
@@ -808,14 +887,29 @@ function NewCasePage() {
           </CardContent>
         </Card>
 
-        <div className="flex justify-end gap-2">
-          <Button type="button" variant="ghost" asChild>
-            <Link to="/cases">Cancelar</Link>
-          </Button>
-          <Button type="submit" disabled={submitting || (needsReview && !reviewConfirmed)}>
-            {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {needsReview ? "Confirmar e criar caso" : "Criar caso"}
-          </Button>
+        <div className="flex flex-col items-end gap-2">
+          {attemptedSubmit && hasErrors && (
+            <p className="text-xs text-destructive flex items-center gap-1">
+              <AlertTriangle className="h-3 w-3" />
+              Existem campos obrigatórios pendentes — corrija os destaques em vermelho.
+            </p>
+          )}
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="ghost" asChild>
+              <Link to="/cases">Cancelar</Link>
+            </Button>
+            <Button
+              type="submit"
+              disabled={
+                submitting ||
+                (needsReview && !reviewConfirmed) ||
+                (attemptedSubmit && hasErrors)
+              }
+            >
+              {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {needsReview ? "Confirmar e criar caso" : "Criar caso"}
+            </Button>
+          </div>
         </div>
       </form>
     </div>
