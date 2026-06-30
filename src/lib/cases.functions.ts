@@ -311,14 +311,18 @@ ${snippet}
     if (result.parties.length === 0) missing.push("parties");
     if (!result.description) missing.push("description");
 
-    const warnings: string[] = [];
+    const warnings: { field: string | null; message: string }[] = [];
     if (parsed.case_number && !normalizedNumber) {
-      warnings.push(
-        `Número do processo "${parsed.case_number}" não parece estar no padrão CNJ.`,
-      );
+      warnings.push({
+        field: "case_number",
+        message: `O número "${parsed.case_number}" não está no padrão CNJ (NNNNNNN-DD.AAAA.J.TR.OOOO). Corrija antes de criar o caso.`,
+      });
     }
     if (cnjFromText && parsed.case_number && cnjFromText !== parsed.case_number) {
-      warnings.push("Número detectado no texto difere do extraído pela IA — confira.");
+      warnings.push({
+        field: "case_number",
+        message: `Encontramos outro número no texto (${cnjFromText}) diferente do extraído pela IA. Confira qual é o correto.`,
+      });
     }
 
     return { extracted: result, text_length: text.length, missing, warnings };

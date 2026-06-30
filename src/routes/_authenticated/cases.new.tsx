@@ -53,6 +53,36 @@ type UploadedDoc = {
   file_size: number;
 };
 
+type FieldKey =
+  | "title"
+  | "client_name"
+  | "case_number"
+  | "jurisdiction"
+  | "case_type"
+  | "parties"
+  | "description";
+
+type ExtractionWarning = { field: string | null; message: string };
+
+const FIELD_LABELS: Record<string, string> = {
+  title: "título",
+  client_name: "cliente",
+  case_number: "número do processo",
+  jurisdiction: "vara/jurisdição",
+  case_type: "tipo do caso",
+  parties: "partes",
+  description: "descrição",
+};
+
+const MISSING_FIELD_HINTS: Record<string, string> = {
+  client_name: "Não identificamos o nome do cliente no documento.",
+  case_number: "Nenhum número de processo (CNJ) foi encontrado.",
+  jurisdiction: "A vara ou tribunal não foi identificado.",
+  case_type: "O tipo do caso não foi identificado.",
+  parties: "Nenhuma parte foi identificada — adicione abaixo.",
+  description: "Não geramos uma descrição — escreva um resumo do caso.",
+};
+
 function NewCasePage() {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -90,8 +120,10 @@ function NewCasePage() {
   // review state — exibido só quando houve extração via documento.
   // Persistido em localStorage para sobreviver a reload da página.
   const REVIEW_STORAGE_KEY = user ? `jurismind:new-case-review:${user.id}` : null;
+  // missingFields contém chaves brutas (ex.: "client_name") para podermos
+  // destacar inputs e mostrar a mensagem amigável de MISSING_FIELD_HINTS.
   const [missingFields, setMissingFields] = useState<string[]>([]);
-  const [extractionWarnings, setExtractionWarnings] = useState<string[]>([]);
+  const [extractionWarnings, setExtractionWarnings] = useState<ExtractionWarning[]>([]);
   const [reviewConfirmed, setReviewConfirmed] = useState(false);
   const [hydratedReview, setHydratedReview] = useState(false);
 
@@ -104,12 +136,20 @@ function NewCasePage() {
         const s = JSON.parse(raw) as {
           uploaded?: UploadedDoc | null;
           missingFields?: string[];
-          extractionWarnings?: string[];
+          extractionWarnings?: ExtractionWarning[];
           reviewConfirmed?: boolean;
         };
         if (s.uploaded) setUploaded(s.uploaded);
         if (Array.isArray(s.missingFields)) setMissingFields(s.missingFields);
-        if (Array.isArray(s.extractionWarnings)) setExtractionWarnings(s.extractionWarnings);
+        if (Array.isArray(s.extractionWarnings)) {
+          // Filtra entradas em formato antigo (string)
+          setExtractionWarnings(
+            s.extractionWarnings.filter(
+              (w): w is ExtractionWarning =>
+                !!w && typeof w === "object" && typeof (w as ExtractionWarning).message === "string",
+            ),
+          );
+        }
         if (typeof s.reviewConfirmed === "boolean") setReviewConfirmed(s.reviewConfirmed);
       }
     } catch {
@@ -188,26 +228,23 @@ function NewCasePage() {
 
       const res = await extractFn({ data: meta });
       applyExtracted(res.extracted);
-      const FIELD_LABELS: Record<string, string> = {
-        client_name: "cliente",
-        case_number: "número do processo",
-        jurisdiction: "vara/jurisdição",
-        case_type: "tipo do caso",
-        parties: "partes",
-        description: "descrição",
-      };
-      const missingLabels = (res.missing ?? []).map((f) => FIELD_LABELS[f] ?? f);
-      setMissingFields(missingLabels);
+      const missingRaw = res.missing ?? [];
+      setMissingFields(missingRaw);
       setExtractionWarnings(res.warnings ?? []);
       setReviewConfirmed(false);
-      if (missingLabels.length) {
+      if (missingRaw.length) {
+        const labels = missingRaw.map((f) => FIELD_LABELS[f] ?? f);
         toast.warning("Alguns dados não foram identificados", {
-          description: `Preencha manualmente: ${missingLabels.join(", ")}.`,
+          description: `Preencha manualmente: ${labels.join(", ")}.`,
         });
       } else {
         toast.success("Dados extraídos do documento");
       }
-      (res.warnings ?? []).forEach((w) => toast.warning(w));
+      (res.warnings ?? []).forEach((w) =>
+        toast.warning(w.field ? FIELD_LABELS[w.field] ?? w.field : "Aviso", {
+          description: w.message,
+        }),
+      );
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       toast.error(`Falha: ${msg}`);
@@ -302,6 +339,69 @@ function NewCasePage() {
       setSubmitting(false);
     }
   };
+
+  // Agrupa avisos por campo para renderizar embaixo dos inputs.
+  const warningsByField = extractionWarnings.reduce<Record<string, string[]>>((acc, w) => {
+    const key = w.field ?? "_global";
+    (acc[key] ??= []).push(w.message);
+    return acc;
+  }, {});
+  const missingSet = new Set(missingFields);
+
+  const fieldHasIssue = (field: FieldKey) =>
+    missingSet.has(field) || (warningsByField[field]?.length ?? 0) > 0;
+  const fieldRing = (field: FieldKey) =>
+    uploaded && fieldHasIssue(field)
+      ? "border-amber-500 ring-1 ring-amber-500/40 focus-visible:ring-amber-500"
+      : "";
+
+  const FieldIssue = ({ field }: { field: FieldKey }) => {
+    if (!uploaded) return null;
+    const isMissing = missingSet.has(field);
+    const fieldWarnings = warningsByField[field] ?? [];
+    if (!isMissing && fieldWarnings.length === 0) return null;
+    return (
+      <div className="space-y-1">
+        {isMissing && (
+          <p className="text-xs text-amber-700 dark:text-amber-400 flex items-start gap-1">
+            <AlertTriangle className="h-3 w-3 mt-0.5 shrink-0" />
+            {MISSING_FIELD_HINTS[field] ?? "Não identificado pela IA — preencha manualmente."}
+          </p>
+        )}
+        {fieldWarnings.map((m, i) => (
+          <p
+            key={i}
+            className="text-xs text-amber-700 dark:text-amber-400 flex items-start gap-1"
+          >
+            <AlertTriangle className="h-3 w-3 mt-0.5 shrink-0" />
+            {m}
+          </p>
+        ))}
+      </div>
+    );
+  };
+
+  // Lista consolidada para o painel de revisão (uma linha por campo).
+  const reviewIssues: { field: FieldKey | "_global"; label: string; messages: string[] }[] = [];
+  const FIELDS_ORDER: FieldKey[] = [
+    "client_name",
+    "case_number",
+    "jurisdiction",
+    "case_type",
+    "parties",
+    "description",
+  ];
+  for (const f of FIELDS_ORDER) {
+    const msgs: string[] = [];
+    if (missingSet.has(f)) {
+      msgs.push(MISSING_FIELD_HINTS[f] ?? "Não identificado pela IA.");
+    }
+    msgs.push(...(warningsByField[f] ?? []));
+    if (msgs.length) {
+      reviewIssues.push({ field: f, label: FIELD_LABELS[f] ?? f, messages: msgs });
+    }
+  }
+  const globalWarnings = warningsByField["_global"] ?? [];
 
   return (
     <div className="space-y-6 max-w-5xl">
@@ -408,36 +508,44 @@ function NewCasePage() {
                 <AlertTriangle className="h-5 w-5" /> Revisar dados extraídos
               </CardTitle>
               <CardDescription>
-                A IA preencheu os campos do formulário abaixo a partir do documento.
-                <strong> Qualquer alteração que você fizer nos campos será salva
-                no caso</strong> — eles não são apenas visualização. Marque a
-                confirmação quando estiver satisfeito.
+                A IA preencheu os campos abaixo a partir do documento.
+                <strong> Edite o que precisar — os valores que ficarem aqui
+                serão salvos no caso.</strong> Os campos destacados em âmbar
+                precisam da sua atenção.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
-              {missingFields.length > 0 && (
-                <div className="rounded-md border border-amber-500/40 bg-amber-50/40 p-3 dark:bg-amber-950/10">
-                  <p className="text-sm font-medium text-amber-700 dark:text-amber-400">
-                    Campos não identificados — preencha manualmente:
-                  </p>
-                  <ul className="list-disc pl-5 text-sm text-muted-foreground">
-                    {missingFields.map((f) => (
-                      <li key={f}>{f}</li>
-                    ))}
-                  </ul>
+              {reviewIssues.length === 0 && globalWarnings.length === 0 ? (
+                <div className="flex items-center gap-2 rounded-md border border-emerald-500/40 bg-emerald-50/40 p-3 text-sm text-emerald-700 dark:bg-emerald-950/10 dark:text-emerald-400">
+                  <CheckCircle2 className="h-4 w-4" />
+                  Todos os campos foram identificados. Revise e confirme abaixo.
                 </div>
-              )}
-              {extractionWarnings.length > 0 && (
-                <div className="rounded-md border border-amber-500/40 bg-amber-50/40 p-3 dark:bg-amber-950/10">
-                  <p className="text-sm font-medium text-amber-700 dark:text-amber-400">
-                    Avisos da extração:
-                  </p>
-                  <ul className="list-disc pl-5 text-sm text-muted-foreground">
-                    {extractionWarnings.map((w, i) => (
-                      <li key={i}>{w}</li>
-                    ))}
-                  </ul>
-                </div>
+              ) : (
+                <ul className="space-y-2">
+                  {reviewIssues.map((issue) => (
+                    <li
+                      key={issue.field}
+                      className="rounded-md border border-amber-500/40 bg-amber-50/40 p-3 dark:bg-amber-950/10"
+                    >
+                      <p className="text-sm font-medium text-amber-700 dark:text-amber-400 capitalize">
+                        {issue.label}
+                      </p>
+                      <ul className="mt-1 list-disc pl-5 text-sm text-muted-foreground space-y-0.5">
+                        {issue.messages.map((m, i) => (
+                          <li key={i}>{m}</li>
+                        ))}
+                      </ul>
+                    </li>
+                  ))}
+                  {globalWarnings.map((m, i) => (
+                    <li
+                      key={`g-${i}`}
+                      className="rounded-md border border-amber-500/40 bg-amber-50/40 p-3 text-sm text-muted-foreground dark:bg-amber-950/10"
+                    >
+                      {m}
+                    </li>
+                  ))}
+                </ul>
               )}
               <label className="flex items-start gap-2 rounded-md border bg-background p-3 cursor-pointer">
                 <Checkbox
@@ -484,7 +592,9 @@ function NewCasePage() {
                 value={clientName}
                 onChange={(e) => setClientName(e.target.value)}
                 maxLength={200}
+                className={fieldRing("client_name")}
               />
+              <FieldIssue field="client_name" />
             </div>
             <div className="space-y-2">
               <Label htmlFor="case_number">Número do processo</Label>
@@ -493,7 +603,9 @@ function NewCasePage() {
                 value={caseNumber}
                 onChange={(e) => setCaseNumber(e.target.value)}
                 maxLength={120}
+                className={fieldRing("case_number")}
               />
+              <FieldIssue field="case_number" />
             </div>
             <div className="space-y-2">
               <Label htmlFor="jurisdiction">Vara / Tribunal</Label>
@@ -503,12 +615,14 @@ function NewCasePage() {
                 onChange={(e) => setJurisdiction(e.target.value)}
                 placeholder="Ex.: TJSP — 3ª Vara Cível"
                 maxLength={200}
+                className={fieldRing("jurisdiction")}
               />
+              <FieldIssue field="jurisdiction" />
             </div>
             <div className="space-y-2">
               <Label htmlFor="case_type">Tipo</Label>
               <Select value={caseType} onValueChange={setCaseType}>
-                <SelectTrigger id="case_type">
+                <SelectTrigger id="case_type" className={fieldRing("case_type")}>
                   <SelectValue placeholder="Selecione" />
                 </SelectTrigger>
                 <SelectContent>
@@ -526,6 +640,7 @@ function NewCasePage() {
                   <SelectItem value="Outro">Outro</SelectItem>
                 </SelectContent>
               </Select>
+              <FieldIssue field="case_type" />
             </div>
             <div className="space-y-2 md:col-span-2">
               <Label htmlFor="description">Descrição / resumo</Label>
@@ -535,13 +650,15 @@ function NewCasePage() {
                 onChange={(e) => setDescription(e.target.value)}
                 rows={4}
                 maxLength={4000}
+                className={fieldRing("description")}
               />
+              <FieldIssue field="description" />
             </div>
           </CardContent>
         </Card>
 
         {/* Partes */}
-        <Card>
+        <Card className={uploaded && fieldHasIssue("parties") ? "border-amber-500" : ""}>
           <CardHeader>
             <CardTitle className="text-lg">Partes envolvidas</CardTitle>
             <CardDescription>
@@ -549,6 +666,7 @@ function NewCasePage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
+            <FieldIssue field="parties" />
             {parties.length === 0 && (
               <p className="text-sm text-muted-foreground">Nenhuma parte ainda.</p>
             )}
