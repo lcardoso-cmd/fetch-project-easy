@@ -24,6 +24,8 @@ import { UploadZone } from "@/components/documents/upload-zone";
 import { ChatPanel } from "@/components/chat/chat-panel";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ArrowLeft, FileText, Loader2, Sparkles, Trash2, CalendarClock, ClipboardCheck } from "lucide-react";
+import { QuesitosCard } from "@/components/cases/quesitos-card";
+import type { MatterKind } from "@/lib/practice-labels";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/cases/$caseId")({
@@ -337,6 +339,13 @@ function CaseDetailPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Quesitos — apenas para perícia / assistência técnica */}
+      {caseData.matter_kind && caseData.matter_kind !== "processo" && (
+        <QuesitosCard caseId={caseId} matterKind={caseData.matter_kind as MatterKind} />
+      )}
+
+
 
       {/* Chat */}
       <div>
