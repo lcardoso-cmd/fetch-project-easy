@@ -351,6 +351,56 @@ function NewCasePage() {
           </CardContent>
         </Card>
 
+        {/* Revisão da extração — aparece quando o documento gerou avisos */}
+        {uploaded && (missingFields.length > 0 || extractionWarnings.length > 0) && (
+          <Card
+            data-testid="extraction-review"
+            className="border-amber-500/40 bg-amber-50/40 dark:bg-amber-950/10"
+          >
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2 text-amber-700 dark:text-amber-400">
+                <AlertTriangle className="h-5 w-5" /> Revise os dados extraídos
+              </CardTitle>
+              <CardDescription>
+                A IA não conseguiu preencher tudo com segurança. Confira os pontos
+                abaixo antes de criar o caso.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {missingFields.length > 0 && (
+                <div data-testid="review-missing">
+                  <p className="text-sm font-medium">Campos não identificados:</p>
+                  <ul className="list-disc pl-5 text-sm text-muted-foreground">
+                    {missingFields.map((f) => (
+                      <li key={f}>{f}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {extractionWarnings.length > 0 && (
+                <div data-testid="review-warnings">
+                  <p className="text-sm font-medium">Avisos da extração:</p>
+                  <ul className="list-disc pl-5 text-sm text-muted-foreground">
+                    {extractionWarnings.map((w, i) => (
+                      <li key={i}>{w}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              <label className="flex items-start gap-2 rounded-md border bg-background p-3 cursor-pointer">
+                <Checkbox
+                  id="confirm-review"
+                  checked={reviewConfirmed}
+                  onCheckedChange={(v) => setReviewConfirmed(v === true)}
+                />
+                <span className="text-sm">
+                  Revisei os dados acima e confirmo que estão corretos para criar o caso.
+                </span>
+              </label>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Dados do caso */}
         <Card>
           <CardHeader>
