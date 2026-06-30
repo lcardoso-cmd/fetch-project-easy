@@ -27,7 +27,7 @@ export const Route = createFileRoute("/_authenticated/my-tasks")({
 
 const PRIORITY: Record<string, { label: string; cls: string }> = {
   low: { label: "Baixa", cls: "bg-muted text-foreground" },
-  medium: { label: "Média", cls: "bg-blue-500/15 text-blue-700 dark:text-blue-300" },
+  medium: { label: "Média", cls: "bg-primary/10 text-primary" },
   high: { label: "Alta", cls: "bg-amber-500/15 text-amber-700 dark:text-amber-300" },
   urgent: { label: "Urgente", cls: "bg-red-500/15 text-red-700 dark:text-red-300" },
 };
