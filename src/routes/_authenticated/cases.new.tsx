@@ -376,6 +376,10 @@ function NewCasePage() {
           ? cleanParties[representedIdx]
           : null;
 
+      const feeReais = parseFloat(peritoFee.replace(",", "."));
+      const feeCents =
+        !isNaN(feeReais) && peritoFee.trim() ? Math.round(feeReais * 100) : null;
+
       const newCase = await createCaseFn({
         data: {
           title: title.trim(),
@@ -388,6 +392,21 @@ function NewCasePage() {
           represented_party: represented,
           team_member_ids: selectedMembers,
           status: "active",
+          matter_kind: matterKind,
+          practice_type:
+            matterKind === "pericia"
+              ? "perito_judicial"
+              : matterKind === "assistencia_tecnica"
+                ? "assistente_tecnico"
+                : "advogado",
+          assisted_party_name:
+            matterKind === "assistencia_tecnica" ? assistedPartyName.trim() || null : null,
+          perito_fee_cents: matterKind === "pericia" ? feeCents : null,
+          perito_appointment_date:
+            matterKind === "pericia" ? peritoAppointmentDate || null : null,
+          perito_deadline_date: matterKind === "pericia" ? peritoDeadlineDate || null : null,
+          perito_nomination_ref:
+            matterKind === "pericia" ? peritoNominationRef.trim() || null : null,
         },
       });
 
