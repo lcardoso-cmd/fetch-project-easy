@@ -214,11 +214,22 @@ export function JurisMindChat({
           <CardHeader className="pb-3">
             <CardTitle className="text-base">Detalhes do caso</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-1.5 text-sm text-muted-foreground">
+          <CardContent className="space-y-2 text-sm text-muted-foreground">
             {caseInfo.client_name && (
               <p>
                 <span className="font-medium text-foreground">Cliente:</span>{" "}
                 {caseInfo.client_name}
+              </p>
+            )}
+            {caseInfo.represented_party?.name && (
+              <p>
+                <span className="font-medium text-foreground">
+                  Parte representada:
+                </span>{" "}
+                {caseInfo.represented_party.name}
+                {caseInfo.represented_party.role
+                  ? ` (${caseInfo.represented_party.role})`
+                  : ""}
               </p>
             )}
             {caseInfo.status && (
@@ -233,11 +244,34 @@ export function JurisMindChat({
                 {caseInfo.case_number}
               </p>
             )}
+            {caseInfo.jurisdiction && (
+              <p>
+                <span className="font-medium text-foreground">Jurisdição:</span>{" "}
+                {caseInfo.jurisdiction}
+              </p>
+            )}
             {caseInfo.case_type && (
               <p>
                 <span className="font-medium text-foreground">Tipo:</span>{" "}
                 {caseInfo.case_type}
               </p>
+            )}
+            {caseInfo.parties && caseInfo.parties.length > 0 && (
+              <div className="pt-1">
+                <p className="mb-1 font-medium text-foreground">
+                  Partes envolvidas
+                </p>
+                <ul className="space-y-0.5 text-xs">
+                  {caseInfo.parties.map((p, i) => (
+                    <li key={i} className="flex gap-1.5">
+                      <span className="rounded bg-muted px-1.5 py-0.5 font-medium text-foreground">
+                        {p.role}
+                      </span>
+                      <span className="truncate">{p.name}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
             )}
           </CardContent>
         </Card>
