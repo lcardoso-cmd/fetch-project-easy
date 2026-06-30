@@ -12,12 +12,20 @@ import { useNavigate } from "@tanstack/react-router";
 export const Route = createFileRoute("/auth")({
   component: AuthPage,
 });
+
+function AuthPage() {
+  const { user } = useAuth();
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+
+  if (user) {
+    navigate({ to: "/dashboard", replace: true });
+    return null;
+  }
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
