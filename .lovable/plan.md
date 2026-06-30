@@ -1,110 +1,67 @@
-# JurisMind híbrido: advogados, peritos e assistentes técnicos
+# Chat interno de equipe
 
-Transformar o produto em uma plataforma única que atenda três perfis profissionais com o mesmo motor (RAG, prazos, extração, chat), adaptando vocabulário, campos e templates por perfil.
+Adiciona um sistema completo de comunicação entre membros da equipe, separado do assistente de IA atual (que continua em `/assistant`).
 
-## Modelo de perfis
+## O que será entregue
 
-Três `practice_type` no perfil do usuário:
+**Dois tipos de conversa:**
+- **Conversa por caso** — cada processo/perícia/AT tem sua thread fixa, visível dentro da página do caso e também na lista geral.
+- **DM (mensagem direta)** — conversa 1-a-1 entre dois membros da equipe, fora do contexto de um caso.
 
-- `advogado` — atua em processos do cliente.
-- `perito_judicial` — nomeado pelo juízo para produzir laudo.
-- `assistente_tecnico` — contratado por uma das partes para assessorar/criticar o laudo.
+**Recursos em cada mensagem:**
+- Texto formatado simples (quebras de linha, links auto-detectados).
+- **Anexar documentos** — upload direto pro bucket `documents`; se a conversa for de um caso, o arquivo também fica vinculado ao caso.
+- **Menções `@membro`** — autocomplete; gera notificação no sino do app pra pessoa mencionada.
+- **Virar tarefa** — botão em cada mensagem que abre um modal já preenchido (descrição = texto da mensagem, atribuído a, prazo) e cria a task ligada à mensagem original e ao caso (se houver).
+- **Tempo real** — mensagens, edições e reações aparecem na hora via Realtime do backend.
 
-Cada usuário escolhe **um perfil principal no onboarding** (fica fixo, mas editável em Configurações). Em cada caso, há um override opcional `case.practice_type` para quem atua nos três papéis ocasionalmente.
+## Onde fica na UI
 
-Especialidades suportadas (campo livre + sugestões): contábil, engenharia (civil/mecânica/elétrica/segurança do trabalho), médica, psicológica, ambiental, grafotécnica, TI/digital, avaliação de imóveis, "outra".
+- Novo item no menu lateral: **Equipe → Conversas** (`/inbox`)
+  - Lista lateral com duas abas: "Casos" (threads dos casos onde participo) e "Diretas" (DMs)
+  - Botão "Nova mensagem" abre seletor de membro pra iniciar DM
+  - Painel à direita: thread ativa
+- Página do caso (`/cases/$caseId`): nova aba **"Conversa"** ao lado de Documentos/Quesitos, com a mesma thread embutida
+- Sino de notificações no header com badge de não-lidas + menções
 
-## Mudanças no banco
+## Modelo de dados
 
-```text
-profiles
-  + practice_type        text   (advogado|perito_judicial|assistente_tecnico)
-  + specialty            text   (livre, ex. "contábil")
-  + onboarding_completed boolean default false
+Tabelas novas (com RLS escopada por participante):
 
-cases
-  + practice_type            text   (override opcional do perfil do usuário)
-  + matter_kind              text   (processo|pericia|assistencia_tecnica)
-  + assisted_party_name      text   (só para AT — qual parte o profissional assiste)
-  + perito_fee_cents         integer
-  + perito_appointment_date  date
-  + perito_deadline_date     date
-  + perito_nomination_ref    text   (nº de nomeação / despacho)
+- `conversations` — id, kind (`case` | `dm`), case_id?, created_by, created_at
+- `conversation_participants` — conversation_id, user_id, last_read_at — controla acesso e contador de não-lidas
+- `messages` — id, conversation_id, author_id, body, attachments (jsonb com refs do storage), reply_to_id?, created_at, edited_at
+- `message_mentions` — message_id, mentioned_user_id, read_at — alimenta o sino
+- `message_tasks` — message_id, task_id — liga mensagem ↔ task criada
 
-case_quesitos (nova)
-  id uuid pk, case_id uuid fk, source text (juizo|autor|reu|assistido),
-  number int, question text, answer text null, created_at timestamptz
-```
+Tasks usa a tabela `tasks` que já existe; só adicionamos `source_message_id` opcional.
 
-Tudo com GRANT padrão `authenticated` + `service_role`, RLS por `auth.uid()` (mesmo padrão das demais tabelas do projeto).
+Realtime habilitado em `messages`, `message_mentions`, `conversation_participants`.
 
-## Onboarding
+## Server functions
 
-Nova rota `/_authenticated/onboarding` exibida na primeira sessão (gate em `__root` ou redirect quando `onboarding_completed = false`):
+- `listConversations` — lista por aba (case/dm), ordenadas por última mensagem
+- `getOrCreateCaseConversation(case_id)` — idempotente; auto-adiciona team_members do caso
+- `getOrCreateDM(other_user_id)`
+- `listMessages(conversation_id, before?)` — paginado
+- `sendMessage(conversation_id, body, attachments?, mentions?, reply_to?)`
+- `markRead(conversation_id)`
+- `createTaskFromMessage(message_id, payload)`
+- `listMyMentions()` — pro sino
 
-1. Selecionar perfil (3 cards: Advogado / Perito Judicial / Assistente Técnico).
-2. Para perito/AT: selecionar especialidade (chips + "outra").
-3. Confirmar → grava em `profiles`, marca `onboarding_completed = true`.
+Todas com `requireSupabaseAuth` + checagem de participação.
 
-Editável depois em Configurações → "Perfil profissional".
+## Detalhes técnicos
 
-## Adaptação dos formulários e telas
+- Autocomplete de menção lê de `team_members` (já existe) + `profiles` da equipe.
+- Anexos seguem o mesmo padrão do caso: upload pro bucket `documents` em `${user_id}/conversations/${conversation_id}/...`, signed URLs no display, preview reaproveita o modal de PDF que acabamos de fazer.
+- Componente `<ConversationView />` reutilizado entre `/inbox` e a aba do caso.
 
-**Vocabulário dinâmico** via util `usePracticeLabels(practiceType)`:
+## Fora de escopo (deixar pra depois se você quiser)
 
-| Conceito | Advogado | Perito | Assistente Técnico |
-|---|---|---|---|
-| Entidade principal | Caso | Perícia | Assistência |
-| Parte vinculada | Cliente | (sem cliente direto) | Parte assistida |
-| Saída esperada | Petição | Laudo pericial | Parecer técnico |
-| "Represento" | Represento | — | Assisto |
+- Reações com emoji
+- Edição/exclusão de mensagem (1ª versão só envia)
+- E-mail pra menções (só notificação in-app)
+- Chamada de voz/vídeo
 
-**`cases.new.tsx`**: blocos condicionais por `matter_kind`.
-
-- `processo` (advogado): formulário atual + validação já implementada.
-- `pericia`: troca "Cliente" por "Órgão nomeante" (vara), exibe campos de honorários, data de nomeação, prazo do laudo, e card de **Quesitos** (juízo / autor / réu).
-- `assistencia_tecnica`: campo "Parte assistida" obrigatório, card de **Quesitos** (assistido + impugnações ao laudo oficial), upload sugerido do laudo oficial.
-
-A validação inline existente é estendida para os campos novos quando aplicáveis.
-
-**Lista de casos** (`cases.tsx`): filtro adicional por `matter_kind`, ícone distinto e badge ("Perícia", "Assistência"). Título do menu lateral muda para "Casos e perícias" quando o perfil não é exclusivamente advogado.
-
-**Detalhe do caso** (`cases.$caseId.tsx`): aba extra "Quesitos" quando `matter_kind ≠ processo`. Resumo JurisMind do caso passa a usar o vocabulário do perfil.
-
-## Extração JurisMind adaptada
-
-`extractCaseDataFromDocument` ganha parâmetro `matter_kind` e roteia para um prompt específico:
-
-- Processo: prompt atual.
-- Perícia: extrai também nº de nomeação, prazo, quesitos por origem, honorários quando aparecem no despacho.
-- Assistência técnica: extrai laudo oficial (conclusões), quesitos da parte assistida, pontos de impugnação sugeridos.
-
-A revisão visual amber/vermelha já implementada continua valendo para qualquer um dos perfis.
-
-## Templates de saída (gerador de documentos)
-
-`proposal.tsx` vira "Gerador de documentos" com seleção do tipo conforme perfil:
-
-- Advogado: petição inicial, contestação, recurso, proposta de honorários.
-- Perito: laudo pericial estruturado (identificação, metodologia, resposta aos quesitos, conclusão, anexos).
-- Assistente técnico: parecer técnico, impugnação ao laudo oficial, quesitos suplementares.
-
-Mesmo pipeline RAG + prompt-template por tipo. Saída em markdown + export DOCX/PDF (reaproveita o que já existe).
-
-## Plano de execução (ordem)
-
-1. **Migração** + GRANTs/RLS para colunas e tabela `case_quesitos`.
-2. **Onboarding** + edição em Configurações + gate no root.
-3. **`usePracticeLabels`** e troca de vocabulário em menu, listas e detalhe.
-4. **`cases.new.tsx`**: seletor de `matter_kind`, blocos condicionais, validação estendida, card de quesitos.
-5. **`cases.$caseId.tsx`**: aba de quesitos, labels adaptados.
-6. **Extração JurisMind** por `matter_kind` (prompts dedicados).
-7. **Gerador de documentos** com templates por perfil.
-8. Ajustes de copy na landing (`index.tsx`) — "para advogados, peritos e assistentes técnicos".
-
-## Riscos e mitigações
-
-- **Formulário inchado** → blocos condicionais com `Collapsible` por seção; nunca mostrar campos de outro perfil.
-- **Confusão de vocabulário** → util central `usePracticeLabels`; nenhum texto hard-coded de "cliente"/"caso" em telas multi-perfil.
-- **Migração de dados existentes** → todo caso atual recebe `matter_kind = 'processo'` por default; usuários existentes recebem `practice_type = 'advogado'` e `onboarding_completed = true` para não ver o onboarding.
-- **Escopo grande** → entregar em etapas 1–4 primeiro (já dá produto utilizável pelos três perfis); 5–8 numa segunda passada.
+Confirma e eu começo pela migração + servidor, depois UI.
