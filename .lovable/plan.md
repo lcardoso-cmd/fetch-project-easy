@@ -1,82 +1,110 @@
-# Plano: Replicar JurisMind fielmente no Lovable
+# JurisMind híbrido: advogados, peritos e assistentes técnicos
 
-## Objetivo
-Reproduzir o protótipo do GitHub (`lcardoso-cmd/jurismind`) com **mesma UI, mesmo fluxo e mesmas funcionalidades**, adaptando do stack original (Next.js + Firebase + OpenAI + Genkit) para o stack do Lovable (TanStack Start + Lovable Cloud/Supabase + Lovable AI Gateway).
+Transformar o produto em uma plataforma única que atenda três perfis profissionais com o mesmo motor (RAG, prazos, extração, chat), adaptando vocabulário, campos e templates por perfil.
 
-Sem dados de exemplo — apenas estrutura e código funcional.
+## Modelo de perfis
 
----
+Três `practice_type` no perfil do usuário:
 
-## Sobre as chaves de API (boa notícia)
-Você **não precisa fornecer chave de OpenAI nem Gemini**. O Lovable já inclui o **Lovable AI Gateway**, que dá acesso direto a:
-- `google/gemini-2.5-pro` / `gemini-3-flash` (chat, raciocínio, tool-calling)
-- `openai/gpt-5`, `gpt-5-mini` (alternativas)
-- `google/gemini-embedding-001` (embeddings pro RAG)
-- Geração de imagem
+- `advogado` — atua em processos do cliente.
+- `perito_judicial` — nomeado pelo juízo para produzir laudo.
+- `assistente_tecnico` — contratado por uma das partes para assessorar/criticar o laudo.
 
-Custo é debitado dos créditos do workspace. **Só precisarei pedir chaves se você quiser integrações externas** (Google Drive OAuth, Gamma.app).
+Cada usuário escolhe **um perfil principal no onboarding** (fica fixo, mas editável em Configurações). Em cada caso, há um override opcional `case.practice_type` para quem atua nos três papéis ocasionalmente.
 
----
+Especialidades suportadas (campo livre + sugestões): contábil, engenharia (civil/mecânica/elétrica/segurança do trabalho), médica, psicológica, ambiental, grafotécnica, TI/digital, avaliação de imóveis, "outra".
 
-## Escopo do trabalho (em ondas)
+## Mudanças no banco
 
-### 🌊 Onda 1 — UI/Layout fiel ao original
-Replicar visualmente o app: sidebar, header, paleta, tipografia, navegação, dashboard principal. O que você vê hoje (cara genérica) vira **a cara real do JurisMind**.
-- Sidebar com todas as seções: Dashboard, Casos, Agenda, My Files, My Tasks, Marketing, Proposal, Monitoring, Integrations, Settings, Admin
-- Layout do dashboard com cards de visão geral
-- Cores, espaçamento, fontes idênticas ao original
+```text
+profiles
+  + practice_type        text   (advogado|perito_judicial|assistente_tecnico)
+  + specialty            text   (livre, ex. "contábil")
+  + onboarding_completed boolean default false
 
-### 🌊 Onda 2 — Núcleo RAG (igual ao original)
-Já temos a base (`document_chunks` + pgvector + `match_chunks`). Falta refinar pra ficar **igual ao fluxo original**:
-- Upload com extração de texto (PDF/DOCX) e chunking inteligente
-- Embeddings via Lovable AI (Gemini embedding) ou OpenAI (sua escolha)
-- Chat por caso com **tool-calling** (criar tabela, gerar resumo, etc — igual `chat-tools.ts` original)
-- Chat global cruzando todos os documentos do usuário
-- Resumo automático de caso após upload (campo `summary` já existe na tabela `cases`)
-- Citações com trecho + nome do arquivo
+cases
+  + practice_type            text   (override opcional do perfil do usuário)
+  + matter_kind              text   (processo|pericia|assistencia_tecnica)
+  + assisted_party_name      text   (só para AT — qual parte o profissional assiste)
+  + perito_fee_cents         integer
+  + perito_appointment_date  date
+  + perito_deadline_date     date
+  + perito_nomination_ref    text   (nº de nomeação / despacho)
 
-### 🌊 Onda 3 — Módulos de produtividade (telas que estão vazias)
-- **Casos**: detalhe completo com timeline, partes envolvidas, documentos, prazos
-- **Agenda**: calendário com prazos e audiências (tabela `events` já existe)
-- **My Files**: visão global de todos os documentos
-- **My Tasks**: tarefas (criar tabela)
-- **Settings**: perfil, OAB, telefone, preferências
+case_quesitos (nova)
+  id uuid pk, case_id uuid fk, source text (juizo|autor|reu|assistido),
+  number int, question text, answer text null, created_at timestamptz
+```
 
-### 🌊 Onda 4 — Geradores com IA (replicar actions originais)
-- **Proposal**: gerador de propostas comerciais com IA
-- **Marketing**: chat especializado em marketing jurídico
-- **Export**: gerar Word (.docx) e PowerPoint (.pptx) de resumos/petições — bibliotecas `docx` e `pptxgenjs` rodam no edge runtime do TanStack
-- **Geração de imagem** para materiais visuais
+Tudo com GRANT padrão `authenticated` + `service_role`, RLS por `auth.uid()` (mesmo padrão das demais tabelas do projeto).
 
-### 🌊 Onda 5 — Admin / Multi-tenant
-- Tabela `user_roles` (admin/lawyer/client) com RLS
-- Telas `/admin/clients` e `/admin/tenants` se for multi-escritório
-- Gerenciamento de permissões
+## Onboarding
 
-### 🌊 Onda 6 — Integrações externas (precisam chave/credencial)
-- **Google Drive** (per-user OAuth): listar arquivos do Drive do usuário e importar pro caso. Requer você criar OAuth Client no Google Cloud Console e me passar Client ID + Secret.
-- **Gamma.app** (apresentações automáticas): requer GAMMA_API_KEY
-- **Monitoring de processos**: depende de qual fonte (API de tribunal, scraping, ou input manual)
+Nova rota `/_authenticated/onboarding` exibida na primeira sessão (gate em `__root` ou redirect quando `onboarding_completed = false`):
 
----
+1. Selecionar perfil (3 cards: Advogado / Perito Judicial / Assistente Técnico).
+2. Para perito/AT: selecionar especialidade (chips + "outra").
+3. Confirmar → grava em `profiles`, marca `onboarding_completed = true`.
 
-## Decisões técnicas chave
+Editável depois em Configurações → "Perfil profissional".
 
-| Original (Firebase/Next) | No Lovable |
-|---|---|
-| Firebase Auth | Supabase Auth (já configurado) |
-| Firestore | Postgres + RLS (já temos tabelas) |
-| Firebase Storage | Supabase Storage (bucket `documents` já existe) |
-| OpenAI direto (chave do usuário) | Lovable AI Gateway (sem chave) |
-| Genkit flows | `createServerFn` + AI SDK + tool-calling |
-| Next.js server actions | TanStack server functions |
-| Per-user Google OAuth | Implementar manualmente (você cria OAuth app) |
+## Adaptação dos formulários e telas
 
----
+**Vocabulário dinâmico** via util `usePracticeLabels(practiceType)`:
 
-## Como vamos trabalhar
-Cada onda é um ciclo de implementação. Eu sugiro começar pela **Onda 1 (UI fiel)** porque é o que mais incomoda você visualmente agora — depois disso o app já "parece" o JurisMind. Em seguida Onda 2 (RAG completo) que é o coração técnico.
+| Conceito | Advogado | Perito | Assistente Técnico |
+|---|---|---|---|
+| Entidade principal | Caso | Perícia | Assistência |
+| Parte vinculada | Cliente | (sem cliente direto) | Parte assistida |
+| Saída esperada | Petição | Laudo pericial | Parecer técnico |
+| "Represento" | Represento | — | Assisto |
 
-**Você aprova esse plano e começo pela Onda 1?**
+**`cases.new.tsx`**: blocos condicionais por `matter_kind`.
 
-Se quiser começar por outra onda ou priorizar algo específico (ex.: "Drive primeiro porque é o mais doloroso"), me diz antes de aprovar.
+- `processo` (advogado): formulário atual + validação já implementada.
+- `pericia`: troca "Cliente" por "Órgão nomeante" (vara), exibe campos de honorários, data de nomeação, prazo do laudo, e card de **Quesitos** (juízo / autor / réu).
+- `assistencia_tecnica`: campo "Parte assistida" obrigatório, card de **Quesitos** (assistido + impugnações ao laudo oficial), upload sugerido do laudo oficial.
+
+A validação inline existente é estendida para os campos novos quando aplicáveis.
+
+**Lista de casos** (`cases.tsx`): filtro adicional por `matter_kind`, ícone distinto e badge ("Perícia", "Assistência"). Título do menu lateral muda para "Casos e perícias" quando o perfil não é exclusivamente advogado.
+
+**Detalhe do caso** (`cases.$caseId.tsx`): aba extra "Quesitos" quando `matter_kind ≠ processo`. Resumo JurisMind do caso passa a usar o vocabulário do perfil.
+
+## Extração JurisMind adaptada
+
+`extractCaseDataFromDocument` ganha parâmetro `matter_kind` e roteia para um prompt específico:
+
+- Processo: prompt atual.
+- Perícia: extrai também nº de nomeação, prazo, quesitos por origem, honorários quando aparecem no despacho.
+- Assistência técnica: extrai laudo oficial (conclusões), quesitos da parte assistida, pontos de impugnação sugeridos.
+
+A revisão visual amber/vermelha já implementada continua valendo para qualquer um dos perfis.
+
+## Templates de saída (gerador de documentos)
+
+`proposal.tsx` vira "Gerador de documentos" com seleção do tipo conforme perfil:
+
+- Advogado: petição inicial, contestação, recurso, proposta de honorários.
+- Perito: laudo pericial estruturado (identificação, metodologia, resposta aos quesitos, conclusão, anexos).
+- Assistente técnico: parecer técnico, impugnação ao laudo oficial, quesitos suplementares.
+
+Mesmo pipeline RAG + prompt-template por tipo. Saída em markdown + export DOCX/PDF (reaproveita o que já existe).
+
+## Plano de execução (ordem)
+
+1. **Migração** + GRANTs/RLS para colunas e tabela `case_quesitos`.
+2. **Onboarding** + edição em Configurações + gate no root.
+3. **`usePracticeLabels`** e troca de vocabulário em menu, listas e detalhe.
+4. **`cases.new.tsx`**: seletor de `matter_kind`, blocos condicionais, validação estendida, card de quesitos.
+5. **`cases.$caseId.tsx`**: aba de quesitos, labels adaptados.
+6. **Extração JurisMind** por `matter_kind` (prompts dedicados).
+7. **Gerador de documentos** com templates por perfil.
+8. Ajustes de copy na landing (`index.tsx`) — "para advogados, peritos e assistentes técnicos".
+
+## Riscos e mitigações
+
+- **Formulário inchado** → blocos condicionais com `Collapsible` por seção; nunca mostrar campos de outro perfil.
+- **Confusão de vocabulário** → util central `usePracticeLabels`; nenhum texto hard-coded de "cliente"/"caso" em telas multi-perfil.
+- **Migração de dados existentes** → todo caso atual recebe `matter_kind = 'processo'` por default; usuários existentes recebem `practice_type = 'advogado'` e `onboarding_completed = true` para não ver o onboarding.
+- **Escopo grande** → entregar em etapas 1–4 primeiro (já dá produto utilizável pelos três perfis); 5–8 numa segunda passada.
