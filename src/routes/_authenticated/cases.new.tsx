@@ -337,13 +337,25 @@ function NewCasePage() {
     const cleanParties = parties.filter((p) => p.name.trim());
     if (cleanParties.length === 0) {
       errors.parties = "Adicione ao menos uma parte com nome preenchido.";
-    } else if (representedIdx === null || !parties[representedIdx]?.name.trim()) {
-      errors.represented = `Marque qual parte você ${labels.representVerb.toLowerCase()}.`;
+    } else {
+      const repRel = representedRelationFor(matterKind);
+      // Perícia: representante não é obrigatório (perito é imparcial).
+      if (repRel && matterKind !== "pericia") {
+        const repCount = cleanParties.filter((p) => p.relation === repRel).length;
+        const repLabel =
+          PARTY_RELATIONS[matterKind].find((r) => r.value === repRel)?.label ?? "representante";
+        if (repCount === 0) {
+          errors.represented = `Marque uma das partes como "${repLabel}".`;
+        } else if (repCount > 1) {
+          errors.represented = `Marque apenas uma parte como "${repLabel}".`;
+        }
+      }
+      const unclassified = cleanParties.filter((p) => !p.relation);
+      if (unclassified.length > 0) {
+        errors.parties = "Classifique a relação de cada parte (cliente, contrária, perito, etc).";
+      }
     }
 
-    if (matterKind === "assistencia_tecnica" && !assistedPartyName.trim()) {
-      errors.assisted_party_name = "Informe a parte assistida.";
-    }
     if (matterKind === "pericia" && peritoFee.trim()) {
       const reais = parseFloat(peritoFee.replace(",", "."));
       if (isNaN(reais) || reais < 0) {
