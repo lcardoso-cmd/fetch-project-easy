@@ -65,7 +65,7 @@ function ProposalPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold font-heading tracking-tight">Proposta Comercial</h1>
-        <p className="mt-1 text-muted-foreground">Gere propostas personalizadas com IA.</p>
+        <p className="mt-1 text-muted-foreground">Gere propostas personalizadas com JurisMind.</p>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">

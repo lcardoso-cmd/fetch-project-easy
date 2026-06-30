@@ -241,7 +241,7 @@ function CaseDetailPage() {
         {/* Resumo IA */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0">
-            <CardTitle className="text-lg">Resumo do caso (IA)</CardTitle>
+            <CardTitle className="text-lg">Resumo do caso (JurisMind)</CardTitle>
             <Button size="sm" onClick={handleSummarize} disabled={summarizing}>
               {summarizing ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
