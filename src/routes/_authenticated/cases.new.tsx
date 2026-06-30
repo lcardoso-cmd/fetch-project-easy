@@ -286,10 +286,54 @@ function NewCasePage() {
   // independentemente de haver warnings ou campos faltantes.
   const needsReview = !!uploaded;
 
+  // Validação inline dos campos obrigatórios / formatos.
+  // Retorna mapa { campo -> mensagem } apenas para campos inválidos.
+  const validate = (): Record<string, string> => {
+    const errors: Record<string, string> = {};
+    if (!title.trim()) errors.title = "Informe um título para o caso.";
+    else if (title.trim().length < 3) errors.title = "O título precisa ter ao menos 3 caracteres.";
+
+    if (!clientName.trim()) errors.client_name = "Informe o nome do cliente.";
+
+    if (caseNumber.trim()) {
+      const digits = caseNumber.replace(/\D/g, "");
+      if (digits.length !== 20) {
+        errors.case_number =
+          "Número CNJ inválido — deve conter 20 dígitos (formato NNNNNNN-DD.AAAA.J.TR.OOOO).";
+      }
+    }
+
+    if (!caseType.trim()) errors.case_type = "Selecione o tipo do caso.";
+
+    const cleanParties = parties.filter((p) => p.name.trim());
+    if (cleanParties.length === 0) {
+      errors.parties = "Adicione ao menos uma parte com nome preenchido.";
+    } else if (representedIdx === null || !parties[representedIdx]?.name.trim()) {
+      errors.represented = "Marque qual parte você representa.";
+    }
+
+    return errors;
+  };
+
+  const errors = validate();
+  const showError = (k: string) => (attemptedSubmit || touched[k]) && !!errors[k];
+  const errorRing = (k: string) =>
+    showError(k) ? "border-destructive ring-1 ring-destructive/40 focus-visible:ring-destructive" : "";
+  const ErrorMsg = ({ k }: { k: string }) =>
+    showError(k) ? (
+      <p className="text-xs text-destructive flex items-start gap-1">
+        <AlertTriangle className="h-3 w-3 mt-0.5 shrink-0" />
+        {errors[k]}
+      </p>
+    ) : null;
+
+  const hasErrors = Object.keys(errors).length > 0;
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim()) {
-      toast.error("Informe um título para o caso");
+    setAttemptedSubmit(true);
+    if (hasErrors) {
+      toast.error("Corrija os campos destacados antes de criar o caso.");
       return;
     }
     if (needsReview && !reviewConfirmed) {
