@@ -45,12 +45,14 @@ export function CaseSummaryCard({
   summary,
   summaryUpdatedAt,
   hasReadyDocs,
+  actions,
 }: {
   caseId: string;
   caseTitle: string;
   summary: string | null;
   summaryUpdatedAt: string | null;
   hasReadyDocs: boolean;
+  actions?: React.ReactNode;
 }) {
   const summarizeFn = useServerFn(summarizeCase);
   const exportDocxFn = useServerFn(exportSummaryDocx);
