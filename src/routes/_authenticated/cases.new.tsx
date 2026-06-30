@@ -38,7 +38,7 @@ import {
   MATTER_KIND_LABELS,
   type MatterKind,
 } from "@/lib/practice-labels";
-import { PARTY_RELATIONS, representedRelationFor } from "@/lib/party-relations";
+import { PARTY_RELATIONS, representedRelationFor, guessRelation } from "@/lib/party-relations";
 import {
   createCase,
   extractCaseDataFromDocument,
@@ -233,7 +233,12 @@ function NewCasePage() {
     setJurisdiction(e.jurisdiction ?? "");
     setCaseType(e.case_type ?? "");
     setDescription(e.description ?? "");
-    setParties(e.parties ?? []);
+    setParties(
+      (e.parties ?? []).map((p) => {
+        const withRel = p as Party;
+        return { ...withRel, relation: withRel.relation ?? guessRelation(p, matterKind) };
+      }),
+    );
   };
 
   const handleFile = async (file: File) => {
@@ -1130,9 +1135,9 @@ function MatterKindBar({
           )}
           <Button
             type="button"
-            variant="ghost"
+            variant="destructive"
             size="sm"
-            className="h-7 px-2 text-xs"
+            className="h-7 px-3 text-xs font-semibold"
             onClick={() => setEditing(true)}
           >
             Trocar
