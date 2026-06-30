@@ -10,6 +10,7 @@ import {
   Settings,
   LogOut,
   Scale,
+  BrainCircuit,
 } from "lucide-react";
 
 const navItems = [
@@ -30,7 +31,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
       <aside className="hidden w-64 flex-col border-r bg-card lg:flex">
         <div className="flex h-16 items-center gap-2 border-b px-6">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-            <span className="font-heading text-lg font-bold">J</span>
+            <BrainCircuit className="h-5 w-5" />
           </div>
           <span className="font-heading text-xl font-bold text-card-foreground">JurisMind</span>
         </div>
@@ -82,7 +83,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
         <header className="flex h-16 items-center justify-between border-b bg-card px-4 lg:hidden">
           <div className="flex items-center gap-2">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-              <span className="font-heading text-lg font-bold">J</span>
+              <BrainCircuit className="h-5 w-5" />
             </div>
             <span className="font-heading text-xl font-bold text-card-foreground">JurisMind</span>
           </div>
