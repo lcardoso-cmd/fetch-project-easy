@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { askWithRag } from "@/lib/chat.functions";
+import { stripMarkdown } from "@/lib/strip-markdown";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Loader2, Send, Sparkles, FileText, AlertCircle } from "lucide-react";
@@ -56,7 +57,7 @@ export function ChatPanel({
       const res = await askFn({ data: { case_id: caseId, question: q, history } });
       setMessages([
         ...next,
-        { role: "assistant", content: res.answer, citations: res.citations, steps: res.steps },
+        { role: "assistant", content: stripMarkdown(res.answer), citations: res.citations, steps: res.steps },
       ]);
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);

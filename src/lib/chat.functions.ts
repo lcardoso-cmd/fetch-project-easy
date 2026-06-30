@@ -130,6 +130,8 @@ Use EXCLUSIVAMENTE o contexto fornecido para responder à pergunta. Cite as font
 Se o contexto for insuficiente, diga claramente.
 Você possui ferramentas: use-as quando o usuário pedir ação concreta (criar prazo, consultar agenda, listar casos).
 
+IMPORTANTE: Responda em TEXTO CORRIDO, sem Markdown. NÃO use **negrito**, *itálico*, # títulos, listas com - ou *, nem blocos de código. Use parágrafos simples e, quando necessário, títulos em MAIÚSCULAS seguidos de dois-pontos.
+
 CONTEXTO DOS DOCUMENTOS:
 ${contextBlock}`;
 
@@ -216,17 +218,20 @@ export const summarizeCase = createServerFn({ method: "POST" })
     }
 
     const text = chunks.map((c) => c.content).join("\n\n");
-    const { content: summary } = await chatComplete(
+    const { content: rawSummary } = await chatComplete(
       [
         {
           role: "system",
           content:
-            "Você é o JurisMind. Gere um resumo executivo em português do caso jurídico a partir dos trechos fornecidos. Estruture em: (1) Visão geral, (2) Partes envolvidas, (3) Pontos-chave, (4) Próximos passos sugeridos. Máximo 400 palavras.",
+            "Você é o JurisMind. Gere um resumo executivo em português do caso jurídico a partir dos trechos fornecidos. Estruture em quatro blocos com títulos em MAIÚSCULAS seguidos de dois-pontos: VISÃO GERAL, PARTES ENVOLVIDAS, PONTOS-CHAVE, PRÓXIMOS PASSOS. Use texto corrido em parágrafos curtos. NÃO use Markdown: nada de **negrito**, *itálico*, # títulos, listas com - ou *, nem blocos de código. Máximo 400 palavras.",
         },
         { role: "user", content: text.slice(0, 30_000) },
       ],
       { temperature: 0.3 },
     );
+
+    const { stripMarkdown } = await import("./strip-markdown");
+    const summary = stripMarkdown(rawSummary);
 
     await context.supabase
       .from("cases")

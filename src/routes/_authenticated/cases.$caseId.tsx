@@ -29,6 +29,7 @@ import { ArrowLeft, FileText, Loader2, Sparkles, Trash2, CalendarClock, Clipboar
 import { QuesitosCard } from "@/components/cases/quesitos-card";
 import type { MatterKind } from "@/lib/practice-labels";
 import { toast } from "sonner";
+import { stripMarkdown } from "@/lib/strip-markdown";
 
 export const Route = createFileRoute("/_authenticated/cases/$caseId")({
   component: CaseDetailPage,
@@ -67,6 +68,7 @@ function CaseDetailPage() {
   const [summarizing, setSummarizing] = useState(false);
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({
+    title: "",
     case_number: "",
     jurisdiction: "",
     case_type: "",
@@ -77,6 +79,7 @@ function CaseDetailPage() {
   const openEdit = () => {
     if (!caseData) return;
     setForm({
+      title: caseData.title ?? "",
       case_number: caseData.case_number ?? "",
       jurisdiction: caseData.jurisdiction ?? "",
       case_type: caseData.case_type ?? "",
@@ -145,6 +148,13 @@ function CaseDetailPage() {
             <CardTitle className="text-lg">Editar caso</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-3 md:grid-cols-2">
+            <div className="space-y-1 md:col-span-2">
+              <Label>Título do caso</Label>
+              <Input
+                value={form.title}
+                onChange={(e) => setForm({ ...form, title: e.target.value })}
+              />
+            </div>
             <div className="space-y-1">
               <Label>Cliente</Label>
               <Input
@@ -258,7 +268,7 @@ function CaseDetailPage() {
           <CardContent>
             {caseData.summary ? (
               <div className="prose prose-sm max-w-none whitespace-pre-wrap text-foreground">
-                {caseData.summary}
+                {stripMarkdown(caseData.summary)}
               </div>
             ) : (
               <p className="text-sm text-muted-foreground">
