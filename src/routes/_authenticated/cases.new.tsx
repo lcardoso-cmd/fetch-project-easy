@@ -233,7 +233,7 @@ function NewCasePage() {
     setJurisdiction(e.jurisdiction ?? "");
     setCaseType(e.case_type ?? "");
     setDescription(e.description ?? "");
-    setParties(e.parties ?? []);
+    setParties((e.parties ?? []).map((p) => ({ ...p, relation: p.relation ?? guessRelation(p, matterKind) })));
   };
 
   const handleFile = async (file: File) => {
