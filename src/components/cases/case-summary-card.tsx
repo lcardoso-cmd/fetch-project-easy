@@ -30,6 +30,7 @@ import {
   Download,
   FileText,
   Loader2,
+  Maximize2,
   Presentation,
   RefreshCw,
   Sparkles,
