@@ -87,6 +87,11 @@ function NewCasePage() {
   const [extracting, setExtracting] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
+  // review state — exibido só quando houve extração via documento
+  const [missingFields, setMissingFields] = useState<string[]>([]);
+  const [extractionWarnings, setExtractionWarnings] = useState<string[]>([]);
+  const [reviewConfirmed, setReviewConfirmed] = useState(false);
+
   // quick add team
   const [newMemberName, setNewMemberName] = useState("");
   const [newMemberRole, setNewMemberRole] = useState("");
