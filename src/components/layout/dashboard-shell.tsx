@@ -69,6 +69,8 @@ function buildNav(practice: PracticeType | null | undefined): NavItem[] {
 export function DashboardShell({ children }: { children: React.ReactNode }) {
   const { pathname } = useLocation();
   const { user, signOut } = useAuth();
+  const { data: profile } = useProfile();
+  const NAV = buildNav((profile?.practice_type as PracticeType | undefined) ?? null);
   const [collapsed, setCollapsed] = useState(false);
 
   useEffect(() => {
