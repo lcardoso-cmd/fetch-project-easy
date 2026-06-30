@@ -12,10 +12,17 @@ interface Citation {
   similarity: number;
 }
 
+interface ToolStep {
+  name: string;
+  args_json: string;
+  result_json: string;
+}
+
 interface Msg {
   role: "user" | "assistant";
   content: string;
   citations?: Citation[];
+  steps?: ToolStep[];
 }
 
 export function ChatPanel({ caseId }: { caseId?: string }) {
@@ -41,7 +48,7 @@ export function ChatPanel({ caseId }: { caseId?: string }) {
       const res = await askFn({ data: { case_id: caseId, question: q, history } });
       setMessages([
         ...next,
-        { role: "assistant", content: res.answer, citations: res.citations },
+        { role: "assistant", content: res.answer, citations: res.citations, steps: res.steps },
       ]);
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
@@ -86,6 +93,16 @@ export function ChatPanel({ caseId }: { caseId?: string }) {
                             ({Math.round(c.similarity * 100)}%)
                           </span>
                         </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {m.steps && m.steps.length > 0 && (
+                  <div className="mt-3 space-y-1 border-t border-border/40 pt-2">
+                    <p className="text-xs font-semibold opacity-70">Ações executadas:</p>
+                    {m.steps.map((s, idx) => (
+                      <div key={idx} className="text-xs opacity-80">
+                        ⚡ <span className="font-mono">{s.name}</span>
                       </div>
                     ))}
                   </div>
