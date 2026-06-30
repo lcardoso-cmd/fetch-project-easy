@@ -1,18 +1,35 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Plus, Trash2, Loader2, Users } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Plus, Trash2, Loader2, Users, UserCog } from "lucide-react";
 import { toast } from "sonner";
 import {
   listTeamMembers,
   createTeamMember,
   deleteTeamMember,
 } from "@/lib/team.functions";
+import {
+  updateMyProfile,
+  PRACTICE_TYPES,
+  type PracticeType,
+} from "@/lib/profile.functions";
+import {
+  PRACTICE_TYPE_LABELS,
+  SPECIALTY_SUGGESTIONS,
+} from "@/lib/practice-labels";
+import { useProfile } from "@/hooks/use-profile";
 
 export const Route = createFileRoute("/_authenticated/settings")({
   component: SettingsPage,
