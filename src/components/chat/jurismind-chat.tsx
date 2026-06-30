@@ -531,6 +531,24 @@ export function JurisMindChat({
           </div>
 
           <div className="border-t p-3">
+            {messages.length === 0 && (
+              <div className="mb-2 flex flex-wrap gap-1.5">
+                {QUICK_ACTIONS.map((qa) => (
+                  <button
+                    key={qa.label}
+                    type="button"
+                    disabled={busy}
+                    onClick={() => {
+                      setInput(qa.prompt);
+                      setTimeout(() => send(), 0);
+                    }}
+                    className="rounded-full border bg-background px-2.5 py-1 text-xs text-foreground hover:bg-muted disabled:opacity-50"
+                  >
+                    {qa.label}
+                  </button>
+                ))}
+              </div>
+            )}
             {images.length > 0 && (
               <div className="mb-2 flex flex-wrap gap-2">
                 {images.map((src, idx) => (
