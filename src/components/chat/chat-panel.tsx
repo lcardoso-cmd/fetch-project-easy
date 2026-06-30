@@ -97,6 +97,16 @@ export function ChatPanel({ caseId }: { caseId?: string }) {
                     ))}
                   </div>
                 )}
+                {m.steps && m.steps.length > 0 && (
+                  <div className="mt-3 space-y-1 border-t border-border/40 pt-2">
+                    <p className="text-xs font-semibold opacity-70">Ações executadas:</p>
+                    {m.steps.map((s, idx) => (
+                      <div key={idx} className="text-xs opacity-80">
+                        ⚡ <span className="font-mono">{s.name}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           ))
