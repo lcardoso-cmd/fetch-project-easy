@@ -212,9 +212,12 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
             </div>
             <span className="font-heading text-lg font-bold">JurisMind AI</span>
           </Link>
-          <Button variant="ghost" size="icon" onClick={signOut}>
-            <LogOut className="h-4 w-4" />
-          </Button>
+          <div className="flex items-center gap-1">
+            <NotificationBell />
+            <Button variant="ghost" size="icon" onClick={signOut}>
+              <LogOut className="h-4 w-4" />
+            </Button>
+          </div>
         </header>
 
         {/* Mobile nav strip */}
