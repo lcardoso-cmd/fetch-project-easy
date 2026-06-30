@@ -119,13 +119,42 @@ export const draftLegalPiece = createServerFn({ method: "POST" })
 
     const { data: caseRow, error: caseErr } = await context.supabase
       .from("cases")
-      .select("id, title, client_name, case_type, jurisdiction, summary, description")
+      .select(
+        "id, title, client_name, case_type, jurisdiction, summary, description, matter_kind, assisted_party_name, perito_nomination_ref, perito_deadline_date",
+      )
       .eq("id", data.case_id)
       .eq("user_id", context.userId)
       .single();
     if (caseErr || !caseRow) throw new Error("Caso não encontrado");
 
-    // Query semântica para puxar trechos relevantes do caso
+    // Quesitos do caso (para laudos / pareceres / impugnação)
+    const { data: quesitos } = await context.supabase
+      .from("case_quesitos")
+      .select("source, number, question, answer")
+      .eq("case_id", data.case_id)
+      .eq("user_id", context.userId)
+      .order("source", { ascending: true })
+      .order("number", { ascending: true, nullsFirst: false });
+
+    let quesitosBlock = "(Nenhum quesito cadastrado.)";
+    if ((quesitos ?? []).length > 0) {
+      const grouped = (quesitos ?? []).reduce<Record<string, typeof quesitos>>((acc, q) => {
+        (acc[q.source] ??= [] as never)?.push(q as never);
+        return acc;
+      }, {});
+      quesitosBlock = Object.entries(grouped)
+        .map(([src, list]) => {
+          const items = (list ?? [])
+            .map(
+              (q, i) =>
+                `  ${q.number ?? i + 1}. ${q.question}${q.answer ? `\n     Resposta prévia: ${q.answer}` : ""}`,
+            )
+            .join("\n");
+          return `Quesitos de ${src}:\n${items}`;
+        })
+        .join("\n\n");
+    }
+
     const seed = `${caseRow.title} ${caseRow.case_type ?? ""} ${data.instructions} ${data.piece_type}`;
     const [qEmb] = await embedTexts([seed]);
     let contextBlock = "(Sem documentos indexados neste caso.)";
@@ -147,24 +176,50 @@ export const draftLegalPiece = createServerFn({ method: "POST" })
       }
     }
 
-    const system = `Você é um advogado brasileiro experiente. Redija a peça jurídica solicitada em português formal, em Markdown, fiel ao CPC/2015 e à praxe forense. ${PIECE_GUIDE[data.piece_type]}
+    const isPerito =
+      data.piece_type === "laudo-pericial" || data.piece_type === "esclarecimentos-perito";
+    const isAssistente =
+      data.piece_type === "parecer-tecnico" ||
+      data.piece_type === "impugnacao-laudo" ||
+      data.piece_type === "quesitos-suplementares";
+
+    const persona = isPerito
+      ? "Você é um(a) perito(a) judicial brasileiro(a) experiente, redigindo documento técnico, impessoal e imparcial, em obediência aos arts. 464-480 do CPC."
+      : isAssistente
+        ? "Você é um(a) assistente técnico(a) contratado(a) por uma das partes. Redija documento técnico rigoroso, defendendo os interesses legítimos da parte assistida sem comprometer o rigor metodológico."
+        : "Você é um(a) advogado(a) brasileiro(a) experiente. Redija a peça em português formal, fiel ao CPC/2015 e à praxe forense.";
+
+    const system = `${persona} ${PIECE_GUIDE[data.piece_type]}
 REGRAS:
-- Use APENAS fatos presentes no contexto do caso. Se faltar informação, marque com [INSERIR ...].
-- Não invente nomes, CPF/CNPJ, valores, datas ou jurisprudência. Quando citar jurisprudência, use placeholder [CITAR JURISPRUDÊNCIA].
-- Cabeçalhos em Markdown (##), corpo em parágrafos claros.`;
+- Use APENAS fatos presentes no contexto do caso e nos quesitos. Se faltar informação, marque com [INSERIR ...].
+- Não invente nomes, CPF/CNPJ, valores, datas, jurisprudência ou conclusões técnicas. Use placeholders [INSERIR ...] / [CITAR JURISPRUDÊNCIA] / [DADO TÉCNICO PENDENTE] quando necessário.
+- Saída em Markdown, cabeçalhos em ## e parágrafos claros.`;
+
+    const clientLabel = isPerito
+      ? "Juízo nomeante"
+      : isAssistente
+        ? "Parte assistida"
+        : "Cliente";
+    const clientValue =
+      isAssistente && caseRow.assisted_party_name
+        ? caseRow.assisted_party_name
+        : (caseRow.client_name ?? "[INSERIR]");
 
     const user = `CASO: ${caseRow.title}
-Cliente: ${caseRow.client_name ?? "[INSERIR]"}
+${clientLabel}: ${clientValue}
 Tipo: ${caseRow.case_type ?? "[INSERIR]"}
 Jurisdição: ${caseRow.jurisdiction ?? "[INSERIR]"}
-Resumo: ${caseRow.summary ?? caseRow.description ?? "(sem resumo)"}
+${caseRow.perito_nomination_ref ? `Nomeação: ${caseRow.perito_nomination_ref}\n` : ""}${caseRow.perito_deadline_date ? `Prazo do laudo: ${caseRow.perito_deadline_date}\n` : ""}Resumo: ${caseRow.summary ?? caseRow.description ?? "(sem resumo)"}
 
-INSTRUÇÕES ESPECÍFICAS DO ADVOGADO: ${data.instructions || "(usar padrão da peça)"}
+INSTRUÇÕES ESPECÍFICAS: ${data.instructions || "(usar padrão do documento)"}
+
+QUESITOS DO CASO:
+${quesitosBlock}
 
 CONTEXTO DOS DOCUMENTOS DO CASO:
 ${contextBlock}
 
-Gere a peça completa agora.`;
+Gere o documento completo agora.`;
 
     const r = await chatComplete(
       [
@@ -175,4 +230,5 @@ Gere a peça completa agora.`;
     );
     return { content: r.content, case_title: caseRow.title };
   });
+
 
