@@ -34,7 +34,7 @@ export const listMyConversations = createServerFn({ method: "GET" })
       .eq("user_id", context.userId);
     if (error) throw error;
     const ids = (parts ?? []).map((p) => p.conversation_id);
-    if (ids.length === 0) return [] as Array<Record<string, unknown>>;
+    if (ids.length === 0) return [];
 
     const { data: convs, error: cErr } = await context.supabase
       .from("conversations")
