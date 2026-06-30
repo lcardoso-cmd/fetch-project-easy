@@ -131,6 +131,78 @@ export const askWithRag = createServerFn({ method: "POST" })
           },
         },
       },
+      {
+        type: "function",
+        function: {
+          name: "create_petition",
+          description:
+            "Gera uma minuta de petição/parecer/contrato para o usuário editar e baixar em Word. Use quando pedirem para 'redigir', 'minutar', 'fazer petição', 'contestação', 'parecer', etc.",
+          parameters: {
+            type: "object",
+            properties: {
+              titulo: { type: "string", description: "Título do documento" },
+              conteudo: {
+                type: "string",
+                description:
+                  "Texto completo da peça em parágrafos separados por quebras de linha. Use linguagem jurídica formal.",
+              },
+            },
+            required: ["titulo", "conteudo"],
+          },
+        },
+      },
+      {
+        type: "function",
+        function: {
+          name: "create_table",
+          description:
+            "Cria uma planilha (.xlsx) a partir de dados estruturados. Use quando pedirem tabela, cronograma, planilha de custas, comparativo, etc.",
+          parameters: {
+            type: "object",
+            properties: {
+              titulo: { type: "string" },
+              rows: {
+                type: "array",
+                description:
+                  "Linhas como array de objetos. As chaves de cada objeto viram colunas.",
+                items: { type: "object" },
+              },
+            },
+            required: ["titulo", "rows"],
+          },
+        },
+      },
+      {
+        type: "function",
+        function: {
+          name: "create_presentation",
+          description:
+            "Cria uma apresentação PowerPoint (.pptx). Use para resumir um caso/processo em slides.",
+          parameters: {
+            type: "object",
+            properties: {
+              title: { type: "string" },
+              subtitle: { type: "string" },
+              slides: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    title: { type: "string" },
+                    content: {
+                      type: "array",
+                      items: { type: "string" },
+                      description: "Tópicos em bullets",
+                    },
+                  },
+                  required: ["title", "content"],
+                },
+              },
+            },
+            required: ["title", "slides"],
+          },
+        },
+      },
     ];
 
     const systemPrompt = `Você é o JurisMind, assistente jurídico em português brasileiro.
