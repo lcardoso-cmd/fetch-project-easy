@@ -847,9 +847,13 @@ function NewCasePage() {
                   id="perito_fee"
                   value={peritoFee}
                   onChange={(e) => setPeritoFee(e.target.value)}
+                  onBlur={() => markTouched("perito_fee")}
                   placeholder="Ex.: 3500,00"
                   inputMode="decimal"
+                  aria-invalid={showError("perito_fee") || undefined}
+                  className={errorRing("perito_fee")}
                 />
+                <ErrorMsg k="perito_fee" />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="perito_appointment_date">Data de nomeação</Label>
