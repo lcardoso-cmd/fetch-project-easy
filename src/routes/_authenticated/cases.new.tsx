@@ -628,19 +628,26 @@ function NewCasePage() {
                 id="title"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
+                onBlur={() => markTouched("title")}
                 required
                 maxLength={200}
+                aria-invalid={showError("title") || undefined}
+                className={errorRing("title")}
               />
+              <ErrorMsg k="title" />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="client">Cliente</Label>
+              <Label htmlFor="client">Cliente *</Label>
               <Input
                 id="client"
                 value={clientName}
                 onChange={(e) => setClientName(e.target.value)}
+                onBlur={() => markTouched("client_name")}
                 maxLength={200}
-                className={fieldRing("client_name")}
+                aria-invalid={showError("client_name") || undefined}
+                className={`${fieldRing("client_name")} ${errorRing("client_name")}`.trim()}
               />
+              <ErrorMsg k="client_name" />
               <FieldIssue field="client_name" />
             </div>
             <div className="space-y-2">
@@ -649,9 +656,13 @@ function NewCasePage() {
                 id="case_number"
                 value={caseNumber}
                 onChange={(e) => setCaseNumber(e.target.value)}
+                onBlur={() => markTouched("case_number")}
+                placeholder="0000000-00.0000.0.00.0000"
                 maxLength={120}
-                className={fieldRing("case_number")}
+                aria-invalid={showError("case_number") || undefined}
+                className={`${fieldRing("case_number")} ${errorRing("case_number")}`.trim()}
               />
+              <ErrorMsg k="case_number" />
               <FieldIssue field="case_number" />
             </div>
             <div className="space-y-2">
@@ -667,9 +678,19 @@ function NewCasePage() {
               <FieldIssue field="jurisdiction" />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="case_type">Tipo</Label>
-              <Select value={caseType} onValueChange={setCaseType}>
-                <SelectTrigger id="case_type" className={fieldRing("case_type")}>
+              <Label htmlFor="case_type">Tipo *</Label>
+              <Select
+                value={caseType}
+                onValueChange={(v) => {
+                  setCaseType(v);
+                  markTouched("case_type");
+                }}
+              >
+                <SelectTrigger
+                  id="case_type"
+                  aria-invalid={showError("case_type") || undefined}
+                  className={`${fieldRing("case_type")} ${errorRing("case_type")}`.trim()}
+                >
                   <SelectValue placeholder="Selecione" />
                 </SelectTrigger>
                 <SelectContent>
@@ -687,6 +708,7 @@ function NewCasePage() {
                   <SelectItem value="Outro">Outro</SelectItem>
                 </SelectContent>
               </Select>
+              <ErrorMsg k="case_type" />
               <FieldIssue field="case_type" />
             </div>
             <div className="space-y-2 md:col-span-2">
