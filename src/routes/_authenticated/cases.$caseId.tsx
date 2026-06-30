@@ -172,13 +172,13 @@ function CaseDetailPage() {
               <Badge variant="secondary">{caseData.case_type}</Badge>
             )}
           </div>
-          {caseData.parties && caseData.parties.length > 0 && (
+          {caseData.parties && (caseData.parties as Array<{ role: string; name: string; relation?: string | null }>).length > 0 && (
             <div className="mt-3">
               <p className="text-sm font-medium text-foreground">
                 Partes Envolvidas:
               </p>
               <ul className="mt-1 space-y-0.5">
-                {caseData.parties.map((party, i) => (
+                {(caseData.parties as Array<{ role: string; name: string; relation?: string | null }>).map((party, i) => (
                   <li key={i} className="text-sm text-muted-foreground">
                     <span className="font-medium text-foreground">
                       {party.role}:
