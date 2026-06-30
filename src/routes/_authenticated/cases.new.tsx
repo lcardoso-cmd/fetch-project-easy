@@ -298,9 +298,6 @@ function NewCasePage() {
     setParties(parties.map((p, idx) => (idx === i ? { ...p, ...patch } : p)));
   const removeParty = (i: number) => {
     setParties(parties.filter((_, idx) => idx !== i));
-    if (representedIdx === i) setRepresentedIdx(null);
-    else if (representedIdx !== null && representedIdx > i)
-      setRepresentedIdx(representedIdx - 1);
   };
 
   const toggleMember = (id: string) =>
