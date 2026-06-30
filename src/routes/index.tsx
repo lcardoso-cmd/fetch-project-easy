@@ -54,7 +54,7 @@ function LandingPage() {
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4">
           <div className="flex items-center gap-2">
             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-              <span className="font-heading text-lg font-extrabold">J</span>
+              <BrainCircuit className="h-5 w-5" />
             </div>
             <span className="font-heading text-xl font-extrabold tracking-tight text-foreground">
               JurisMind
