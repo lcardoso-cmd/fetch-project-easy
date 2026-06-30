@@ -70,10 +70,29 @@ function DashboardPage() {
             <CalendarClock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">0</div>
+            <div className="text-2xl font-bold">{docs.length}</div>
+            <p className="text-xs text-muted-foreground">Total carregado</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Prazos próximos</CardTitle>
+            <CalendarClock className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{upcoming.length}</div>
             <p className="text-xs text-muted-foreground">Próximos 7 dias</p>
           </CardContent>
         </Card>
+      </div>
+
+      {/* dummy close to keep structure */}
+      <div className="hidden">
+        <div>
+          <div>0</div>
+          <p>x</p>
+        </div>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-7">
