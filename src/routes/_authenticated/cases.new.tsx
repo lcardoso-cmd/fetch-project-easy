@@ -130,11 +130,9 @@ function NewCasePage() {
   const [caseType, setCaseType] = useState<string>("");
   const [description, setDescription] = useState("");
   const [parties, setParties] = useState<Party[]>([]);
-  const [representedIdx, setRepresentedIdx] = useState<number | null>(null);
   const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
 
-  // Campos extras de perícia / assistência técnica
-  const [assistedPartyName, setAssistedPartyName] = useState("");
+  // Campos extras de perícia
   const [peritoFee, setPeritoFee] = useState(""); // em reais (string), convertido em cents na submissão
   const [peritoAppointmentDate, setPeritoAppointmentDate] = useState("");
   const [peritoDeadlineDate, setPeritoDeadlineDate] = useState("");
