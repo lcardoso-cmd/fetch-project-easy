@@ -234,7 +234,6 @@ function NewCasePage() {
     setCaseType(e.case_type ?? "");
     setDescription(e.description ?? "");
     setParties(e.parties ?? []);
-    setRepresentedIdx(null);
   };
 
   const handleFile = async (file: File) => {
