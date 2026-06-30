@@ -639,7 +639,7 @@ function NewCasePage() {
           </Button>
           <Button type="submit" disabled={submitting || (needsReview && !reviewConfirmed)}>
             {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Criar caso
+            {needsReview ? "Confirmar e criar caso" : "Criar caso"}
           </Button>
         </div>
       </form>
