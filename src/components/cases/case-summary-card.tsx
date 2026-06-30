@@ -45,12 +45,14 @@ export function CaseSummaryCard({
   summary,
   summaryUpdatedAt,
   hasReadyDocs,
+  actions,
 }: {
   caseId: string;
   caseTitle: string;
   summary: string | null;
   summaryUpdatedAt: string | null;
   hasReadyDocs: boolean;
+  actions?: React.ReactNode;
 }) {
   const summarizeFn = useServerFn(summarizeCase);
   const exportDocxFn = useServerFn(exportSummaryDocx);
@@ -116,7 +118,8 @@ export function CaseSummaryCard({
                 : "Análise automática dos principais pontos do caso."}
             </CardDescription>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            {actions}
             {summary && (
               <>
                 <Button
