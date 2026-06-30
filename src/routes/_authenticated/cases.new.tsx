@@ -365,7 +365,7 @@ function NewCasePage() {
         {isMissing && (
           <p className="text-xs text-amber-700 dark:text-amber-400 flex items-start gap-1">
             <AlertTriangle className="h-3 w-3 mt-0.5 shrink-0" />
-            {MISSING_FIELD_HINTS[field] ?? "Não identificado pela IA — preencha manualmente."}
+            {MISSING_FIELD_HINTS[field] ?? "Não identificado pelo JurisMind — preencha manualmente."}
           </p>
         )}
         {fieldWarnings.map((m, i) => (
@@ -394,7 +394,7 @@ function NewCasePage() {
   for (const f of FIELDS_ORDER) {
     const msgs: string[] = [];
     if (missingSet.has(f)) {
-      msgs.push(MISSING_FIELD_HINTS[f] ?? "Não identificado pela IA.");
+      msgs.push(MISSING_FIELD_HINTS[f] ?? "Não identificado pelo JurisMind.");
     }
     msgs.push(...(warningsByField[f] ?? []));
     if (msgs.length) {
@@ -425,7 +425,7 @@ function NewCasePage() {
               <Sparkles className="h-5 w-5 text-accent" /> Importar documento (opcional)
             </CardTitle>
             <CardDescription>
-              Envie a petição, contrato ou processo. A IA lê e preenche os campos abaixo.
+              Envie a petição, contrato ou processo. O JurisMind lê e preenche os campos abaixo.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -508,7 +508,7 @@ function NewCasePage() {
                 <AlertTriangle className="h-5 w-5" /> Revisar dados extraídos
               </CardTitle>
               <CardDescription>
-                A IA preencheu os campos abaixo a partir do documento.
+                O JurisMind preencheu os campos abaixo a partir do documento.
                 <strong> Edite o que precisar — os valores que ficarem aqui
                 serão salvos no caso.</strong> Os campos destacados em âmbar
                 precisam da sua atenção.

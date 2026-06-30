@@ -84,7 +84,7 @@ export function ChatPanel({
           <div className="flex h-full flex-col items-center justify-center gap-3 text-center text-muted-foreground">
             <Sparkles className="h-10 w-10 text-accent" />
             <p className="font-medium text-foreground">Pergunte sobre seus documentos</p>
-            <p className="text-sm">A IA busca os trechos relevantes e responde citando as fontes.</p>
+            <p className="text-sm">O JurisMind busca os trechos relevantes e responde citando as fontes.</p>
           </div>
         ) : (
           messages.map((m, i) => (

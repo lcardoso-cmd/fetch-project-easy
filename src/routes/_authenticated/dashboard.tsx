@@ -121,7 +121,7 @@ function DashboardPage() {
               Assistente JurisMind
             </CardTitle>
             <CardDescription>
-              Pergunte sobre seus documentos com IA e citações.
+              Pergunte sobre seus documentos com JurisMind e citações.
             </CardDescription>
           </CardHeader>
           <CardContent>

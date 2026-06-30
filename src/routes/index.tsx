@@ -7,11 +7,11 @@ export const Route = createFileRoute("/")({
   component: LandingPage,
   head: () => ({
     meta: [
-      { title: "JurisMind — IA jurídica para advogados" },
+      { title: "JurisMind — Inteligência jurídica para advogados" },
       {
         name: "description",
         content:
-          "JurisMind: plataforma de IA com RAG para análise de documentos jurídicos, resumos automáticos e chat sobre seus casos.",
+          "JurisMind: plataforma com RAG para análise de documentos jurídicos, resumos automáticos e chat sobre seus casos.",
       },
     ],
   }),
@@ -22,7 +22,7 @@ const features = [
     icon: BrainCircuit,
     title: "Chat com seus documentos",
     description:
-      "Pergunte qualquer coisa sobre seus processos. A IA busca trechos relevantes e responde citando as fontes.",
+      "Pergunte qualquer coisa sobre seus processos. O JurisMind busca trechos relevantes e responde citando as fontes.",
   },
   {
     icon: FileText,
@@ -92,12 +92,12 @@ function LandingPage() {
         <div className="relative mx-auto max-w-6xl px-4 py-24 text-center">
           <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-accent/20 px-3 py-1 text-xs font-semibold text-accent">
             <Sparkles className="h-3 w-3" />
-            IA aplicada à advocacia
+            JurisMind aplicado à advocacia
           </div>
           <h1 className="font-heading text-5xl font-extrabold tracking-tight md:text-6xl">
             Sua mente jurídica,
             <br />
-            potencializada por IA.
+            potencializada por JurisMind.
           </h1>
           <p className="mx-auto mt-6 max-w-2xl text-lg text-primary-foreground/80">
             JurisMind transforma a forma como você lida com documentos: faça upload, pergunte,
@@ -157,7 +157,7 @@ function LandingPage() {
             Pronto para experimentar?
           </h2>
           <p className="mt-3 text-muted-foreground">
-            Crie sua conta gratuita, suba seus primeiros documentos e converse com a IA.
+            Crie sua conta gratuita, suba seus primeiros documentos e converse com o JurisMind.
           </p>
           <Button size="lg" asChild className="mt-6">
             <Link to={user ? "/dashboard" : "/auth"}>

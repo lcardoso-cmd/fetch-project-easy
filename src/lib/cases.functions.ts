@@ -236,7 +236,7 @@ export const extractCaseDataFromDocument = createServerFn({ method: "POST" })
     const text = (fullText || "").trim();
     if (!text) throw new Error("Não foi possível extrair texto do documento");
 
-    // Fallback regex pra CNJ direto no texto — reforça o que a IA achar
+    // Fallback regex pra CNJ direto no texto — reforça o que o JurisMind achar
     const cnjFromText = text.match(CNJ_REGEX)?.[0] ?? null;
 
     const snippet = text.slice(0, 15000);
@@ -321,7 +321,7 @@ ${snippet}
     if (cnjFromText && parsed.case_number && cnjFromText !== parsed.case_number) {
       warnings.push({
         field: "case_number",
-        message: `Encontramos outro número no texto (${cnjFromText}) diferente do extraído pela IA. Confira qual é o correto.`,
+        message: `Encontramos outro número no texto (${cnjFromText}) diferente do extraído pelo JurisMind. Confira qual é o correto.`,
       });
     }
 
