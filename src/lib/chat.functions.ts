@@ -23,17 +23,22 @@ interface Citation {
   similarity: number;
 }
 
+interface ToolStep {
+  name: string;
+  args: unknown;
+  result: unknown;
+}
+
 export const askWithRag = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((i: unknown) => AskSchema.parse(i))
   .handler(async ({ data, context }) => {
-    const { embedTexts, chatComplete } = await import("./ai.server");
+    const { embedTexts, chatWithTools, type ToolDef } = await import("./ai.server");
 
-    // 1. Embedding da pergunta
+    // 1. Embedding da pergunta + busca semântica
     const [qEmb] = await embedTexts([data.question]);
     if (!qEmb) throw new Error("Falha ao gerar embedding");
 
-    // 2. Buscar trechos relevantes (escopo por user; se case_id, filtra depois)
     const { data: matches, error } = await context.supabase.rpc("match_chunks", {
       query_embedding: qEmb as unknown as string,
       match_count: 8,
@@ -45,7 +50,6 @@ export const askWithRag = createServerFn({ method: "POST" })
       (m: { case_id: string }) => !data.case_id || m.case_id === data.case_id,
     );
 
-    // 3. Resolver nomes dos arquivos
     const docIds = Array.from(new Set(filtered.map((m: { document_id: string }) => m.document_id)));
     const { data: docs } = await context.supabase
       .from("documents")
@@ -62,7 +66,6 @@ export const askWithRag = createServerFn({ method: "POST" })
       }),
     );
 
-    // 4. Montar prompt
     const contextBlock = filtered.length
       ? filtered
           .map(
@@ -72,11 +75,62 @@ export const askWithRag = createServerFn({ method: "POST" })
           .join("\n\n---\n\n")
       : "(Nenhum trecho relevante encontrado nos documentos indexados.)";
 
-    const systemPrompt = `Você é o JurisMind, assistente jurídico em português brasileiro. \
-Responda à pergunta do(a) advogado(a) usando EXCLUSIVAMENTE o contexto fornecido abaixo. \
-Cite as fontes ao final no formato [n] indicando o número entre colchetes do trecho. \
-Se o contexto for insuficiente, diga claramente que não há informação nos documentos.\n\n\
-CONTEXTO:\n${contextBlock}`;
+    // 2. Tools disponíveis para o modelo
+    const tools: (typeof ToolDef extends never ? never : import("./ai.server").ToolDef)[] = [
+      {
+        type: "function",
+        function: {
+          name: "create_event",
+          description:
+            "Cria um evento na agenda do(a) advogado(a) (prazo, audiência, reunião). Use quando o usuário pedir agendar algo ou quando identificar prazo nos documentos.",
+          parameters: {
+            type: "object",
+            properties: {
+              title: { type: "string", description: "Título curto do evento" },
+              description: { type: "string" },
+              starts_at: {
+                type: "string",
+                description: "Data/hora ISO 8601 (ex: 2026-07-15T14:00:00-03:00)",
+              },
+              ends_at: { type: "string", description: "Opcional, ISO 8601" },
+              event_type: {
+                type: "string",
+                enum: ["deadline", "hearing", "meeting", "task"],
+              },
+              all_day: { type: "boolean" },
+            },
+            required: ["title", "starts_at", "event_type"],
+          },
+        },
+      },
+      {
+        type: "function",
+        function: {
+          name: "list_cases",
+          description: "Lista os casos do(a) advogado(a) (id, título, cliente, status).",
+          parameters: { type: "object", properties: {} },
+        },
+      },
+      {
+        type: "function",
+        function: {
+          name: "list_upcoming_events",
+          description: "Lista próximos eventos/prazos a partir de hoje.",
+          parameters: {
+            type: "object",
+            properties: { days: { type: "number", description: "Janela em dias (default 30)" } },
+          },
+        },
+      },
+    ];
+
+    const systemPrompt = `Você é o JurisMind, assistente jurídico em português brasileiro.
+Use EXCLUSIVAMENTE o contexto fornecido para responder à pergunta. Cite as fontes ao final no formato [n] indicando o número entre colchetes do trecho.
+Se o contexto for insuficiente, diga claramente.
+Você possui ferramentas: use-as quando o usuário pedir ação concreta (criar prazo, consultar agenda, listar casos).
+
+CONTEXTO DOS DOCUMENTOS:
+${contextBlock}`;
 
     const messages = [
       { role: "system" as const, content: systemPrompt },
@@ -84,8 +138,59 @@ CONTEXTO:\n${contextBlock}`;
       { role: "user" as const, content: data.question },
     ];
 
-    const answer = await chatComplete(messages, { temperature: 0.2 });
-    return { answer, citations };
+    const executor = async (name: string, args: Record<string, unknown>) => {
+      if (name === "create_event") {
+        const ev = {
+          user_id: context.userId,
+          case_id: data.case_id ?? null,
+          title: String(args.title ?? "Evento"),
+          description: args.description ? String(args.description) : null,
+          starts_at: String(args.starts_at),
+          ends_at: args.ends_at ? String(args.ends_at) : null,
+          event_type: String(args.event_type ?? "deadline"),
+          all_day: Boolean(args.all_day ?? false),
+        };
+        const { data: row, error: e } = await context.supabase
+          .from("events")
+          .insert(ev)
+          .select()
+          .single();
+        if (e) return { error: e.message };
+        return { ok: true, event: row };
+      }
+      if (name === "list_cases") {
+        const { data: cs } = await context.supabase
+          .from("cases")
+          .select("id, title, client_name, status")
+          .eq("user_id", context.userId)
+          .order("updated_at", { ascending: false })
+          .limit(50);
+        return { cases: cs ?? [] };
+      }
+      if (name === "list_upcoming_events") {
+        const days = Number(args.days ?? 30);
+        const until = new Date(Date.now() + days * 86400_000).toISOString();
+        const { data: evs } = await context.supabase
+          .from("events")
+          .select("id, title, starts_at, event_type, case_id")
+          .eq("user_id", context.userId)
+          .gte("starts_at", new Date().toISOString())
+          .lte("starts_at", until)
+          .order("starts_at", { ascending: true });
+        return { events: evs ?? [] };
+      }
+      return { error: `Tool desconhecida: ${name}` };
+    };
+
+    const { content, steps } = await chatWithTools(messages, tools, executor, {
+      temperature: 0.2,
+    });
+
+    return {
+      answer: content,
+      citations,
+      steps: steps as ToolStep[],
+    };
   });
 
 export const summarizeCase = createServerFn({ method: "POST" })
@@ -106,7 +211,7 @@ export const summarizeCase = createServerFn({ method: "POST" })
     }
 
     const text = chunks.map((c) => c.content).join("\n\n");
-    const summary = await chatComplete(
+    const { content: summary } = await chatComplete(
       [
         {
           role: "system",
