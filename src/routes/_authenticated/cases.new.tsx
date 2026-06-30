@@ -228,26 +228,23 @@ function NewCasePage() {
 
       const res = await extractFn({ data: meta });
       applyExtracted(res.extracted);
-      const FIELD_LABELS: Record<string, string> = {
-        client_name: "cliente",
-        case_number: "número do processo",
-        jurisdiction: "vara/jurisdição",
-        case_type: "tipo do caso",
-        parties: "partes",
-        description: "descrição",
-      };
-      const missingLabels = (res.missing ?? []).map((f) => FIELD_LABELS[f] ?? f);
-      setMissingFields(missingLabels);
+      const missingRaw = res.missing ?? [];
+      setMissingFields(missingRaw);
       setExtractionWarnings(res.warnings ?? []);
       setReviewConfirmed(false);
-      if (missingLabels.length) {
+      if (missingRaw.length) {
+        const labels = missingRaw.map((f) => FIELD_LABELS[f] ?? f);
         toast.warning("Alguns dados não foram identificados", {
-          description: `Preencha manualmente: ${missingLabels.join(", ")}.`,
+          description: `Preencha manualmente: ${labels.join(", ")}.`,
         });
       } else {
         toast.success("Dados extraídos do documento");
       }
-      (res.warnings ?? []).forEach((w) => toast.warning(w));
+      (res.warnings ?? []).forEach((w) =>
+        toast.warning(w.field ? FIELD_LABELS[w.field] ?? w.field : "Aviso", {
+          description: w.message,
+        }),
+      );
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       toast.error(`Falha: ${msg}`);
