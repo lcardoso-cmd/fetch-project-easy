@@ -257,7 +257,7 @@ function NewCasePage() {
       };
       setUploaded(meta);
 
-      const res = await extractFn({ data: meta });
+      const res = await extractFn({ data: { ...meta, matter_kind: matterKind } });
       applyExtracted(res.extracted);
       const missingRaw = res.missing ?? [];
       setMissingFields(missingRaw);
