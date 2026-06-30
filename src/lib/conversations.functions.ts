@@ -255,11 +255,11 @@ export const listConversationParticipants = createServerFn({ method: "GET" })
     if (ids.length === 0) return [] as Array<{ id: string; name: string }>;
     const { data: profiles } = await context.supabase
       .from("profiles")
-      .select("id, full_name, email")
+      .select("id, full_name")
       .in("id", ids);
     return (profiles ?? []).map((p) => ({
       id: p.id,
-      name: p.full_name ?? p.email ?? "Usuário",
+      name: p.full_name ?? "Usuário",
     }));
   });
 
