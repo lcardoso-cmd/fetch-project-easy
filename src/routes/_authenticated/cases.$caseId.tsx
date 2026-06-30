@@ -22,6 +22,8 @@ import { listEvents } from "@/lib/events.functions";
 import { listTasks, toggleTask } from "@/lib/tasks.functions";
 import { UploadZone } from "@/components/documents/upload-zone";
 import { ChatPanel } from "@/components/chat/chat-panel";
+import { ConversationView } from "@/components/chat/conversation-view";
+import { getOrCreateCaseConversation } from "@/lib/conversations.functions";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ArrowLeft, FileText, Loader2, Sparkles, Trash2, CalendarClock, ClipboardCheck } from "lucide-react";
 import { QuesitosCard } from "@/components/cases/quesitos-card";
