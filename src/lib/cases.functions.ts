@@ -1,40 +1,38 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { supabase } from "@/integrations/supabase/client";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 const CaseSchema = z.object({
-  id: z.string().uuid().optional(),
   title: z.string().min(1).max(200),
   description: z.string().max(2000).optional(),
   client_name: z.string().max(200).optional(),
   status: z.enum(["active", "archived", "closed"]).default("active"),
 });
 
-export const getCases = createServerFn({ method: "GET" }).handler(async () => {
-  const { data: { user }, error: authError } = await supabase.auth.getUser();
-  if (authError || !user) throw new Error("Unauthorized");
+const StatusEnum = z.enum(["active", "archived", "closed"]);
 
-  const { data, error } = await supabase
-    .from("cases")
-    .select("*")
-    .eq("user_id", user.id)
-    .order("created_at", { ascending: false });
+export const getCases = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data, error } = await context.supabase
+      .from("cases")
+      .select("*")
+      .eq("user_id", context.userId)
+      .order("created_at", { ascending: false });
 
-  if (error) throw error;
-  return data ?? [];
-});
+    if (error) throw error;
+    return data ?? [];
+  });
 
 export const getCase = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
-  .handler(async ({ data }) => {
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) throw new Error("Unauthorized");
-
-    const { data: caseData, error } = await supabase
+  .handler(async ({ data, context }) => {
+    const { data: caseData, error } = await context.supabase
       .from("cases")
       .select("*, documents(*), events(*)")
       .eq("id", data.id)
-      .eq("user_id", user.id)
+      .eq("user_id", context.userId)
       .single();
 
     if (error) throw error;
@@ -42,15 +40,13 @@ export const getCase = createServerFn({ method: "GET" })
   });
 
 export const createCase = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => CaseSchema.parse(input))
-  .handler(async ({ data }) => {
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) throw new Error("Unauthorized");
-
-    const { data: newCase, error } = await supabase
+  .handler(async ({ data, context }) => {
+    const { data: newCase, error } = await context.supabase
       .from("cases")
       .insert({
-        user_id: user.id,
+        user_id: context.userId,
         title: data.title,
         description: data.description,
         client_name: data.client_name,
@@ -64,6 +60,7 @@ export const createCase = createServerFn({ method: "POST" })
   });
 
 export const updateCase = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) =>
     z
       .object({
@@ -71,20 +68,17 @@ export const updateCase = createServerFn({ method: "POST" })
         title: z.string().min(1).max(200).optional(),
         description: z.string().max(2000).optional(),
         client_name: z.string().max(200).optional(),
-        status: z.enum(["active", "archived", "closed"]).optional(),
+        status: StatusEnum.optional(),
       })
       .parse(input),
   )
-  .handler(async ({ data }) => {
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) throw new Error("Unauthorized");
-
+  .handler(async ({ data, context }) => {
     const { id, ...updates } = data;
-    const { data: updatedCase, error } = await supabase
+    const { data: updatedCase, error } = await context.supabase
       .from("cases")
       .update(updates)
       .eq("id", id)
-      .eq("user_id", user.id)
+      .eq("user_id", context.userId)
       .select()
       .single();
 
@@ -93,12 +87,15 @@ export const updateCase = createServerFn({ method: "POST" })
   });
 
 export const deleteCase = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
-  .handler(async ({ data }) => {
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) throw new Error("Unauthorized");
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase
+      .from("cases")
+      .delete()
+      .eq("id", data.id)
+      .eq("user_id", context.userId);
 
-    const { error } = await supabase.from("cases").delete().eq("id", data.id).eq("user_id", user.id);
     if (error) throw error;
     return { success: true };
   });
