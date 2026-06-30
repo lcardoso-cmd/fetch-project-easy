@@ -40,8 +40,10 @@ export const Route = createFileRoute("/_authenticated/settings")({
 function SettingsPage() {
   const qc = useQueryClient();
   const listFn = useServerFn(listTeamMembers);
-  const createFn = useServerFn(createTeamMember);
+  const inviteFn = useServerFn(inviteTeamMember);
   const deleteFn = useServerFn(deleteTeamMember);
+  const listInvFn = useServerFn(listInvitations);
+  const revokeInvFn = useServerFn(revokeInvitation);
   const updateProfileFn = useServerFn(updateMyProfile);
   const { data: profile } = useProfile();
 
@@ -49,10 +51,15 @@ function SettingsPage() {
     queryKey: ["team-members"],
     queryFn: () => listFn(),
   });
+  const { data: invites = [] } = useQuery({
+    queryKey: ["team-invitations"],
+    queryFn: () => listInvFn(),
+  });
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [role, setRole] = useState("");
+  const [accessRole, setAccessRole] = useState<"viewer" | "editor" | "admin">("editor");
 
   // Perfil profissional
   const [practiceType, setPracticeType] = useState<PracticeType>("advogado");
@@ -67,16 +74,31 @@ function SettingsPage() {
     }
   }, [profile]);
 
-  const createMut = useMutation({
-    mutationFn: () => createFn({ data: { name: name.trim(), email: email.trim(), role: role.trim() } }),
-    onSuccess: () => {
-      toast.success("Membro adicionado");
+  const inviteMut = useMutation({
+    mutationFn: () =>
+      inviteFn({
+        data: {
+          name: name.trim(),
+          email: email.trim(),
+          role: role.trim() || null,
+          access_role: accessRole,
+        },
+      }),
+    onSuccess: (res) => {
+      const link = `${window.location.origin}/invite/${res.invitation.token}`;
+      if (res.alreadyRegistered) {
+        toast.success(`${name} já tem conta — acesso liberado imediatamente.`);
+      } else {
+        navigator.clipboard?.writeText(link).catch(() => {});
+        toast.success("Convite criado — link copiado para a área de transferência.");
+      }
       setName("");
       setEmail("");
       setRole("");
       qc.invalidateQueries({ queryKey: ["team-members"] });
+      qc.invalidateQueries({ queryKey: ["team-invitations"] });
     },
-    onError: (e: Error) => toast.error(e.message || "Falha ao adicionar"),
+    onError: (e: Error) => toast.error(e.message || "Falha ao convidar"),
   });
 
   const deleteMut = useMutation({
@@ -87,6 +109,20 @@ function SettingsPage() {
     },
     onError: (e: Error) => toast.error(e.message || "Falha ao remover"),
   });
+
+  const revokeMut = useMutation({
+    mutationFn: (id: string) => revokeInvFn({ data: { id } }),
+    onSuccess: () => {
+      toast.success("Convite revogado");
+      qc.invalidateQueries({ queryKey: ["team-invitations"] });
+    },
+  });
+
+  function copyInviteLink(token: string) {
+    const link = `${window.location.origin}/invite/${token}`;
+    navigator.clipboard?.writeText(link).then(() => toast.success("Link copiado"));
+  }
+
 
   const profileMut = useMutation({
     mutationFn: () =>
