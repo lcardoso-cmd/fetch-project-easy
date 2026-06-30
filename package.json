@@ -9,7 +9,9 @@
     "build:dev": "vite build --mode development",
     "preview": "vite preview",
     "lint": "eslint .",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "test:e2e": "playwright test",
+    "test:e2e:fixtures": "python3 tests/fixtures/generate-sample-pdf.py"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
