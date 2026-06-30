@@ -422,37 +422,8 @@ function CaseDetailPage() {
           matterKind={caseData.matter_kind as MatterKind}
         />
       )}
-
-      {/* Chat interno da equipe */}
-      <CaseTeamChat caseId={caseId} />
-    </div>
-  );
-}
-
-function CaseTeamChat({ caseId }: { caseId: string }) {
-  const getOrCreateFn = useServerFn(getOrCreateCaseConversation);
-  const { data: conv } = useQuery({
-    queryKey: ["case-conversation", caseId],
-    queryFn: () => getOrCreateFn({ data: { case_id: caseId } }),
-  });
-  if (!conv) {
-    return (
-      <div className="rounded-xl border bg-card p-6 text-sm text-muted-foreground">
-        Carregando conversa da equipe…
-      </div>
-    );
-  }
-  return (
-    <div>
-      <h2 className="mb-3 text-xl font-bold tracking-tight text-foreground">
-        Conversa da equipe
-      </h2>
-      <div className="h-[500px]">
-        <ConversationView
-          conversationId={conv.id}
-          subtitle="Mensagens entre membros do caso"
-        />
-      </div>
+      {/* Chat flutuante da equipe (canto inferior direito) */}
+      <FloatingTeamChat caseId={caseId} />
     </div>
   );
 }
