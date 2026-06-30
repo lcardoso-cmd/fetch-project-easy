@@ -25,6 +25,7 @@ import { Route as AuthenticatedChatRouteImport } from './routes/_authenticated/c
 import { Route as AuthenticatedCasesRouteImport } from './routes/_authenticated/cases'
 import { Route as AuthenticatedCalendarRouteImport } from './routes/_authenticated/calendar'
 import { Route as AuthenticatedCasesNewRouteImport } from './routes/_authenticated/cases.new'
+import { Route as AuthenticatedCasesBulkRouteImport } from './routes/_authenticated/cases.bulk'
 import { Route as AuthenticatedCasesCaseIdRouteImport } from './routes/_authenticated/cases.$caseId'
 import { Route as ApiPublicGoogleCallbackRouteImport } from './routes/api/public/google/callback'
 
@@ -108,6 +109,11 @@ const AuthenticatedCasesNewRoute = AuthenticatedCasesNewRouteImport.update({
   path: '/new',
   getParentRoute: () => AuthenticatedCasesRoute,
 } as any)
+const AuthenticatedCasesBulkRoute = AuthenticatedCasesBulkRouteImport.update({
+  id: '/bulk',
+  path: '/bulk',
+  getParentRoute: () => AuthenticatedCasesRoute,
+} as any)
 const AuthenticatedCasesCaseIdRoute =
   AuthenticatedCasesCaseIdRouteImport.update({
     id: '/$caseId',
@@ -136,6 +142,7 @@ export interface FileRoutesByFullPath {
   '/proposal': typeof AuthenticatedProposalRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/cases/$caseId': typeof AuthenticatedCasesCaseIdRoute
+  '/cases/bulk': typeof AuthenticatedCasesBulkRoute
   '/cases/new': typeof AuthenticatedCasesNewRoute
   '/api/public/google/callback': typeof ApiPublicGoogleCallbackRoute
 }
@@ -155,6 +162,7 @@ export interface FileRoutesByTo {
   '/proposal': typeof AuthenticatedProposalRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/cases/$caseId': typeof AuthenticatedCasesCaseIdRoute
+  '/cases/bulk': typeof AuthenticatedCasesBulkRoute
   '/cases/new': typeof AuthenticatedCasesNewRoute
   '/api/public/google/callback': typeof ApiPublicGoogleCallbackRoute
 }
@@ -176,6 +184,7 @@ export interface FileRoutesById {
   '/_authenticated/proposal': typeof AuthenticatedProposalRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/_authenticated/cases/$caseId': typeof AuthenticatedCasesCaseIdRoute
+  '/_authenticated/cases/bulk': typeof AuthenticatedCasesBulkRoute
   '/_authenticated/cases/new': typeof AuthenticatedCasesNewRoute
   '/api/public/google/callback': typeof ApiPublicGoogleCallbackRoute
 }
@@ -197,6 +206,7 @@ export interface FileRouteTypes {
     | '/proposal'
     | '/settings'
     | '/cases/$caseId'
+    | '/cases/bulk'
     | '/cases/new'
     | '/api/public/google/callback'
   fileRoutesByTo: FileRoutesByTo
@@ -216,6 +226,7 @@ export interface FileRouteTypes {
     | '/proposal'
     | '/settings'
     | '/cases/$caseId'
+    | '/cases/bulk'
     | '/cases/new'
     | '/api/public/google/callback'
   id:
@@ -236,6 +247,7 @@ export interface FileRouteTypes {
     | '/_authenticated/proposal'
     | '/_authenticated/settings'
     | '/_authenticated/cases/$caseId'
+    | '/_authenticated/cases/bulk'
     | '/_authenticated/cases/new'
     | '/api/public/google/callback'
   fileRoutesById: FileRoutesById
@@ -361,6 +373,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedCasesNewRouteImport
       parentRoute: typeof AuthenticatedCasesRoute
     }
+    '/_authenticated/cases/bulk': {
+      id: '/_authenticated/cases/bulk'
+      path: '/bulk'
+      fullPath: '/cases/bulk'
+      preLoaderRoute: typeof AuthenticatedCasesBulkRouteImport
+      parentRoute: typeof AuthenticatedCasesRoute
+    }
     '/_authenticated/cases/$caseId': {
       id: '/_authenticated/cases/$caseId'
       path: '/$caseId'
@@ -380,11 +399,13 @@ declare module '@tanstack/react-router' {
 
 interface AuthenticatedCasesRouteChildren {
   AuthenticatedCasesCaseIdRoute: typeof AuthenticatedCasesCaseIdRoute
+  AuthenticatedCasesBulkRoute: typeof AuthenticatedCasesBulkRoute
   AuthenticatedCasesNewRoute: typeof AuthenticatedCasesNewRoute
 }
 
 const AuthenticatedCasesRouteChildren: AuthenticatedCasesRouteChildren = {
   AuthenticatedCasesCaseIdRoute: AuthenticatedCasesCaseIdRoute,
+  AuthenticatedCasesBulkRoute: AuthenticatedCasesBulkRoute,
   AuthenticatedCasesNewRoute: AuthenticatedCasesNewRoute,
 }
 
