@@ -118,7 +118,8 @@ export function CaseSummaryCard({
                 : "Análise automática dos principais pontos do caso."}
             </CardDescription>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            {actions}
             {summary && (
               <>
                 <Button
