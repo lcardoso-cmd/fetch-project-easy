@@ -7,11 +7,11 @@ export const Route = createFileRoute("/")({
   component: LandingPage,
   head: () => ({
     meta: [
-      { title: "JurisMind — Inteligência jurídica para advogados" },
+      { title: "JurisMind — Inteligência para advogados, peritos e assistentes técnicos" },
       {
         name: "description",
         content:
-          "JurisMind: plataforma com RAG para análise de documentos jurídicos, resumos automáticos e chat sobre seus casos.",
+          "JurisMind: plataforma de IA jurídica para advogados, peritos judiciais e assistentes técnicos. RAG de documentos, prazos e modelos de petição, laudo e parecer.",
       },
     ],
   }),
@@ -22,25 +22,25 @@ const features = [
     icon: BrainCircuit,
     title: "Chat com seus documentos",
     description:
-      "Pergunte qualquer coisa sobre seus processos. O JurisMind busca trechos relevantes e responde citando as fontes.",
+      "Pergunte qualquer coisa sobre seus processos, perícias ou laudos. O JurisMind busca trechos relevantes e responde citando as fontes.",
   },
   {
     icon: FileText,
     title: "Análise automática",
     description:
-      "Faça upload de PDFs, contratos e petições. O JurisMind extrai, indexa e gera resumos executivos em segundos.",
+      "Faça upload de PDFs, contratos, despachos de nomeação e laudos. O JurisMind extrai, indexa e gera resumos em segundos.",
   },
   {
     icon: ListTodo,
-    title: "Gestão centralizada de casos",
+    title: "Casos, perícias e assistências",
     description:
-      "Organize processos, clientes, partes e documentos em um único painel pensado para a rotina jurídica.",
+      "Organize processos do cliente, perícias nomeadas pelo juízo e assistências técnicas em um único painel adaptável ao seu perfil.",
   },
   {
     icon: Scale,
-    title: "Feito para advogados",
+    title: "Para todo o jurídico técnico",
     description:
-      "Linguagem, fluxos e prompts especializados em direito brasileiro — contencioso, arbitragem e consultivo.",
+      "Advogados, peritos contadores, peritos engenheiros, peritos médicos e assistentes técnicos das partes — com vocabulário e modelos próprios para cada um.",
   },
 ];
 
