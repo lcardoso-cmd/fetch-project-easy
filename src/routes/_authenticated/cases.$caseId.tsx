@@ -204,6 +204,16 @@ function CaseDetailPage() {
                     status: caseData.status,
                     case_number: caseData.case_number,
                     case_type: caseData.case_type,
+                    jurisdiction: caseData.jurisdiction,
+                    parties: (caseData.parties ?? []) as Array<{
+                      role: string;
+                      name: string;
+                      relation?: string | null;
+                    }>,
+                    represented_party: (caseData.represented_party ?? null) as {
+                      role: string;
+                      name: string;
+                    } | null,
                   }}
                   documents={docs}
                   selectedDocIds={selectedDocIds}
@@ -212,6 +222,19 @@ function CaseDetailPage() {
                   onDeselectAll={deselectAll}
                 />
               </div>
+            </SheetContent>
+          </Sheet>
+        </div>
+      </div>
+
+      {editing && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Editar caso</CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-3 md:grid-cols-2">
+            <div className="space-y-1 md:col-span-2">
+              <Label>Título do caso</Label>
             </SheetContent>
           </Sheet>
         </div>
