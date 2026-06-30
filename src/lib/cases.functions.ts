@@ -269,22 +269,31 @@ export const extractCaseDataFromDocument = createServerFn({ method: "POST" })
     const cnjFromText = text.match(CNJ_REGEX)?.[0] ?? null;
 
     const snippet = text.slice(0, 15000);
+    const matterContext =
+      data.matter_kind === "pericia"
+        ? "O documento provavelmente é um despacho de nomeação pericial, quesitos ou laudo. Trate 'client_name' como o órgão/juízo nomeante e priorize identificar honorários periciais e prazo do laudo, se aparecerem na descrição."
+        : data.matter_kind === "assistencia_tecnica"
+          ? "O documento provavelmente é um laudo oficial, quesitos da parte ou contrato de assistência técnica. Trate 'client_name' como a parte assistida (quem contratou o assistente técnico)."
+          : "O documento é uma petição, contrato ou processo judicial tradicional.";
+
     const system =
-      "Você é um assistente jurídico brasileiro especialista em ler petições, contratos e processos. Extraia APENAS o que estiver explícito no documento. Quando um campo não estiver claramente identificado, devolva null — NUNCA invente nomes, números, varas ou tipos. Responda apenas com JSON válido, sem markdown.";
-    const userMsg = `Analise o documento abaixo e devolva JSON com EXATAMENTE estas chaves:
+      "Você é um assistente jurídico brasileiro especialista em ler petições, contratos, processos, laudos periciais e pareceres técnicos. Extraia APENAS o que estiver explícito no documento. Quando um campo não estiver claramente identificado, devolva null — NUNCA invente nomes, números, varas ou tipos. Responda apenas com JSON válido, sem markdown.";
+    const userMsg = `Contexto: ${matterContext}
+
+Analise o documento abaixo e devolva JSON com EXATAMENTE estas chaves:
 {
-  "title": string,          // título curto e descritivo (máx 120 chars). Se não houver assunto claro, use a natureza da ação.
-  "client_name": string|null, // nome do cliente principal (autor/requerente/contratante). null se não identificado.
+  "title": string,          // título curto e descritivo (máx 120 chars). Se não houver assunto claro, use a natureza da ação/perícia.
+  "client_name": string|null, // ${data.matter_kind === "pericia" ? "órgão/juízo nomeante" : data.matter_kind === "assistencia_tecnica" ? "parte assistida (quem contratou o assistente técnico)" : "nome do cliente principal (autor/requerente/contratante)"}. null se não identificado.
   "case_number": string|null, // número CNJ no formato NNNNNNN-DD.AAAA.J.TR.OOOO se houver. Se houver outro protocolo, devolva como está. null se não houver.
   "jurisdiction": string|null,// vara/tribunal/comarca completos (ex: "2ª Vara Cível de São Paulo - TJSP"). null se não houver.
   "case_type": string|null,   // UM destes: ${CASE_TYPES.join(", ")}. null se não der pra classificar com segurança.
-  "parties": [{"role": string, "name": string}], // partes explícitas. role em minúsculas: autor, réu, requerente, requerido, advogado, terceiro. [] se nenhuma identificada.
+  "parties": [{"role": string, "name": string}], // partes explícitas. role em minúsculas: autor, réu, requerente, requerido, advogado, terceiro, perito, assistente. [] se nenhuma identificada.
   "description": string       // resumo objetivo em 2-4 frases. Se documento ilegível/incompleto, descreva isso.
 }
 
 Regras:
 - Nunca preencha campos com "N/A", "desconhecido", "—" ou frases. Use null.
-- Não confunda o nome do escritório/advogado com o cliente.
+- Não confunda o nome do escritório/advogado/perito com o cliente.
 - O número do processo tem 20 dígitos no padrão CNJ. Confira antes de devolver.
 
 Documento:
