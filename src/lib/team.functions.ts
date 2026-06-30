@@ -4,6 +4,14 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 const AccessRole = z.enum(["viewer", "editor", "admin"]);
 
+const MemberSchema = z.object({
+  name: z.string().trim().min(1).max(120),
+  email: z.string().trim().email().max(255).optional().or(z.literal("")),
+  role: z.string().trim().max(120).optional().or(z.literal("")),
+  color: z.string().trim().max(20).optional().or(z.literal("")),
+  access_role: AccessRole.optional(),
+});
+
 export const listTeamMembers = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
@@ -11,22 +19,78 @@ export const listTeamMembers = createServerFn({ method: "GET" })
       .from("team_members")
       .select("*")
       .eq("user_id", context.userId)
-      .order("name");
+      .order("name", { ascending: true });
     if (error) throw error;
     return data ?? [];
   });
 
-// Workspaces this user can see: own + ones they've joined
+export const createTeamMember = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((i: unknown) => MemberSchema.parse(i))
+  .handler(async ({ data, context }) => {
+    const { data: row, error } = await context.supabase
+      .from("team_members")
+      .insert({
+        user_id: context.userId,
+        name: data.name,
+        email: data.email || null,
+        role: data.role || null,
+        color: data.color || null,
+        access_role: data.access_role ?? "editor",
+      })
+      .select()
+      .single();
+    if (error) throw error;
+    return row;
+  });
+
+export const updateTeamMember = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((i: unknown) =>
+    z.object({ id: z.string().uuid() }).merge(MemberSchema.partial()).parse(i),
+  )
+  .handler(async ({ data, context }) => {
+    const { id, ...updates } = data;
+    const { data: row, error } = await context.supabase
+      .from("team_members")
+      .update({
+        ...(updates.name !== undefined ? { name: updates.name } : {}),
+        ...(updates.email !== undefined ? { email: updates.email || null } : {}),
+        ...(updates.role !== undefined ? { role: updates.role || null } : {}),
+        ...(updates.color !== undefined ? { color: updates.color || null } : {}),
+        ...(updates.access_role !== undefined ? { access_role: updates.access_role } : {}),
+      })
+      .eq("id", id)
+      .eq("user_id", context.userId)
+      .select()
+      .single();
+    if (error) throw error;
+    return row;
+  });
+
+export const deleteTeamMember = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((i: unknown) => z.object({ id: z.string().uuid() }).parse(i))
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase
+      .from("team_members")
+      .delete()
+      .eq("id", data.id)
+      .eq("user_id", context.userId);
+    if (error) throw error;
+    return { ok: true };
+  });
+
+// Workspaces (owners) where I am an accepted member
 export const listMyWorkspaces = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    // Memberships where I am the joined account
-    const { data: memberships, error } = await context.supabase
+    const { data, error } = await context.supabase
       .from("team_members")
       .select("id, user_id, name, access_role")
       .eq("member_user_id", context.userId);
     if (error) throw error;
-    return memberships ?? [];
+    return data ?? [];
   });
 
 export const inviteTeamMember = createServerFn({ method: "POST" })
@@ -36,21 +100,21 @@ export const inviteTeamMember = createServerFn({ method: "POST" })
       .object({
         name: z.string().trim().min(1).max(120),
         email: z.string().trim().email().toLowerCase(),
-        role: z.string().max(80).optional().nullable(),
+        role: z.string().max(120).optional().nullable(),
         access_role: AccessRole.default("editor"),
         color: z.string().max(20).optional().nullable(),
       })
       .parse(input),
   )
   .handler(async ({ data, context }) => {
-    // Create or reuse a team_member row for this email under this owner
-    let { data: member } = await context.supabase
+    const existing = await context.supabase
       .from("team_members")
       .select("*")
       .eq("user_id", context.userId)
       .eq("email", data.email)
       .maybeSingle();
 
+    let member = existing.data;
     if (!member) {
       const ins = await context.supabase
         .from("team_members")
@@ -73,20 +137,15 @@ export const inviteTeamMember = createServerFn({ method: "POST" })
         .eq("id", member.id);
     }
 
-    // If the email already belongs to a registered auth user, link immediately and skip invite token
+    // Link immediately if the email already has an account
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: existingUser } = await supabaseAdmin.rpc("get_user_id_by_email", {
-      _email: data.email,
-    }).maybeSingle?.() ?? { data: null };
-
-    // Fallback: directly query auth.users via admin (RPC may not exist)
     let linkedUserId: string | null = null;
-    if (existingUser && typeof existingUser === "object" && "id" in existingUser) {
-      linkedUserId = (existingUser as { id: string }).id;
-    } else {
+    try {
       const list = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 200 });
       const match = list.data?.users.find((u) => u.email?.toLowerCase() === data.email);
       if (match) linkedUserId = match.id;
+    } catch {
+      // ignore — fall back to invite token
     }
 
     if (linkedUserId && member && !member.member_user_id) {
@@ -96,8 +155,8 @@ export const inviteTeamMember = createServerFn({ method: "POST" })
         .eq("id", member.id);
     }
 
-    // Create invitation record (with token) regardless — link to share
-    const token = crypto.randomUUID().replace(/-/g, "") + crypto.randomUUID().replace(/-/g, "");
+    const token =
+      crypto.randomUUID().replace(/-/g, "") + crypto.randomUUID().replace(/-/g, "");
     const inv = await context.supabase
       .from("team_invitations")
       .insert({
@@ -162,10 +221,11 @@ export const acceptInvitation = createServerFn({ method: "POST" })
       throw new Error("Convite expirado");
     }
 
-    // Confirm email matches signed-in user
-    const userEmail = (context.claims?.email as string | undefined)?.toLowerCase?.();
+    const userEmail = (
+      (context.claims as Record<string, unknown> | undefined)?.email as string | undefined
+    )?.toLowerCase?.();
     if (!userEmail || userEmail !== inv.email.toLowerCase()) {
-      throw new Error("Este convite é para outro e-mail. Faça login com o e-mail certo.");
+      throw new Error("Este convite é para outro e-mail. Faça login com o e-mail correto.");
     }
 
     await supabaseAdmin
