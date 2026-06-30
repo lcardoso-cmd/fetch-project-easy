@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { askWithRag } from "@/lib/chat.functions";
+import { stripMarkdown } from "@/lib/strip-markdown";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Loader2, Send, Sparkles, FileText, AlertCircle } from "lucide-react";
