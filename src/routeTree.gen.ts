@@ -29,6 +29,7 @@ import { Route as AuthenticatedChatRouteImport } from './routes/_authenticated/c
 import { Route as AuthenticatedCasesRouteImport } from './routes/_authenticated/cases'
 import { Route as AuthenticatedCalendarRouteImport } from './routes/_authenticated/calendar'
 import { Route as AuthenticatedCasesIndexRouteImport } from './routes/_authenticated/cases.index'
+import { Route as ApiToolsTableRouteImport } from './routes/api/tools/table'
 import { Route as ApiToolsPetitionRouteImport } from './routes/api/tools/petition'
 import { Route as AuthenticatedCasesNewRouteImport } from './routes/_authenticated/cases.new'
 import { Route as AuthenticatedCasesBulkRouteImport } from './routes/_authenticated/cases.bulk'
@@ -136,6 +137,11 @@ const AuthenticatedCasesIndexRoute = AuthenticatedCasesIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AuthenticatedCasesRoute,
 } as any)
+const ApiToolsTableRoute = ApiToolsTableRouteImport.update({
+  id: '/api/tools/table',
+  path: '/api/tools/table',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiToolsPetitionRoute = ApiToolsPetitionRouteImport.update({
   id: '/api/tools/petition',
   path: '/api/tools/petition',
@@ -186,6 +192,7 @@ export interface FileRoutesByFullPath {
   '/cases/bulk': typeof AuthenticatedCasesBulkRoute
   '/cases/new': typeof AuthenticatedCasesNewRoute
   '/api/tools/petition': typeof ApiToolsPetitionRoute
+  '/api/tools/table': typeof ApiToolsTableRoute
   '/cases/': typeof AuthenticatedCasesIndexRoute
   '/api/public/google/callback': typeof ApiPublicGoogleCallbackRoute
 }
@@ -211,6 +218,7 @@ export interface FileRoutesByTo {
   '/cases/bulk': typeof AuthenticatedCasesBulkRoute
   '/cases/new': typeof AuthenticatedCasesNewRoute
   '/api/tools/petition': typeof ApiToolsPetitionRoute
+  '/api/tools/table': typeof ApiToolsTableRoute
   '/cases': typeof AuthenticatedCasesIndexRoute
   '/api/public/google/callback': typeof ApiPublicGoogleCallbackRoute
 }
@@ -239,6 +247,7 @@ export interface FileRoutesById {
   '/_authenticated/cases/bulk': typeof AuthenticatedCasesBulkRoute
   '/_authenticated/cases/new': typeof AuthenticatedCasesNewRoute
   '/api/tools/petition': typeof ApiToolsPetitionRoute
+  '/api/tools/table': typeof ApiToolsTableRoute
   '/_authenticated/cases/': typeof AuthenticatedCasesIndexRoute
   '/api/public/google/callback': typeof ApiPublicGoogleCallbackRoute
 }
@@ -267,6 +276,7 @@ export interface FileRouteTypes {
     | '/cases/bulk'
     | '/cases/new'
     | '/api/tools/petition'
+    | '/api/tools/table'
     | '/cases/'
     | '/api/public/google/callback'
   fileRoutesByTo: FileRoutesByTo
@@ -292,6 +302,7 @@ export interface FileRouteTypes {
     | '/cases/bulk'
     | '/cases/new'
     | '/api/tools/petition'
+    | '/api/tools/table'
     | '/cases'
     | '/api/public/google/callback'
   id:
@@ -319,6 +330,7 @@ export interface FileRouteTypes {
     | '/_authenticated/cases/bulk'
     | '/_authenticated/cases/new'
     | '/api/tools/petition'
+    | '/api/tools/table'
     | '/_authenticated/cases/'
     | '/api/public/google/callback'
   fileRoutesById: FileRoutesById
@@ -329,6 +341,7 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   InviteTokenRoute: typeof InviteTokenRoute
   ApiToolsPetitionRoute: typeof ApiToolsPetitionRoute
+  ApiToolsTableRoute: typeof ApiToolsTableRoute
   ApiPublicGoogleCallbackRoute: typeof ApiPublicGoogleCallbackRoute
 }
 
@@ -474,6 +487,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedCasesIndexRouteImport
       parentRoute: typeof AuthenticatedCasesRoute
     }
+    '/api/tools/table': {
+      id: '/api/tools/table'
+      path: '/api/tools/table'
+      fullPath: '/api/tools/table'
+      preLoaderRoute: typeof ApiToolsTableRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/tools/petition': {
       id: '/api/tools/petition'
       path: '/api/tools/petition'
@@ -575,6 +595,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   InviteTokenRoute: InviteTokenRoute,
   ApiToolsPetitionRoute: ApiToolsPetitionRoute,
+  ApiToolsTableRoute: ApiToolsTableRoute,
   ApiPublicGoogleCallbackRoute: ApiPublicGoogleCallbackRoute,
 }
 export const routeTree = rootRouteImport
