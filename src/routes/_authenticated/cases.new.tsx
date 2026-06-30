@@ -143,6 +143,32 @@ function NewCasePage() {
   const [uploaded, setUploaded] = useState<UploadedDoc | null>(null);
   const [extracting, setExtracting] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+
+  useEffect(() => {
+    if (!previewOpen || !uploaded) return;
+    let cancelled = false;
+    setPreviewLoading(true);
+    setPreviewUrl(null);
+    supabase.storage
+      .from("documents")
+      .createSignedUrl(uploaded.storage_path, 60 * 10)
+      .then(({ data, error }) => {
+        if (cancelled) return;
+        if (error || !data?.signedUrl) {
+          toast.error("Não foi possível abrir o documento");
+          setPreviewOpen(false);
+        } else {
+          setPreviewUrl(data.signedUrl);
+        }
+      })
+      .finally(() => !cancelled && setPreviewLoading(false));
+    return () => {
+      cancelled = true;
+    };
+  }, [previewOpen, uploaded]);
   const [attemptedSubmit, setAttemptedSubmit] = useState(false);
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   const markTouched = (k: string) => setTouched((t) => (t[k] ? t : { ...t, [k]: true }));
