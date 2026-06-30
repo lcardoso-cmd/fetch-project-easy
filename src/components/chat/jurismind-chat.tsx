@@ -152,9 +152,16 @@ export function JurisMindChat({
 
   const send = async () => {
     const q = input.trim();
-    if (!q || busy) return;
+    if ((!q && images.length === 0) || busy) return;
     setInput("");
-    const next = [...messages, { role: "user" as const, content: q }];
+    const sentImages = images;
+    setImages([]);
+    const userMsg: Msg = {
+      role: "user",
+      content: q || "(imagens enviadas)",
+      images: sentImages,
+    };
+    const next = [...messages, userMsg];
     setMessages(next);
     setBusy(true);
     try {
@@ -166,9 +173,10 @@ export function JurisMindChat({
       const res = await askFn({
         data: {
           case_id: caseId,
-          question: q,
+          question: q || "Analise as imagens enviadas.",
           history,
           selected_doc_ids: selected.length ? selected : undefined,
+          images: sentImages.length ? sentImages : undefined,
         },
       });
       setMessages([
