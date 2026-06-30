@@ -340,6 +340,69 @@ function NewCasePage() {
     }
   };
 
+  // Agrupa avisos por campo para renderizar embaixo dos inputs.
+  const warningsByField = extractionWarnings.reduce<Record<string, string[]>>((acc, w) => {
+    const key = w.field ?? "_global";
+    (acc[key] ??= []).push(w.message);
+    return acc;
+  }, {});
+  const missingSet = new Set(missingFields);
+
+  const fieldHasIssue = (field: FieldKey) =>
+    missingSet.has(field) || (warningsByField[field]?.length ?? 0) > 0;
+  const fieldRing = (field: FieldKey) =>
+    uploaded && fieldHasIssue(field)
+      ? "border-amber-500 ring-1 ring-amber-500/40 focus-visible:ring-amber-500"
+      : "";
+
+  const FieldIssue = ({ field }: { field: FieldKey }) => {
+    if (!uploaded) return null;
+    const isMissing = missingSet.has(field);
+    const fieldWarnings = warningsByField[field] ?? [];
+    if (!isMissing && fieldWarnings.length === 0) return null;
+    return (
+      <div className="space-y-1">
+        {isMissing && (
+          <p className="text-xs text-amber-700 dark:text-amber-400 flex items-start gap-1">
+            <AlertTriangle className="h-3 w-3 mt-0.5 shrink-0" />
+            {MISSING_FIELD_HINTS[field] ?? "Não identificado pela IA — preencha manualmente."}
+          </p>
+        )}
+        {fieldWarnings.map((m, i) => (
+          <p
+            key={i}
+            className="text-xs text-amber-700 dark:text-amber-400 flex items-start gap-1"
+          >
+            <AlertTriangle className="h-3 w-3 mt-0.5 shrink-0" />
+            {m}
+          </p>
+        ))}
+      </div>
+    );
+  };
+
+  // Lista consolidada para o painel de revisão (uma linha por campo).
+  const reviewIssues: { field: FieldKey | "_global"; label: string; messages: string[] }[] = [];
+  const FIELDS_ORDER: FieldKey[] = [
+    "client_name",
+    "case_number",
+    "jurisdiction",
+    "case_type",
+    "parties",
+    "description",
+  ];
+  for (const f of FIELDS_ORDER) {
+    const msgs: string[] = [];
+    if (missingSet.has(f)) {
+      msgs.push(MISSING_FIELD_HINTS[f] ?? "Não identificado pela IA.");
+    }
+    msgs.push(...(warningsByField[f] ?? []));
+    if (msgs.length) {
+      reviewIssues.push({ field: f, label: FIELD_LABELS[f] ?? f, messages: msgs });
+    }
+  }
+  const globalWarnings = warningsByField["_global"] ?? [];
+
   return (
     <div className="space-y-6 max-w-5xl">
       <div>
