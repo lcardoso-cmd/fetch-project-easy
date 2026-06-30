@@ -406,10 +406,17 @@ function NewCasePage() {
         )}
 
 
-        {/* Dados do caso */}
+        {/* Dados do caso — editáveis; o que estiver aqui é o que será salvo */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">Dados do caso</CardTitle>
+            <CardTitle className="text-lg">
+              {uploaded ? "Dados do caso — edite o que precisar" : "Dados do caso"}
+            </CardTitle>
+            {uploaded && (
+              <CardDescription>
+                Estes são os valores que serão enviados ao confirmar.
+              </CardDescription>
+            )}
           </CardHeader>
           <CardContent className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2 md:col-span-2">
