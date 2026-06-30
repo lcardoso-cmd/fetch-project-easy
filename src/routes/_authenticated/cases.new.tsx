@@ -1135,9 +1135,9 @@ function MatterKindBar({
           )}
           <Button
             type="button"
-            variant="ghost"
+            variant="destructive"
             size="sm"
-            className="h-7 px-2 text-xs"
+            className="h-7 px-3 text-xs font-semibold"
             onClick={() => setEditing(true)}
           >
             Trocar
