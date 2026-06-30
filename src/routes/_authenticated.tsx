@@ -20,7 +20,7 @@ function AuthenticatedLayout() {
     }
   }, [isLoading, user, navigate]);
 
-  if (isLoading) {
+  if (isLoading || !user) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
@@ -28,38 +28,20 @@ function AuthenticatedLayout() {
     );
   }
 
-  if (!user) {
-    return null;
-  }
-
-  // Gate de onboarding: roda só dentro da área autenticada.
-  return (
-    <OnboardingGate currentPath={pathname}>
-      <DashboardShell>
-        <Outlet />
-      </DashboardShell>
-    </OnboardingGate>
-  );
+  return <Gate path={pathname} />;
 }
 
-function OnboardingGate({
-  children,
-  currentPath,
-}: {
-  children: React.ReactNode;
-  currentPath: string;
-}) {
+function Gate({ path }: { path: string }) {
   const { data: profile, isLoading } = useProfile();
   const navigate = useNavigate();
-  const isOnboardingRoute = currentPath.startsWith("/onboarding");
+  const isOnboarding = path.startsWith("/onboarding");
 
   useEffect(() => {
-    if (isLoading) return;
-    if (!profile) return;
-    if (!profile.onboarding_completed && !isOnboardingRoute) {
+    if (isLoading || !profile) return;
+    if (!profile.onboarding_completed && !isOnboarding) {
       navigate({ to: "/onboarding", replace: true });
     }
-  }, [profile, isLoading, isOnboardingRoute, navigate]);
+  }, [profile, isLoading, isOnboarding, navigate]);
 
   if (isLoading || !profile) {
     return (
@@ -69,18 +51,21 @@ function OnboardingGate({
     );
   }
 
-  // Onboarding pendente: renderiza só o conteúdo (sem o shell completo).
-  if (!profile.onboarding_completed && isOnboardingRoute) {
+  // Onboarding ainda pendente → tela limpa, sem o shell.
+  if (!profile.onboarding_completed) {
     return (
       <div className="min-h-screen bg-background">
         <div className="mx-auto max-w-5xl px-4 md:px-6 lg:px-8 py-8">
-          {/* O Outlet é renderizado dentro de children → DashboardShell;
-              quando estamos só no onboarding queremos uma tela limpa. */}
-          {children}
+          <Outlet />
         </div>
       </div>
     );
   }
 
-  return <>{children}</>;
+  // Onboarding já concluído mas o usuário voltou para editar perfil → mantemos o shell.
+  return (
+    <DashboardShell>
+      <Outlet />
+    </DashboardShell>
+  );
 }
