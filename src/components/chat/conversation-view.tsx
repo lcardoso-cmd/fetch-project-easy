@@ -356,6 +356,34 @@ export function ConversationView({
   );
 }
 
+function renderBodyWithMentions(text: string, mine: boolean) {
+  const parts: Array<string | { mention: string }> = [];
+  const re = /(^|\s)@([\p{L}\p{N}._-]+(?:\s[\p{L}\p{N}._-]+){0,3})/gu;
+  let last = 0;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(text)) !== null) {
+    const start = m.index + m[1].length;
+    if (start > last) parts.push(text.slice(last, start));
+    parts.push({ mention: m[2] });
+    last = start + 1 + m[2].length;
+  }
+  if (last < text.length) parts.push(text.slice(last));
+  return parts.map((p, i) =>
+    typeof p === "string" ? (
+      <span key={i}>{p}</span>
+    ) : (
+      <span
+        key={i}
+        className={`rounded px-1 font-medium ${
+          mine ? "bg-primary-foreground/20" : "bg-primary/10 text-primary"
+        }`}
+      >
+        @{p.mention}
+      </span>
+    ),
+  );
+}
+
 function MessageBubble({ message, mine }: { message: Message; mine: boolean }) {
   const [openTask, setOpenTask] = useState(false);
 
