@@ -61,3 +61,103 @@ export const generateMarketing = createServerFn({ method: "POST" })
     );
     return { content: r.content };
   });
+
+const PieceSchema = z.object({
+  case_id: z.string().uuid(),
+  piece_type: z.enum([
+    "peticao-inicial",
+    "contestacao",
+    "replica",
+    "recurso-apelacao",
+    "agravo-instrumento",
+    "memoriais",
+    "parecer",
+    "notificacao-extrajudicial",
+  ]),
+  instructions: z.string().max(3000).optional().default(""),
+});
+
+const PIECE_GUIDE: Record<string, string> = {
+  "peticao-inicial":
+    "Petição inicial cível com: Endereçamento, Qualificação das partes, Dos Fatos, Do Direito (com fundamentos legais e jurisprudência quando cabível), Dos Pedidos, Do Valor da Causa, Das Provas, Local/Data, Assinatura.",
+  contestacao:
+    "Contestação com: Endereçamento, Qualificação, Preliminares (se cabíveis), Mérito (impugnação fato a fato), Do Direito, Dos Pedidos, Provas, Local/Data.",
+  replica:
+    "Réplica à contestação: refutar preliminares e impugnar mérito ponto a ponto, reiterando pedidos da inicial.",
+  "recurso-apelacao":
+    "Recurso de Apelação (CPC art. 1.009 e ss.): Endereçamento ao juízo a quo, Razões de Apelação separadas (síntese da lide, do julgado, das razões de reforma, dos pedidos).",
+  "agravo-instrumento":
+    "Agravo de Instrumento (CPC art. 1.015): Endereçamento ao Tribunal, requisitos do art. 1.016, pedido de efeito suspensivo/antecipação de tutela quando cabível.",
+  memoriais:
+    "Memoriais finais: síntese da causa, prova produzida, fundamentos jurídicos, reiteração dos pedidos.",
+  parecer:
+    "Parecer jurídico: Consulta, Análise dos Fatos, Análise Jurídica (legislação, doutrina, jurisprudência), Conclusão objetiva.",
+  "notificacao-extrajudicial":
+    "Notificação extrajudicial: identificação das partes, exposição dos fatos, fundamento, requerimento, prazo para cumprimento, consequências do descumprimento.",
+};
+
+export const draftLegalPiece = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => PieceSchema.parse(input))
+  .handler(async ({ data, context }) => {
+    const { embedTexts } = await import("./ai.server");
+
+    const { data: caseRow, error: caseErr } = await context.supabase
+      .from("cases")
+      .select("id, title, client_name, case_type, jurisdiction, summary, description")
+      .eq("id", data.case_id)
+      .eq("user_id", context.userId)
+      .single();
+    if (caseErr || !caseRow) throw new Error("Caso não encontrado");
+
+    // Query semântica para puxar trechos relevantes do caso
+    const seed = `${caseRow.title} ${caseRow.case_type ?? ""} ${data.instructions} ${data.piece_type}`;
+    const [qEmb] = await embedTexts([seed]);
+    let contextBlock = "(Sem documentos indexados neste caso.)";
+    if (qEmb) {
+      const { data: matches } = await context.supabase.rpc("match_chunks", {
+        query_embedding: qEmb as unknown as string,
+        match_count: 12,
+        filter_user_id: context.userId,
+      });
+      const filtered = (matches ?? []).filter(
+        (m: { case_id: string }) => m.case_id === data.case_id,
+      );
+      if (filtered.length > 0) {
+        contextBlock = filtered
+          .map(
+            (m: { content: string }, idx: number) => `[Trecho ${idx + 1}]\n${m.content}`,
+          )
+          .join("\n\n---\n\n");
+      }
+    }
+
+    const system = `Você é um advogado brasileiro experiente. Redija a peça jurídica solicitada em português formal, em Markdown, fiel ao CPC/2015 e à praxe forense. ${PIECE_GUIDE[data.piece_type]}
+REGRAS:
+- Use APENAS fatos presentes no contexto do caso. Se faltar informação, marque com [INSERIR ...].
+- Não invente nomes, CPF/CNPJ, valores, datas ou jurisprudência. Quando citar jurisprudência, use placeholder [CITAR JURISPRUDÊNCIA].
+- Cabeçalhos em Markdown (##), corpo em parágrafos claros.`;
+
+    const user = `CASO: ${caseRow.title}
+Cliente: ${caseRow.client_name ?? "[INSERIR]"}
+Tipo: ${caseRow.case_type ?? "[INSERIR]"}
+Jurisdição: ${caseRow.jurisdiction ?? "[INSERIR]"}
+Resumo: ${caseRow.summary ?? caseRow.description ?? "(sem resumo)"}
+
+INSTRUÇÕES ESPECÍFICAS DO ADVOGADO: ${data.instructions || "(usar padrão da peça)"}
+
+CONTEXTO DOS DOCUMENTOS DO CASO:
+${contextBlock}
+
+Gere a peça completa agora.`;
+
+    const r = await chatComplete(
+      [
+        { role: "system", content: system },
+        { role: "user", content: user },
+      ],
+      { model: "google/gemini-2.5-pro", temperature: 0.3 },
+    );
+    return { content: r.content, case_title: caseRow.title };
+  });
+
