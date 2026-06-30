@@ -29,6 +29,7 @@ import { ArrowLeft, FileText, Loader2, Sparkles, Trash2, CalendarClock, Clipboar
 import { QuesitosCard } from "@/components/cases/quesitos-card";
 import type { MatterKind } from "@/lib/practice-labels";
 import { toast } from "sonner";
+import { stripMarkdown } from "@/lib/strip-markdown";
 
 export const Route = createFileRoute("/_authenticated/cases/$caseId")({
   component: CaseDetailPage,
