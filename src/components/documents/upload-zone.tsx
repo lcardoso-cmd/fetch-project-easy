@@ -40,20 +40,21 @@ export function UploadZone({ caseId }: { caseId: string }) {
           },
         });
 
-        toast.success(`${file.name} enviado. Indexando...`);
-        // Indexação roda em background — não aguarda
-        indexFn({ data: { document_id: doc.id } })
-          .then(() => {
-            toast.success(`${file.name} indexado`);
-            queryClient.invalidateQueries({ queryKey: ["documents", caseId] });
-          })
-          .catch((e) => {
-            const msg = e instanceof Error ? e.message : String(e);
-            toast.error(`Falha ao indexar ${file.name}: ${msg}`);
-            queryClient.invalidateQueries({ queryKey: ["documents", caseId] });
-          });
+        toast.info(`${file.name}: indexando para busca…`);
+        await queryClient.invalidateQueries({ queryKey: ["documents", caseId] });
+
+        try {
+          const res = await indexFn({ data: { document_id: doc.id } });
+          toast.success(
+            `${file.name} pronto para o chat (${res.chunks ?? 0} trechos indexados)`,
+          );
+        } catch (e) {
+          const msg = e instanceof Error ? e.message : String(e);
+          toast.error(`Falha ao indexar ${file.name}: ${msg}`);
+        } finally {
+          await queryClient.invalidateQueries({ queryKey: ["documents", caseId] });
+        }
       }
-      await queryClient.invalidateQueries({ queryKey: ["documents", caseId] });
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       toast.error(`Falha no upload: ${msg}`);
@@ -62,6 +63,7 @@ export function UploadZone({ caseId }: { caseId: string }) {
       if (inputRef.current) inputRef.current.value = "";
     }
   };
+
 
   return (
     <div

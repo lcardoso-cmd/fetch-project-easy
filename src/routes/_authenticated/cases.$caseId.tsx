@@ -343,7 +343,11 @@ function CaseDetailPage() {
         <h2 className="mb-3 text-xl font-bold tracking-tight text-foreground">
           Pergunte sobre este caso
         </h2>
-        <ChatPanel caseId={caseId} />
+        <ChatPanel
+          caseId={caseId}
+          pendingDocs={docs.filter((d) => d.processing_status === "pending" || d.processing_status === "processing").length}
+          readyDocs={docs.filter((d) => d.processing_status === "ready").length}
+        />
       </div>
     </div>
   );
