@@ -508,36 +508,44 @@ function NewCasePage() {
                 <AlertTriangle className="h-5 w-5" /> Revisar dados extraídos
               </CardTitle>
               <CardDescription>
-                A IA preencheu os campos do formulário abaixo a partir do documento.
-                <strong> Qualquer alteração que você fizer nos campos será salva
-                no caso</strong> — eles não são apenas visualização. Marque a
-                confirmação quando estiver satisfeito.
+                A IA preencheu os campos abaixo a partir do documento.
+                <strong> Edite o que precisar — os valores que ficarem aqui
+                serão salvos no caso.</strong> Os campos destacados em âmbar
+                precisam da sua atenção.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
-              {missingFields.length > 0 && (
-                <div className="rounded-md border border-amber-500/40 bg-amber-50/40 p-3 dark:bg-amber-950/10">
-                  <p className="text-sm font-medium text-amber-700 dark:text-amber-400">
-                    Campos não identificados — preencha manualmente:
-                  </p>
-                  <ul className="list-disc pl-5 text-sm text-muted-foreground">
-                    {missingFields.map((f) => (
-                      <li key={f}>{f}</li>
-                    ))}
-                  </ul>
+              {reviewIssues.length === 0 && globalWarnings.length === 0 ? (
+                <div className="flex items-center gap-2 rounded-md border border-emerald-500/40 bg-emerald-50/40 p-3 text-sm text-emerald-700 dark:bg-emerald-950/10 dark:text-emerald-400">
+                  <CheckCircle2 className="h-4 w-4" />
+                  Todos os campos foram identificados. Revise e confirme abaixo.
                 </div>
-              )}
-              {extractionWarnings.length > 0 && (
-                <div className="rounded-md border border-amber-500/40 bg-amber-50/40 p-3 dark:bg-amber-950/10">
-                  <p className="text-sm font-medium text-amber-700 dark:text-amber-400">
-                    Avisos da extração:
-                  </p>
-                  <ul className="list-disc pl-5 text-sm text-muted-foreground">
-                    {extractionWarnings.map((w, i) => (
-                      <li key={i}>{w}</li>
-                    ))}
-                  </ul>
-                </div>
+              ) : (
+                <ul className="space-y-2">
+                  {reviewIssues.map((issue) => (
+                    <li
+                      key={issue.field}
+                      className="rounded-md border border-amber-500/40 bg-amber-50/40 p-3 dark:bg-amber-950/10"
+                    >
+                      <p className="text-sm font-medium text-amber-700 dark:text-amber-400 capitalize">
+                        {issue.label}
+                      </p>
+                      <ul className="mt-1 list-disc pl-5 text-sm text-muted-foreground space-y-0.5">
+                        {issue.messages.map((m, i) => (
+                          <li key={i}>{m}</li>
+                        ))}
+                      </ul>
+                    </li>
+                  ))}
+                  {globalWarnings.map((m, i) => (
+                    <li
+                      key={`g-${i}`}
+                      className="rounded-md border border-amber-500/40 bg-amber-50/40 p-3 text-sm text-muted-foreground dark:bg-amber-950/10"
+                    >
+                      {m}
+                    </li>
+                  ))}
+                </ul>
               )}
               <label className="flex items-start gap-2 rounded-md border bg-background p-3 cursor-pointer">
                 <Checkbox
