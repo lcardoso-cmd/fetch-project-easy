@@ -33,7 +33,7 @@ export async function embedTexts(inputs: string[]): Promise<number[][]> {
 
 export interface ChatMessage {
   role: "system" | "user" | "assistant" | "tool";
-  content: string | null;
+  content: string | null | Array<Record<string, unknown>>;
   tool_calls?: ToolCall[];
   tool_call_id?: string;
   name?: string;
