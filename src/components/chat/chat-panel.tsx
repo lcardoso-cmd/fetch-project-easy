@@ -12,10 +12,17 @@ interface Citation {
   similarity: number;
 }
 
+interface ToolStep {
+  name: string;
+  args_json: string;
+  result_json: string;
+}
+
 interface Msg {
   role: "user" | "assistant";
   content: string;
   citations?: Citation[];
+  steps?: ToolStep[];
 }
 
 export function ChatPanel({ caseId }: { caseId?: string }) {
