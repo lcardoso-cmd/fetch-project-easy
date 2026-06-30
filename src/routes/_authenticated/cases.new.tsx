@@ -31,6 +31,13 @@ import {
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
+import { useProfile } from "@/hooks/use-profile";
+import {
+  defaultMatterKindFor,
+  labelsForMatter,
+  MATTER_KIND_LABELS,
+  type MatterKind,
+} from "@/lib/practice-labels";
 import {
   createCase,
   extractCaseDataFromDocument,
