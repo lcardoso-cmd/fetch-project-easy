@@ -259,7 +259,7 @@ export function ConversationView({
         </div>
       )}
 
-      <div className="flex items-end gap-2 border-t p-3">
+      <div className="relative flex items-end gap-2 border-t p-3">
         <Button
           type="button"
           variant="ghost"
@@ -276,19 +276,78 @@ export function ConversationView({
           className="hidden"
           onChange={(e) => handleAttach(e.target.files)}
         />
-        <Textarea
-          value={body}
-          onChange={(e) => setBody(e.target.value)}
-          placeholder="Escreva uma mensagem…"
-          rows={2}
-          className="min-h-[44px] resize-none"
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && !e.shiftKey) {
-              e.preventDefault();
-              handleSend();
-            }
-          }}
-        />
+        <div className="relative flex-1">
+          {mentionQuery !== null && mentionCandidates.length > 0 && (
+            <div className="absolute bottom-full left-0 z-20 mb-1 w-64 overflow-hidden rounded-md border bg-popover shadow-lg">
+              <div className="px-3 py-1.5 text-[10px] uppercase tracking-wider text-muted-foreground">
+                Mencionar
+              </div>
+              {mentionCandidates.map((p, i) => (
+                <button
+                  type="button"
+                  key={p.id}
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    insertMention(p);
+                  }}
+                  onMouseEnter={() => setMentionIndex(i)}
+                  className={`flex w-full items-center gap-2 px-3 py-2 text-left text-sm ${
+                    i === mentionIndex ? "bg-accent text-accent-foreground" : "hover:bg-muted"
+                  }`}
+                >
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-[10px] font-semibold uppercase text-primary">
+                    {p.name.slice(0, 2)}
+                  </span>
+                  <span className="truncate">{p.name}</span>
+                </button>
+              ))}
+            </div>
+          )}
+          <Textarea
+            ref={textareaRef}
+            value={body}
+            onChange={(e) => handleBodyChange(e.target.value)}
+            onKeyUp={(e) => {
+              // re-check after caret moves
+              if (["ArrowLeft", "ArrowRight", "Home", "End"].includes(e.key)) {
+                handleBodyChange(body);
+              }
+            }}
+            placeholder="Escreva uma mensagem… use @ para mencionar"
+            rows={2}
+            className="min-h-[44px] resize-none"
+            onKeyDown={(e) => {
+              if (mentionQuery !== null && mentionCandidates.length > 0) {
+                if (e.key === "ArrowDown") {
+                  e.preventDefault();
+                  setMentionIndex((i) => (i + 1) % mentionCandidates.length);
+                  return;
+                }
+                if (e.key === "ArrowUp") {
+                  e.preventDefault();
+                  setMentionIndex(
+                    (i) => (i - 1 + mentionCandidates.length) % mentionCandidates.length,
+                  );
+                  return;
+                }
+                if (e.key === "Enter" || e.key === "Tab") {
+                  e.preventDefault();
+                  insertMention(mentionCandidates[mentionIndex]);
+                  return;
+                }
+                if (e.key === "Escape") {
+                  e.preventDefault();
+                  setMentionQuery(null);
+                  return;
+                }
+              }
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                handleSend();
+              }
+            }}
+          />
+        </div>
         <Button onClick={handleSend} disabled={busy} size="icon">
           {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
         </Button>
