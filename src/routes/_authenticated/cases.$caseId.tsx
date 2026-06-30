@@ -41,13 +41,11 @@ import { getCase, updateCase } from "@/lib/cases.functions";
 import { listDocuments } from "@/lib/documents.functions";
 import { listEvents } from "@/lib/events.functions";
 import { listTasks, toggleTask } from "@/lib/tasks.functions";
-import { getOrCreateCaseConversation } from "@/lib/conversations.functions";
-
 import { DocumentList } from "@/components/documents/document-list";
 import { CaseSummaryCard } from "@/components/cases/case-summary-card";
 import { JurisMindChat } from "@/components/chat/jurismind-chat";
 import { CaseTasksDialog } from "@/components/tasks/case-tasks-dialog";
-import { ConversationView } from "@/components/chat/conversation-view";
+import { FloatingTeamChat } from "@/components/chat/floating-team-chat";
 import { QuesitosCard } from "@/components/cases/quesitos-card";
 import type { MatterKind } from "@/lib/practice-labels";
 
@@ -424,37 +422,8 @@ function CaseDetailPage() {
           matterKind={caseData.matter_kind as MatterKind}
         />
       )}
-
-      {/* Chat interno da equipe */}
-      <CaseTeamChat caseId={caseId} />
-    </div>
-  );
-}
-
-function CaseTeamChat({ caseId }: { caseId: string }) {
-  const getOrCreateFn = useServerFn(getOrCreateCaseConversation);
-  const { data: conv } = useQuery({
-    queryKey: ["case-conversation", caseId],
-    queryFn: () => getOrCreateFn({ data: { case_id: caseId } }),
-  });
-  if (!conv) {
-    return (
-      <div className="rounded-xl border bg-card p-6 text-sm text-muted-foreground">
-        Carregando conversa da equipe…
-      </div>
-    );
-  }
-  return (
-    <div>
-      <h2 className="mb-3 text-xl font-bold tracking-tight text-foreground">
-        Conversa da equipe
-      </h2>
-      <div className="h-[500px]">
-        <ConversationView
-          conversationId={conv.id}
-          subtitle="Mensagens entre membros do caso"
-        />
-      </div>
+      {/* Chat flutuante da equipe (canto inferior direito) */}
+      <FloatingTeamChat caseId={caseId} />
     </div>
   );
 }
