@@ -47,3 +47,52 @@ export function relationLabel(matter: MatterKind, value: string | null | undefin
 export function representedRelationFor(matter: MatterKind): string | null {
   return PARTY_RELATIONS[matter]?.find((r) => r.isRepresented)?.value ?? null;
 }
+
+/**
+ * Heurística para inferir a relação de uma parte a partir do papel/nome
+ * extraído do documento (ex.: "perito", "requerente", "réu").
+ * Retorna null se não houver match confiável — UI marca como "Classificar".
+ */
+export function guessRelation(
+  party: { role?: string | null; name?: string | null },
+  matter: MatterKind,
+): string | null {
+  const hay = `${party.role ?? ""} ${party.name ?? ""}`.toLowerCase();
+  if (!hay.trim()) return null;
+
+  const has = (...needles: string[]) => needles.some((n) => hay.includes(n));
+
+  // Perito do juízo aparece em qualquer matéria
+  if (has("perito") && !has("assistente")) {
+    if (matter === "pericia") return null; // o próprio usuário é o perito
+    return "perito_juizo";
+  }
+
+  if (matter === "processo") {
+    if (has("requerente", "autor", "exequente", "reclamante", "demandante")) return "cliente";
+    if (has("requerido", "réu", "reu", "executado", "reclamado", "demandado")) return "contraria";
+    if (has("litisconsorte")) return "litisconsorte";
+    if (has("terceiro")) return "terceiro";
+    if (has("advogado") && has("adverso", "contrário", "contrario")) return "advogado_adverso";
+    if (has("assistente técnico", "assistente tecnico")) return "assistente_contrario";
+  }
+
+  if (matter === "pericia") {
+    if (has("requerente", "autor", "exequente", "reclamante")) return "autor";
+    if (has("requerido", "réu", "reu", "executado", "reclamado")) return "reu";
+    if (has("juiz", "juízo", "juizo", "vara", "tribunal")) return "nomeante";
+    if (has("assistente") && has("autor", "requerente", "reclamante")) return "assistente_autor";
+    if (has("assistente") && has("réu", "reu", "requerido", "reclamado")) return "assistente_reu";
+    if (has("advogado") && has("autor", "requerente")) return "advogado_autor";
+    if (has("advogado") && has("réu", "reu", "requerido")) return "advogado_reu";
+  }
+
+  if (matter === "assistencia_tecnica") {
+    if (has("assistido")) return "assistido";
+    if (has("contrária", "contraria", "adverso")) return "contraria";
+    if (has("assistente técnico", "assistente tecnico")) return "assistente_contrario";
+    if (has("advogado")) return "advogado_assistido";
+  }
+
+  return null;
+}
