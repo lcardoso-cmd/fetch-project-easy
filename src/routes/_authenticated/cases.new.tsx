@@ -658,7 +658,7 @@ function NewCasePage() {
         </Card>
 
         {/* Partes */}
-        <Card>
+        <Card className={uploaded && fieldHasIssue("parties") ? "border-amber-500" : ""}>
           <CardHeader>
             <CardTitle className="text-lg">Partes envolvidas</CardTitle>
             <CardDescription>
@@ -666,6 +666,7 @@ function NewCasePage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
+            <FieldIssue field="parties" />
             {parties.length === 0 && (
               <p className="text-sm text-muted-foreground">Nenhuma parte ainda.</p>
             )}
