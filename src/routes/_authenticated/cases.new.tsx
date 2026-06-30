@@ -557,19 +557,26 @@ function NewCasePage() {
           <CardContent>
             {uploaded ? (
               <div className="flex items-center justify-between rounded-lg border bg-muted/30 p-3">
-                <div className="flex items-center gap-2 min-w-0">
+                <button
+                  type="button"
+                  onClick={() => setPreviewOpen(true)}
+                  className="flex items-center gap-2 min-w-0 text-left hover:text-accent transition-colors"
+                  title="Clique para visualizar o documento"
+                >
                   <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
-                  <span className="truncate text-sm font-medium">{uploaded.filename}</span>
+                  <span className="truncate text-sm font-medium underline-offset-2 hover:underline">
+                    {uploaded.filename}
+                  </span>
                   {extracting ? (
                     <Badge variant="secondary" className="ml-2 gap-1">
                       <Loader2 className="h-3 w-3 animate-spin" /> Extraindo...
                     </Badge>
                   ) : (
                     <Badge variant="secondary" className="ml-2 gap-1">
-                      <CheckCircle2 className="h-3 w-3" /> Anexado
+                      <CheckCircle2 className="h-3 w-3" /> Anexado — clique para ver
                     </Badge>
                   )}
-                </div>
+                </button>
                 <Button
                   type="button"
                   variant="ghost"
