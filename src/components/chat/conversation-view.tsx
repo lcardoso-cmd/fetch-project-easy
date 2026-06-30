@@ -144,6 +144,50 @@ export function ConversationView({
     }
   }
 
+  function handleBodyChange(value: string) {
+    setBody(value);
+    const caret = textareaRef.current?.selectionStart ?? value.length;
+    const upto = value.slice(0, caret);
+    const m = upto.match(/(?:^|\s)@([\p{L}\p{N}._-]{0,30})$/u);
+    if (m) {
+      setMentionQuery(m[1]);
+      setMentionIndex(0);
+    } else {
+      setMentionQuery(null);
+    }
+  }
+
+  function insertMention(p: { id: string; name: string }) {
+    const ta = textareaRef.current;
+    if (!ta) return;
+    const caret = ta.selectionStart ?? body.length;
+    const upto = body.slice(0, caret);
+    const after = body.slice(caret);
+    const replaced = upto.replace(/@([\p{L}\p{N}._-]{0,30})$/u, `@${p.name} `);
+    const next = replaced + after;
+    setBody(next);
+    setMentionMap((mm) => ({ ...mm, [p.name]: p.id }));
+    setMentionQuery(null);
+    requestAnimationFrame(() => {
+      ta.focus();
+      const pos = replaced.length;
+      ta.setSelectionRange(pos, pos);
+    });
+  }
+
+  function resolveMentionIds(text: string): string[] {
+    const ids = new Set<string>();
+    for (const [name, id] of Object.entries(mentionMap)) {
+      // word-boundary-ish: ensure @name still present
+      const re = new RegExp(
+        `(?:^|\\s)@${name.replace(/[.*+?^${}()|[\]\\]/g, "\\\\$&")}(?=\\s|$|[,.;:!?])`,
+        "u",
+      );
+      if (re.test(text)) ids.add(id);
+    }
+    return Array.from(ids);
+  }
+
   async function handleSend() {
     if (!body.trim() && pending.length === 0) return;
     setBusy(true);
@@ -153,11 +197,13 @@ export function ConversationView({
           conversation_id: conversationId,
           body,
           attachments: pending,
-          mention_user_ids: [],
+          mention_user_ids: resolveMentionIds(body),
         },
       });
       setBody("");
       setPending([]);
+      setMentionMap({});
+      setMentionQuery(null);
       queryClient.invalidateQueries({ queryKey: ["conversation-messages", conversationId] });
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Falha ao enviar");
