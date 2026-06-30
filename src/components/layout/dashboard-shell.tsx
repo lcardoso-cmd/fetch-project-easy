@@ -26,6 +26,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { NotificationBell } from "@/components/layout/notification-bell";
 
 type NavItem =
   | { type: "label"; label: string }
@@ -211,9 +212,12 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
             </div>
             <span className="font-heading text-lg font-bold">JurisMind AI</span>
           </Link>
-          <Button variant="ghost" size="icon" onClick={signOut}>
-            <LogOut className="h-4 w-4" />
-          </Button>
+          <div className="flex items-center gap-1">
+            <NotificationBell />
+            <Button variant="ghost" size="icon" onClick={signOut}>
+              <LogOut className="h-4 w-4" />
+            </Button>
+          </div>
         </header>
 
         {/* Mobile nav strip */}
@@ -239,7 +243,8 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
         </nav>
 
         {/* Desktop topbar */}
-        <header className="hidden h-16 items-center justify-end border-b bg-card px-6 lg:flex">
+        <header className="hidden h-16 items-center justify-end gap-3 border-b bg-card px-6 lg:flex">
+          <NotificationBell />
           <div className="text-xs text-muted-foreground">{user?.email}</div>
         </header>
 
