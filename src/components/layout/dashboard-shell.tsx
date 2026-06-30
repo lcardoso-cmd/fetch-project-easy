@@ -46,6 +46,7 @@ function buildNav(practice: PracticeType | null | undefined): NavItem[] {
       match: "startsWith",
     },
     { type: "link", to: "/my-tasks", label: "Minhas Tarefas", icon: ClipboardCheck },
+    { type: "link", to: "/inbox", label: "Conversas", icon: MessageSquare, match: "startsWith" },
     { type: "link", to: "/calendar", label: "Agenda", icon: CalendarDays },
     { type: "link", to: "/my-files", label: "Meus Documentos", icon: FileArchive },
     { type: "separator" },
