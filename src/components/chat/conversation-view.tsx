@@ -7,6 +7,7 @@ import {
   markConversationRead,
   uploadConversationAttachment,
   createTaskFromMessage,
+  listConversationParticipants,
 } from "@/lib/conversations.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
