@@ -592,7 +592,9 @@ function NewCasePage() {
                 value={clientName}
                 onChange={(e) => setClientName(e.target.value)}
                 maxLength={200}
+                className={fieldRing("client_name")}
               />
+              <FieldIssue field="client_name" />
             </div>
             <div className="space-y-2">
               <Label htmlFor="case_number">Número do processo</Label>
@@ -601,7 +603,9 @@ function NewCasePage() {
                 value={caseNumber}
                 onChange={(e) => setCaseNumber(e.target.value)}
                 maxLength={120}
+                className={fieldRing("case_number")}
               />
+              <FieldIssue field="case_number" />
             </div>
             <div className="space-y-2">
               <Label htmlFor="jurisdiction">Vara / Tribunal</Label>
@@ -611,12 +615,14 @@ function NewCasePage() {
                 onChange={(e) => setJurisdiction(e.target.value)}
                 placeholder="Ex.: TJSP — 3ª Vara Cível"
                 maxLength={200}
+                className={fieldRing("jurisdiction")}
               />
+              <FieldIssue field="jurisdiction" />
             </div>
             <div className="space-y-2">
               <Label htmlFor="case_type">Tipo</Label>
               <Select value={caseType} onValueChange={setCaseType}>
-                <SelectTrigger id="case_type">
+                <SelectTrigger id="case_type" className={fieldRing("case_type")}>
                   <SelectValue placeholder="Selecione" />
                 </SelectTrigger>
                 <SelectContent>
@@ -634,6 +640,7 @@ function NewCasePage() {
                   <SelectItem value="Outro">Outro</SelectItem>
                 </SelectContent>
               </Select>
+              <FieldIssue field="case_type" />
             </div>
             <div className="space-y-2 md:col-span-2">
               <Label htmlFor="description">Descrição / resumo</Label>
@@ -643,7 +650,9 @@ function NewCasePage() {
                 onChange={(e) => setDescription(e.target.value)}
                 rows={4}
                 maxLength={4000}
+                className={fieldRing("description")}
               />
+              <FieldIssue field="description" />
             </div>
           </CardContent>
         </Card>
