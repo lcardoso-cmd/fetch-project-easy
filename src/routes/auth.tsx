@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { AuthProvider } from "@/hooks/use-auth";
+import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,16 +12,6 @@ import { useNavigate } from "@tanstack/react-router";
 export const Route = createFileRoute("/auth")({
   component: AuthPage,
 });
-
-function AuthPage() {
-  return (
-    <AuthProvider>
-      <AuthPageInner />
-    </AuthProvider>
-  );
-}
-
-function AuthPageInner() {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
