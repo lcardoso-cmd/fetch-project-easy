@@ -887,14 +887,29 @@ function NewCasePage() {
           </CardContent>
         </Card>
 
-        <div className="flex justify-end gap-2">
-          <Button type="button" variant="ghost" asChild>
-            <Link to="/cases">Cancelar</Link>
-          </Button>
-          <Button type="submit" disabled={submitting || (needsReview && !reviewConfirmed)}>
-            {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {needsReview ? "Confirmar e criar caso" : "Criar caso"}
-          </Button>
+        <div className="flex flex-col items-end gap-2">
+          {attemptedSubmit && hasErrors && (
+            <p className="text-xs text-destructive flex items-center gap-1">
+              <AlertTriangle className="h-3 w-3" />
+              Existem campos obrigatórios pendentes — corrija os destaques em vermelho.
+            </p>
+          )}
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="ghost" asChild>
+              <Link to="/cases">Cancelar</Link>
+            </Button>
+            <Button
+              type="submit"
+              disabled={
+                submitting ||
+                (needsReview && !reviewConfirmed) ||
+                (attemptedSubmit && hasErrors)
+              }
+            >
+              {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {needsReview ? "Confirmar e criar caso" : "Criar caso"}
+            </Button>
+          </div>
         </div>
       </form>
     </div>
