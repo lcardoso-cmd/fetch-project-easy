@@ -4,8 +4,9 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 const AskSchema = z.object({
   case_id: z.string().uuid().optional(),
-  question: z.string().min(1).max(4000),
+  question: z.string().min(1).max(8000),
   selected_doc_ids: z.array(z.string().uuid()).optional(),
+  images: z.array(z.string()).max(6).optional(),
   history: z
     .array(
       z.object({
@@ -130,22 +131,109 @@ export const askWithRag = createServerFn({ method: "POST" })
           },
         },
       },
+      {
+        type: "function",
+        function: {
+          name: "create_petition",
+          description:
+            "Gera uma minuta de petição/parecer/contrato para o usuário editar e baixar em Word. Use quando pedirem para 'redigir', 'minutar', 'fazer petição', 'contestação', 'parecer', etc.",
+          parameters: {
+            type: "object",
+            properties: {
+              titulo: { type: "string", description: "Título do documento" },
+              conteudo: {
+                type: "string",
+                description:
+                  "Texto completo da peça em parágrafos separados por quebras de linha. Use linguagem jurídica formal.",
+              },
+            },
+            required: ["titulo", "conteudo"],
+          },
+        },
+      },
+      {
+        type: "function",
+        function: {
+          name: "create_table",
+          description:
+            "Cria uma planilha (.xlsx) a partir de dados estruturados. Use quando pedirem tabela, cronograma, planilha de custas, comparativo, etc.",
+          parameters: {
+            type: "object",
+            properties: {
+              titulo: { type: "string" },
+              rows: {
+                type: "array",
+                description:
+                  "Linhas como array de objetos. As chaves de cada objeto viram colunas.",
+                items: { type: "object" },
+              },
+            },
+            required: ["titulo", "rows"],
+          },
+        },
+      },
+      {
+        type: "function",
+        function: {
+          name: "create_presentation",
+          description:
+            "Cria uma apresentação PowerPoint (.pptx). Use para resumir um caso/processo em slides.",
+          parameters: {
+            type: "object",
+            properties: {
+              title: { type: "string" },
+              subtitle: { type: "string" },
+              slides: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    title: { type: "string" },
+                    content: {
+                      type: "array",
+                      items: { type: "string" },
+                      description: "Tópicos em bullets",
+                    },
+                  },
+                  required: ["title", "content"],
+                },
+              },
+            },
+            required: ["title", "slides"],
+          },
+        },
+      },
     ];
 
     const systemPrompt = `Você é o JurisMind, assistente jurídico em português brasileiro.
 Use EXCLUSIVAMENTE o contexto fornecido para responder à pergunta. Cite as fontes ao final no formato [n] indicando o número entre colchetes do trecho.
 Se o contexto for insuficiente, diga claramente.
-Você possui ferramentas: use-as quando o usuário pedir ação concreta (criar prazo, consultar agenda, listar casos).
+Você possui ferramentas: use-as quando o usuário pedir ação concreta (criar prazo, listar casos, redigir uma peça/petição, montar planilha, criar apresentação). Para create_petition, create_table e create_presentation, NÃO descreva o resultado em texto — chame a tool com o conteúdo completo e depois apenas confirme em uma frase curta que o arquivo está pronto para baixar.
+Se o usuário enviar imagens, analise o que está visível nelas (documento fotografado, print de processo, identidade, foto de local etc.) e leve isso em conta.
 
 IMPORTANTE: Responda em TEXTO CORRIDO, sem Markdown. NÃO use **negrito**, *itálico*, # títulos, listas com - ou *, nem blocos de código. Use parágrafos simples e, quando necessário, títulos em MAIÚSCULAS seguidos de dois-pontos.
 
 CONTEXTO DOS DOCUMENTOS:
 ${contextBlock}`;
 
+    // Mensagem do usuário (multimodal se houver imagens)
+    const userContent:
+      | string
+      | Array<Record<string, unknown>> =
+      data.images && data.images.length > 0
+        ? [
+            { type: "text", text: data.question },
+            ...data.images.map((url) => ({
+              type: "image_url",
+              image_url: { url },
+            })),
+          ]
+        : data.question;
+
     const messages = [
       { role: "system" as const, content: systemPrompt },
       ...(data.history ?? []).map((h) => ({ role: h.role, content: h.content })),
-      { role: "user" as const, content: data.question },
+      { role: "user" as const, content: userContent },
     ];
 
     const executor = async (name: string, args: Record<string, unknown>) => {
@@ -188,6 +276,28 @@ ${contextBlock}`;
           .lte("starts_at", until)
           .order("starts_at", { ascending: true });
         return { events: evs ?? [] };
+      }
+      if (name === "create_petition") {
+        return {
+          kind: "petition",
+          titulo: String(args.titulo ?? "Petição"),
+          conteudo: String(args.conteudo ?? ""),
+        };
+      }
+      if (name === "create_table") {
+        return {
+          kind: "table",
+          titulo: String(args.titulo ?? "Tabela"),
+          rows: Array.isArray(args.rows) ? args.rows : [],
+        };
+      }
+      if (name === "create_presentation") {
+        return {
+          kind: "presentation",
+          title: String(args.title ?? "Apresentação"),
+          subtitle: args.subtitle ? String(args.subtitle) : undefined,
+          slides: Array.isArray(args.slides) ? args.slides : [],
+        };
       }
       return { error: `Tool desconhecida: ${name}` };
     };

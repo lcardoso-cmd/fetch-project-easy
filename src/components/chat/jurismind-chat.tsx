@@ -25,6 +25,7 @@ import {
   BrainCircuit,
   CalendarIcon,
   FileText,
+  ImagePlus,
   Loader2,
   Search,
   Send,
@@ -32,6 +33,12 @@ import {
   X,
 } from "lucide-react";
 import type { DocItem } from "@/components/documents/document-list";
+import {
+  PetitionCard,
+  PresentationCard,
+  TableCard,
+} from "@/components/chat/artifact-cards";
+import { toast } from "sonner";
 
 interface Citation {
   document_id: string;
@@ -47,6 +54,7 @@ interface ToolStep {
 interface Msg {
   role: "user" | "assistant";
   content: string;
+  images?: string[];
   citations?: Citation[];
   steps?: ToolStep[];
 }
@@ -82,7 +90,30 @@ export function JurisMindChat({
   const [busy, setBusy] = useState(false);
   const [search, setSearch] = useState("");
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
+  const [images, setImages] = useState<string[]>([]);
+  const fileRef = useRef<HTMLInputElement>(null);
   const endRef = useRef<HTMLDivElement>(null);
+
+  const onPickImages = async (files: FileList | null) => {
+    if (!files) return;
+    const list: string[] = [];
+    for (const f of Array.from(files).slice(0, 6 - images.length)) {
+      if (!f.type.startsWith("image/")) continue;
+      if (f.size > 8 * 1024 * 1024) {
+        toast.error(`${f.name} maior que 8MB`);
+        continue;
+      }
+      list.push(
+        await new Promise<string>((resolve, reject) => {
+          const r = new FileReader();
+          r.onerror = () => reject(r.error);
+          r.onload = () => resolve(String(r.result));
+          r.readAsDataURL(f);
+        }),
+      );
+    }
+    setImages((prev) => [...prev, ...list]);
+  };
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -122,9 +153,16 @@ export function JurisMindChat({
 
   const send = async () => {
     const q = input.trim();
-    if (!q || busy) return;
+    if ((!q && images.length === 0) || busy) return;
     setInput("");
-    const next = [...messages, { role: "user" as const, content: q }];
+    const sentImages = images;
+    setImages([]);
+    const userMsg: Msg = {
+      role: "user",
+      content: q || "(imagens enviadas)",
+      images: sentImages,
+    };
+    const next = [...messages, userMsg];
     setMessages(next);
     setBusy(true);
     try {
@@ -136,9 +174,10 @@ export function JurisMindChat({
       const res = await askFn({
         data: {
           case_id: caseId,
-          question: q,
+          question: q || "Analise as imagens enviadas.",
           history,
           selected_doc_ids: selected.length ? selected : undefined,
+          images: sentImages.length ? sentImages : undefined,
         },
       });
       setMessages([
@@ -366,6 +405,59 @@ export function JurisMindChat({
                     )}
                   >
                     {m.content}
+                    {m.images && m.images.length > 0 && (
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {m.images.map((src, idx) => (
+                          <img
+                            key={idx}
+                            src={src}
+                            alt={`anexo ${idx + 1}`}
+                            className="h-24 w-24 rounded border object-cover"
+                          />
+                        ))}
+                      </div>
+                    )}
+                    {m.steps?.map((s, idx) => {
+                      try {
+                        const r = JSON.parse(s.result_json) as {
+                          kind?: string;
+                          titulo?: string;
+                          conteudo?: string;
+                          rows?: Array<Record<string, unknown>>;
+                          title?: string;
+                          subtitle?: string;
+                          slides?: Array<{ title?: string; content?: string[] }>;
+                        };
+                        if (r.kind === "petition")
+                          return (
+                            <PetitionCard
+                              key={idx}
+                              titulo={r.titulo ?? "Petição"}
+                              conteudo={r.conteudo ?? ""}
+                            />
+                          );
+                        if (r.kind === "table")
+                          return (
+                            <TableCard
+                              key={idx}
+                              titulo={r.titulo ?? "Tabela"}
+                              rows={r.rows ?? []}
+                            />
+                          );
+                        if (r.kind === "presentation")
+                          return (
+                            <PresentationCard
+                              key={idx}
+                              title={r.title ?? "Apresentação"}
+                              subtitle={r.subtitle}
+                              slides={r.slides ?? []}
+                            />
+                          );
+                      } catch {
+                        // ignore
+                      }
+                      return null;
+                    })}
                     {m.citations && m.citations.length > 0 && (
                       <div className="mt-3 space-y-1 border-t border-border/40 pt-2">
                         <p className="text-xs font-semibold opacity-70">Fontes:</p>
@@ -412,7 +504,46 @@ export function JurisMindChat({
           </div>
 
           <div className="border-t p-3">
+            {images.length > 0 && (
+              <div className="mb-2 flex flex-wrap gap-2">
+                {images.map((src, idx) => (
+                  <div key={idx} className="relative">
+                    <img src={src} alt="" className="h-16 w-16 rounded border object-cover" />
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setImages((prev) => prev.filter((_, i) => i !== idx))
+                      }
+                      className="absolute -right-1 -top-1 rounded-full bg-background p-0.5 shadow"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
             <div className="flex gap-2">
+              <input
+                ref={fileRef}
+                type="file"
+                accept="image/*"
+                multiple
+                hidden
+                onChange={(e) => {
+                  onPickImages(e.target.files);
+                  e.target.value = "";
+                }}
+              />
+              <Button
+                type="button"
+                size="icon"
+                variant="outline"
+                onClick={() => fileRef.current?.click()}
+                disabled={busy || images.length >= 6}
+                title="Anexar imagens"
+              >
+                <ImagePlus className="h-4 w-4" />
+              </Button>
               <Textarea
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
@@ -422,14 +553,14 @@ export function JurisMindChat({
                     send();
                   }
                 }}
-                placeholder="Ex.: Qual o prazo de defesa neste caso?"
+                placeholder="Pergunte, peça uma minuta de petição, planilha ou apresentação…"
                 rows={2}
                 className="resize-none"
                 disabled={busy}
               />
               <Button
                 onClick={send}
-                disabled={busy || !input.trim()}
+                disabled={busy || (!input.trim() && images.length === 0)}
                 size="icon"
                 className="h-auto"
               >
