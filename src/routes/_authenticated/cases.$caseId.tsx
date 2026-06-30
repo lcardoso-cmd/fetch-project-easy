@@ -41,13 +41,11 @@ import { getCase, updateCase } from "@/lib/cases.functions";
 import { listDocuments } from "@/lib/documents.functions";
 import { listEvents } from "@/lib/events.functions";
 import { listTasks, toggleTask } from "@/lib/tasks.functions";
-import { getOrCreateCaseConversation } from "@/lib/conversations.functions";
-
 import { DocumentList } from "@/components/documents/document-list";
 import { CaseSummaryCard } from "@/components/cases/case-summary-card";
 import { JurisMindChat } from "@/components/chat/jurismind-chat";
 import { CaseTasksDialog } from "@/components/tasks/case-tasks-dialog";
-import { ConversationView } from "@/components/chat/conversation-view";
+import { FloatingTeamChat } from "@/components/chat/floating-team-chat";
 import { QuesitosCard } from "@/components/cases/quesitos-card";
 import type { MatterKind } from "@/lib/practice-labels";
 
