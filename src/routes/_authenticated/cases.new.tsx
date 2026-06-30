@@ -1088,8 +1088,8 @@ function MatterKindBar({
 }) {
   const [editing, setEditing] = useState(false);
   return (
-    <div className="flex flex-wrap items-center gap-2 rounded-lg border bg-muted/30 px-3 py-2 text-sm">
-      <span className="text-muted-foreground">Tipo de matéria:</span>
+    <div className="flex flex-wrap items-center gap-3 rounded-xl border-2 border-accent/30 bg-accent/5 px-4 py-3 shadow-sm">
+      <span className="text-sm font-semibold text-foreground">Tipo de atuação:</span>
       {editing ? (
         <>
           <Select
