@@ -17,8 +17,10 @@ import { Plus, Trash2, Loader2, Users, UserCog } from "lucide-react";
 import { toast } from "sonner";
 import {
   listTeamMembers,
-  createTeamMember,
   deleteTeamMember,
+  inviteTeamMember,
+  listInvitations,
+  revokeInvitation,
 } from "@/lib/team.functions";
 import {
   updateMyProfile,
