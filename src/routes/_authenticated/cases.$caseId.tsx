@@ -99,6 +99,19 @@ function CaseDetailPage() {
   const selectAll = () => setSelectedDocIds(new Set(readyDocIds));
   const deselectAll = () => setSelectedDocIds(new Set());
 
+  // Auto-marca novos docs prontos (apenas adiciona; nunca remove escolhas manuais).
+  const seenReadyRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    const fresh = readyDocIds.filter((id) => !seenReadyRef.current.has(id));
+    if (fresh.length === 0) return;
+    fresh.forEach((id) => seenReadyRef.current.add(id));
+    setSelectedDocIds((prev) => {
+      const next = new Set(prev);
+      fresh.forEach((id) => next.add(id));
+      return next;
+    });
+  }, [readyDocIds]);
+
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({
     title: "",
