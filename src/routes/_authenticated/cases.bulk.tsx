@@ -469,6 +469,29 @@ function DraftCard({
         )}
       </div>
 
+      {(draft.missing.length > 0 || draft.warnings.length > 0) &&
+        draft.extractStatus === "ready" && (
+          <div className="mb-4 space-y-2">
+            {draft.missing.length > 0 && (
+              <div className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+                <strong>Não identificado pela IA:</strong>{" "}
+                {draft.missing
+                  .map((f) => FIELD_LABELS[f] ?? f)
+                  .join(", ")}
+                . Preencha manualmente abaixo.
+              </div>
+            )}
+            {draft.warnings.map((w, i) => (
+              <div
+                key={i}
+                className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900"
+              >
+                {w}
+              </div>
+            ))}
+          </div>
+        )}
+
       {draft.extractStatus === "error" ? (
         <p className="text-sm text-muted-foreground">
           Não foi possível ler este documento. Remova ou tente novamente.
