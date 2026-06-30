@@ -25,8 +25,8 @@ interface Citation {
 
 interface ToolStep {
   name: string;
-  args: unknown;
-  result: unknown;
+  args: Record<string, unknown>;
+  result: Record<string, unknown>;
 }
 
 export const askWithRag = createServerFn({ method: "POST" })
