@@ -20,6 +20,7 @@ import {
   Settings2,
   LogOut,
   BrainCircuit,
+  MessageSquare,
   PanelLeftClose,
   PanelLeftOpen,
   type LucideIcon,
