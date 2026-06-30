@@ -59,12 +59,21 @@ interface Msg {
   steps?: ToolStep[];
 }
 
+interface PartyRef {
+  role: string;
+  name: string;
+  relation?: string | null;
+}
+
 interface CaseSummary {
   title: string;
   client_name?: string | null;
   status?: string | null;
   case_number?: string | null;
   case_type?: string | null;
+  jurisdiction?: string | null;
+  parties?: PartyRef[];
+  represented_party?: { role: string; name: string } | null;
 }
 
 export function JurisMindChat({
