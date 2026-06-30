@@ -68,6 +68,7 @@ function CaseDetailPage() {
   const [summarizing, setSummarizing] = useState(false);
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({
+    title: "",
     case_number: "",
     jurisdiction: "",
     case_type: "",
@@ -78,6 +79,7 @@ function CaseDetailPage() {
   const openEdit = () => {
     if (!caseData) return;
     setForm({
+      title: caseData.title ?? "",
       case_number: caseData.case_number ?? "",
       jurisdiction: caseData.jurisdiction ?? "",
       case_type: caseData.case_type ?? "",
