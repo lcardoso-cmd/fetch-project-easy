@@ -16,7 +16,7 @@ export const Route = createFileRoute("/invite/$token")({
 function InvitePage() {
   const { token } = Route.useParams();
   const navigate = useNavigate();
-  const { user, loading } = useAuth();
+  const { user, isLoading: loading } = useAuth();
   const peekFn = useServerFn(peekInvitation);
   const acceptFn = useServerFn(acceptInvitation);
 
