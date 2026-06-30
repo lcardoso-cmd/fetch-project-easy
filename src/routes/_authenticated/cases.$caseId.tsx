@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,24 +13,43 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  ArrowLeft,
+  BrainCircuit,
+  CalendarClock,
+  ClipboardCheck,
+  ListTodo,
+} from "lucide-react";
+import { toast } from "sonner";
+
 import { getCase, updateCase } from "@/lib/cases.functions";
-import { listDocuments, deleteDocument } from "@/lib/documents.functions";
-import { summarizeCase } from "@/lib/chat.functions";
+import { listDocuments } from "@/lib/documents.functions";
 import { listEvents } from "@/lib/events.functions";
 import { listTasks, toggleTask } from "@/lib/tasks.functions";
-import { UploadZone } from "@/components/documents/upload-zone";
-import { ChatPanel } from "@/components/chat/chat-panel";
-import { ConversationView } from "@/components/chat/conversation-view";
 import { getOrCreateCaseConversation } from "@/lib/conversations.functions";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import { ArrowLeft, FileText, Loader2, MessageSquare, Sparkles, Trash2, CalendarClock, ClipboardCheck } from "lucide-react";
+
+import { DocumentList } from "@/components/documents/document-list";
+import { CaseSummaryCard } from "@/components/cases/case-summary-card";
+import { JurisMindChat } from "@/components/chat/jurismind-chat";
+import { CaseTasksDialog } from "@/components/tasks/case-tasks-dialog";
+import { ConversationView } from "@/components/chat/conversation-view";
 import { QuesitosCard } from "@/components/cases/quesitos-card";
 import type { MatterKind } from "@/lib/practice-labels";
-import { toast } from "sonner";
-import { stripMarkdown } from "@/lib/strip-markdown";
 
 export const Route = createFileRoute("/_authenticated/cases/$caseId")({
   component: CaseDetailPage,
@@ -38,12 +57,10 @@ export const Route = createFileRoute("/_authenticated/cases/$caseId")({
 
 function CaseDetailPage() {
   const { caseId } = Route.useParams();
-  const queryClient = useQueryClient();
+  const qc = useQueryClient();
   const getCaseFn = useServerFn(getCase);
   const updateCaseFn = useServerFn(updateCase);
   const listDocsFn = useServerFn(listDocuments);
-  const deleteDocFn = useServerFn(deleteDocument);
-  const summarizeFn = useServerFn(summarizeCase);
   const listEventsFn = useServerFn(listEvents);
   const listTasksFn = useServerFn(listTasks);
   const toggleTaskFn = useServerFn(toggleTask);
@@ -66,7 +83,22 @@ function CaseDetailPage() {
     queryFn: () => listTasksFn({ data: { case_id: caseId, status: "all" } }),
   });
 
-  const [summarizing, setSummarizing] = useState(false);
+  // Seleção compartilhada entre Lista de documentos e Chat
+  const [selectedDocIds, setSelectedDocIds] = useState<Set<string>>(new Set());
+  const toggleSelect = (id: string) =>
+    setSelectedDocIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  const readyDocIds = useMemo(
+    () => docs.filter((d) => d.processing_status === "ready").map((d) => d.id),
+    [docs],
+  );
+  const selectAll = () => setSelectedDocIds(new Set(readyDocIds));
+  const deselectAll = () => setSelectedDocIds(new Set());
+
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({
     title: "",
@@ -76,7 +108,6 @@ function CaseDetailPage() {
     client_name: "",
     description: "",
   });
-
   const openEdit = () => {
     if (!caseData) return;
     setForm({
@@ -89,58 +120,88 @@ function CaseDetailPage() {
     });
     setEditing(true);
   };
-
   const saveEdit = async () => {
     await updateCaseFn({ data: { id: caseId, ...form } });
-    await queryClient.invalidateQueries({ queryKey: ["case", caseId] });
+    await qc.invalidateQueries({ queryKey: ["case", caseId] });
     setEditing(false);
     toast.success("Caso atualizado");
   };
 
-  const handleSummarize = async () => {
-    setSummarizing(true);
-    try {
-      await summarizeFn({ data: { case_id: caseId } });
-      await queryClient.invalidateQueries({ queryKey: ["case", caseId] });
-      toast.success("Resumo gerado");
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Falha no resumo");
-    } finally {
-      setSummarizing(false);
-    }
-  };
-
-  const handleDeleteDoc = async (id: string, name: string) => {
-    if (!confirm(`Excluir ${name}?`)) return;
-    await deleteDocFn({ data: { id } });
-    await queryClient.invalidateQueries({ queryKey: ["documents", caseId] });
-  };
-
-  if (isLoading) return <p className="text-muted-foreground">Carregando...</p>;
-  if (!caseData) return <p className="text-muted-foreground">Caso não encontrado.</p>;
+  if (isLoading)
+    return <p className="text-muted-foreground">Carregando...</p>;
+  if (!caseData)
+    return <p className="text-muted-foreground">Caso não encontrado.</p>;
 
   return (
     <div className="space-y-6">
-      <div className="flex items-start justify-between gap-4">
-        <div>
+      {/* Header */}
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="min-w-0">
           <Button variant="ghost" size="sm" asChild className="mb-2 -ml-2">
             <Link to="/cases">
               <ArrowLeft className="mr-1 h-4 w-4" /> Voltar
             </Link>
           </Button>
-          <h1 className="text-3xl font-bold tracking-tight text-foreground">{caseData.title}</h1>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">
+            {caseData.title}
+          </h1>
           {caseData.client_name && (
-            <p className="mt-1 text-muted-foreground">Cliente: {caseData.client_name}</p>
+            <p className="mt-1 text-muted-foreground">
+              Cliente: {caseData.client_name}
+            </p>
           )}
           <div className="mt-2 flex flex-wrap gap-2">
-            {caseData.case_number && <Badge variant="secondary">N° {caseData.case_number}</Badge>}
-            {caseData.jurisdiction && <Badge variant="secondary">{caseData.jurisdiction}</Badge>}
-            {caseData.case_type && <Badge variant="secondary">{caseData.case_type}</Badge>}
+            {caseData.case_number && (
+              <Badge variant="secondary">N° {caseData.case_number}</Badge>
+            )}
+            {caseData.jurisdiction && (
+              <Badge variant="secondary">{caseData.jurisdiction}</Badge>
+            )}
+            {caseData.case_type && (
+              <Badge variant="secondary">{caseData.case_type}</Badge>
+            )}
           </div>
         </div>
-        <Button variant="outline" onClick={openEdit}>
-          Editar dados
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={openEdit}>
+            Editar dados
+          </Button>
+          <Sheet>
+            <SheetTrigger asChild>
+              <Button size="lg">
+                <BrainCircuit className="mr-2 h-5 w-5" /> JurisMind AI
+              </Button>
+            </SheetTrigger>
+            <SheetContent
+              side="right"
+              className="flex w-full flex-col p-0 sm:max-w-4xl lg:max-w-6xl"
+            >
+              <SheetHeader className="border-b p-4">
+                <SheetTitle className="flex items-center gap-2 truncate">
+                  <BrainCircuit className="h-5 w-5 text-primary" />
+                  JurisMind AI — {caseData.title}
+                </SheetTitle>
+              </SheetHeader>
+              <div className="min-h-0 flex-1 overflow-hidden">
+                <JurisMindChat
+                  caseId={caseId}
+                  caseInfo={{
+                    title: caseData.title,
+                    client_name: caseData.client_name,
+                    status: caseData.status,
+                    case_number: caseData.case_number,
+                    case_type: caseData.case_type,
+                  }}
+                  documents={docs}
+                  selectedDocIds={selectedDocIds}
+                  onToggleSelect={toggleSelect}
+                  onSelectAll={selectAll}
+                  onDeselectAll={deselectAll}
+                />
+              </div>
+            </SheetContent>
+          </Sheet>
+        </div>
       </div>
 
       {editing && (
@@ -160,22 +221,27 @@ function CaseDetailPage() {
               <Label>Cliente</Label>
               <Input
                 value={form.client_name}
-                onChange={(e) => setForm({ ...form, client_name: e.target.value })}
+                onChange={(e) =>
+                  setForm({ ...form, client_name: e.target.value })
+                }
               />
             </div>
             <div className="space-y-1">
               <Label>Número do processo</Label>
               <Input
                 value={form.case_number}
-                onChange={(e) => setForm({ ...form, case_number: e.target.value })}
+                onChange={(e) =>
+                  setForm({ ...form, case_number: e.target.value })
+                }
               />
             </div>
             <div className="space-y-1">
               <Label>Jurisdição</Label>
               <Input
                 value={form.jurisdiction}
-                onChange={(e) => setForm({ ...form, jurisdiction: e.target.value })}
-                placeholder="Ex.: TJSP — 3ª Vara Cível"
+                onChange={(e) =>
+                  setForm({ ...form, jurisdiction: e.target.value })
+                }
               />
             </div>
             <div className="space-y-1">
@@ -199,7 +265,9 @@ function CaseDetailPage() {
               <Label>Descrição</Label>
               <Textarea
                 value={form.description}
-                onChange={(e) => setForm({ ...form, description: e.target.value })}
+                onChange={(e) =>
+                  setForm({ ...form, description: e.target.value })
+                }
               />
             </div>
             <div className="md:col-span-2 flex gap-2">
@@ -212,74 +280,26 @@ function CaseDetailPage() {
         </Card>
       )}
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        {/* Documentos */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Documentos</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <UploadZone caseId={caseId} />
-            {docs.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Nenhum documento ainda.</p>
-            ) : (
-              <ul className="divide-y rounded-lg border">
-                {docs.map((d) => (
-                  <li key={d.id} className="flex items-center justify-between gap-2 p-3">
-                    <div className="flex items-start gap-2 min-w-0">
-                      <FileText className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-medium text-foreground">{d.filename}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {(d.file_size ?? 0) > 0
-                            ? `${Math.round((d.file_size ?? 0) / 1024)} KB · `
-                            : ""}
-                          <StatusBadge status={d.processing_status} />
-                        </p>
-                      </div>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                      onClick={() => handleDeleteDoc(d.id, d.filename)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </CardContent>
-        </Card>
+      {/* Resumo (linha cheia) */}
+      <CaseSummaryCard
+        caseId={caseId}
+        caseTitle={caseData.title}
+        summary={caseData.summary ?? null}
+        summaryUpdatedAt={caseData.summary_updated_at ?? null}
+        hasReadyDocs={readyDocIds.length > 0}
+      />
 
-        {/* Resumo JurisMind */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0">
-            <CardTitle className="text-lg">Resumo do caso (JurisMind)</CardTitle>
-            <Button size="sm" onClick={handleSummarize} disabled={summarizing}>
-              {summarizing ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <Sparkles className="mr-2 h-4 w-4" />
-              )}
-              {caseData.summary ? "Atualizar" : "Gerar resumo"}
-            </Button>
-          </CardHeader>
-          <CardContent>
-            {caseData.summary ? (
-              <div className="prose prose-sm max-w-none whitespace-pre-wrap text-foreground">
-                {stripMarkdown(caseData.summary)}
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground">
-                Indexe documentos e clique em "Gerar resumo" para um overview automático.
-              </p>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+      {/* Documentos (linha cheia para caber a tabela) */}
+      <DocumentList
+        caseId={caseId}
+        documents={docs}
+        selectedDocIds={selectedDocIds}
+        onToggleSelect={toggleSelect}
+        onSelectAll={selectAll}
+        onDeselectAll={deselectAll}
+      />
 
+      {/* Eventos + Tarefas */}
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0">
@@ -293,14 +313,18 @@ function CaseDetailPage() {
           <CardContent>
             {events.length === 0 ? (
               <p className="text-sm text-muted-foreground">
-                Nenhum evento. O assistente pode criar usando a tool <code>create_event</code>.
+                Nenhum evento. O assistente pode criar usando a tool{" "}
+                <code>create_event</code>.
               </p>
             ) : (
               <ul className="divide-y">
                 {events.slice(0, 8).map((ev) => (
-                  <li key={ev.id} className="flex items-center justify-between py-2 text-sm">
+                  <li
+                    key={ev.id}
+                    className="flex items-center justify-between py-2 text-sm"
+                  >
                     <span className="truncate">{ev.title}</span>
-                    <span className="text-xs text-muted-foreground shrink-0 ml-2">
+                    <span className="ml-2 shrink-0 text-xs text-muted-foreground">
                       {new Date(ev.starts_at).toLocaleString("pt-BR", {
                         day: "2-digit",
                         month: "2-digit",
@@ -320,27 +344,44 @@ function CaseDetailPage() {
             <CardTitle className="text-lg flex items-center gap-2">
               <ClipboardCheck className="h-4 w-4" /> Tarefas
             </CardTitle>
-            <Button size="sm" variant="ghost" asChild>
-              <Link to="/my-tasks">Ver todas</Link>
-            </Button>
+            <CaseTasksDialog
+              caseId={caseId}
+              caseTitle={caseData.title}
+              trigger={
+                <Button size="sm" variant="ghost">
+                  <ListTodo className="mr-1 h-4 w-4" /> Gerenciar
+                </Button>
+              }
+            />
           </CardHeader>
           <CardContent>
             {tasks.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Nenhuma tarefa para este caso.</p>
+              <p className="text-sm text-muted-foreground">
+                Nenhuma tarefa para este caso.
+              </p>
             ) : (
               <ul className="divide-y">
                 {tasks.slice(0, 8).map((t) => (
-                  <li key={t.id} className="flex items-center gap-2 py-2 text-sm">
+                  <li
+                    key={t.id}
+                    className="flex items-center gap-2 py-2 text-sm"
+                  >
                     <Checkbox
                       checked={t.status === "done"}
                       onCheckedChange={async (c) => {
-                        await toggleTaskFn({ data: { id: t.id, done: Boolean(c) } });
-                        await queryClient.invalidateQueries({ queryKey: ["tasks", caseId] });
+                        await toggleTaskFn({
+                          data: { id: t.id, done: Boolean(c) },
+                        });
+                        await qc.invalidateQueries({
+                          queryKey: ["tasks", caseId],
+                        });
                       }}
                     />
                     <span
                       className={
-                        t.status === "done" ? "line-through text-muted-foreground" : ""
+                        t.status === "done"
+                          ? "line-through text-muted-foreground"
+                          : ""
                       }
                     >
                       {t.title}
@@ -353,50 +394,15 @@ function CaseDetailPage() {
         </Card>
       </div>
 
-      {/* Quesitos — apenas para perícia / assistência técnica */}
+      {/* Quesitos para perícia / assistência técnica */}
       {caseData.matter_kind && caseData.matter_kind !== "processo" && (
-        <QuesitosCard caseId={caseId} matterKind={caseData.matter_kind as MatterKind} />
+        <QuesitosCard
+          caseId={caseId}
+          matterKind={caseData.matter_kind as MatterKind}
+        />
       )}
 
-
-
-      {/* Chat IA do caso — JurisMind */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0">
-          <div>
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Sparkles className="h-4 w-4" /> Assistente JurisMind
-            </CardTitle>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Chat com IA usando os documentos deste caso, criação de prazos, consultas à agenda e mais.
-            </p>
-          </div>
-          <Sheet>
-            <SheetTrigger asChild>
-              <Button>
-                <MessageSquare className="mr-2 h-4 w-4" />
-                Abrir chat JurisMind
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="right" className="w-full sm:max-w-2xl flex flex-col p-0">
-              <SheetHeader className="border-b p-4">
-                <SheetTitle className="flex items-center gap-2">
-                  <Sparkles className="h-4 w-4" /> JurisMind — {caseData.title}
-                </SheetTitle>
-              </SheetHeader>
-              <div className="flex-1 overflow-hidden p-4">
-                <ChatPanel
-                  caseId={caseId}
-                  pendingDocs={docs.filter((d) => d.processing_status === "pending" || d.processing_status === "processing").length}
-                  readyDocs={docs.filter((d) => d.processing_status === "ready").length}
-                />
-              </div>
-            </SheetContent>
-          </Sheet>
-        </CardHeader>
-      </Card>
-
-      {/* Chat interno da equipe sobre o caso */}
+      {/* Chat interno da equipe */}
       <CaseTeamChat caseId={caseId} />
     </div>
   );
@@ -421,20 +427,11 @@ function CaseTeamChat({ caseId }: { caseId: string }) {
         Conversa da equipe
       </h2>
       <div className="h-[500px]">
-        <ConversationView conversationId={conv.id} subtitle="Mensagens entre membros do caso" />
+        <ConversationView
+          conversationId={conv.id}
+          subtitle="Mensagens entre membros do caso"
+        />
       </div>
     </div>
   );
-}
-
-
-function StatusBadge({ status }: { status: string }) {
-  const map: Record<string, string> = {
-    pending: "Aguardando",
-    processing: "Indexando...",
-    ready: "Pronto",
-    empty: "Sem texto",
-  };
-  const label = map[status] ?? status;
-  return <span>{label}</span>;
 }

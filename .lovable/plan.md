@@ -1,67 +1,86 @@
-# Chat interno de equipe
+## Objetivo
 
-Adiciona um sistema completo de comunicação entre membros da equipe, separado do assistente de IA atual (que continua em `/assistant`).
+Trazer para este projeto (TanStack Start + Supabase) a experiência completa que existe no repositório original `lcardoso-cmd/jurismind` (Next.js + Firebase) para as duas telas-chave: **Detalhe do Caso** e **Chat JurisMind AI**. O original não pode ser copiado linha-a-linha (stack diferente, Firebase vs Supabase), então vou **portar a UX e as funcionalidades** reaproveitando o backend já existente (server functions, RAG, conversations, tasks, events).
 
-## O que será entregue
+## O que já existe aqui (reaproveitar)
+- `getCase / updateCase`, `listDocuments / registerDocument / deleteDocument`, `indexDocument` (RAG), `askWithRag` (chat com citations + tool steps), `summarizeCase`, `listEvents`, `listTasks / toggleTask`, `getOrCreateCaseConversation`, `QuesitosCard`, `UploadZone` simples, `ChatPanel` básico.
+- Bucket `documents`, tabela `document_chunks` + `match_chunks`, conversations/messages.
 
-**Dois tipos de conversa:**
-- **Conversa por caso** — cada processo/perícia/AT tem sua thread fixa, visível dentro da página do caso e também na lista geral.
-- **DM (mensagem direta)** — conversa 1-a-1 entre dois membros da equipe, fora do contexto de um caso.
+## O que falta (vou criar/portar)
 
-**Recursos em cada mensagem:**
-- Texto formatado simples (quebras de linha, links auto-detectados).
-- **Anexar documentos** — upload direto pro bucket `documents`; se a conversa for de um caso, o arquivo também fica vinculado ao caso.
-- **Menções `@membro`** — autocomplete; gera notificação no sino do app pra pessoa mencionada.
-- **Virar tarefa** — botão em cada mensagem que abre um modal já preenchido (descrição = texto da mensagem, atribuído a, prazo) e cria a task ligada à mensagem original e ao caso (se houver).
-- **Tempo real** — mensagens, edições e reações aparecem na hora via Realtime do backend.
+### 1. Tela de Detalhe do Caso (`src/routes/_authenticated/cases.$caseId.tsx`) — reorganizar
+Layout igual ao original:
+- Header: voltar, título do caso, cliente, e **botão grande "JurisMind AI"** (BrainCircuit) abrindo Sheet/Dialog maximizável com o chat completo.
+- Card **Resumo do Caso (IA)** com:
+  - Botão "Gerar/Atualizar Resumo", data da última atualização.
+  - Menu "Exportar" → **Word (.docx)** e **Apresentação (.pptx)**.
+- Card **Detalhes do Caso** (edição inline com o form atual, incluindo título).
+- Card **Equipe do caso** (a partir de `team_members` quando aplicável; placeholder se vazio).
+- `QuesitosCard` (já existe).
+- **Lista de Documentos** rica (componente novo, ver abaixo).
+- Botão **"Gerenciar Tarefas do Caso"** abrindo dialog com Kanban/lista simples baseada em `tasks.functions`.
+- **Agenda/Eventos** do caso (lista compacta) — já temos `listEvents`.
 
-## Onde fica na UI
+### 2. Novo `DocumentList` (`src/components/documents/document-list.tsx`)
+Porta de `case-view`/`document-list.tsx` original:
+- Tabela com nome, tamanho, data de upload, **status do embedding** (Na fila / Baixando / Analisando / Gerando busca / Pronto / Erro) com ícones e cores.
+- Botão **Carregar** abrindo Dialog com drag-and-drop, multi-arquivo, lista de selecionados removíveis, limite 15 MB, tipos aceitos (PDF, DOCX, XLS/XLSX, CSV, PNG, JPG).
+- Detecção de **arquivo duplicado** → AlertDialog "Substituir?".
+- Botão **Reprocessar / Tentar novamente** em documentos com erro → chama `indexDocument` novamente.
+- Checkbox por linha alimentando o **doc-selection store** (Zustand) para escopar o chat.
+- Botão excluir com confirmação.
+- Reaproveita `UploadZone` atual como base, mas substitui pelo novo componente (o `UploadZone` pode virar interno do dialog).
 
-- Novo item no menu lateral: **Equipe → Conversas** (`/inbox`)
-  - Lista lateral com duas abas: "Casos" (threads dos casos onde participo) e "Diretas" (DMs)
-  - Botão "Nova mensagem" abre seletor de membro pra iniciar DM
-  - Painel à direita: thread ativa
-- Página do caso (`/cases/$caseId`): nova aba **"Conversa"** ao lado de Documentos/Quesitos, com a mesma thread embutida
-- Sino de notificações no header com badge de não-lidas + menções
+### 3. Doc-selection store (`src/lib/document-selection-store.ts`)
+Zustand: `{ selectedDocIds: Set<string>, toggle, selectAll, deselect, setDocuments }`. Igual ao do original. `askWithRag` ganha parâmetro opcional `selected_doc_ids: string[]` → quando enviado, `match_chunks` é filtrado por esses ids (ajusto a server fn e, se preciso, crio variante `match_chunks_by_docs`).
 
-## Modelo de dados
+### 4. Chat completo (`src/components/chat/jurismind-chat.tsx`)
+Substitui o `ChatPanel` quando aberto a partir do caso. Porta de `case-chat-view.tsx`:
+- Layout 1/3 + 2/3 dentro do Sheet (maximizável).
+- **Sidebar**:
+  - Card "Detalhes do Caso" (cliente, status, nº processo, tipo).
+  - Card "Equipe".
+  - Card "Documentos do Caso" com **busca** por nome, **filtro por intervalo de data** (Popover + Calendar range), botões "Marcar todos / Desmarcar todos", checkboxes ligados ao store.
+  - Botão "Gerenciar Tarefas" (mesmo dialog do caso).
+- **Coluna principal**: chat (askWithRag) com mensagens, citações (file + snippet + score), tool steps recolhíveis, indicador de "Pensando…", input com Enter para enviar, botão Stop quando ocupado.
+- Mensagens sem Markdown (já temos `stripMarkdown`).
 
-Tabelas novas (com RLS escopada por participante):
+### 5. Export DOCX/PPTX (`src/lib/export.functions.ts`)
+Server functions novas:
+- `exportSummaryDocx({ case_id, title, content })` → usa `docx` (npm) para gerar e retornar `{ base64, fileName }`.
+- `exportSummaryPptx({ case_id, title, content })` → usa `pptxgenjs` para gerar slides simples (capa + tópicos quebrando o resumo por parágrafo).
+- Cliente baixa via `saveAs` (Blob a partir de base64). Adicionar deps: `docx`, `pptxgenjs`, `file-saver`.
 
-- `conversations` — id, kind (`case` | `dm`), case_id?, created_by, created_at
-- `conversation_participants` — conversation_id, user_id, last_read_at — controla acesso e contador de não-lidas
-- `messages` — id, conversation_id, author_id, body, attachments (jsonb com refs do storage), reply_to_id?, created_at, edited_at
-- `message_mentions` — message_id, mentioned_user_id, read_at — alimenta o sino
-- `message_tasks` — message_id, task_id — liga mensagem ↔ task criada
+### 6. Tarefas do caso (dialog reutilizável)
+`src/components/tasks/case-tasks-dialog.tsx`: lista as `tasks` do caso, permite marcar concluído (`toggleTask`), adicionar nova (form simples chamando uma nova `createTask` se ainda não existir; verifico antes de implementar).
 
-Tasks usa a tabela `tasks` que já existe; só adicionamos `source_message_id` opcional.
+### 7. Ajustes pontuais
+- `askWithRag` aceita `selected_doc_ids` e repassa ao filtro de chunks.
+- `indexDocument` exposto também via botão "Reprocessar" (já existe; só conectar UI).
+- Mantém `getOrCreateCaseConversation` para persistir histórico do chat (cada caso = 1 conversa).
+- Sem alterações destrutivas em schema; uso `team_member_ids` já presente em `cases` se necessário para o painel de equipe.
 
-Realtime habilitado em `messages`, `message_mentions`, `conversation_participants`.
+## Arquivos (resumo)
 
-## Server functions
+Criar:
+- `src/components/documents/document-list.tsx`
+- `src/components/documents/upload-dialog.tsx`
+- `src/components/chat/jurismind-chat.tsx`
+- `src/components/chat/document-picker.tsx`
+- `src/components/cases/case-summary-card.tsx`
+- `src/components/cases/case-team-panel.tsx`
+- `src/components/tasks/case-tasks-dialog.tsx`
+- `src/lib/document-selection-store.ts`
+- `src/lib/export.functions.ts`
 
-- `listConversations` — lista por aba (case/dm), ordenadas por última mensagem
-- `getOrCreateCaseConversation(case_id)` — idempotente; auto-adiciona team_members do caso
-- `getOrCreateDM(other_user_id)`
-- `listMessages(conversation_id, before?)` — paginado
-- `sendMessage(conversation_id, body, attachments?, mentions?, reply_to?)`
-- `markRead(conversation_id)`
-- `createTaskFromMessage(message_id, payload)`
-- `listMyMentions()` — pro sino
+Editar:
+- `src/routes/_authenticated/cases.$caseId.tsx` (reorganiza layout)
+- `src/lib/chat.functions.ts` (`askWithRag` aceita `selected_doc_ids`)
+- `package.json` (`docx`, `pptxgenjs`, `file-saver`, `zustand` se ainda não tiver, `react-day-picker` se faltar)
 
-Todas com `requireSupabaseAuth` + checagem de participação.
+## Fora de escopo
+- Não vou trazer Genkit/Firebase, gamma.app, marketing chat, admin de tenants, geração de petição, OCR — não foram pedidos.
+- Não vou alterar policies/migrations além do necessário (nenhuma alteração prevista).
 
-## Detalhes técnicos
-
-- Autocomplete de menção lê de `team_members` (já existe) + `profiles` da equipe.
-- Anexos seguem o mesmo padrão do caso: upload pro bucket `documents` em `${user_id}/conversations/${conversation_id}/...`, signed URLs no display, preview reaproveita o modal de PDF que acabamos de fazer.
-- Componente `<ConversationView />` reutilizado entre `/inbox` e a aba do caso.
-
-## Fora de escopo (deixar pra depois se você quiser)
-
-- Reações com emoji
-- Edição/exclusão de mensagem (1ª versão só envia)
-- E-mail pra menções (só notificação in-app)
-- Chamada de voz/vídeo
-
-Confirma e eu começo pela migração + servidor, depois UI.
+## Validação
+Após implementar: `bun x tsgo --noEmit`, abrir o caso atual no preview, testar upload + indexação + chat com filtro de docs + exportar DOCX.
