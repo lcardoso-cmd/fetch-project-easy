@@ -151,21 +151,52 @@ test("novo caso a partir de PDF: IA preenche campos e anexa o arquivo", async ({
   // Deve navegar para /cases/<uuid>
   await page.waitForURL(/\/cases\/[0-9a-f-]{36}$/, { timeout: 30_000 });
 
-  // 6. Validar que o documento foi anexado ao caso e está visível na lista.
-  // Espera explicitamente o card "Documentos" e o nome do arquivo.
+  // 6. Já estamos na página de detalhes do caso — validar que o PDF aparece
+  // anexado e que o status final é "Pronto" (sem pendência de indexação).
+  const caseUrl = page.url();
+  expect(caseUrl).toMatch(/\/cases\/[0-9a-f-]{36}$/);
+
   await expect(
     page.getByRole("heading", { name: "Documentos" }),
   ).toBeVisible({ timeout: 30_000 });
-  await expect(page.getByText("sample-case.pdf")).toBeVisible({
-    timeout: 30_000,
+
+  // O nome do arquivo deve aparecer dentro da seção Documentos
+  const docItem = page
+    .locator("section, div", { has: page.getByRole("heading", { name: "Documentos" }) })
+    .getByText("sample-case.pdf")
+    .first();
+  await expect(docItem).toBeVisible({ timeout: 30_000 });
+
+  // Nenhum documento pode ficar no estado "Aguardando" ou "Indexando..." —
+  // a indexação foi awaited antes de navegar, então o status deve ser "Pronto".
+  await expect(page.getByText("Indexando...")).toHaveCount(0, {
+    timeout: 60_000,
+  });
+  await expect(page.getByText("Aguardando")).toHaveCount(0, {
+    timeout: 60_000,
+  });
+  await expect(page.getByText("Pronto").first()).toBeVisible({
+    timeout: 60_000,
   });
 
-  // Aguarda o status de indexação refletir "indexado" / sumir o "processando".
-  // Se a UI mostrar um badge "Processando", esperamos ele desaparecer; se
-  // mostrar "Indexado", esperamos ele aparecer. Qualquer um dos dois resolve.
-  const processing = page.getByText(/Processando|Indexando/i).first();
-  if (await processing.isVisible().catch(() => false)) {
-    await expect(processing).toBeHidden({ timeout: 60_000 });
-  }
+  // Recarrega a página de detalhes pra garantir que o estado "Pronto" está
+  // persistido no backend (não é só estado local pós-upload).
+  await page.reload();
+  await expect(
+    page.getByRole("heading", { name: "Documentos" }),
+  ).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByText("sample-case.pdf")).toBeVisible();
+  await expect(page.getByText("Pronto").first()).toBeVisible({
+    timeout: 30_000,
+  });
+  await expect(page.getByText("Indexando...")).toHaveCount(0);
+  await expect(page.getByText("Aguardando")).toHaveCount(0);
+
+  // O banner amarelo do chat ("documento(s) ainda sendo indexado(s)") NÃO
+  // pode estar visível, já que readyDocs > 0 e pendingDocs === 0.
+  await expect(
+    page.getByText(/ainda sendo indexado/i),
+  ).toHaveCount(0);
 });
+
 
