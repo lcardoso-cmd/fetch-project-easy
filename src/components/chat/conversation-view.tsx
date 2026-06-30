@@ -473,9 +473,19 @@ function CreateTaskDialog({
   message: Message;
 }) {
   const createTaskFn = useServerFn(createTaskFromMessage);
+  const listParticipantsFn = useServerFn(listConversationParticipants);
   const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
   const [due, setDue] = useState("");
   const [busy, setBusy] = useState(false);
+
+  const { data: participants = [] } = useQuery({
+    queryKey: ["conversation-participants", message.conversation_id],
+    queryFn: () =>
+      listParticipantsFn({ data: { conversation_id: message.conversation_id } }),
+    enabled: open,
+  });
+  const participantList = participants as Array<{ id: string; name: string }>;
 
   const defaultTitle = useMemo(
     () => (message.body || "Tarefa da conversa").slice(0, 80),
@@ -483,26 +493,115 @@ function CreateTaskDialog({
   );
 
   useEffect(() => {
-    if (open) setTitle(defaultTitle);
-  }, [open, defaultTitle]);
+    if (open) {
+      setTitle(defaultTitle);
+      setDescription(message.body || "");
+    }
+  }, [open, defaultTitle, message.body]);
+
+  // mention autocomplete shared between title + description
+  const [mentionTarget, setMentionTarget] = useState<"title" | "desc" | null>(null);
+  const [mentionQuery, setMentionQuery] = useState("");
+  const [mentionIndex, setMentionIndex] = useState(0);
+  const titleRef = useRef<HTMLInputElement>(null);
+  const descRef = useRef<HTMLTextAreaElement>(null);
+
+  const candidates = useMemo(() => {
+    const q = mentionQuery.toLowerCase();
+    return participantList.filter((p) => p.name.toLowerCase().includes(q)).slice(0, 6);
+  }, [participantList, mentionQuery]);
+
+  function detectMention(value: string, caret: number, which: "title" | "desc") {
+    const before = value.slice(0, caret);
+    const m = before.match(/(?:^|\s)@([\p{L}0-9._-]*)$/u);
+    if (m) {
+      setMentionTarget(which);
+      setMentionQuery(m[1] ?? "");
+      setMentionIndex(0);
+    } else {
+      setMentionTarget(null);
+    }
+  }
+
+  function applyMention(p: { id: string; name: string }) {
+    if (!mentionTarget) return;
+    const ref = mentionTarget === "title" ? titleRef.current : descRef.current;
+    const value = mentionTarget === "title" ? title : description;
+    const setter = mentionTarget === "title" ? setTitle : setDescription;
+    const caret = ref?.selectionStart ?? value.length;
+    const before = value.slice(0, caret).replace(/@([\p{L}0-9._-]*)$/u, `@${p.name} `);
+    const after = value.slice(caret);
+    setter(before + after);
+    setMentionTarget(null);
+    setMentionQuery("");
+    requestAnimationFrame(() => {
+      ref?.focus();
+      const pos = before.length;
+      ref?.setSelectionRange(pos, pos);
+    });
+  }
+
+  function resolveMentionIds(): string[] {
+    const ids = new Set<string>();
+    const text = `${title}\n${description}`;
+    const byName = new Map(participantList.map((p) => [p.name.toLowerCase(), p.id]));
+    const regex = /@([\p{L}0-9._\-\s]{1,60}?)(?=\s|$|[,.;:!?])/gu;
+    let match: RegExpExecArray | null;
+    while ((match = regex.exec(text)) !== null) {
+      const candidate = match[1].trim().toLowerCase();
+      // try longest match first by stripping trailing words
+      const parts = candidate.split(/\s+/);
+      for (let len = parts.length; len > 0; len--) {
+        const key = parts.slice(0, len).join(" ");
+        const id = byName.get(key);
+        if (id) {
+          ids.add(id);
+          break;
+        }
+      }
+    }
+    return Array.from(ids);
+  }
 
   async function submit() {
     setBusy(true);
     try {
+      const mention_user_ids = resolveMentionIds();
       await createTaskFn({
         data: {
           message_id: message.id,
           title: title.trim() || defaultTitle,
-          description: message.body || null,
+          description: description || null,
           due_date: due || null,
+          mention_user_ids,
         },
       });
-      toast.success("Tarefa criada");
+      toast.success(
+        mention_user_ids.length > 0
+          ? `Tarefa criada e ${mention_user_ids.length} responsável(eis) notificado(s)`
+          : "Tarefa criada",
+      );
       onClose();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Falha");
     } finally {
       setBusy(false);
+    }
+  }
+
+  function handleKey(e: React.KeyboardEvent) {
+    if (!mentionTarget || candidates.length === 0) return;
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setMentionIndex((i) => (i + 1) % candidates.length);
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setMentionIndex((i) => (i - 1 + candidates.length) % candidates.length);
+    } else if (e.key === "Enter" || e.key === "Tab") {
+      e.preventDefault();
+      applyMention(candidates[mentionIndex]);
+    } else if (e.key === "Escape") {
+      setMentionTarget(null);
     }
   }
 
@@ -512,17 +611,64 @@ function CreateTaskDialog({
         <DialogHeader>
           <DialogTitle>Criar tarefa a partir da mensagem</DialogTitle>
         </DialogHeader>
-        <div className="space-y-3">
+        <div className="relative space-y-3">
           <div>
             <Label>Título</Label>
-            <Input value={title} onChange={(e) => setTitle(e.target.value)} />
+            <Input
+              ref={titleRef}
+              value={title}
+              onChange={(e) => {
+                setTitle(e.target.value);
+                detectMention(e.target.value, e.target.selectionStart ?? 0, "title");
+              }}
+              onKeyDown={handleKey}
+              placeholder="Use @ para mencionar e notificar membros"
+            />
+          </div>
+          <div>
+            <Label>Descrição</Label>
+            <Textarea
+              ref={descRef}
+              rows={3}
+              value={description}
+              onChange={(e) => {
+                setDescription(e.target.value);
+                detectMention(e.target.value, e.target.selectionStart ?? 0, "desc");
+              }}
+              onKeyDown={handleKey}
+              placeholder="Detalhes (use @ para mencionar)"
+            />
           </div>
           <div>
             <Label>Prazo (opcional)</Label>
             <Input type="datetime-local" value={due} onChange={(e) => setDue(e.target.value)} />
           </div>
+
+          {mentionTarget && candidates.length > 0 && (
+            <div className="absolute left-0 right-0 z-20 mt-1 max-h-48 overflow-y-auto rounded-md border bg-popover shadow-md">
+              {candidates.map((p, idx) => (
+                <button
+                  key={p.id}
+                  type="button"
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    applyMention(p);
+                  }}
+                  className={`flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-accent ${
+                    idx === mentionIndex ? "bg-accent" : ""
+                  }`}
+                >
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-xs text-primary">
+                    {p.name.charAt(0).toUpperCase()}
+                  </span>
+                  {p.name}
+                </button>
+              ))}
+            </div>
+          )}
+
           <p className="rounded-md border bg-muted/30 p-2 text-xs text-muted-foreground">
-            {message.body || "(mensagem sem texto)"}
+            Mensagem origem: {message.body || "(sem texto)"}
           </p>
         </div>
         <DialogFooter>
@@ -537,3 +683,4 @@ function CreateTaskDialog({
     </Dialog>
   );
 }
+
