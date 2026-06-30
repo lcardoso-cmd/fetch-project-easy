@@ -1076,3 +1076,69 @@ function NewCasePage() {
     </div>
   );
 }
+
+function MatterKindBar({
+  matterKind,
+  setMatterKind,
+  fromProfile,
+}: {
+  matterKind: MatterKind;
+  setMatterKind: (k: MatterKind) => void;
+  fromProfile: boolean;
+}) {
+  const [editing, setEditing] = useState(false);
+  return (
+    <div className="flex flex-wrap items-center gap-2 rounded-lg border bg-muted/30 px-3 py-2 text-sm">
+      <span className="text-muted-foreground">Tipo de matéria:</span>
+      {editing ? (
+        <>
+          <Select
+            value={matterKind}
+            onValueChange={(v) => {
+              setMatterKind(v as MatterKind);
+              setEditing(false);
+            }}
+          >
+            <SelectTrigger className="h-8 w-[260px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {(Object.keys(MATTER_KIND_LABELS) as MatterKind[]).map((k) => (
+                <SelectItem key={k} value={k}>
+                  {MATTER_KIND_LABELS[k]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-8"
+            onClick={() => setEditing(false)}
+          >
+            Cancelar
+          </Button>
+        </>
+      ) : (
+        <>
+          <Badge variant="secondary" className="font-medium">
+            {MATTER_KIND_LABELS[matterKind]}
+          </Badge>
+          {fromProfile && (
+            <span className="text-xs text-muted-foreground">(do seu perfil)</span>
+          )}
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-7 px-2 text-xs"
+            onClick={() => setEditing(true)}
+          >
+            Trocar
+          </Button>
+        </>
+      )}
+    </div>
+  );
+}
