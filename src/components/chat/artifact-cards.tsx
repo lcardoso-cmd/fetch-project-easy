@@ -1,9 +1,19 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Download, FileSpreadsheet, FileText, Presentation } from "lucide-react";
+import {
+  ChevronDown,
+  ChevronUp,
+  Download,
+  FileSpreadsheet,
+  FileText,
+  Maximize2,
+  Minimize2,
+  Pencil,
+  Presentation,
+} from "lucide-react";
 import { toast } from "sonner";
+import { RichTextEditor } from "@/components/chat/rich-text-editor";
 
 async function downloadBlob(url: string, body: unknown, filename: string) {
   const res = await fetch(url, {
@@ -26,41 +36,118 @@ async function downloadBlob(url: string, body: unknown, filename: string) {
   URL.revokeObjectURL(objUrl);
 }
 
+function textToHtml(text: string) {
+  return text
+    .split(/\n{2,}/)
+    .map(
+      (p) =>
+        `<p>${p
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/\n/g, "<br/>")}</p>`,
+    )
+    .join("");
+}
+
 export function PetitionCard({ titulo, conteudo }: { titulo: string; conteudo: string }) {
+  const initialHtml = useMemo(
+    () => (/<\w+/.test(conteudo) ? conteudo : textToHtml(conteudo)),
+    [conteudo],
+  );
   const [t, setT] = useState(titulo);
-  const [c, setC] = useState(conteudo);
+  const [html, setHtml] = useState(initialHtml);
+  const [open, setOpen] = useState(false);
+  const [full, setFull] = useState(false);
   const [busy, setBusy] = useState(false);
+
+  const preview = useMemo(() => {
+    const text = html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+    return text.length > 220 ? text.slice(0, 220) + "…" : text;
+  }, [html]);
+
   return (
-    <div className="mt-3 rounded-md border bg-background p-3 text-foreground">
-      <div className="mb-2 flex items-center gap-2 text-sm font-semibold">
-        <FileText className="h-4 w-4 text-primary" /> Minuta gerada
-      </div>
-      <Input value={t} onChange={(e) => setT(e.target.value)} className="mb-2 font-semibold" />
-      <Textarea
-        value={c}
-        onChange={(e) => setC(e.target.value)}
-        className="min-h-[260px] font-serif text-sm leading-relaxed"
-      />
-      <div className="mt-2 flex justify-end">
-        <Button
-          size="sm"
-          disabled={busy}
-          onClick={async () => {
-            setBusy(true);
-            await downloadBlob(
-              "/api/tools/petition",
-              { titulo: t, conteudo: c },
-              `${t || "peticao"}.docx`,
-            );
-            setBusy(false);
-          }}
+    <div className="mt-3 overflow-hidden rounded-md border bg-background text-foreground">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center justify-between gap-2 border-b bg-muted/40 px-3 py-2 text-left text-sm font-semibold hover:bg-muted"
+      >
+        <span className="flex items-center gap-2">
+          <FileText className="h-4 w-4 text-primary" /> {t || "Minuta gerada"}
+        </span>
+        <span className="flex items-center gap-1 text-xs font-normal text-muted-foreground">
+          {open ? "Recolher" : "Abrir editor"}
+          {open ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+        </span>
+      </button>
+
+      {!open && (
+        <p className="px-3 py-2 text-xs italic text-muted-foreground">{preview}</p>
+      )}
+
+      {open && (
+        <div
+          className={
+            full
+              ? "fixed inset-0 z-50 flex flex-col bg-background p-4"
+              : "p-3"
+          }
         >
-          <Download className="mr-1.5 h-4 w-4" /> Baixar Word
-        </Button>
-      </div>
+          <div className="mb-2 flex items-center gap-2">
+            <Input
+              value={t}
+              onChange={(e) => setT(e.target.value)}
+              className="font-semibold"
+              placeholder="Título da peça"
+            />
+            <Button
+              type="button"
+              size="icon"
+              variant="ghost"
+              title={full ? "Restaurar" : "Tela cheia"}
+              onClick={() => setFull((v) => !v)}
+            >
+              {full ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+            </Button>
+          </div>
+          <div className={full ? "min-h-0 flex-1 overflow-auto" : ""}>
+            <RichTextEditor
+              html={html}
+              onChange={setHtml}
+              minHeight={full ? 600 : 360}
+            />
+          </div>
+          <div className="mt-2 flex justify-end gap-2">
+            {full && (
+              <Button size="sm" variant="outline" onClick={() => setFull(false)}>
+                Fechar
+              </Button>
+            )}
+            <Button
+              size="sm"
+              disabled={busy}
+              onClick={async () => {
+                setBusy(true);
+                await downloadBlob(
+                  "/api/tools/petition",
+                  { titulo: t, html },
+                  `${t || "peticao"}.docx`,
+                );
+                setBusy(false);
+              }}
+            >
+              <Download className="mr-1.5 h-4 w-4" /> Baixar Word
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+
+// Suppress unused-import warning for Pencil (kept for future use)
+void Pencil;
 
 export function TableCard({
   titulo,
