@@ -20,6 +20,7 @@ import { Route as AuthenticatedMyFilesRouteImport } from './routes/_authenticate
 import { Route as AuthenticatedMonitoringRouteImport } from './routes/_authenticated/monitoring'
 import { Route as AuthenticatedMarketingRouteImport } from './routes/_authenticated/marketing'
 import { Route as AuthenticatedIntegrationsRouteImport } from './routes/_authenticated/integrations'
+import { Route as AuthenticatedInboxRouteImport } from './routes/_authenticated/inbox'
 import { Route as AuthenticatedDrafterRouteImport } from './routes/_authenticated/drafter'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedChatRouteImport } from './routes/_authenticated/chat'
@@ -86,6 +87,11 @@ const AuthenticatedIntegrationsRoute =
     path: '/integrations',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedInboxRoute = AuthenticatedInboxRouteImport.update({
+  id: '/inbox',
+  path: '/inbox',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 const AuthenticatedDrafterRoute = AuthenticatedDrafterRouteImport.update({
   id: '/drafter',
   path: '/drafter',
@@ -146,6 +152,7 @@ export interface FileRoutesByFullPath {
   '/chat': typeof AuthenticatedChatRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/drafter': typeof AuthenticatedDrafterRoute
+  '/inbox': typeof AuthenticatedInboxRoute
   '/integrations': typeof AuthenticatedIntegrationsRoute
   '/marketing': typeof AuthenticatedMarketingRoute
   '/monitoring': typeof AuthenticatedMonitoringRoute
@@ -167,6 +174,7 @@ export interface FileRoutesByTo {
   '/chat': typeof AuthenticatedChatRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/drafter': typeof AuthenticatedDrafterRoute
+  '/inbox': typeof AuthenticatedInboxRoute
   '/integrations': typeof AuthenticatedIntegrationsRoute
   '/marketing': typeof AuthenticatedMarketingRoute
   '/monitoring': typeof AuthenticatedMonitoringRoute
@@ -191,6 +199,7 @@ export interface FileRoutesById {
   '/_authenticated/chat': typeof AuthenticatedChatRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/drafter': typeof AuthenticatedDrafterRoute
+  '/_authenticated/inbox': typeof AuthenticatedInboxRoute
   '/_authenticated/integrations': typeof AuthenticatedIntegrationsRoute
   '/_authenticated/marketing': typeof AuthenticatedMarketingRoute
   '/_authenticated/monitoring': typeof AuthenticatedMonitoringRoute
@@ -215,6 +224,7 @@ export interface FileRouteTypes {
     | '/chat'
     | '/dashboard'
     | '/drafter'
+    | '/inbox'
     | '/integrations'
     | '/marketing'
     | '/monitoring'
@@ -236,6 +246,7 @@ export interface FileRouteTypes {
     | '/chat'
     | '/dashboard'
     | '/drafter'
+    | '/inbox'
     | '/integrations'
     | '/marketing'
     | '/monitoring'
@@ -259,6 +270,7 @@ export interface FileRouteTypes {
     | '/_authenticated/chat'
     | '/_authenticated/dashboard'
     | '/_authenticated/drafter'
+    | '/_authenticated/inbox'
     | '/_authenticated/integrations'
     | '/_authenticated/marketing'
     | '/_authenticated/monitoring'
@@ -360,6 +372,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedIntegrationsRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/inbox': {
+      id: '/_authenticated/inbox'
+      path: '/inbox'
+      fullPath: '/inbox'
+      preLoaderRoute: typeof AuthenticatedInboxRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/drafter': {
       id: '/_authenticated/drafter'
       path: '/drafter'
@@ -456,6 +475,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedChatRoute: typeof AuthenticatedChatRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedDrafterRoute: typeof AuthenticatedDrafterRoute
+  AuthenticatedInboxRoute: typeof AuthenticatedInboxRoute
   AuthenticatedIntegrationsRoute: typeof AuthenticatedIntegrationsRoute
   AuthenticatedMarketingRoute: typeof AuthenticatedMarketingRoute
   AuthenticatedMonitoringRoute: typeof AuthenticatedMonitoringRoute
@@ -472,6 +492,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedChatRoute: AuthenticatedChatRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedDrafterRoute: AuthenticatedDrafterRoute,
+  AuthenticatedInboxRoute: AuthenticatedInboxRoute,
   AuthenticatedIntegrationsRoute: AuthenticatedIntegrationsRoute,
   AuthenticatedMarketingRoute: AuthenticatedMarketingRoute,
   AuthenticatedMonitoringRoute: AuthenticatedMonitoringRoute,

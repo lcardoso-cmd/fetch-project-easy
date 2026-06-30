@@ -268,7 +268,7 @@ function NewDMDialog({
                     const conv = await getDMFn({
                       data: { other_user_id: m.member_user_id! },
                     });
-                    onCreated(conv.id);
+                    if (conv) onCreated(conv.id);
                   }}
                   className="flex w-full items-center justify-between rounded-md border p-3 text-left text-sm hover:bg-muted/50"
                 >
