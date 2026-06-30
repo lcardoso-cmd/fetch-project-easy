@@ -197,8 +197,9 @@ function NewCasePage() {
       prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
     );
 
-  const needsReview =
-    !!uploaded && (missingFields.length > 0 || extractionWarnings.length > 0);
+  // Sempre que veio de um documento, exigimos revisão+confirmação explícita,
+  // independentemente de haver warnings ou campos faltantes.
+  const needsReview = !!uploaded;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -207,7 +208,7 @@ function NewCasePage() {
       return;
     }
     if (needsReview && !reviewConfirmed) {
-      toast.error("Revise os avisos da extração e confirme antes de criar o caso");
+      toast.error("Revise os dados extraídos e confirme antes de criar o caso");
       return;
     }
     setSubmitting(true);
