@@ -98,6 +98,8 @@ function BulkUploadPage() {
       extractStatus: "pending",
       saveStatus: "idle",
       data: emptyExtracted(f.name),
+      missing: [],
+      warnings: [],
     }));
     setDrafts((prev) => [...prev, ...next]);
   };
@@ -129,7 +131,7 @@ function BulkUploadPage() {
 
         update(d.id, { storagePath: path, extractStatus: "extracting" });
         // eslint-disable-next-line no-await-in-loop
-        const { extracted } = await extractFn({
+        const { extracted, missing, warnings } = await extractFn({
           data: {
             storage_path: path,
             filename: d.file.name,
@@ -137,7 +139,12 @@ function BulkUploadPage() {
             file_size: d.file.size,
           },
         });
-        update(d.id, { extractStatus: "ready", data: extracted });
+        update(d.id, {
+          extractStatus: "ready",
+          data: extracted,
+          missing: missing ?? [],
+          warnings: warnings ?? [],
+        });
       } catch (e) {
         console.error(e);
         update(d.id, {
