@@ -24,6 +24,8 @@ import { UploadZone } from "@/components/documents/upload-zone";
 import { ChatPanel } from "@/components/chat/chat-panel";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ArrowLeft, FileText, Loader2, Sparkles, Trash2, CalendarClock, ClipboardCheck } from "lucide-react";
+import { QuesitosCard } from "@/components/cases/quesitos-card";
+import type { MatterKind } from "@/lib/practice-labels";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/cases/$caseId")({
