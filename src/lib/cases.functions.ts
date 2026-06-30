@@ -82,6 +82,13 @@ export const createCase = createServerFn({ method: "POST" })
         parties: data.parties ?? [],
         represented_party: data.represented_party ?? null,
         team_member_ids: data.team_member_ids ?? [],
+        matter_kind: data.matter_kind,
+        practice_type: data.practice_type ?? null,
+        assisted_party_name: data.assisted_party_name ?? null,
+        perito_fee_cents: data.perito_fee_cents ?? null,
+        perito_appointment_date: data.perito_appointment_date ?? null,
+        perito_deadline_date: data.perito_deadline_date ?? null,
+        perito_nomination_ref: data.perito_nomination_ref ?? null,
       })
       .select()
       .single();
@@ -106,6 +113,13 @@ export const updateCase = createServerFn({ method: "POST" })
         parties: z.array(PartySchema).optional(),
         represented_party: PartySchema.nullable().optional(),
         team_member_ids: z.array(z.string().uuid()).optional(),
+        matter_kind: MatterKindEnum.optional(),
+        practice_type: PracticeTypeEnum.optional().nullable(),
+        assisted_party_name: z.string().max(200).optional().nullable(),
+        perito_fee_cents: z.number().int().nonnegative().optional().nullable(),
+        perito_appointment_date: z.string().optional().nullable(),
+        perito_deadline_date: z.string().optional().nullable(),
+        perito_nomination_ref: z.string().max(200).optional().nullable(),
       })
       .parse(input),
   )
