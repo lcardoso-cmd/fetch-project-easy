@@ -69,6 +69,9 @@ export const updateCase = createServerFn({ method: "POST" })
         description: z.string().max(2000).optional(),
         client_name: z.string().max(200).optional(),
         status: StatusEnum.optional(),
+        case_number: z.string().max(120).optional(),
+        jurisdiction: z.string().max(200).optional(),
+        case_type: z.string().max(80).optional(),
       })
       .parse(input),
   )

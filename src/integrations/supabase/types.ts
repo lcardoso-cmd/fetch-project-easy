@@ -16,31 +16,49 @@ export type Database = {
     Tables: {
       cases: {
         Row: {
+          case_number: string | null
+          case_type: string | null
           client_name: string | null
           created_at: string
           description: string | null
           id: string
+          jurisdiction: string | null
+          parties: Json | null
           status: string
+          summary: string | null
+          summary_updated_at: string | null
           title: string
           updated_at: string
           user_id: string
         }
         Insert: {
+          case_number?: string | null
+          case_type?: string | null
           client_name?: string | null
           created_at?: string
           description?: string | null
           id?: string
+          jurisdiction?: string | null
+          parties?: Json | null
           status?: string
+          summary?: string | null
+          summary_updated_at?: string | null
           title: string
           updated_at?: string
           user_id: string
         }
         Update: {
+          case_number?: string | null
+          case_type?: string | null
           client_name?: string | null
           created_at?: string
           description?: string | null
           id?: string
+          jurisdiction?: string | null
+          parties?: Json | null
           status?: string
+          summary?: string | null
+          summary_updated_at?: string | null
           title?: string
           updated_at?: string
           user_id?: string
