@@ -109,12 +109,16 @@ function NewCasePage() {
   });
 
   // matter_kind herda do perfil mas é editável por caso.
-  const defaultKind = defaultMatterKindFor(profile?.practice_type ?? null);
+  const profilePractice = (profile?.practice_type ?? null) as
+    | "advogado"
+    | "perito_judicial"
+    | "assistente_tecnico"
+    | null;
+  const defaultKind = defaultMatterKindFor(profilePractice);
   const [matterKind, setMatterKind] = useState<MatterKind>(defaultKind);
   useEffect(() => {
-    // Sincroniza quando o perfil chega depois do mount inicial.
-    setMatterKind(defaultMatterKindFor(profile?.practice_type ?? null));
-  }, [profile?.practice_type]);
+    setMatterKind(defaultMatterKindFor(profilePractice));
+  }, [profilePractice]);
   const labels = labelsForMatter(matterKind);
 
   // form state
