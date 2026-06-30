@@ -9,6 +9,8 @@ import {
   CalendarDays,
   FileArchive,
   FileSearch,
+  Scale,
+
   Handshake,
   Megaphone,
   Puzzle,
@@ -36,6 +38,7 @@ const NAV: NavItem[] = [
   { type: "separator" },
   { type: "label", label: "Gestão" },
   { type: "link", to: "/monitoring", label: "Publicações", icon: FileSearch },
+  { type: "link", to: "/drafter", label: "Peças Jurídicas", icon: Scale },
   { type: "link", to: "/proposal", label: "Proposta Comercial", icon: Handshake },
   { type: "link", to: "/marketing", label: "Marketing", icon: Megaphone },
   { type: "separator" },
