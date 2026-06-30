@@ -120,8 +120,10 @@ function NewCasePage() {
   // review state — exibido só quando houve extração via documento.
   // Persistido em localStorage para sobreviver a reload da página.
   const REVIEW_STORAGE_KEY = user ? `jurismind:new-case-review:${user.id}` : null;
+  // missingFields contém chaves brutas (ex.: "client_name") para podermos
+  // destacar inputs e mostrar a mensagem amigável de MISSING_FIELD_HINTS.
   const [missingFields, setMissingFields] = useState<string[]>([]);
-  const [extractionWarnings, setExtractionWarnings] = useState<string[]>([]);
+  const [extractionWarnings, setExtractionWarnings] = useState<ExtractionWarning[]>([]);
   const [reviewConfirmed, setReviewConfirmed] = useState(false);
   const [hydratedReview, setHydratedReview] = useState(false);
 
@@ -134,12 +136,20 @@ function NewCasePage() {
         const s = JSON.parse(raw) as {
           uploaded?: UploadedDoc | null;
           missingFields?: string[];
-          extractionWarnings?: string[];
+          extractionWarnings?: ExtractionWarning[];
           reviewConfirmed?: boolean;
         };
         if (s.uploaded) setUploaded(s.uploaded);
         if (Array.isArray(s.missingFields)) setMissingFields(s.missingFields);
-        if (Array.isArray(s.extractionWarnings)) setExtractionWarnings(s.extractionWarnings);
+        if (Array.isArray(s.extractionWarnings)) {
+          // Filtra entradas em formato antigo (string)
+          setExtractionWarnings(
+            s.extractionWarnings.filter(
+              (w): w is ExtractionWarning =>
+                !!w && typeof w === "object" && typeof (w as ExtractionWarning).message === "string",
+            ),
+          );
+        }
         if (typeof s.reviewConfirmed === "boolean") setReviewConfirmed(s.reviewConfirmed);
       }
     } catch {
