@@ -290,6 +290,9 @@ function NewCasePage() {
       }
 
       await qc.invalidateQueries({ queryKey: ["cases"] });
+      if (REVIEW_STORAGE_KEY) {
+        try { localStorage.removeItem(REVIEW_STORAGE_KEY); } catch { /* noop */ }
+      }
       toast.success("Caso criado");
       navigate({ to: "/cases/$caseId", params: { caseId: newCase.id } });
     } catch (err) {
