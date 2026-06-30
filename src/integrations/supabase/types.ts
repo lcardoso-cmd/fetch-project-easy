@@ -136,6 +136,76 @@ export type Database = {
         }
         Relationships: []
       }
+      conversation_participants: {
+        Row: {
+          conversation_id: string
+          joined_at: string
+          last_read_at: string
+          user_id: string
+        }
+        Insert: {
+          conversation_id: string
+          joined_at?: string
+          last_read_at?: string
+          user_id: string
+        }
+        Update: {
+          conversation_id?: string
+          joined_at?: string
+          last_read_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversation_participants_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      conversations: {
+        Row: {
+          case_id: string | null
+          created_at: string
+          created_by: string
+          id: string
+          kind: string
+          last_message_at: string
+          title: string | null
+          updated_at: string
+        }
+        Insert: {
+          case_id?: string | null
+          created_at?: string
+          created_by: string
+          id?: string
+          kind: string
+          last_message_at?: string
+          title?: string | null
+          updated_at?: string
+        }
+        Update: {
+          case_id?: string | null
+          created_at?: string
+          created_by?: string
+          id?: string
+          kind?: string
+          last_message_at?: string
+          title?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversations_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       document_chunks: {
         Row: {
           case_id: string
@@ -341,6 +411,126 @@ export type Database = {
         }
         Relationships: []
       }
+      message_mentions: {
+        Row: {
+          conversation_id: string
+          created_at: string
+          id: string
+          mentioned_user_id: string
+          message_id: string
+          read_at: string | null
+        }
+        Insert: {
+          conversation_id: string
+          created_at?: string
+          id?: string
+          mentioned_user_id: string
+          message_id: string
+          read_at?: string | null
+        }
+        Update: {
+          conversation_id?: string
+          created_at?: string
+          id?: string
+          mentioned_user_id?: string
+          message_id?: string
+          read_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "message_mentions_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "message_mentions_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      message_tasks: {
+        Row: {
+          message_id: string
+          task_id: string
+        }
+        Insert: {
+          message_id: string
+          task_id: string
+        }
+        Update: {
+          message_id?: string
+          task_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "message_tasks_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "message_tasks_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      messages: {
+        Row: {
+          attachments: Json
+          author_id: string
+          body: string
+          conversation_id: string
+          created_at: string
+          edited_at: string | null
+          id: string
+          reply_to_id: string | null
+        }
+        Insert: {
+          attachments?: Json
+          author_id: string
+          body?: string
+          conversation_id: string
+          created_at?: string
+          edited_at?: string | null
+          id?: string
+          reply_to_id?: string | null
+        }
+        Update: {
+          attachments?: Json
+          author_id?: string
+          body?: string
+          conversation_id?: string
+          created_at?: string
+          edited_at?: string | null
+          id?: string
+          reply_to_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messages_reply_to_id_fkey"
+            columns: ["reply_to_id"]
+            isOneToOne: false
+            referencedRelation: "messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string
@@ -379,6 +569,7 @@ export type Database = {
       }
       tasks: {
         Row: {
+          assigned_to_user_id: string | null
           case_id: string | null
           completed_at: string | null
           created_at: string
@@ -386,12 +577,14 @@ export type Database = {
           due_date: string | null
           id: string
           priority: string
+          source_message_id: string | null
           status: string
           title: string
           updated_at: string
           user_id: string
         }
         Insert: {
+          assigned_to_user_id?: string | null
           case_id?: string | null
           completed_at?: string | null
           created_at?: string
@@ -399,12 +592,14 @@ export type Database = {
           due_date?: string | null
           id?: string
           priority?: string
+          source_message_id?: string | null
           status?: string
           title: string
           updated_at?: string
           user_id: string
         }
         Update: {
+          assigned_to_user_id?: string | null
           case_id?: string | null
           completed_at?: string | null
           created_at?: string
@@ -412,6 +607,7 @@ export type Database = {
           due_date?: string | null
           id?: string
           priority?: string
+          source_message_id?: string | null
           status?: string
           title?: string
           updated_at?: string
@@ -427,32 +623,91 @@ export type Database = {
           },
         ]
       }
+      team_invitations: {
+        Row: {
+          accepted_at: string | null
+          accepted_by: string | null
+          created_at: string
+          email: string
+          expires_at: string
+          id: string
+          invited_at: string
+          owner_user_id: string
+          status: string
+          team_member_id: string
+          token: string
+          updated_at: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          accepted_by?: string | null
+          created_at?: string
+          email: string
+          expires_at?: string
+          id?: string
+          invited_at?: string
+          owner_user_id: string
+          status?: string
+          team_member_id: string
+          token: string
+          updated_at?: string
+        }
+        Update: {
+          accepted_at?: string | null
+          accepted_by?: string | null
+          created_at?: string
+          email?: string
+          expires_at?: string
+          id?: string
+          invited_at?: string
+          owner_user_id?: string
+          status?: string
+          team_member_id?: string
+          token?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_invitations_team_member_id_fkey"
+            columns: ["team_member_id"]
+            isOneToOne: false
+            referencedRelation: "team_members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       team_members: {
         Row: {
+          access_role: string
           color: string | null
           created_at: string
           email: string | null
           id: string
+          member_user_id: string | null
           name: string
           role: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
+          access_role?: string
           color?: string | null
           created_at?: string
           email?: string | null
           id?: string
+          member_user_id?: string | null
           name: string
           role?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
+          access_role?: string
           color?: string | null
           created_at?: string
           email?: string | null
           id?: string
+          member_user_id?: string | null
           name?: string
           role?: string | null
           updated_at?: string
@@ -465,6 +720,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      is_conversation_participant: {
+        Args: { _conversation_id: string; _user_id: string }
+        Returns: boolean
+      }
       match_chunks: {
         Args: {
           filter_user_id?: string
@@ -478,6 +737,14 @@ export type Database = {
           id: string
           similarity: number
         }[]
+      }
+      user_can_access_case: {
+        Args: { _case_id: string; _user_id: string }
+        Returns: boolean
+      }
+      user_can_edit_case: {
+        Args: { _case_id: string; _user_id: string }
+        Returns: boolean
       }
     }
     Enums: {

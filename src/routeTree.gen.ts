@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as InviteTokenRouteImport } from './routes/invite.$token'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
 import { Route as AuthenticatedProposalRouteImport } from './routes/_authenticated/proposal'
 import { Route as AuthenticatedOnboardingRouteImport } from './routes/_authenticated/onboarding'
@@ -20,6 +21,7 @@ import { Route as AuthenticatedMyFilesRouteImport } from './routes/_authenticate
 import { Route as AuthenticatedMonitoringRouteImport } from './routes/_authenticated/monitoring'
 import { Route as AuthenticatedMarketingRouteImport } from './routes/_authenticated/marketing'
 import { Route as AuthenticatedIntegrationsRouteImport } from './routes/_authenticated/integrations'
+import { Route as AuthenticatedInboxRouteImport } from './routes/_authenticated/inbox'
 import { Route as AuthenticatedDrafterRouteImport } from './routes/_authenticated/drafter'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedChatRouteImport } from './routes/_authenticated/chat'
@@ -43,6 +45,11 @@ const AuthenticatedRoute = AuthenticatedRouteImport.update({
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InviteTokenRoute = InviteTokenRouteImport.update({
+  id: '/invite/$token',
+  path: '/invite/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedSettingsRoute = AuthenticatedSettingsRouteImport.update({
@@ -86,6 +93,11 @@ const AuthenticatedIntegrationsRoute =
     path: '/integrations',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedInboxRoute = AuthenticatedInboxRouteImport.update({
+  id: '/inbox',
+  path: '/inbox',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 const AuthenticatedDrafterRoute = AuthenticatedDrafterRouteImport.update({
   id: '/drafter',
   path: '/drafter',
@@ -146,6 +158,7 @@ export interface FileRoutesByFullPath {
   '/chat': typeof AuthenticatedChatRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/drafter': typeof AuthenticatedDrafterRoute
+  '/inbox': typeof AuthenticatedInboxRoute
   '/integrations': typeof AuthenticatedIntegrationsRoute
   '/marketing': typeof AuthenticatedMarketingRoute
   '/monitoring': typeof AuthenticatedMonitoringRoute
@@ -154,6 +167,7 @@ export interface FileRoutesByFullPath {
   '/onboarding': typeof AuthenticatedOnboardingRoute
   '/proposal': typeof AuthenticatedProposalRoute
   '/settings': typeof AuthenticatedSettingsRoute
+  '/invite/$token': typeof InviteTokenRoute
   '/cases/$caseId': typeof AuthenticatedCasesCaseIdRoute
   '/cases/bulk': typeof AuthenticatedCasesBulkRoute
   '/cases/new': typeof AuthenticatedCasesNewRoute
@@ -167,6 +181,7 @@ export interface FileRoutesByTo {
   '/chat': typeof AuthenticatedChatRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/drafter': typeof AuthenticatedDrafterRoute
+  '/inbox': typeof AuthenticatedInboxRoute
   '/integrations': typeof AuthenticatedIntegrationsRoute
   '/marketing': typeof AuthenticatedMarketingRoute
   '/monitoring': typeof AuthenticatedMonitoringRoute
@@ -175,6 +190,7 @@ export interface FileRoutesByTo {
   '/onboarding': typeof AuthenticatedOnboardingRoute
   '/proposal': typeof AuthenticatedProposalRoute
   '/settings': typeof AuthenticatedSettingsRoute
+  '/invite/$token': typeof InviteTokenRoute
   '/cases/$caseId': typeof AuthenticatedCasesCaseIdRoute
   '/cases/bulk': typeof AuthenticatedCasesBulkRoute
   '/cases/new': typeof AuthenticatedCasesNewRoute
@@ -191,6 +207,7 @@ export interface FileRoutesById {
   '/_authenticated/chat': typeof AuthenticatedChatRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/drafter': typeof AuthenticatedDrafterRoute
+  '/_authenticated/inbox': typeof AuthenticatedInboxRoute
   '/_authenticated/integrations': typeof AuthenticatedIntegrationsRoute
   '/_authenticated/marketing': typeof AuthenticatedMarketingRoute
   '/_authenticated/monitoring': typeof AuthenticatedMonitoringRoute
@@ -199,6 +216,7 @@ export interface FileRoutesById {
   '/_authenticated/onboarding': typeof AuthenticatedOnboardingRoute
   '/_authenticated/proposal': typeof AuthenticatedProposalRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
+  '/invite/$token': typeof InviteTokenRoute
   '/_authenticated/cases/$caseId': typeof AuthenticatedCasesCaseIdRoute
   '/_authenticated/cases/bulk': typeof AuthenticatedCasesBulkRoute
   '/_authenticated/cases/new': typeof AuthenticatedCasesNewRoute
@@ -215,6 +233,7 @@ export interface FileRouteTypes {
     | '/chat'
     | '/dashboard'
     | '/drafter'
+    | '/inbox'
     | '/integrations'
     | '/marketing'
     | '/monitoring'
@@ -223,6 +242,7 @@ export interface FileRouteTypes {
     | '/onboarding'
     | '/proposal'
     | '/settings'
+    | '/invite/$token'
     | '/cases/$caseId'
     | '/cases/bulk'
     | '/cases/new'
@@ -236,6 +256,7 @@ export interface FileRouteTypes {
     | '/chat'
     | '/dashboard'
     | '/drafter'
+    | '/inbox'
     | '/integrations'
     | '/marketing'
     | '/monitoring'
@@ -244,6 +265,7 @@ export interface FileRouteTypes {
     | '/onboarding'
     | '/proposal'
     | '/settings'
+    | '/invite/$token'
     | '/cases/$caseId'
     | '/cases/bulk'
     | '/cases/new'
@@ -259,6 +281,7 @@ export interface FileRouteTypes {
     | '/_authenticated/chat'
     | '/_authenticated/dashboard'
     | '/_authenticated/drafter'
+    | '/_authenticated/inbox'
     | '/_authenticated/integrations'
     | '/_authenticated/marketing'
     | '/_authenticated/monitoring'
@@ -267,6 +290,7 @@ export interface FileRouteTypes {
     | '/_authenticated/onboarding'
     | '/_authenticated/proposal'
     | '/_authenticated/settings'
+    | '/invite/$token'
     | '/_authenticated/cases/$caseId'
     | '/_authenticated/cases/bulk'
     | '/_authenticated/cases/new'
@@ -278,6 +302,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
   AuthRoute: typeof AuthRoute
+  InviteTokenRoute: typeof InviteTokenRoute
   ApiPublicGoogleCallbackRoute: typeof ApiPublicGoogleCallbackRoute
 }
 
@@ -302,6 +327,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/invite/$token': {
+      id: '/invite/$token'
+      path: '/invite/$token'
+      fullPath: '/invite/$token'
+      preLoaderRoute: typeof InviteTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/settings': {
@@ -358,6 +390,13 @@ declare module '@tanstack/react-router' {
       path: '/integrations'
       fullPath: '/integrations'
       preLoaderRoute: typeof AuthenticatedIntegrationsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/inbox': {
+      id: '/_authenticated/inbox'
+      path: '/inbox'
+      fullPath: '/inbox'
+      preLoaderRoute: typeof AuthenticatedInboxRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/drafter': {
@@ -456,6 +495,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedChatRoute: typeof AuthenticatedChatRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedDrafterRoute: typeof AuthenticatedDrafterRoute
+  AuthenticatedInboxRoute: typeof AuthenticatedInboxRoute
   AuthenticatedIntegrationsRoute: typeof AuthenticatedIntegrationsRoute
   AuthenticatedMarketingRoute: typeof AuthenticatedMarketingRoute
   AuthenticatedMonitoringRoute: typeof AuthenticatedMonitoringRoute
@@ -472,6 +512,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedChatRoute: AuthenticatedChatRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedDrafterRoute: AuthenticatedDrafterRoute,
+  AuthenticatedInboxRoute: AuthenticatedInboxRoute,
   AuthenticatedIntegrationsRoute: AuthenticatedIntegrationsRoute,
   AuthenticatedMarketingRoute: AuthenticatedMarketingRoute,
   AuthenticatedMonitoringRoute: AuthenticatedMonitoringRoute,
@@ -490,6 +531,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRoute: AuthenticatedRouteWithChildren,
   AuthRoute: AuthRoute,
+  InviteTokenRoute: InviteTokenRoute,
   ApiPublicGoogleCallbackRoute: ApiPublicGoogleCallbackRoute,
 }
 export const routeTree = rootRouteImport

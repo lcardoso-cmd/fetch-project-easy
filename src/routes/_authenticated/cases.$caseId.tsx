@@ -22,6 +22,8 @@ import { listEvents } from "@/lib/events.functions";
 import { listTasks, toggleTask } from "@/lib/tasks.functions";
 import { UploadZone } from "@/components/documents/upload-zone";
 import { ChatPanel } from "@/components/chat/chat-panel";
+import { ConversationView } from "@/components/chat/conversation-view";
+import { getOrCreateCaseConversation } from "@/lib/conversations.functions";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ArrowLeft, FileText, Loader2, Sparkles, Trash2, CalendarClock, ClipboardCheck } from "lucide-react";
 import { QuesitosCard } from "@/components/cases/quesitos-card";
@@ -347,7 +349,7 @@ function CaseDetailPage() {
 
 
 
-      {/* Chat */}
+      {/* Chat IA do caso */}
       <div>
         <h2 className="mb-3 text-xl font-bold tracking-tight text-foreground">
           Pergunte sobre este caso
@@ -358,9 +360,38 @@ function CaseDetailPage() {
           readyDocs={docs.filter((d) => d.processing_status === "ready").length}
         />
       </div>
+
+      {/* Chat interno da equipe sobre o caso */}
+      <CaseTeamChat caseId={caseId} />
     </div>
   );
 }
+
+function CaseTeamChat({ caseId }: { caseId: string }) {
+  const getOrCreateFn = useServerFn(getOrCreateCaseConversation);
+  const { data: conv } = useQuery({
+    queryKey: ["case-conversation", caseId],
+    queryFn: () => getOrCreateFn({ data: { case_id: caseId } }),
+  });
+  if (!conv) {
+    return (
+      <div className="rounded-xl border bg-card p-6 text-sm text-muted-foreground">
+        Carregando conversa da equipe…
+      </div>
+    );
+  }
+  return (
+    <div>
+      <h2 className="mb-3 text-xl font-bold tracking-tight text-foreground">
+        Conversa da equipe
+      </h2>
+      <div className="h-[500px]">
+        <ConversationView conversationId={conv.id} subtitle="Mensagens entre membros do caso" />
+      </div>
+    </div>
+  );
+}
+
 
 function StatusBadge({ status }: { status: string }) {
   const map: Record<string, string> = {

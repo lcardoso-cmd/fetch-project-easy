@@ -17,8 +17,10 @@ import { Plus, Trash2, Loader2, Users, UserCog } from "lucide-react";
 import { toast } from "sonner";
 import {
   listTeamMembers,
-  createTeamMember,
   deleteTeamMember,
+  inviteTeamMember,
+  listInvitations,
+  revokeInvitation,
 } from "@/lib/team.functions";
 import {
   updateMyProfile,
@@ -38,8 +40,10 @@ export const Route = createFileRoute("/_authenticated/settings")({
 function SettingsPage() {
   const qc = useQueryClient();
   const listFn = useServerFn(listTeamMembers);
-  const createFn = useServerFn(createTeamMember);
+  const inviteFn = useServerFn(inviteTeamMember);
   const deleteFn = useServerFn(deleteTeamMember);
+  const listInvFn = useServerFn(listInvitations);
+  const revokeInvFn = useServerFn(revokeInvitation);
   const updateProfileFn = useServerFn(updateMyProfile);
   const { data: profile } = useProfile();
 
@@ -47,10 +51,15 @@ function SettingsPage() {
     queryKey: ["team-members"],
     queryFn: () => listFn(),
   });
+  const { data: invites = [] } = useQuery({
+    queryKey: ["team-invitations"],
+    queryFn: () => listInvFn(),
+  });
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [role, setRole] = useState("");
+  const [accessRole, setAccessRole] = useState<"viewer" | "editor" | "admin">("editor");
 
   // Perfil profissional
   const [practiceType, setPracticeType] = useState<PracticeType>("advogado");
@@ -65,16 +74,31 @@ function SettingsPage() {
     }
   }, [profile]);
 
-  const createMut = useMutation({
-    mutationFn: () => createFn({ data: { name: name.trim(), email: email.trim(), role: role.trim() } }),
-    onSuccess: () => {
-      toast.success("Membro adicionado");
+  const inviteMut = useMutation({
+    mutationFn: () =>
+      inviteFn({
+        data: {
+          name: name.trim(),
+          email: email.trim(),
+          role: role.trim() || null,
+          access_role: accessRole,
+        },
+      }),
+    onSuccess: (res) => {
+      const link = `${window.location.origin}/invite/${res.invitation.token}`;
+      if (res.alreadyRegistered) {
+        toast.success(`${name} já tem conta — acesso liberado imediatamente.`);
+      } else {
+        navigator.clipboard?.writeText(link).catch(() => {});
+        toast.success("Convite criado — link copiado para a área de transferência.");
+      }
       setName("");
       setEmail("");
       setRole("");
       qc.invalidateQueries({ queryKey: ["team-members"] });
+      qc.invalidateQueries({ queryKey: ["team-invitations"] });
     },
-    onError: (e: Error) => toast.error(e.message || "Falha ao adicionar"),
+    onError: (e: Error) => toast.error(e.message || "Falha ao convidar"),
   });
 
   const deleteMut = useMutation({
@@ -85,6 +109,20 @@ function SettingsPage() {
     },
     onError: (e: Error) => toast.error(e.message || "Falha ao remover"),
   });
+
+  const revokeMut = useMutation({
+    mutationFn: (id: string) => revokeInvFn({ data: { id } }),
+    onSuccess: () => {
+      toast.success("Convite revogado");
+      qc.invalidateQueries({ queryKey: ["team-invitations"] });
+    },
+  });
+
+  function copyInviteLink(token: string) {
+    const link = `${window.location.origin}/invite/${token}`;
+    navigator.clipboard?.writeText(link).then(() => toast.success("Link copiado"));
+  }
+
 
   const profileMut = useMutation({
     mutationFn: () =>
@@ -191,7 +229,8 @@ function SettingsPage() {
             <Users className="h-5 w-5" /> Equipe
           </CardTitle>
           <CardDescription>
-            Cadastre os membros do seu escritório para alocar em casos.
+            Convide membros por e-mail. Eles criam conta, fazem login e passam a ver os casos
+            onde estão alocados — e podem conversar com você no chat interno.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -201,60 +240,117 @@ function SettingsPage() {
             <p className="text-sm text-muted-foreground">Nenhum membro cadastrado ainda.</p>
           ) : (
             <ul className="divide-y rounded-lg border">
-              {team.map((m) => (
-                <li key={m.id} className="flex items-center justify-between p-3">
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium truncate">{m.name}</p>
-                    <p className="text-xs text-muted-foreground truncate">
-                      {[m.role, m.email].filter(Boolean).join(" · ") || "—"}
-                    </p>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                    onClick={() => {
-                      if (confirm(`Remover ${m.name}?`)) deleteMut.mutate(m.id);
-                    }}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </li>
-              ))}
+              {team.map((m) => {
+                const inv = invites.find(
+                  (i) => i.team_member_id === m.id && i.status === "pending",
+                );
+                const linked = Boolean(m.member_user_id);
+                return (
+                  <li key={m.id} className="flex items-center justify-between gap-3 p-3">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium truncate">{m.name}</p>
+                      <p className="text-xs text-muted-foreground truncate">
+                        {[m.role, m.email].filter(Boolean).join(" · ") || "—"}
+                      </p>
+                      <p className="text-xs">
+                        {linked ? (
+                          <span className="text-emerald-600 dark:text-emerald-400">
+                            ✓ Conta vinculada · {m.access_role ?? "editor"}
+                          </span>
+                        ) : inv ? (
+                          <span className="text-amber-600 dark:text-amber-400">
+                            ⏳ Convite pendente
+                          </span>
+                        ) : (
+                          <span className="text-muted-foreground">Sem convite ativo</span>
+                        )}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {inv && (
+                        <>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-8"
+                            onClick={() => copyInviteLink(inv.token)}
+                          >
+                            Copiar link
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 text-destructive"
+                            onClick={() => revokeMut.mutate(inv.id)}
+                          >
+                            Revogar
+                          </Button>
+                        </>
+                      )}
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                        onClick={() => {
+                          if (confirm(`Remover ${m.name}?`)) deleteMut.mutate(m.id);
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </li>
+                );
+              })}
             </ul>
           )}
 
           <div className="rounded-lg border p-4 space-y-3">
-            <p className="text-sm font-medium">Adicionar membro</p>
-            <div className="grid gap-3 sm:grid-cols-3">
+            <p className="text-sm font-medium">Convidar membro</p>
+            <div className="grid gap-3 sm:grid-cols-4">
               <div className="space-y-1">
                 <Label htmlFor="m-name">Nome *</Label>
                 <Input id="m-name" value={name} onChange={(e) => setName(e.target.value)} maxLength={120} />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="m-email">E-mail *</Label>
+                <Input id="m-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} maxLength={255} />
               </div>
               <div className="space-y-1">
                 <Label htmlFor="m-role">Cargo</Label>
                 <Input id="m-role" value={role} onChange={(e) => setRole(e.target.value)} maxLength={120} placeholder="Ex.: Sócio, Estagiário" />
               </div>
               <div className="space-y-1">
-                <Label htmlFor="m-email">E-mail</Label>
-                <Input id="m-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} maxLength={255} />
+                <Label htmlFor="m-access">Acesso</Label>
+                <Select value={accessRole} onValueChange={(v) => setAccessRole(v as typeof accessRole)}>
+                  <SelectTrigger id="m-access"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="viewer">Visualizar</SelectItem>
+                    <SelectItem value="editor">Editar</SelectItem>
+                    <SelectItem value="admin">Admin</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
             <Button
               size="sm"
-              onClick={() => createMut.mutate()}
-              disabled={!name.trim() || createMut.isPending}
+              onClick={() => inviteMut.mutate()}
+              disabled={!name.trim() || !email.trim() || inviteMut.isPending}
             >
-              {createMut.isPending ? (
+              {inviteMut.isPending ? (
                 <Loader2 className="mr-1 h-4 w-4 animate-spin" />
               ) : (
                 <Plus className="mr-1 h-4 w-4" />
               )}
-              Adicionar
+              Convidar e copiar link
             </Button>
+            <p className="text-xs text-muted-foreground">
+              Compartilhe o link com a pessoa. Ao acessá-lo logada com o e-mail informado, ela
+              ganha acesso aos casos onde está alocada.
+            </p>
           </div>
         </CardContent>
       </Card>
+
     </div>
   );
 }
