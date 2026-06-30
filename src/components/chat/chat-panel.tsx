@@ -25,7 +25,15 @@ interface Msg {
   steps?: ToolStep[];
 }
 
-export function ChatPanel({ caseId }: { caseId?: string }) {
+export function ChatPanel({
+  caseId,
+  pendingDocs = 0,
+  readyDocs = 0,
+}: {
+  caseId?: string;
+  pendingDocs?: number;
+  readyDocs?: number;
+}) {
   const askFn = useServerFn(askWithRag);
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
