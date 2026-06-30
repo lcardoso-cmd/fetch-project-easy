@@ -360,17 +360,41 @@ function CaseDetailPage() {
 
 
 
-      {/* Chat IA do caso */}
-      <div>
-        <h2 className="mb-3 text-xl font-bold tracking-tight text-foreground">
-          Pergunte sobre este caso
-        </h2>
-        <ChatPanel
-          caseId={caseId}
-          pendingDocs={docs.filter((d) => d.processing_status === "pending" || d.processing_status === "processing").length}
-          readyDocs={docs.filter((d) => d.processing_status === "ready").length}
-        />
-      </div>
+      {/* Chat IA do caso — JurisMind */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0">
+          <div>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Sparkles className="h-4 w-4" /> Assistente JurisMind
+            </CardTitle>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Chat com IA usando os documentos deste caso, criação de prazos, consultas à agenda e mais.
+            </p>
+          </div>
+          <Sheet>
+            <SheetTrigger asChild>
+              <Button>
+                <MessageSquare className="mr-2 h-4 w-4" />
+                Abrir chat JurisMind
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="right" className="w-full sm:max-w-2xl flex flex-col p-0">
+              <SheetHeader className="border-b p-4">
+                <SheetTitle className="flex items-center gap-2">
+                  <Sparkles className="h-4 w-4" /> JurisMind — {caseData.title}
+                </SheetTitle>
+              </SheetHeader>
+              <div className="flex-1 overflow-hidden p-4">
+                <ChatPanel
+                  caseId={caseId}
+                  pendingDocs={docs.filter((d) => d.processing_status === "pending" || d.processing_status === "processing").length}
+                  readyDocs={docs.filter((d) => d.processing_status === "ready").length}
+                />
+              </div>
+            </SheetContent>
+          </Sheet>
+        </CardHeader>
+      </Card>
 
       {/* Chat interno da equipe sobre o caso */}
       <CaseTeamChat caseId={caseId} />
