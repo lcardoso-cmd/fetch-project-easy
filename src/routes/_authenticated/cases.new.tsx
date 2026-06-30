@@ -321,7 +321,7 @@ function NewCasePage() {
     if (!title.trim()) errors.title = "Informe um título para o caso.";
     else if (title.trim().length < 3) errors.title = "O título precisa ter ao menos 3 caracteres.";
 
-    if (!clientName.trim()) errors.client_name = "Informe o nome do cliente.";
+    if (!clientName.trim()) errors.client_name = `Informe ${labels.clientLabel.toLowerCase()}.`;
 
     if (caseNumber.trim()) {
       const digits = caseNumber.replace(/\D/g, "");
@@ -337,7 +337,17 @@ function NewCasePage() {
     if (cleanParties.length === 0) {
       errors.parties = "Adicione ao menos uma parte com nome preenchido.";
     } else if (representedIdx === null || !parties[representedIdx]?.name.trim()) {
-      errors.represented = "Marque qual parte você representa.";
+      errors.represented = `Marque qual parte você ${labels.representVerb.toLowerCase()}.`;
+    }
+
+    if (matterKind === "assistencia_tecnica" && !assistedPartyName.trim()) {
+      errors.assisted_party_name = "Informe a parte assistida.";
+    }
+    if (matterKind === "pericia" && peritoFee.trim()) {
+      const reais = parseFloat(peritoFee.replace(",", "."));
+      if (isNaN(reais) || reais < 0) {
+        errors.perito_fee = "Honorários inválidos — use valor numérico em reais.";
+      }
     }
 
     return errors;
