@@ -218,7 +218,7 @@ export const summarizeCase = createServerFn({ method: "POST" })
     }
 
     const text = chunks.map((c) => c.content).join("\n\n");
-    const { content: summary } = await chatComplete(
+    const { content: rawSummary } = await chatComplete(
       [
         {
           role: "system",
@@ -229,6 +229,9 @@ export const summarizeCase = createServerFn({ method: "POST" })
       ],
       { temperature: 0.3 },
     );
+
+    const { stripMarkdown } = await import("./strip-markdown");
+    const summary = stripMarkdown(rawSummary);
 
     await context.supabase
       .from("cases")
