@@ -51,7 +51,7 @@ export const Route = createFileRoute("/_authenticated/cases/new")({
   component: NewCasePage,
 });
 
-type Party = { role: string; name: string };
+type Party = { role: string; name: string; relation?: string | null };
 
 type UploadedDoc = {
   storage_path: string;
