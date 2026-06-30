@@ -73,6 +73,11 @@ const PieceSchema = z.object({
     "memoriais",
     "parecer",
     "notificacao-extrajudicial",
+    "laudo-pericial",
+    "esclarecimentos-perito",
+    "parecer-tecnico",
+    "impugnacao-laudo",
+    "quesitos-suplementares",
   ]),
   instructions: z.string().max(3000).optional().default(""),
 });
@@ -94,6 +99,16 @@ const PIECE_GUIDE: Record<string, string> = {
     "Parecer jurídico: Consulta, Análise dos Fatos, Análise Jurídica (legislação, doutrina, jurisprudência), Conclusão objetiva.",
   "notificacao-extrajudicial":
     "Notificação extrajudicial: identificação das partes, exposição dos fatos, fundamento, requerimento, prazo para cumprimento, consequências do descumprimento.",
+  "laudo-pericial":
+    "Laudo pericial estruturado (CPC arts. 464-480) com seções: 1) Identificação (perito, processo, juízo nomeante, partes, data da nomeação); 2) Objeto da perícia; 3) Metodologia e diligências realizadas; 4) Análise técnica; 5) Resposta fundamentada aos quesitos (agrupados por origem: juízo, autor, réu); 6) Conclusão objetiva; 7) Anexos sugeridos. Linguagem técnica, impessoal e imparcial.",
+  "esclarecimentos-perito":
+    "Esclarecimentos do perito a pedido de parte ou do juízo: resposta pontual a cada quesito complementar mantendo o teor técnico do laudo já apresentado.",
+  "parecer-tecnico":
+    "Parecer técnico do assistente técnico contratado pela parte: 1) Identificação do assistente e da parte assistida; 2) Documentos analisados; 3) Metodologia; 4) Análise técnica dos pontos relevantes; 5) Resposta aos quesitos da parte assistida; 6) Considerações sobre o laudo oficial (se houver); 7) Conclusão técnica favorável aos interesses da parte assistida, mantendo rigor técnico.",
+  "impugnacao-laudo":
+    "Impugnação ao laudo pericial oficial pela parte assistida: 1) Síntese do laudo oficial; 2) Pontos controversos (metodologia, premissas, cálculos, interpretação); 3) Fundamentação técnica da divergência item a item; 4) Quesitos suplementares sugeridos; 5) Conclusão pleiteando complementação/refazimento do laudo ou prevalência do parecer do assistente.",
+  "quesitos-suplementares":
+    "Lista de quesitos suplementares formulados pela parte assistida, numerados, claros, técnicos e ligados a pontos não respondidos ou mal esclarecidos no laudo oficial.",
 };
 
 export const draftLegalPiece = createServerFn({ method: "POST" })
