@@ -52,6 +52,7 @@ export function ConversationView({
   const sendFn = useServerFn(sendMessage);
   const markReadFn = useServerFn(markConversationRead);
   const uploadFn = useServerFn(uploadConversationAttachment);
+  const listParticipantsFn = useServerFn(listConversationParticipants);
 
   const { data: messagesRaw = [], isLoading } = useQuery({
     queryKey: ["conversation-messages", conversationId],
@@ -59,11 +60,31 @@ export function ConversationView({
   });
   const messages = messagesRaw as unknown as Message[];
 
+  const { data: participants = [] } = useQuery({
+    queryKey: ["conversation-participants", conversationId],
+    queryFn: () => listParticipantsFn({ data: { conversation_id: conversationId } }),
+  });
+  const participantList = participants as Array<{ id: string; name: string }>;
+
   const [body, setBody] = useState("");
   const [pending, setPending] = useState<Attachment[]>([]);
   const [busy, setBusy] = useState(false);
+  // mention autocomplete state
+  const [mentionQuery, setMentionQuery] = useState<string | null>(null);
+  const [mentionIndex, setMentionIndex] = useState(0);
+  // resolved mentions in current draft: name -> userId
+  const [mentionMap, setMentionMap] = useState<Record<string, string>>({});
   const fileRef = useRef<HTMLInputElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const endRef = useRef<HTMLDivElement>(null);
+
+  const mentionCandidates = useMemo(() => {
+    if (mentionQuery === null) return [];
+    const q = mentionQuery.toLowerCase();
+    return participantList
+      .filter((p) => p.id !== user?.id && p.name.toLowerCase().includes(q))
+      .slice(0, 6);
+  }, [mentionQuery, participantList, user?.id]);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
