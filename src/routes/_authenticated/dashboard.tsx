@@ -1,31 +1,121 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
+import { useQuery } from "@tanstack/react-query";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { FolderKanban, FileText, Users, CalendarClock, Sparkles } from "lucide-react";
+import { getCases } from "@/lib/cases.functions";
+import { Link } from "@tanstack/react-router";
+import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   component: DashboardPage,
 });
 
 function DashboardPage() {
+  const getCasesFn = useServerFn(getCases);
+  const { data: cases = [], isLoading } = useQuery({
+    queryKey: ["cases"],
+    queryFn: () => getCasesFn(),
+  });
+
+  const totalCases = cases.length;
+  const activeCases = cases.filter((c) => c.status === "active").length;
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight text-foreground">Dashboard</h1>
-        <p className="mt-1 text-muted-foreground">
-          Visão geral da sua prática advocatícia.
-        </p>
+      <div className="flex items-center justify-between">
+        <h2 className="text-3xl font-bold font-heading tracking-tight">Painel de Controle</h2>
       </div>
+
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        <div className="rounded-xl border bg-card p-6 shadow-sm">
-          <div className="text-sm font-medium text-muted-foreground">Casos ativos</div>
-          <div className="mt-2 text-3xl font-bold text-card-foreground">0</div>
-        </div>
-        <div className="rounded-xl border bg-card p-6 shadow-sm">
-          <div className="text-sm font-medium text-muted-foreground">Prazos esta semana</div>
-          <div className="mt-2 text-3xl font-bold text-card-foreground">0</div>
-        </div>
-        <div className="rounded-xl border bg-card p-6 shadow-sm">
-          <div className="text-sm font-medium text-muted-foreground">Documentos</div>
-          <div className="mt-2 text-3xl font-bold text-card-foreground">0</div>
-        </div>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total de Casos</CardTitle>
+            <FolderKanban className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{isLoading ? "—" : totalCases}</div>
+            <p className="text-xs text-muted-foreground">{activeCases} casos ativos</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Documentos</CardTitle>
+            <FileText className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">—</div>
+            <p className="text-xs text-muted-foreground">Total carregado</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Prazos próximos</CardTitle>
+            <CalendarClock className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">0</div>
+            <p className="text-xs text-muted-foreground">Próximos 7 dias</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-7">
+        <Card className="lg:col-span-4">
+          <CardHeader>
+            <CardTitle className="font-heading">Visão Geral</CardTitle>
+            <CardDescription>
+              Acompanhe o progresso e as atividades recentes da sua equipe.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {cases.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 text-center">
+                <FolderKanban className="h-10 w-10 text-muted-foreground" />
+                <p className="mt-3 font-medium">Nenhum caso ainda</p>
+                <p className="text-sm text-muted-foreground">Comece criando seu primeiro caso.</p>
+                <Button asChild className="mt-4">
+                  <Link to="/cases">Ir para Casos</Link>
+                </Button>
+              </div>
+            ) : (
+              <ul className="divide-y">
+                {cases.slice(0, 5).map((c) => (
+                  <li key={c.id} className="flex items-center justify-between py-3">
+                    <div>
+                      <p className="font-medium">{c.title}</p>
+                      {c.client_name && (
+                        <p className="text-xs text-muted-foreground">{c.client_name}</p>
+                      )}
+                    </div>
+                    <Button asChild variant="ghost" size="sm">
+                      <Link to={`/cases/${c.id}`}>Abrir</Link>
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="lg:col-span-3">
+          <CardHeader>
+            <CardTitle className="font-heading flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-accent" />
+              Assistente JurisMind
+            </CardTitle>
+            <CardDescription>
+              Pergunte sobre seus documentos com IA e citações.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button asChild className="w-full">
+              <Link to="/chat">Abrir assistente</Link>
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
