@@ -893,9 +893,13 @@ function NewCasePage() {
                   id="assisted_party_name"
                   value={assistedPartyName}
                   onChange={(e) => setAssistedPartyName(e.target.value)}
+                  onBlur={() => markTouched("assisted_party_name")}
                   placeholder="Nome da parte contratante"
                   maxLength={200}
+                  aria-invalid={showError("assisted_party_name") || undefined}
+                  className={errorRing("assisted_party_name")}
                 />
+                <ErrorMsg k="assisted_party_name" />
                 <p className="text-xs text-muted-foreground">
                   Isso aparece nos pareceres técnicos gerados pelo JurisMind.
                 </p>
