@@ -156,23 +156,34 @@ function NewCasePage() {
   useEffect(() => {
     if (!previewOpen || !uploaded) return;
     let cancelled = false;
+    let blobUrl: string | null = null;
     setPreviewLoading(true);
     setPreviewUrl(null);
-    supabase.storage
-      .from("documents")
-      .createSignedUrl(uploaded.storage_path, 60 * 10)
-      .then(({ data, error }) => {
+
+    (async () => {
+      try {
+        // Baixa via SDK (cookie de auth do storage) e cria blob URL same-origin
+        // para evitar bloqueio do Chrome ao carregar PDFs cross-origin em iframe.
+        const { data, error } = await supabase.storage
+          .from("documents")
+          .download(uploaded.storage_path);
+        if (error || !data) throw error ?? new Error("download falhou");
         if (cancelled) return;
-        if (error || !data?.signedUrl) {
+        blobUrl = URL.createObjectURL(data);
+        setPreviewUrl(blobUrl);
+      } catch {
+        if (!cancelled) {
           toast.error("Não foi possível abrir o documento");
           setPreviewOpen(false);
-        } else {
-          setPreviewUrl(data.signedUrl);
         }
-      })
-      .finally(() => !cancelled && setPreviewLoading(false));
+      } finally {
+        if (!cancelled) setPreviewLoading(false);
+      }
+    })();
+
     return () => {
       cancelled = true;
+      if (blobUrl) URL.revokeObjectURL(blobUrl);
     };
   }, [previewOpen, uploaded]);
   const [attemptedSubmit, setAttemptedSubmit] = useState(false);
