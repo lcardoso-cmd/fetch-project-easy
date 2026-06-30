@@ -238,7 +238,7 @@ function CaseDetailPage() {
           </CardContent>
         </Card>
 
-        {/* Resumo IA */}
+        {/* Resumo JurisMind */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0">
             <CardTitle className="text-lg">Resumo do caso (JurisMind)</CardTitle>
