@@ -52,10 +52,11 @@ export function ConversationView({
   const markReadFn = useServerFn(markConversationRead);
   const uploadFn = useServerFn(uploadConversationAttachment);
 
-  const { data: messages = [], isLoading } = useQuery({
+  const { data: messagesRaw = [], isLoading } = useQuery({
     queryKey: ["conversation-messages", conversationId],
-    queryFn: () => listFn({ data: { conversation_id: conversationId, limit: 100 } }) as Promise<Message[]>,
+    queryFn: () => listFn({ data: { conversation_id: conversationId, limit: 100 } }),
   });
+  const messages = messagesRaw as unknown as Message[];
 
   const [body, setBody] = useState("");
   const [pending, setPending] = useState<Attachment[]>([]);
