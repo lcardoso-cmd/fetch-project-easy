@@ -5,6 +5,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 const PartySchema = z.object({
   role: z.string().trim().max(80),
   name: z.string().trim().max(200),
+  relation: z.string().trim().max(40).optional().nullable(),
 });
 
 const MatterKindEnum = z.enum(["processo", "pericia", "assistencia_tecnica"]);

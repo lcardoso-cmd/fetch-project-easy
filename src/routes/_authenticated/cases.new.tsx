@@ -38,6 +38,7 @@ import {
   MATTER_KIND_LABELS,
   type MatterKind,
 } from "@/lib/practice-labels";
+import { PARTY_RELATIONS, representedRelationFor } from "@/lib/party-relations";
 import {
   createCase,
   extractCaseDataFromDocument,
@@ -51,7 +52,7 @@ export const Route = createFileRoute("/_authenticated/cases/new")({
   component: NewCasePage,
 });
 
-type Party = { role: string; name: string };
+type Party = { role: string; name: string; relation?: string | null };
 
 type UploadedDoc = {
   storage_path: string;
@@ -129,11 +130,9 @@ function NewCasePage() {
   const [caseType, setCaseType] = useState<string>("");
   const [description, setDescription] = useState("");
   const [parties, setParties] = useState<Party[]>([]);
-  const [representedIdx, setRepresentedIdx] = useState<number | null>(null);
   const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
 
-  // Campos extras de perícia / assistência técnica
-  const [assistedPartyName, setAssistedPartyName] = useState("");
+  // Campos extras de perícia
   const [peritoFee, setPeritoFee] = useState(""); // em reais (string), convertido em cents na submissão
   const [peritoAppointmentDate, setPeritoAppointmentDate] = useState("");
   const [peritoDeadlineDate, setPeritoDeadlineDate] = useState("");
@@ -235,7 +234,6 @@ function NewCasePage() {
     setCaseType(e.case_type ?? "");
     setDescription(e.description ?? "");
     setParties(e.parties ?? []);
-    setRepresentedIdx(null);
   };
 
   const handleFile = async (file: File) => {
@@ -300,9 +298,6 @@ function NewCasePage() {
     setParties(parties.map((p, idx) => (idx === i ? { ...p, ...patch } : p)));
   const removeParty = (i: number) => {
     setParties(parties.filter((_, idx) => idx !== i));
-    if (representedIdx === i) setRepresentedIdx(null);
-    else if (representedIdx !== null && representedIdx > i)
-      setRepresentedIdx(representedIdx - 1);
   };
 
   const toggleMember = (id: string) =>
@@ -336,13 +331,25 @@ function NewCasePage() {
     const cleanParties = parties.filter((p) => p.name.trim());
     if (cleanParties.length === 0) {
       errors.parties = "Adicione ao menos uma parte com nome preenchido.";
-    } else if (representedIdx === null || !parties[representedIdx]?.name.trim()) {
-      errors.represented = `Marque qual parte você ${labels.representVerb.toLowerCase()}.`;
+    } else {
+      const repRel = representedRelationFor(matterKind);
+      // Perícia: representante não é obrigatório (perito é imparcial).
+      if (repRel && matterKind !== "pericia") {
+        const repCount = cleanParties.filter((p) => p.relation === repRel).length;
+        const repLabel =
+          PARTY_RELATIONS[matterKind].find((r) => r.value === repRel)?.label ?? "representante";
+        if (repCount === 0) {
+          errors.represented = `Marque uma das partes como "${repLabel}".`;
+        } else if (repCount > 1) {
+          errors.represented = `Marque apenas uma parte como "${repLabel}".`;
+        }
+      }
+      const unclassified = cleanParties.filter((p) => !p.relation);
+      if (unclassified.length > 0) {
+        errors.parties = "Classifique a relação de cada parte (cliente, contrária, perito, etc).";
+      }
     }
 
-    if (matterKind === "assistencia_tecnica" && !assistedPartyName.trim()) {
-      errors.assisted_party_name = "Informe a parte assistida.";
-    }
     if (matterKind === "pericia" && peritoFee.trim()) {
       const reais = parseFloat(peritoFee.replace(",", "."));
       if (isNaN(reais) || reais < 0) {
@@ -381,10 +388,12 @@ function NewCasePage() {
     setSubmitting(true);
     try {
       const cleanParties = parties.filter((p) => p.name.trim() || p.role.trim());
-      const represented =
-        representedIdx !== null && cleanParties[representedIdx]
-          ? cleanParties[representedIdx]
-          : null;
+      const repRel = representedRelationFor(matterKind);
+      const represented = repRel
+        ? cleanParties.find((p) => p.relation === repRel) ?? null
+        : null;
+      const assistedFromParties =
+        matterKind === "assistencia_tecnica" ? represented?.name ?? null : null;
 
       const feeReais = parseFloat(peritoFee.replace(",", "."));
       const feeCents =
@@ -409,8 +418,7 @@ function NewCasePage() {
               : matterKind === "assistencia_tecnica"
                 ? "assistente_tecnico"
                 : "advogado",
-          assisted_party_name:
-            matterKind === "assistencia_tecnica" ? assistedPartyName.trim() || null : null,
+          assisted_party_name: assistedFromParties,
           perito_fee_cents: matterKind === "pericia" ? feeCents : null,
           perito_appointment_date:
             matterKind === "pericia" ? peritoAppointmentDate || null : null,
@@ -877,39 +885,6 @@ function NewCasePage() {
           </Card>
         )}
 
-        {/* Campos específicos: Assistência Técnica */}
-        {matterKind === "assistencia_tecnica" && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Dados da assistência</CardTitle>
-              <CardDescription>
-                Identifique qual parte do processo você está assistindo tecnicamente.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="assisted_party_name">Parte assistida *</Label>
-                <Input
-                  id="assisted_party_name"
-                  value={assistedPartyName}
-                  onChange={(e) => setAssistedPartyName(e.target.value)}
-                  onBlur={() => markTouched("assisted_party_name")}
-                  placeholder="Nome da parte contratante"
-                  maxLength={200}
-                  aria-invalid={showError("assisted_party_name") || undefined}
-                  className={errorRing("assisted_party_name")}
-                />
-                <ErrorMsg k="assisted_party_name" />
-                <p className="text-xs text-muted-foreground">
-                  Isso aparece nos pareceres técnicos gerados pelo JurisMind.
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-
-
         {/* Partes */}
         <Card
           className={
@@ -923,7 +898,11 @@ function NewCasePage() {
           <CardHeader>
             <CardTitle className="text-lg">Partes envolvidas *</CardTitle>
             <CardDescription>
-              Adicione ao menos uma parte e marque qual você representa.
+              Adicione cada player do processo e classifique a relação dele com você (cliente, parte
+              contrária, perito do juízo, assistente técnico contrário, etc.).
+              {matterKind === "assistencia_tecnica" && (
+                <> A parte marcada como <strong>"Parte que assisto"</strong> é usada como parte assistida nos pareceres do JurisMind.</>
+              )}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
@@ -933,49 +912,74 @@ function NewCasePage() {
             {parties.length === 0 && (
               <p className="text-sm text-muted-foreground">Nenhuma parte ainda.</p>
             )}
-            {parties.map((p, i) => (
-              <div key={i} className="grid grid-cols-[auto_1fr_2fr_auto] gap-2 items-center">
-                <button
-                  type="button"
-                  onClick={() => setRepresentedIdx(representedIdx === i ? null : i)}
-                  className={`flex h-9 items-center gap-1 rounded-md border px-3 text-xs font-medium transition-colors ${
-                    representedIdx === i
-                      ? "border-accent bg-accent text-accent-foreground"
-                      : "border-border text-muted-foreground hover:border-accent/50"
+            {parties.map((p, i) => {
+              const rel = PARTY_RELATIONS[matterKind].find((r) => r.value === p.relation);
+              const isRepresented = !!rel?.isRepresented;
+              return (
+                <div
+                  key={i}
+                  className={`grid grid-cols-1 md:grid-cols-[200px_180px_1fr_auto] gap-2 items-start rounded-md border p-2 ${
+                    isRepresented ? "border-accent/60 bg-accent/5" : "border-border"
                   }`}
-                  title={`Marcar como parte que você ${labels.representVerb.toLowerCase()}`}
                 >
-                  {representedIdx === i ? (
-                    <>
-                      <CheckCircle2 className="h-3.5 w-3.5" /> {labels.representVerb}
-                    </>
-                  ) : (
-                    labels.representVerb
-                  )}
-                </button>
-                <Input
-                  placeholder="Papel (autor, réu, etc)"
-                  value={p.role}
-                  onChange={(e) => updateParty(i, { role: e.target.value })}
-                  maxLength={80}
-                />
-                <Input
-                  placeholder="Nome"
-                  value={p.name}
-                  onChange={(e) => updateParty(i, { name: e.target.value })}
-                  maxLength={200}
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => removeParty(i)}
-                  className="text-muted-foreground hover:text-destructive"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
-            ))}
+                  <div className="space-y-1">
+                    <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                      Relação com você
+                    </Label>
+                    <Select
+                      value={p.relation ?? ""}
+                      onValueChange={(v) => updateParty(i, { relation: v })}
+                    >
+                      <SelectTrigger className="h-9">
+                        <SelectValue placeholder="Classificar..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {PARTY_RELATIONS[matterKind].map((opt) => (
+                          <SelectItem key={opt.value} value={opt.value}>
+                            {opt.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                      Papel processual
+                    </Label>
+                    <Input
+                      placeholder="autor, réu, perito..."
+                      value={p.role}
+                      onChange={(e) => updateParty(i, { role: e.target.value })}
+                      maxLength={80}
+                      className="h-9"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                      Nome
+                    </Label>
+                    <Input
+                      placeholder="Nome completo / razão social"
+                      value={p.name}
+                      onChange={(e) => updateParty(i, { name: e.target.value })}
+                      maxLength={200}
+                      className="h-9"
+                    />
+                  </div>
+                  <div className="flex items-end justify-end h-full pt-5 md:pt-0">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => removeParty(i)}
+                      className="text-muted-foreground hover:text-destructive"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              );
+            })}
             <Button type="button" variant="outline" size="sm" onClick={addParty}>
               <Plus className="mr-1 h-4 w-4" /> Adicionar parte
             </Button>
