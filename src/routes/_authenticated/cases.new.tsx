@@ -17,6 +17,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   ArrowLeft,
   UploadCloud,
   Loader2,
@@ -143,6 +149,32 @@ function NewCasePage() {
   const [uploaded, setUploaded] = useState<UploadedDoc | null>(null);
   const [extracting, setExtracting] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+
+  useEffect(() => {
+    if (!previewOpen || !uploaded) return;
+    let cancelled = false;
+    setPreviewLoading(true);
+    setPreviewUrl(null);
+    supabase.storage
+      .from("documents")
+      .createSignedUrl(uploaded.storage_path, 60 * 10)
+      .then(({ data, error }) => {
+        if (cancelled) return;
+        if (error || !data?.signedUrl) {
+          toast.error("Não foi possível abrir o documento");
+          setPreviewOpen(false);
+        } else {
+          setPreviewUrl(data.signedUrl);
+        }
+      })
+      .finally(() => !cancelled && setPreviewLoading(false));
+    return () => {
+      cancelled = true;
+    };
+  }, [previewOpen, uploaded]);
   const [attemptedSubmit, setAttemptedSubmit] = useState(false);
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   const markTouched = (k: string) => setTouched((t) => (t[k] ? t : { ...t, [k]: true }));
@@ -557,19 +589,26 @@ function NewCasePage() {
           <CardContent>
             {uploaded ? (
               <div className="flex items-center justify-between rounded-lg border bg-muted/30 p-3">
-                <div className="flex items-center gap-2 min-w-0">
+                <button
+                  type="button"
+                  onClick={() => setPreviewOpen(true)}
+                  className="flex items-center gap-2 min-w-0 text-left hover:text-accent transition-colors"
+                  title="Clique para visualizar o documento"
+                >
                   <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
-                  <span className="truncate text-sm font-medium">{uploaded.filename}</span>
+                  <span className="truncate text-sm font-medium underline-offset-2 hover:underline">
+                    {uploaded.filename}
+                  </span>
                   {extracting ? (
                     <Badge variant="secondary" className="ml-2 gap-1">
                       <Loader2 className="h-3 w-3 animate-spin" /> Extraindo...
                     </Badge>
                   ) : (
                     <Badge variant="secondary" className="ml-2 gap-1">
-                      <CheckCircle2 className="h-3 w-3" /> Anexado
+                      <CheckCircle2 className="h-3 w-3" /> Anexado — clique para ver
                     </Badge>
                   )}
-                </div>
+                </button>
                 <Button
                   type="button"
                   variant="ghost"
@@ -1078,6 +1117,46 @@ function NewCasePage() {
           </div>
         </div>
       </form>
+
+      <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
+        <DialogContent className="max-w-5xl h-[85vh] flex flex-col p-0">
+          <DialogHeader className="px-6 pt-6 pb-3 border-b">
+            <DialogTitle className="truncate pr-8">
+              {uploaded?.filename ?? "Documento"}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="flex-1 min-h-0 bg-muted/30">
+            {previewLoading || !previewUrl ? (
+              <div className="h-full flex items-center justify-center text-sm text-muted-foreground">
+                <Loader2 className="h-5 w-5 animate-spin mr-2" /> Carregando documento...
+              </div>
+            ) : uploaded?.file_type?.startsWith("image/") ? (
+              <div className="h-full overflow-auto flex items-start justify-center p-4">
+                <img src={previewUrl} alt={uploaded.filename} className="max-w-full" />
+              </div>
+            ) : uploaded?.file_type === "application/pdf" ||
+              uploaded?.filename.toLowerCase().endsWith(".pdf") ? (
+              <iframe
+                src={previewUrl}
+                title={uploaded?.filename}
+                className="w-full h-full border-0"
+              />
+            ) : (
+              <div className="h-full flex flex-col items-center justify-center gap-3 p-6 text-center">
+                <FileText className="h-10 w-10 text-muted-foreground" />
+                <p className="text-sm text-muted-foreground">
+                  Pré-visualização não disponível para este formato.
+                </p>
+                <Button asChild variant="outline" size="sm">
+                  <a href={previewUrl} target="_blank" rel="noreferrer">
+                    Abrir em nova aba
+                  </a>
+                </Button>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
