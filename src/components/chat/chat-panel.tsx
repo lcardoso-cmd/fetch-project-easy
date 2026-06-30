@@ -3,7 +3,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { askWithRag } from "@/lib/chat.functions";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Send, Sparkles, FileText } from "lucide-react";
+import { Loader2, Send, Sparkles, FileText, AlertCircle } from "lucide-react";
 
 interface Citation {
   document_id: string;
