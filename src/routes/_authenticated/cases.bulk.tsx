@@ -47,7 +47,7 @@ type Draft = {
   caseId?: string;
   data: ExtractedCaseData;
   missing: string[];
-  warnings: string[];
+  warnings: { field: string | null; message: string }[];
 };
 
 const FIELD_LABELS: Record<string, string> = {
