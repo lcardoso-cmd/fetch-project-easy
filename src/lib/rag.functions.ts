@@ -35,12 +35,22 @@ export const indexDocument = createServerFn({ method: "POST" })
           .download(doc.storage_path);
         if (dlErr || !blob) throw new Error("Falha ao baixar arquivo do storage");
 
-        if (doc.file_type === "application/pdf" || doc.filename.toLowerCase().endsWith(".pdf")) {
+        const lower = doc.filename.toLowerCase();
+        if (doc.file_type === "application/pdf" || lower.endsWith(".pdf")) {
           const { extractText, getDocumentProxy } = await import("unpdf");
           const buffer = new Uint8Array(await blob.arrayBuffer());
           const pdf = await getDocumentProxy(buffer);
           const { text: pdfText } = await extractText(pdf, { mergePages: true });
           text = Array.isArray(pdfText) ? pdfText.join("\n") : pdfText;
+        } else if (
+          lower.endsWith(".docx") ||
+          doc.file_type ===
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        ) {
+          const mammoth = await import("mammoth");
+          const buffer = Buffer.from(await blob.arrayBuffer());
+          const { value } = await mammoth.extractRawText({ buffer });
+          text = value;
         } else {
           text = await blob.text();
         }
