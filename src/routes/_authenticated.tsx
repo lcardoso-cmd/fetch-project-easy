@@ -1,22 +1,13 @@
 import { createFileRoute, Outlet, useNavigate } from "@tanstack/react-router";
-import { AuthProvider, useAuth } from "@/hooks/use-auth";
+import { useAuth } from "@/hooks/use-auth";
 import { useEffect } from "react";
+import { DashboardShell } from "@/components/layout/dashboard-shell";
 
 export const Route = createFileRoute("/_authenticated")({
   component: AuthenticatedLayout,
 });
 
 function AuthenticatedLayout() {
-  return (
-    <AuthProvider>
-      <AuthGuard>
-        <Outlet />
-      </AuthGuard>
-    </AuthProvider>
-  );
-}
-
-function AuthGuard({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuth();
   const navigate = useNavigate();
 
@@ -38,5 +29,9 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
     return null;
   }
 
-  return <>{children}</>;
+  return (
+    <DashboardShell>
+      <Outlet />
+    </DashboardShell>
+  );
 }
