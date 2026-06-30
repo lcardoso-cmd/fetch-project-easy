@@ -2,8 +2,10 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { FolderKanban, FileText, Users, CalendarClock, Sparkles } from "lucide-react";
+import { FolderKanban, FileText, CalendarClock, Sparkles } from "lucide-react";
 import { getCases } from "@/lib/cases.functions";
+import { listAllDocuments } from "@/lib/documents.functions";
+import { listEvents } from "@/lib/events.functions";
 import { Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 
@@ -13,9 +15,21 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
 
 function DashboardPage() {
   const getCasesFn = useServerFn(getCases);
+  const listDocsFn = useServerFn(listAllDocuments);
+  const listEventsFn = useServerFn(listEvents);
   const { data: cases = [], isLoading } = useQuery({
     queryKey: ["cases"],
     queryFn: () => getCasesFn(),
+  });
+  const { data: docs = [] } = useQuery({
+    queryKey: ["documents-all"],
+    queryFn: () => listDocsFn(),
+  });
+  const in7 = new Date(Date.now() + 7 * 86400_000).toISOString();
+  const today = new Date().toISOString();
+  const { data: upcoming = [] } = useQuery({
+    queryKey: ["events", "upcoming-7"],
+    queryFn: () => listEventsFn({ data: { from: today, to: in7 } }),
   });
 
   const totalCases = cases.length;
@@ -45,7 +59,7 @@ function DashboardPage() {
             <FileText className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">—</div>
+            <div className="text-2xl font-bold">{docs.length}</div>
             <p className="text-xs text-muted-foreground">Total carregado</p>
           </CardContent>
         </Card>
@@ -56,7 +70,7 @@ function DashboardPage() {
             <CalendarClock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">0</div>
+            <div className="text-2xl font-bold">{upcoming.length}</div>
             <p className="text-xs text-muted-foreground">Próximos 7 dias</p>
           </CardContent>
         </Card>

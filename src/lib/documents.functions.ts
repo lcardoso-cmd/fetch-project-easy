@@ -25,6 +25,35 @@ export const listDocuments = createServerFn({ method: "GET" })
     return docs ?? [];
   });
 
+export const listAllDocuments = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data, error } = await context.supabase
+      .from("documents")
+      .select("id, filename, file_type, file_size, processing_status, created_at, case_id, storage_path")
+      .eq("user_id", context.userId)
+      .order("created_at", { ascending: false });
+    if (error) throw error;
+    return data ?? [];
+  });
+
+export const getDocumentUrl = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((i: unknown) => z.object({ id: z.string().uuid() }).parse(i))
+  .handler(async ({ data, context }) => {
+    const { data: doc } = await context.supabase
+      .from("documents")
+      .select("storage_path")
+      .eq("id", data.id)
+      .eq("user_id", context.userId)
+      .single();
+    if (!doc) throw new Error("Documento não encontrado");
+    const { data: signed, error } = await context.supabase.storage
+      .from("documents")
+      .createSignedUrl(doc.storage_path, 300);
+    if (error) throw error;
+    return { url: signed.signedUrl };
+  });
 export const registerDocument = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((i: unknown) => UploadSchema.parse(i))

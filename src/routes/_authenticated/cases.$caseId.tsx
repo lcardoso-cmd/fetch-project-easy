@@ -18,9 +18,12 @@ import { Badge } from "@/components/ui/badge";
 import { getCase, updateCase } from "@/lib/cases.functions";
 import { listDocuments, deleteDocument } from "@/lib/documents.functions";
 import { summarizeCase } from "@/lib/chat.functions";
+import { listEvents } from "@/lib/events.functions";
+import { listTasks, toggleTask } from "@/lib/tasks.functions";
 import { UploadZone } from "@/components/documents/upload-zone";
 import { ChatPanel } from "@/components/chat/chat-panel";
-import { ArrowLeft, FileText, Loader2, Sparkles, Trash2 } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ArrowLeft, FileText, Loader2, Sparkles, Trash2, CalendarClock, ClipboardCheck } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/cases/$caseId")({
@@ -35,6 +38,9 @@ function CaseDetailPage() {
   const listDocsFn = useServerFn(listDocuments);
   const deleteDocFn = useServerFn(deleteDocument);
   const summarizeFn = useServerFn(summarizeCase);
+  const listEventsFn = useServerFn(listEvents);
+  const listTasksFn = useServerFn(listTasks);
+  const toggleTaskFn = useServerFn(toggleTask);
 
   const { data: caseData, isLoading } = useQuery({
     queryKey: ["case", caseId],
@@ -44,6 +50,14 @@ function CaseDetailPage() {
     queryKey: ["documents", caseId],
     queryFn: () => listDocsFn({ data: { case_id: caseId } }),
     refetchInterval: 5000,
+  });
+  const { data: events = [] } = useQuery({
+    queryKey: ["events", caseId],
+    queryFn: () => listEventsFn({ data: { case_id: caseId } }),
+  });
+  const { data: tasks = [] } = useQuery({
+    queryKey: ["tasks", caseId],
+    queryFn: () => listTasksFn({ data: { case_id: caseId, status: "all" } }),
   });
 
   const [summarizing, setSummarizing] = useState(false);
@@ -246,6 +260,79 @@ function CaseDetailPage() {
               <p className="text-sm text-muted-foreground">
                 Indexe documentos e clique em "Gerar resumo" para um overview automático.
               </p>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid gap-6 lg:grid-cols-2">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <CalendarClock className="h-4 w-4" /> Prazos e eventos
+            </CardTitle>
+            <Button size="sm" variant="ghost" asChild>
+              <Link to="/calendar">Ver agenda</Link>
+            </Button>
+          </CardHeader>
+          <CardContent>
+            {events.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                Nenhum evento. O assistente pode criar usando a tool <code>create_event</code>.
+              </p>
+            ) : (
+              <ul className="divide-y">
+                {events.slice(0, 8).map((ev) => (
+                  <li key={ev.id} className="flex items-center justify-between py-2 text-sm">
+                    <span className="truncate">{ev.title}</span>
+                    <span className="text-xs text-muted-foreground shrink-0 ml-2">
+                      {new Date(ev.starts_at).toLocaleString("pt-BR", {
+                        day: "2-digit",
+                        month: "2-digit",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <ClipboardCheck className="h-4 w-4" /> Tarefas
+            </CardTitle>
+            <Button size="sm" variant="ghost" asChild>
+              <Link to="/my-tasks">Ver todas</Link>
+            </Button>
+          </CardHeader>
+          <CardContent>
+            {tasks.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Nenhuma tarefa para este caso.</p>
+            ) : (
+              <ul className="divide-y">
+                {tasks.slice(0, 8).map((t) => (
+                  <li key={t.id} className="flex items-center gap-2 py-2 text-sm">
+                    <Checkbox
+                      checked={t.status === "done"}
+                      onCheckedChange={async (c) => {
+                        await toggleTaskFn({ data: { id: t.id, done: Boolean(c) } });
+                        await queryClient.invalidateQueries({ queryKey: ["tasks", caseId] });
+                      }}
+                    />
+                    <span
+                      className={
+                        t.status === "done" ? "line-through text-muted-foreground" : ""
+                      }
+                    >
+                      {t.title}
+                    </span>
+                  </li>
+                ))}
+              </ul>
             )}
           </CardContent>
         </Card>
