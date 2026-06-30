@@ -53,6 +53,36 @@ type UploadedDoc = {
   file_size: number;
 };
 
+type FieldKey =
+  | "title"
+  | "client_name"
+  | "case_number"
+  | "jurisdiction"
+  | "case_type"
+  | "parties"
+  | "description";
+
+type ExtractionWarning = { field: string | null; message: string };
+
+const FIELD_LABELS: Record<string, string> = {
+  title: "título",
+  client_name: "cliente",
+  case_number: "número do processo",
+  jurisdiction: "vara/jurisdição",
+  case_type: "tipo do caso",
+  parties: "partes",
+  description: "descrição",
+};
+
+const MISSING_FIELD_HINTS: Record<string, string> = {
+  client_name: "Não identificamos o nome do cliente no documento.",
+  case_number: "Nenhum número de processo (CNJ) foi encontrado.",
+  jurisdiction: "A vara ou tribunal não foi identificado.",
+  case_type: "O tipo do caso não foi identificado.",
+  parties: "Nenhuma parte foi identificada — adicione abaixo.",
+  description: "Não geramos uma descrição — escreva um resumo do caso.",
+};
+
 function NewCasePage() {
   const { user } = useAuth();
   const navigate = useNavigate();
