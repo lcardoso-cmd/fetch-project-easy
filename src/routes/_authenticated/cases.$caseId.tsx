@@ -191,6 +191,61 @@ function CaseDetailPage() {
             </div>
           )}
         </div>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="lg"
+            onClick={openEdit}
+            className="bg-red-600 text-white hover:bg-red-700"
+          >
+            Editar dados
+          </Button>
+          <Sheet>
+            <SheetTrigger asChild>
+              <Button size="lg">
+                <BrainCircuit className="mr-2 h-5 w-5" /> JurisMind AI
+              </Button>
+            </SheetTrigger>
+            <SheetContent
+              side="right"
+              className="flex w-full flex-col p-0 sm:max-w-4xl lg:max-w-6xl"
+            >
+              <SheetHeader className="border-b p-4">
+                <SheetTitle className="flex items-center gap-2 truncate">
+                  <BrainCircuit className="h-5 w-5 text-primary" />
+                  JurisMind AI — {caseData.title}
+                </SheetTitle>
+              </SheetHeader>
+              <div className="min-h-0 flex-1 overflow-hidden">
+                <JurisMindChat
+                  caseId={caseId}
+                  caseInfo={{
+                    title: caseData.title,
+                    client_name: caseData.client_name,
+                    status: caseData.status,
+                    case_number: caseData.case_number,
+                    case_type: caseData.case_type,
+                    jurisdiction: caseData.jurisdiction,
+                    parties: (caseData.parties ?? []) as Array<{
+                      role: string;
+                      name: string;
+                      relation?: string | null;
+                    }>,
+                    represented_party: (caseData.represented_party ?? null) as {
+                      role: string;
+                      name: string;
+                    } | null,
+                  }}
+                  documents={docs}
+                  selectedDocIds={selectedDocIds}
+                  onToggleSelect={toggleSelect}
+                  onSelectAll={selectAll}
+                  onDeselectAll={deselectAll}
+                />
+              </div>
+            </SheetContent>
+          </Sheet>
+        </div>
       </div>
 
       {editing && (
