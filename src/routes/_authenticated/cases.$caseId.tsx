@@ -268,7 +268,7 @@ function CaseDetailPage() {
           <CardContent>
             {caseData.summary ? (
               <div className="prose prose-sm max-w-none whitespace-pre-wrap text-foreground">
-                {caseData.summary}
+                {stripMarkdown(caseData.summary)}
               </div>
             ) : (
               <p className="text-sm text-muted-foreground">
