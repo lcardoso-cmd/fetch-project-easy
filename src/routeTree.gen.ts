@@ -22,6 +22,7 @@ import { Route as AuthenticatedIntegrationsRouteImport } from './routes/_authent
 import { Route as AuthenticatedDrafterRouteImport } from './routes/_authenticated/drafter'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedChatRouteImport } from './routes/_authenticated/chat'
+import { Route as AuthenticatedCasesRouteImport } from './routes/_authenticated/cases'
 import { Route as AuthenticatedCalendarRouteImport } from './routes/_authenticated/calendar'
 import { Route as AuthenticatedCasesIndexRouteImport } from './routes/_authenticated/cases.index'
 import { Route as AuthenticatedCasesNewRouteImport } from './routes/_authenticated/cases.new'
@@ -94,31 +95,36 @@ const AuthenticatedChatRoute = AuthenticatedChatRouteImport.update({
   path: '/chat',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedCasesRoute = AuthenticatedCasesRouteImport.update({
+  id: '/cases',
+  path: '/cases',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 const AuthenticatedCalendarRoute = AuthenticatedCalendarRouteImport.update({
   id: '/calendar',
   path: '/calendar',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
 const AuthenticatedCasesIndexRoute = AuthenticatedCasesIndexRouteImport.update({
-  id: '/cases/',
-  path: '/cases/',
-  getParentRoute: () => AuthenticatedRoute,
+  id: '/',
+  path: '/',
+  getParentRoute: () => AuthenticatedCasesRoute,
 } as any)
 const AuthenticatedCasesNewRoute = AuthenticatedCasesNewRouteImport.update({
-  id: '/cases/new',
-  path: '/cases/new',
-  getParentRoute: () => AuthenticatedRoute,
+  id: '/new',
+  path: '/new',
+  getParentRoute: () => AuthenticatedCasesRoute,
 } as any)
 const AuthenticatedCasesBulkRoute = AuthenticatedCasesBulkRouteImport.update({
-  id: '/cases/bulk',
-  path: '/cases/bulk',
-  getParentRoute: () => AuthenticatedRoute,
+  id: '/bulk',
+  path: '/bulk',
+  getParentRoute: () => AuthenticatedCasesRoute,
 } as any)
 const AuthenticatedCasesCaseIdRoute =
   AuthenticatedCasesCaseIdRouteImport.update({
-    id: '/cases/$caseId',
-    path: '/cases/$caseId',
-    getParentRoute: () => AuthenticatedRoute,
+    id: '/$caseId',
+    path: '/$caseId',
+    getParentRoute: () => AuthenticatedCasesRoute,
   } as any)
 const ApiPublicGoogleCallbackRoute = ApiPublicGoogleCallbackRouteImport.update({
   id: '/api/public/google/callback',
@@ -130,6 +136,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/calendar': typeof AuthenticatedCalendarRoute
+  '/cases': typeof AuthenticatedCasesRouteWithChildren
   '/chat': typeof AuthenticatedChatRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/drafter': typeof AuthenticatedDrafterRoute
@@ -172,6 +179,7 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/auth': typeof AuthRoute
   '/_authenticated/calendar': typeof AuthenticatedCalendarRoute
+  '/_authenticated/cases': typeof AuthenticatedCasesRouteWithChildren
   '/_authenticated/chat': typeof AuthenticatedChatRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/drafter': typeof AuthenticatedDrafterRoute
@@ -194,6 +202,7 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/calendar'
+    | '/cases'
     | '/chat'
     | '/dashboard'
     | '/drafter'
@@ -235,6 +244,7 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/auth'
     | '/_authenticated/calendar'
+    | '/_authenticated/cases'
     | '/_authenticated/chat'
     | '/_authenticated/dashboard'
     | '/_authenticated/drafter'
@@ -352,6 +362,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedChatRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/cases': {
+      id: '/_authenticated/cases'
+      path: '/cases'
+      fullPath: '/cases'
+      preLoaderRoute: typeof AuthenticatedCasesRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/calendar': {
       id: '/_authenticated/calendar'
       path: '/calendar'
@@ -361,31 +378,31 @@ declare module '@tanstack/react-router' {
     }
     '/_authenticated/cases/': {
       id: '/_authenticated/cases/'
-      path: '/cases'
+      path: '/'
       fullPath: '/cases/'
       preLoaderRoute: typeof AuthenticatedCasesIndexRouteImport
-      parentRoute: typeof AuthenticatedRoute
+      parentRoute: typeof AuthenticatedCasesRoute
     }
     '/_authenticated/cases/new': {
       id: '/_authenticated/cases/new'
-      path: '/cases/new'
+      path: '/new'
       fullPath: '/cases/new'
       preLoaderRoute: typeof AuthenticatedCasesNewRouteImport
-      parentRoute: typeof AuthenticatedRoute
+      parentRoute: typeof AuthenticatedCasesRoute
     }
     '/_authenticated/cases/bulk': {
       id: '/_authenticated/cases/bulk'
-      path: '/cases/bulk'
+      path: '/bulk'
       fullPath: '/cases/bulk'
       preLoaderRoute: typeof AuthenticatedCasesBulkRouteImport
-      parentRoute: typeof AuthenticatedRoute
+      parentRoute: typeof AuthenticatedCasesRoute
     }
     '/_authenticated/cases/$caseId': {
       id: '/_authenticated/cases/$caseId'
-      path: '/cases/$caseId'
+      path: '/$caseId'
       fullPath: '/cases/$caseId'
       preLoaderRoute: typeof AuthenticatedCasesCaseIdRouteImport
-      parentRoute: typeof AuthenticatedRoute
+      parentRoute: typeof AuthenticatedCasesRoute
     }
     '/api/public/google/callback': {
       id: '/api/public/google/callback'
@@ -397,8 +414,26 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface AuthenticatedCasesRouteChildren {
+  AuthenticatedCasesCaseIdRoute: typeof AuthenticatedCasesCaseIdRoute
+  AuthenticatedCasesBulkRoute: typeof AuthenticatedCasesBulkRoute
+  AuthenticatedCasesNewRoute: typeof AuthenticatedCasesNewRoute
+  AuthenticatedCasesIndexRoute: typeof AuthenticatedCasesIndexRoute
+}
+
+const AuthenticatedCasesRouteChildren: AuthenticatedCasesRouteChildren = {
+  AuthenticatedCasesCaseIdRoute: AuthenticatedCasesCaseIdRoute,
+  AuthenticatedCasesBulkRoute: AuthenticatedCasesBulkRoute,
+  AuthenticatedCasesNewRoute: AuthenticatedCasesNewRoute,
+  AuthenticatedCasesIndexRoute: AuthenticatedCasesIndexRoute,
+}
+
+const AuthenticatedCasesRouteWithChildren =
+  AuthenticatedCasesRoute._addFileChildren(AuthenticatedCasesRouteChildren)
+
 interface AuthenticatedRouteChildren {
   AuthenticatedCalendarRoute: typeof AuthenticatedCalendarRoute
+  AuthenticatedCasesRoute: typeof AuthenticatedCasesRouteWithChildren
   AuthenticatedChatRoute: typeof AuthenticatedChatRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedDrafterRoute: typeof AuthenticatedDrafterRoute
@@ -409,14 +444,11 @@ interface AuthenticatedRouteChildren {
   AuthenticatedMyTasksRoute: typeof AuthenticatedMyTasksRoute
   AuthenticatedProposalRoute: typeof AuthenticatedProposalRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
-  AuthenticatedCasesCaseIdRoute: typeof AuthenticatedCasesCaseIdRoute
-  AuthenticatedCasesBulkRoute: typeof AuthenticatedCasesBulkRoute
-  AuthenticatedCasesNewRoute: typeof AuthenticatedCasesNewRoute
-  AuthenticatedCasesIndexRoute: typeof AuthenticatedCasesIndexRoute
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedCalendarRoute: AuthenticatedCalendarRoute,
+  AuthenticatedCasesRoute: AuthenticatedCasesRouteWithChildren,
   AuthenticatedChatRoute: AuthenticatedChatRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedDrafterRoute: AuthenticatedDrafterRoute,
@@ -427,10 +459,6 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedMyTasksRoute: AuthenticatedMyTasksRoute,
   AuthenticatedProposalRoute: AuthenticatedProposalRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
-  AuthenticatedCasesCaseIdRoute: AuthenticatedCasesCaseIdRoute,
-  AuthenticatedCasesBulkRoute: AuthenticatedCasesBulkRoute,
-  AuthenticatedCasesNewRoute: AuthenticatedCasesNewRoute,
-  AuthenticatedCasesIndexRoute: AuthenticatedCasesIndexRoute,
 }
 
 const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
