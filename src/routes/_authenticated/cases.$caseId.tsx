@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -99,6 +99,19 @@ function CaseDetailPage() {
   const selectAll = () => setSelectedDocIds(new Set(readyDocIds));
   const deselectAll = () => setSelectedDocIds(new Set());
 
+  // Auto-marca novos docs prontos (apenas adiciona; nunca remove escolhas manuais).
+  const seenReadyRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    const fresh = readyDocIds.filter((id) => !seenReadyRef.current.has(id));
+    if (fresh.length === 0) return;
+    fresh.forEach((id) => seenReadyRef.current.add(id));
+    setSelectedDocIds((prev) => {
+      const next = new Set(prev);
+      fresh.forEach((id) => next.add(id));
+      return next;
+    });
+  }, [readyDocIds]);
+
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({
     title: "",
@@ -191,6 +204,16 @@ function CaseDetailPage() {
                     status: caseData.status,
                     case_number: caseData.case_number,
                     case_type: caseData.case_type,
+                    jurisdiction: caseData.jurisdiction,
+                    parties: (caseData.parties ?? []) as Array<{
+                      role: string;
+                      name: string;
+                      relation?: string | null;
+                    }>,
+                    represented_party: (caseData.represented_party ?? null) as {
+                      role: string;
+                      name: string;
+                    } | null,
                   }}
                   documents={docs}
                   selectedDocIds={selectedDocIds}

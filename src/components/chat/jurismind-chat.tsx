@@ -59,13 +59,65 @@ interface Msg {
   steps?: ToolStep[];
 }
 
+interface PartyRef {
+  role: string;
+  name: string;
+  relation?: string | null;
+}
+
 interface CaseSummary {
   title: string;
   client_name?: string | null;
   status?: string | null;
   case_number?: string | null;
   case_type?: string | null;
+  jurisdiction?: string | null;
+  parties?: PartyRef[];
+  represented_party?: { role: string; name: string } | null;
 }
+
+const QUICK_ACTIONS: Array<{ label: string; prompt: string }> = [
+  {
+    label: "Resumo do caso",
+    prompt:
+      "Faça um resumo executivo do caso em até 8 linhas: partes, objeto, pedidos, valor envolvido e estágio atual. Cite as fontes.",
+  },
+  {
+    label: "Linha do tempo",
+    prompt:
+      "Monte uma linha do tempo cronológica dos principais atos processuais e fatos relevantes, com datas (dd/mm/aaaa) e fonte de cada item.",
+  },
+  {
+    label: "Pontos críticos",
+    prompt:
+      "Liste os pontos críticos, riscos e teses adversas mais fortes contra a parte representada, com nível de risco (alto/médio/baixo) e citação das fontes.",
+  },
+  {
+    label: "Quesitos periciais",
+    prompt:
+      "Proponha 10 quesitos periciais técnicos pertinentes ao objeto da causa, organizados por tema e fundamentados nos documentos do caso.",
+  },
+  {
+    label: "Petição inicial",
+    prompt:
+      "Use a ferramenta create_petition para redigir uma petição inicial completa (qualificação, fatos, fundamentos, pedidos e valor da causa) a partir dos documentos selecionados.",
+  },
+  {
+    label: "Manifestação técnica",
+    prompt:
+      "Use create_petition para elaborar uma manifestação técnica respondendo aos pontos centrais do laudo, com tópicos e fundamentação técnica e jurídica.",
+  },
+  {
+    label: "Planilha de cálculo",
+    prompt:
+      "Use create_table para gerar uma planilha com os valores envolvidos no caso (rubrica, base de cálculo, índice, valor original, valor corrigido).",
+  },
+  {
+    label: "Apresentação",
+    prompt:
+      "Use create_presentation para preparar uma apresentação executiva com 8 slides cobrindo: contexto, partes, fatos, teses, pontos críticos, valores, estratégia e próximos passos.",
+  },
+];
 
 export function JurisMindChat({
   caseId,
@@ -205,11 +257,22 @@ export function JurisMindChat({
           <CardHeader className="pb-3">
             <CardTitle className="text-base">Detalhes do caso</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-1.5 text-sm text-muted-foreground">
+          <CardContent className="space-y-2 text-sm text-muted-foreground">
             {caseInfo.client_name && (
               <p>
                 <span className="font-medium text-foreground">Cliente:</span>{" "}
                 {caseInfo.client_name}
+              </p>
+            )}
+            {caseInfo.represented_party?.name && (
+              <p>
+                <span className="font-medium text-foreground">
+                  Parte representada:
+                </span>{" "}
+                {caseInfo.represented_party.name}
+                {caseInfo.represented_party.role
+                  ? ` (${caseInfo.represented_party.role})`
+                  : ""}
               </p>
             )}
             {caseInfo.status && (
@@ -224,11 +287,34 @@ export function JurisMindChat({
                 {caseInfo.case_number}
               </p>
             )}
+            {caseInfo.jurisdiction && (
+              <p>
+                <span className="font-medium text-foreground">Jurisdição:</span>{" "}
+                {caseInfo.jurisdiction}
+              </p>
+            )}
             {caseInfo.case_type && (
               <p>
                 <span className="font-medium text-foreground">Tipo:</span>{" "}
                 {caseInfo.case_type}
               </p>
+            )}
+            {caseInfo.parties && caseInfo.parties.length > 0 && (
+              <div className="pt-1">
+                <p className="mb-1 font-medium text-foreground">
+                  Partes envolvidas
+                </p>
+                <ul className="space-y-0.5 text-xs">
+                  {caseInfo.parties.map((p, i) => (
+                    <li key={i} className="flex gap-1.5">
+                      <span className="rounded bg-muted px-1.5 py-0.5 font-medium text-foreground">
+                        {p.role}
+                      </span>
+                      <span className="truncate">{p.name}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
             )}
           </CardContent>
         </Card>
@@ -488,6 +574,24 @@ export function JurisMindChat({
           </div>
 
           <div className="border-t p-3">
+            {messages.length === 0 && (
+              <div className="mb-2 flex flex-wrap gap-1.5">
+                {QUICK_ACTIONS.map((qa) => (
+                  <button
+                    key={qa.label}
+                    type="button"
+                    disabled={busy}
+                    onClick={() => {
+                      setInput(qa.prompt);
+                      setTimeout(() => send(), 0);
+                    }}
+                    className="rounded-full border bg-background px-2.5 py-1 text-xs text-foreground hover:bg-muted disabled:opacity-50"
+                  >
+                    {qa.label}
+                  </button>
+                ))}
+              </div>
+            )}
             {images.length > 0 && (
               <div className="mb-2 flex flex-wrap gap-2">
                 {images.map((src, idx) => (
