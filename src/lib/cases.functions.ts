@@ -7,6 +7,19 @@ const PartySchema = z.object({
   name: z.string().trim().max(200),
 });
 
+const MatterKindEnum = z.enum(["processo", "pericia", "assistencia_tecnica"]);
+const PracticeTypeEnum = z.enum(["advogado", "perito_judicial", "assistente_tecnico"]);
+
+const PericiaFields = {
+  matter_kind: MatterKindEnum.default("processo"),
+  practice_type: PracticeTypeEnum.optional().nullable(),
+  assisted_party_name: z.string().max(200).optional().nullable(),
+  perito_fee_cents: z.number().int().nonnegative().optional().nullable(),
+  perito_appointment_date: z.string().optional().nullable(),
+  perito_deadline_date: z.string().optional().nullable(),
+  perito_nomination_ref: z.string().max(200).optional().nullable(),
+};
+
 const CaseSchema = z.object({
   title: z.string().trim().min(1).max(200),
   description: z.string().max(4000).optional().nullable(),
@@ -18,6 +31,7 @@ const CaseSchema = z.object({
   parties: z.array(PartySchema).optional(),
   represented_party: PartySchema.nullable().optional(),
   team_member_ids: z.array(z.string().uuid()).optional(),
+  ...PericiaFields,
 });
 
 const StatusEnum = z.enum(["active", "archived", "closed"]);
