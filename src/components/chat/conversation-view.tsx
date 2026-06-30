@@ -372,7 +372,9 @@ function MessageBubble({ message, mine }: { message: Message; mine: boolean }) {
             mine ? "bg-primary text-primary-foreground" : "bg-muted text-foreground"
           }`}
         >
-          {message.body && <div className="whitespace-pre-wrap break-words">{message.body}</div>}
+          {message.body && (
+            <div className="whitespace-pre-wrap break-words">{renderBodyWithMentions(message.body, mine)}</div>
+          )}
           {message.attachments?.length > 0 && (
             <div className="mt-2 flex flex-col gap-1">
               {message.attachments.map((a, i) => (
