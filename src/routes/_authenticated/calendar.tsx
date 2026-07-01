@@ -213,8 +213,8 @@ function CalendarPage() {
       await qc.invalidateQueries({ queryKey: ["google-connection"] });
       await qc.invalidateQueries({ queryKey: ["outlook-connection"] });
       // Refetch active calendar queries immediately
-      await qc.refetchQueries({ queryKey: ["google-calendar-events", syncDays] });
-      await qc.refetchQueries({ queryKey: ["outlook-calendar-events", syncDays] });
+      await qc.refetchQueries({ queryKey: ["google-calendar-events", rangeKey] });
+      await qc.refetchQueries({ queryKey: ["outlook-calendar-events", rangeKey] });
       await qc.refetchQueries({ queryKey: ["google-connection"] });
       await qc.refetchQueries({ queryKey: ["outlook-connection"] });
     },
