@@ -59,7 +59,7 @@ function CalendarPage() {
     queryFn: () => getCasesFn(),
   });
 
-  // External calendars
+  // External calendars — Google
   const getGConn = useServerFn(getGoogleConnection);
   const getGUrl = useServerFn(getGoogleAuthUrl);
   const disconnectG = useServerFn(disconnectGoogle);
@@ -88,6 +88,38 @@ function CalendarPage() {
       toast.success("Google Agenda desconectado");
       qc.invalidateQueries({ queryKey: ["google-connection"] });
       qc.invalidateQueries({ queryKey: ["google-calendar-events"] });
+    },
+  });
+
+  // External calendars — Outlook (Microsoft)
+  const getOConn = useServerFn(getOutlookConnection);
+  const getOUrl = useServerFn(getOutlookAuthUrl);
+  const disconnectO = useServerFn(disconnectOutlook);
+  const listOCal = useServerFn(listOutlookCalendarEvents);
+
+  const { data: oConn } = useQuery({
+    queryKey: ["outlook-connection"],
+    queryFn: () => getOConn(),
+  });
+  const { data: oCal } = useQuery({
+    queryKey: ["outlook-calendar-events"],
+    queryFn: () => listOCal({ data: {} }),
+    enabled: !!oConn,
+  });
+
+  const connectOutlookMut = useMutation({
+    mutationFn: async () => getOUrl({ data: { origin: window.location.origin } }),
+    onSuccess: (r) => {
+      window.location.href = r.url;
+    },
+    onError: (e: Error) => toast.error(e.message || "Falha ao conectar"),
+  });
+  const disconnectOutlookMut = useMutation({
+    mutationFn: () => disconnectO(),
+    onSuccess: () => {
+      toast.success("Outlook Agenda desconectado");
+      qc.invalidateQueries({ queryKey: ["outlook-connection"] });
+      qc.invalidateQueries({ queryKey: ["outlook-calendar-events"] });
     },
   });
 
