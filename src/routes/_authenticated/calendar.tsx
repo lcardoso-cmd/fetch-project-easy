@@ -280,21 +280,33 @@ function CalendarPage() {
               <p className="flex items-center gap-1.5 font-medium">
                 <Mail className="h-4 w-4" /> Outlook Agenda
               </p>
-              <p className="text-xs text-muted-foreground">
-                Requer configuração das credenciais Microsoft
-              </p>
+              {oConn ? (
+                <p className="truncate text-xs text-muted-foreground">{oConn.outlook_email}</p>
+              ) : (
+                <p className="text-xs text-muted-foreground">Não conectada</p>
+              )}
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() =>
-                toast.info(
-                  "Para conectar o Outlook, precisamos das credenciais Microsoft OAuth. Confirme para eu iniciar a configuração.",
-                )
-              }
-            >
-              Configurar
-            </Button>
+            {oConn ? (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => disconnectOutlookMut.mutate()}
+                disabled={disconnectOutlookMut.isPending}
+              >
+                Desconectar
+              </Button>
+            ) : (
+              <Button
+                size="sm"
+                onClick={() => connectOutlookMut.mutate()}
+                disabled={connectOutlookMut.isPending}
+              >
+                {connectOutlookMut.isPending && (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                )}
+                Conectar
+              </Button>
+            )}
           </div>
         </CardContent>
       </Card>
