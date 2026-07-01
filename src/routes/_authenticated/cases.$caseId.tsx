@@ -49,6 +49,10 @@ import { FloatingTeamChat } from "@/components/chat/floating-team-chat";
 import { QuesitosCard } from "@/components/cases/quesitos-card";
 import type { MatterKind } from "@/lib/practice-labels";
 
+function capitalize(str: string): string {
+  return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
 export const Route = createFileRoute("/_authenticated/cases/$caseId")({
   component: CaseDetailPage,
 });
@@ -172,24 +176,6 @@ function CaseDetailPage() {
               <Badge variant="secondary">{caseData.case_type}</Badge>
             )}
           </div>
-          {caseData.parties && (caseData.parties as Array<{ role: string; name: string; relation?: string | null }>).length > 0 && (
-            <div className="mt-3">
-              <p className="text-sm font-medium text-foreground">
-                Partes Envolvidas:
-              </p>
-              <ul className="mt-1 space-y-0.5">
-                {(caseData.parties as Array<{ role: string; name: string; relation?: string | null }>).map((party, i) => (
-                  <li key={i} className="text-sm text-muted-foreground">
-                    <span className="font-medium text-foreground">
-                      {party.role}:
-                    </span>{" "}
-                    {party.name}
-                    {party.relation ? ` (${party.relation})` : ""}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
         </div>
         <div className="flex shrink-0 items-center gap-2">
           <Button
@@ -247,6 +233,28 @@ function CaseDetailPage() {
           </Sheet>
         </div>
       </div>
+
+      {/* Partes envolvidas — quadro branco */}
+      {caseData.parties && (caseData.parties as Array<{ role: string; name: string; relation?: string | null }>).length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Partes Envolvidas</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ul className="space-y-1">
+              {(caseData.parties as Array<{ role: string; name: string; relation?: string | null }>).map((party, i) => (
+                <li key={i} className="text-sm text-muted-foreground">
+                  <span className="font-medium text-foreground">
+                    {capitalize(party.role)}:
+                  </span>{" "}
+                  {party.name}
+                  {party.relation ? ` (${capitalize(party.relation)})` : ""}
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+      )}
 
       {editing && (
         <Card>
