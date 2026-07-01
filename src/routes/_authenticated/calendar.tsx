@@ -18,7 +18,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { CalendarDays, Plus, Trash2, Loader2, ExternalLink, Link2, Mail, RefreshCw } from "lucide-react";
+import { CalendarDays, Plus, Trash2, Loader2, ExternalLink, Link2, Mail, RefreshCw, ListFilter } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { listEvents, createEvent, deleteEvent } from "@/lib/events.functions";
 import { getCases } from "@/lib/cases.functions";
 import {
