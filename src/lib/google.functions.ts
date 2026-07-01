@@ -49,7 +49,7 @@ export const getGoogleConnection = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const { data, error } = await context.supabase
       .from("google_connections")
-      .select("google_email, scope, expires_at, created_at")
+      .select("google_email, scope, expires_at, created_at, is_active")
       .eq("user_id", context.userId)
       .maybeSingle();
     if (error) throw error;
@@ -66,6 +66,19 @@ export const disconnectGoogle = createServerFn({ method: "POST" })
     if (error) throw error;
     return { success: true };
   });
+
+export const setGoogleActive = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((i: unknown) => z.object({ active: z.boolean() }).parse(i))
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase
+      .from("google_connections")
+      .update({ is_active: data.active })
+      .eq("user_id", context.userId);
+    if (error) throw error;
+    return { success: true };
+  });
+
 
 async function getValidGoogleAccessToken(userId: string): Promise<string | null> {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
