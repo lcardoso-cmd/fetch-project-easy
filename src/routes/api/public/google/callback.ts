@@ -23,9 +23,10 @@ export const Route = createFileRoute("/api/public/google/callback")({
         if (errorParam) return redirectBack("error", errorParam, errorDescription ?? errorUri ?? undefined);
         if (!code || !state) return redirectBack("error", "missing_code_or_state");
 
-        const clientId = process.env.GOOGLE_OAUTH_CLIENT_ID;
-        const clientSecret = process.env.GOOGLE_OAUTH_CLIENT_SECRET;
-        if (!clientId || !clientSecret) return redirectBack("error", "server_misconfigured");
+        const { getProviderCredentials } = await import("@/lib/oauth-settings.server");
+        const creds = await getProviderCredentials("google");
+        if (!creds) return redirectBack("error", "server_misconfigured");
+        const { clientId, clientSecret } = creds;
 
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 

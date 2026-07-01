@@ -22,8 +22,10 @@ export const getOutlookAuthUrl = createServerFn({ method: "POST" })
     z.object({ origin: z.string().url() }).parse(input),
   )
   .handler(async ({ data, context }) => {
-    const clientId = process.env.MICROSOFT_OAUTH_CLIENT_ID;
-    if (!clientId) throw new Error("MICROSOFT_OAUTH_CLIENT_ID não configurado");
+    const { getProviderCredentials } = await import("@/lib/oauth-settings.server");
+    const creds = await getProviderCredentials("outlook");
+    if (!creds) throw new Error("Credenciais do Microsoft/Outlook não configuradas. Peça a um admin para preencher em Configurações → OAuth.");
+    const clientId = creds.clientId;
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
@@ -118,9 +120,10 @@ async function getValidOutlookAccessToken(userId: string): Promise<string | null
   const expiresAt = new Date(conn.expires_at).getTime();
   if (expiresAt - Date.now() > 60_000) return conn.access_token;
 
-  const clientId = process.env.MICROSOFT_OAUTH_CLIENT_ID;
-  const clientSecret = process.env.MICROSOFT_OAUTH_CLIENT_SECRET;
-  if (!clientId || !clientSecret) return null;
+  const { getProviderCredentials } = await import("@/lib/oauth-settings.server");
+  const creds = await getProviderCredentials("outlook");
+  if (!creds) return null;
+  const { clientId, clientSecret } = creds;
 
   const res = await fetch(TOKEN_URL, {
     method: "POST",

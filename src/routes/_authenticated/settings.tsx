@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
@@ -13,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Trash2, Loader2, Users, UserCog } from "lucide-react";
+import { Plus, Trash2, Loader2, Users, UserCog, KeyRound, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import {
   listTeamMembers,
@@ -32,6 +32,7 @@ import {
   SPECIALTY_SUGGESTIONS,
 } from "@/lib/practice-labels";
 import { useProfile } from "@/hooks/use-profile";
+import { isCurrentUserAdmin } from "@/lib/oauth-settings.functions";
 
 export const Route = createFileRoute("/_authenticated/settings")({
   component: SettingsPage,
@@ -45,7 +46,13 @@ function SettingsPage() {
   const listInvFn = useServerFn(listInvitations);
   const revokeInvFn = useServerFn(revokeInvitation);
   const updateProfileFn = useServerFn(updateMyProfile);
+  const isAdminFn = useServerFn(isCurrentUserAdmin);
   const { data: profile } = useProfile();
+  const { data: adminInfo } = useQuery({
+    queryKey: ["is-admin"],
+    queryFn: () => isAdminFn(),
+  });
+  const isAdmin = adminInfo?.isAdmin ?? false;
 
   const { data: team = [], isLoading } = useQuery({
     queryKey: ["team-members"],
@@ -351,6 +358,28 @@ function SettingsPage() {
         </CardContent>
       </Card>
 
+      {isAdmin && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <KeyRound className="h-5 w-5" /> Credenciais OAuth
+            </CardTitle>
+            <CardDescription>
+              Configure Client ID e Client Secret do Google e do Microsoft/Outlook.
+              Valores criptografados no banco.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Link
+              to="/settings/oauth"
+              className="flex items-center justify-between rounded-lg border p-3 hover:bg-accent/50"
+            >
+              <span className="text-sm">Abrir configurações OAuth</span>
+              <ChevronRight className="h-4 w-4 text-muted-foreground" />
+            </Link>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

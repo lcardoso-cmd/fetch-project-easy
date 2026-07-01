@@ -22,9 +22,10 @@ export const Route = createFileRoute("/api/public/outlook/callback")({
         if (errorParam) return redirectBack("error", errorParam, errorDescription ?? undefined);
         if (!code || !state) return redirectBack("error", "missing_code_or_state");
 
-        const clientId = process.env.MICROSOFT_OAUTH_CLIENT_ID;
-        const clientSecret = process.env.MICROSOFT_OAUTH_CLIENT_SECRET;
-        if (!clientId || !clientSecret) return redirectBack("error", "server_misconfigured");
+        const { getProviderCredentials } = await import("@/lib/oauth-settings.server");
+        const creds = await getProviderCredentials("outlook");
+        if (!creds) return redirectBack("error", "server_misconfigured");
+        const { clientId, clientSecret } = creds;
 
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
