@@ -675,6 +675,48 @@ function CalendarPage() {
                       onCheckedChange={(v) => toggleGoogleMut.mutate(v)}
                     />
                   </div>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" size="sm">
+                        <ListFilter className="mr-1.5 h-3.5 w-3.5" />
+                        Calendários ({(gConn.selected_calendar_ids?.length) || (gCalsList?.calendars ?? []).filter((c) => c.primary).length || "padrão"})
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent align="end" className="w-72 p-2">
+                      <p className="px-2 py-1 text-xs font-medium text-muted-foreground">
+                        Escolha quais calendários sincronizar
+                      </p>
+                      <div className="max-h-64 overflow-auto">
+                        {!gCalsList ? (
+                          <p className="p-2 text-xs text-muted-foreground">Carregando…</p>
+                        ) : (gCalsList.calendars ?? []).length === 0 ? (
+                          <p className="p-2 text-xs text-muted-foreground">Nenhum calendário encontrado.</p>
+                        ) : (
+                          gCalsList.calendars.map((c) => (
+                            <label
+                              key={c.id}
+                              className="flex items-center gap-2 rounded px-2 py-1.5 text-sm hover:bg-muted"
+                            >
+                              <Checkbox
+                                checked={isGCalSelected(c.id, c.primary)}
+                                onCheckedChange={(v) => toggleGCalendar(c.id, Boolean(v))}
+                              />
+                              {c.color && (
+                                <span
+                                  className="inline-block h-3 w-3 rounded-sm border"
+                                  style={{ backgroundColor: c.color }}
+                                />
+                              )}
+                              <span className="min-w-0 flex-1 truncate">{c.summary}</span>
+                              {c.primary && (
+                                <span className="text-[10px] text-muted-foreground">principal</span>
+                              )}
+                            </label>
+                          ))
+                        )}
+                      </div>
+                    </PopoverContent>
+                  </Popover>
                   <Button
                     variant="outline"
                     size="sm"
