@@ -4,11 +4,22 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { chatComplete } from "./ai.server";
 
 const ProposalSchema = z.object({
-  client_name: z.string().min(1).max(200),
-  matter: z.string().min(1).max(2000),
-  scope: z.string().max(2000).optional().default(""),
-  fees: z.string().max(500).optional().default(""),
-  deadline: z.string().max(200).optional().default(""),
+  client_name: z.string().trim().min(1).max(200),
+  client_document: z.string().trim().max(50).optional().default(""),
+  client_address: z.string().trim().max(300).optional().default(""),
+  client_city_state: z.string().trim().max(150).optional().default(""),
+  matter: z.string().trim().min(1).max(2000),
+  scope: z.string().trim().max(2000).optional().default(""),
+  fees: z.string().trim().max(500).optional().default(""),
+  success_fee: z.string().trim().max(100).optional().default(""),
+  deadline: z.string().trim().max(200).optional().default(""),
+  firm_name: z.string().trim().max(200).optional().default(""),
+  firm_practice_areas: z.string().trim().max(300).optional().default(""),
+  firm_address: z.string().trim().max(300).optional().default(""),
+  firm_phone: z.string().trim().max(50).optional().default(""),
+  firm_email: z.string().trim().max(200).optional().default(""),
+  lawyer_name: z.string().trim().max(200).optional().default(""),
+  lawyer_title: z.string().trim().max(150).optional().default(""),
   tone: z.enum(["formal", "consultivo", "direto"]).default("formal"),
 });
 
@@ -16,19 +27,44 @@ export const generateProposal = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => ProposalSchema.parse(input))
   .handler(async ({ data }) => {
-    const system = `Você é um advogado sênior brasileiro especialista em redigir propostas comerciais de serviços jurídicos. Use linguagem ${data.tone}, estrutura clara em Markdown, com cabeçalhos: Apresentação, Objeto, Escopo de Serviços, Honorários, Prazo, Condições Gerais, Aceite. Português do Brasil. Não invente CNPJ, endereços ou valores não fornecidos.`;
-    const user = `Gere uma proposta comercial para:
-- Cliente: ${data.client_name}
-- Matéria: ${data.matter}
-- Escopo informado: ${data.scope || "(definir conforme reunião)"}
-- Honorários: ${data.fees || "(a combinar)"}
-- Prazo: ${data.deadline || "(a combinar)"}`;
+    const system = `Você é um advogado sênior brasileiro especialista em redigir propostas comerciais de serviços jurídicos. Use linguagem ${data.tone}, estrutura clara em Markdown, com cabeçalhos: Apresentação, Objeto, Escopo de Serviços, Honorários, Prazo, Condições Gerais, Aceite. Português do Brasil.
+
+REGRAS DE PREENCHIMENTO:
+- Use SEMPRE os dados fornecidos abaixo — não deixe placeholders como "[Nome do Escritório]", "[Endereço]", "[definir percentual]" etc. quando o dado estiver informado.
+- Quando um dado NÃO for informado, OMITA a linha/parágrafo correspondente por completo (não escreva colchetes vazios, não escreva "a definir" nem "não informado").
+- Não invente CNPJ, endereços, telefones ou valores que não tenham sido fornecidos.`;
+    const line = (label: string, value: string) => (value ? `- ${label}: ${value}` : `- ${label}: (não informado — omitir do texto)`);
+    const user = `Gere uma proposta comercial usando exatamente os dados abaixo:
+
+DADOS DO CLIENTE
+${line("Cliente", data.client_name)}
+${line("CPF/CNPJ", data.client_document)}
+${line("Endereço", data.client_address)}
+${line("Cidade/Estado", data.client_city_state)}
+
+OBJETO E ESCOPO
+${line("Matéria/Caso", data.matter)}
+${line("Escopo informado", data.scope)}
+
+HONORÁRIOS E PRAZO
+${line("Honorários", data.fees)}
+${line("Honorários de êxito", data.success_fee)}
+${line("Prazo estimado", data.deadline)}
+
+DADOS DO ESCRITÓRIO / ADVOGADO
+${line("Nome do escritório", data.firm_name)}
+${line("Áreas de atuação", data.firm_practice_areas)}
+${line("Endereço do escritório", data.firm_address)}
+${line("Telefone", data.firm_phone)}
+${line("E-mail", data.firm_email)}
+${line("Advogado responsável", data.lawyer_name)}
+${line("Cargo/Título", data.lawyer_title)}`;
     const r = await chatComplete(
       [
         { role: "system", content: system },
         { role: "user", content: user },
       ],
-      { model: "google/gemini-2.5-flash", temperature: 0.6 },
+      { model: "google/gemini-2.5-flash", temperature: 0.5 },
     );
     return { content: r.content };
   });
