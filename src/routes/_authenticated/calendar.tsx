@@ -247,6 +247,8 @@ function CalendarPage() {
   const disconnectO = useServerFn(disconnectOutlook);
   const setOActive = useServerFn(setOutlookActive);
   const listOCal = useServerFn(listOutlookCalendarEvents);
+  const listOCals = useServerFn(listOutlookCalendars);
+  const setOCals = useServerFn(setOutlookSelectedCalendars);
 
   const { data: oConn } = useQuery({
     queryKey: ["outlook-connection"],
