@@ -195,13 +195,43 @@ function CalendarPage() {
     },
   });
 
+  const setOSync = useServerFn(setOutlookSyncWindow);
+
+  // Hydrate window prefs from whichever connection exists (prefer Google)
+  useEffect(() => {
+    if (prefsHydrated) return;
+    const src = gConn ?? oConn;
+    if (!src) return;
+    if (src.sync_end_date) {
+      setSyncMode("custom");
+      setCustomEndDate(src.sync_end_date);
+    } else {
+      setSyncMode("preset");
+    }
+    if (src.sync_window_days) setSyncDays(src.sync_window_days);
+    setPrefsHydrated(true);
+  }, [gConn, oConn, prefsHydrated]);
+
+  const persistWindow = async (days: number, endDate: string | null) => {
+    const ops: Promise<unknown>[] = [];
+    if (gConn) ops.push(setGSync({ data: { sync_window_days: days, sync_end_date: endDate } }));
+    if (oConn) ops.push(setOSync({ data: { sync_window_days: days, sync_end_date: endDate } }));
+    if (ops.length === 0) return;
+    try {
+      await Promise.all(ops);
+      qc.invalidateQueries({ queryKey: ["google-connection"] });
+      qc.invalidateQueries({ queryKey: ["outlook-connection"] });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Falha ao salvar janela");
+    }
+  };
+
   const syncNowMut = useMutation({
     mutationFn: async () => {
       await qc.invalidateQueries({ queryKey: ["google-calendar-events"] });
       await qc.invalidateQueries({ queryKey: ["outlook-calendar-events"] });
       await qc.invalidateQueries({ queryKey: ["google-connection"] });
       await qc.invalidateQueries({ queryKey: ["outlook-connection"] });
-      // Refetch active calendar queries immediately
       await qc.refetchQueries({ queryKey: ["google-calendar-events", rangeKey] });
       await qc.refetchQueries({ queryKey: ["outlook-calendar-events", rangeKey] });
       await qc.refetchQueries({ queryKey: ["google-connection"] });
