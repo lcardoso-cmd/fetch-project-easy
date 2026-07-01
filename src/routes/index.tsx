@@ -7,11 +7,11 @@ export const Route = createFileRoute("/")({
   component: LandingPage,
   head: () => ({
     meta: [
-      { title: "JurisMind — Inteligência para advogados, peritos e assistentes técnicos" },
+      { title: "B2B | JurisMind Ai — Inteligência para advogados, peritos e assistentes técnicos" },
       {
         name: "description",
         content:
-          "JurisMind: plataforma de IA jurídica para advogados, peritos judiciais e assistentes técnicos. RAG de documentos, prazos e modelos de petição, laudo e parecer.",
+          "B2B | JurisMind Ai: plataforma de IA jurídica para advogados, peritos judiciais e assistentes técnicos. RAG de documentos, prazos e modelos de petição, laudo e parecer.",
       },
     ],
   }),
@@ -22,13 +22,13 @@ const features = [
     icon: BrainCircuit,
     title: "Chat com seus documentos",
     description:
-      "Pergunte qualquer coisa sobre seus processos, perícias ou laudos. O JurisMind busca trechos relevantes e responde citando as fontes.",
+      "Pergunte qualquer coisa sobre seus processos, perícias ou laudos. O JurisMind Ai busca trechos relevantes e responde citando as fontes.",
   },
   {
     icon: FileText,
     title: "Análise automática",
     description:
-      "Faça upload de PDFs, contratos, despachos de nomeação e laudos. O JurisMind extrai, indexa e gera resumos em segundos.",
+      "Faça upload de PDFs, contratos, despachos de nomeação e laudos. O JurisMind Ai extrai, indexa e gera resumos em segundos.",
   },
   {
     icon: ListTodo,
@@ -57,7 +57,7 @@ function LandingPage() {
               <BrainCircuit className="h-5 w-5" />
             </div>
             <span className="font-heading text-xl font-extrabold tracking-tight text-foreground">
-              JurisMind
+              B2B | JurisMind Ai
             </span>
           </div>
           <div className="flex items-center gap-2">
@@ -92,15 +92,15 @@ function LandingPage() {
         <div className="relative mx-auto max-w-6xl px-4 py-24 text-center">
           <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-accent/20 px-3 py-1 text-xs font-semibold text-accent">
             <Sparkles className="h-3 w-3" />
-            JurisMind aplicado à advocacia
+            B2B | JurisMind Ai aplicado à advocacia
           </div>
           <h1 className="font-heading text-5xl font-extrabold tracking-tight md:text-6xl">
             Sua mente jurídica,
             <br />
-            potencializada por JurisMind.
+            potencializada por B2B | JurisMind Ai.
           </h1>
           <p className="mx-auto mt-6 max-w-2xl text-lg text-primary-foreground/80">
-            JurisMind transforma a forma como você lida com documentos: faça upload, pergunte,
+            B2B | JurisMind Ai transforma a forma como você lida com documentos: faça upload, pergunte,
             obtenha resumos e cite as fontes — tudo em um único lugar.
           </p>
           <div className="mt-8 flex flex-wrap justify-center gap-3">
@@ -157,7 +157,7 @@ function LandingPage() {
             Pronto para experimentar?
           </h2>
           <p className="mt-3 text-muted-foreground">
-            Crie sua conta gratuita, suba seus primeiros documentos e converse com o JurisMind.
+            Crie sua conta gratuita, suba seus primeiros documentos e converse com o B2B | JurisMind Ai.
           </p>
           <Button size="lg" asChild className="mt-6">
             <Link to={user ? "/dashboard" : "/auth"}>
@@ -169,7 +169,7 @@ function LandingPage() {
 
       <footer className="border-t">
         <div className="mx-auto max-w-6xl px-4 py-6 text-center text-sm text-muted-foreground">
-          © {new Date().getFullYear()} JurisMind. Feito para advogados.
+          © {new Date().getFullYear()} B2B | JurisMind Ai. Feito para advogados.
         </div>
       </footer>
     </div>
