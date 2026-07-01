@@ -73,20 +73,47 @@ function CalendarPage() {
     queryKey: ["google-connection"],
     queryFn: () => getGConn(),
   });
+  const [syncMode, setSyncMode] = useState<"preset" | "custom">(() => {
+    if (typeof window === "undefined") return "preset";
+    return window.localStorage.getItem("calendar-sync-mode") === "custom"
+      ? "custom"
+      : "preset";
+  });
   const [syncDays, setSyncDays] = useState<number>(() => {
     if (typeof window === "undefined") return 90;
     const v = Number(window.localStorage.getItem("calendar-sync-days"));
     return v === 30 || v === 90 || v === 180 || v === 365 ? v : 90;
   });
-  const syncTimeMax = () =>
-    new Date(Date.now() + syncDays * 24 * 3600 * 1000).toISOString();
+  const [customEndDate, setCustomEndDate] = useState<string>(() => {
+    if (typeof window === "undefined") return "";
+    const saved = window.localStorage.getItem("calendar-sync-custom-end");
+    if (saved) return saved;
+    // default: 90 days ahead
+    return new Date(Date.now() + 90 * 24 * 3600 * 1000)
+      .toISOString()
+      .slice(0, 10);
+  });
+
+  const effectiveEndMs = () => {
+    if (syncMode === "custom" && customEndDate) {
+      // end of the selected day
+      const d = new Date(customEndDate + "T23:59:59");
+      const ms = d.getTime();
+      return Number.isFinite(ms) && ms > Date.now()
+        ? ms
+        : Date.now() + syncDays * 24 * 3600 * 1000;
+    }
+    return Date.now() + syncDays * 24 * 3600 * 1000;
+  };
+  const syncTimeMax = () => new Date(effectiveEndMs()).toISOString();
   const syncRangeLabel = () => {
-    const end = new Date(Date.now() + syncDays * 24 * 3600 * 1000);
+    const end = new Date(effectiveEndMs());
     const endStr = end.toLocaleDateString("pt-BR", {
       day: "2-digit",
       month: "2-digit",
       year: "numeric",
     });
+    if (syncMode === "custom") return `De hoje até ${endStr}`;
     return `Próximos ${syncDays} dias até ${endStr}`;
   };
   const formatLastSync = (iso: string | null | undefined) => {
@@ -104,8 +131,11 @@ function CalendarPage() {
     return `Última sincronização: ${date}, ${time}`;
   };
 
+  const rangeKey =
+    syncMode === "custom" ? `custom:${customEndDate}` : `days:${syncDays}`;
+
   const { data: gCal } = useQuery({
-    queryKey: ["google-calendar-events", syncDays],
+    queryKey: ["google-calendar-events", rangeKey],
     queryFn: () => listGCal({ data: { timeMax: syncTimeMax() } }),
     enabled: !!gConn && gConn.is_active !== false,
   });
