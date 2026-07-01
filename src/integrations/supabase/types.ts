@@ -361,6 +361,7 @@ export type Database = {
           expires_at: string
           google_email: string | null
           id: string
+          is_active: boolean
           refresh_token: string
           scope: string | null
           updated_at: string
@@ -372,6 +373,7 @@ export type Database = {
           expires_at: string
           google_email?: string | null
           id?: string
+          is_active?: boolean
           refresh_token: string
           scope?: string | null
           updated_at?: string
@@ -383,6 +385,7 @@ export type Database = {
           expires_at?: string
           google_email?: string | null
           id?: string
+          is_active?: boolean
           refresh_token?: string
           scope?: string | null
           updated_at?: string
@@ -537,6 +540,7 @@ export type Database = {
           created_at: string
           expires_at: string
           id: string
+          is_active: boolean
           outlook_email: string | null
           refresh_token: string
           scope: string | null
@@ -548,6 +552,7 @@ export type Database = {
           created_at?: string
           expires_at: string
           id?: string
+          is_active?: boolean
           outlook_email?: string | null
           refresh_token: string
           scope?: string | null
@@ -559,6 +564,7 @@ export type Database = {
           created_at?: string
           expires_at?: string
           id?: string
+          is_active?: boolean
           outlook_email?: string | null
           refresh_token?: string
           scope?: string | null
