@@ -223,6 +223,37 @@ function CaseDetailPage() {
         </div>
       </div>
 
+      {/* Dados do caso — quadro branco */}
+      {(caseData.case_number || caseData.jurisdiction || caseData.case_type) && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Dados do caso</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ul className="space-y-1">
+              {caseData.case_number && (
+                <li className="text-sm text-muted-foreground">
+                  <span className="font-medium text-foreground">Número do processo:</span>{" "}
+                  {caseData.case_number}
+                </li>
+              )}
+              {caseData.jurisdiction && (
+                <li className="text-sm text-muted-foreground">
+                  <span className="font-medium text-foreground">Vara / Tribunal:</span>{" "}
+                  {caseData.jurisdiction}
+                </li>
+              )}
+              {caseData.case_type && (
+                <li className="text-sm text-muted-foreground">
+                  <span className="font-medium text-foreground">Área:</span>{" "}
+                  {caseData.case_type}
+                </li>
+              )}
+            </ul>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Partes envolvidas — quadro branco */}
       {caseData.parties && (caseData.parties as Array<{ role: string; name: string; relation?: string | null }>).length > 0 && (
         <Card>
@@ -230,20 +261,6 @@ function CaseDetailPage() {
             <CardTitle className="text-lg">Partes Envolvidas</CardTitle>
           </CardHeader>
           <CardContent>
-            <ul className="space-y-1">
-              {(caseData.parties as Array<{ role: string; name: string; relation?: string | null }>).map((party, i) => (
-                <li key={i} className="text-sm text-muted-foreground">
-                  <span className="font-medium text-foreground">
-                    {capitalize(party.role)}:
-                  </span>{" "}
-                  {party.name}
-                  {party.relation ? ` (${capitalize(party.relation)})` : ""}
-                </li>
-              ))}
-            </ul>
-          </CardContent>
-        </Card>
-      )}
 
       {editing && (
         <Card>
