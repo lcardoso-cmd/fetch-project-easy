@@ -66,6 +66,7 @@ function CalendarPage() {
   const getGConn = useServerFn(getGoogleConnection);
   const getGUrl = useServerFn(getGoogleAuthUrl);
   const disconnectG = useServerFn(disconnectGoogle);
+  const setGActive = useServerFn(setGoogleActive);
   const listGCal = useServerFn(listGoogleCalendarEvents);
 
   const { data: gConn } = useQuery({
@@ -75,7 +76,7 @@ function CalendarPage() {
   const { data: gCal } = useQuery({
     queryKey: ["google-calendar-events"],
     queryFn: () => listGCal({ data: {} }),
-    enabled: !!gConn,
+    enabled: !!gConn && gConn.is_active !== false,
   });
 
   const connectGoogleMut = useMutation({
@@ -88,7 +89,15 @@ function CalendarPage() {
   const disconnectGoogleMut = useMutation({
     mutationFn: () => disconnectG(),
     onSuccess: () => {
-      toast.success("Google Agenda desconectado");
+      toast.success("Google Agenda removido");
+      qc.invalidateQueries({ queryKey: ["google-connection"] });
+      qc.invalidateQueries({ queryKey: ["google-calendar-events"] });
+    },
+  });
+  const toggleGoogleMut = useMutation({
+    mutationFn: (active: boolean) => setGActive({ data: { active } }),
+    onSuccess: (_r, active) => {
+      toast.success(active ? "Google Agenda ativado" : "Google Agenda desativado");
       qc.invalidateQueries({ queryKey: ["google-connection"] });
       qc.invalidateQueries({ queryKey: ["google-calendar-events"] });
     },
