@@ -24,6 +24,12 @@ import {
   disconnectGoogle,
   listGoogleCalendarEvents,
 } from "@/lib/google.functions";
+import {
+  getOutlookAuthUrl,
+  getOutlookConnection,
+  disconnectOutlook,
+  listOutlookCalendarEvents,
+} from "@/lib/outlook.functions";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/calendar")({
@@ -53,7 +59,7 @@ function CalendarPage() {
     queryFn: () => getCasesFn(),
   });
 
-  // External calendars
+  // External calendars — Google
   const getGConn = useServerFn(getGoogleConnection);
   const getGUrl = useServerFn(getGoogleAuthUrl);
   const disconnectG = useServerFn(disconnectGoogle);
@@ -82,6 +88,38 @@ function CalendarPage() {
       toast.success("Google Agenda desconectado");
       qc.invalidateQueries({ queryKey: ["google-connection"] });
       qc.invalidateQueries({ queryKey: ["google-calendar-events"] });
+    },
+  });
+
+  // External calendars — Outlook (Microsoft)
+  const getOConn = useServerFn(getOutlookConnection);
+  const getOUrl = useServerFn(getOutlookAuthUrl);
+  const disconnectO = useServerFn(disconnectOutlook);
+  const listOCal = useServerFn(listOutlookCalendarEvents);
+
+  const { data: oConn } = useQuery({
+    queryKey: ["outlook-connection"],
+    queryFn: () => getOConn(),
+  });
+  const { data: oCal } = useQuery({
+    queryKey: ["outlook-calendar-events"],
+    queryFn: () => listOCal({ data: {} }),
+    enabled: !!oConn,
+  });
+
+  const connectOutlookMut = useMutation({
+    mutationFn: async () => getOUrl({ data: { origin: window.location.origin } }),
+    onSuccess: (r) => {
+      window.location.href = r.url;
+    },
+    onError: (e: Error) => toast.error(e.message || "Falha ao conectar"),
+  });
+  const disconnectOutlookMut = useMutation({
+    mutationFn: () => disconnectO(),
+    onSuccess: () => {
+      toast.success("Outlook Agenda desconectado");
+      qc.invalidateQueries({ queryKey: ["outlook-connection"] });
+      qc.invalidateQueries({ queryKey: ["outlook-calendar-events"] });
     },
   });
 
@@ -139,7 +177,7 @@ function CalendarPage() {
     starts_at: string;
     event_type?: string;
     case_id?: string | null;
-    source: "local" | "google";
+    source: "local" | "google" | "outlook";
     html_link?: string | null;
   };
 
@@ -159,6 +197,14 @@ function CalendarPage() {
       description: e.description,
       starts_at: e.starts_at,
       source: "google" as const,
+      html_link: e.html_link,
+    })) as UnifiedEvent[]),
+    ...((oCal?.events ?? []).map((e) => ({
+      id: `ocal-${e.id}`,
+      title: e.title,
+      description: e.description,
+      starts_at: e.starts_at,
+      source: "outlook" as const,
       html_link: e.html_link,
     })) as UnifiedEvent[]),
   ].sort((a, b) => a.starts_at.localeCompare(b.starts_at));
@@ -234,21 +280,33 @@ function CalendarPage() {
               <p className="flex items-center gap-1.5 font-medium">
                 <Mail className="h-4 w-4" /> Outlook Agenda
               </p>
-              <p className="text-xs text-muted-foreground">
-                Requer configuração das credenciais Microsoft
-              </p>
+              {oConn ? (
+                <p className="truncate text-xs text-muted-foreground">{oConn.outlook_email}</p>
+              ) : (
+                <p className="text-xs text-muted-foreground">Não conectada</p>
+              )}
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() =>
-                toast.info(
-                  "Para conectar o Outlook, precisamos das credenciais Microsoft OAuth. Confirme para eu iniciar a configuração.",
-                )
-              }
-            >
-              Configurar
-            </Button>
+            {oConn ? (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => disconnectOutlookMut.mutate()}
+                disabled={disconnectOutlookMut.isPending}
+              >
+                Desconectar
+              </Button>
+            ) : (
+              <Button
+                size="sm"
+                onClick={() => connectOutlookMut.mutate()}
+                disabled={connectOutlookMut.isPending}
+              >
+                {connectOutlookMut.isPending && (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                )}
+                Conectar
+              </Button>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -336,7 +394,7 @@ function CalendarPage() {
 
       {isLoading ? (
         <p className="text-muted-foreground">Carregando...</p>
-      ) : events.length === 0 ? (
+      ) : unified.length === 0 ? (
         <div className="rounded-xl border bg-card p-8 text-center shadow-sm">
           <CalendarDays className="mx-auto h-10 w-10 text-muted-foreground" />
           <p className="mt-3 text-muted-foreground">Nenhum evento agendado.</p>
@@ -356,6 +414,10 @@ function CalendarPage() {
                         {ev.source === "google" ? (
                           <Badge variant="outline" className="border-blue-500/40 text-blue-600 dark:text-blue-400">
                             Google
+                          </Badge>
+                        ) : ev.source === "outlook" ? (
+                          <Badge variant="outline" className="border-sky-500/40 text-sky-600 dark:text-sky-400">
+                            Outlook
                           </Badge>
                         ) : (
                           <Badge variant="secondary">
@@ -382,7 +444,7 @@ function CalendarPage() {
                         <p className="text-sm text-muted-foreground mt-1">{ev.description}</p>
                       )}
                     </div>
-                    {ev.source === "google" ? (
+                    {ev.source === "google" || ev.source === "outlook" ? (
                       ev.html_link && (
                         <a
                           href={ev.html_link}

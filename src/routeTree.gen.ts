@@ -35,6 +35,7 @@ import { Route as ApiToolsPetitionRouteImport } from './routes/api/tools/petitio
 import { Route as AuthenticatedCasesNewRouteImport } from './routes/_authenticated/cases.new'
 import { Route as AuthenticatedCasesBulkRouteImport } from './routes/_authenticated/cases.bulk'
 import { Route as AuthenticatedCasesCaseIdRouteImport } from './routes/_authenticated/cases.$caseId'
+import { Route as ApiPublicOutlookCallbackRouteImport } from './routes/api/public/outlook/callback'
 import { Route as ApiPublicGoogleCallbackRouteImport } from './routes/api/public/google/callback'
 
 const AuthRoute = AuthRouteImport.update({
@@ -169,6 +170,12 @@ const AuthenticatedCasesCaseIdRoute =
     path: '/$caseId',
     getParentRoute: () => AuthenticatedCasesRoute,
   } as any)
+const ApiPublicOutlookCallbackRoute =
+  ApiPublicOutlookCallbackRouteImport.update({
+    id: '/api/public/outlook/callback',
+    path: '/api/public/outlook/callback',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicGoogleCallbackRoute = ApiPublicGoogleCallbackRouteImport.update({
   id: '/api/public/google/callback',
   path: '/api/public/google/callback',
@@ -202,6 +209,7 @@ export interface FileRoutesByFullPath {
   '/api/tools/table': typeof ApiToolsTableRoute
   '/cases/': typeof AuthenticatedCasesIndexRoute
   '/api/public/google/callback': typeof ApiPublicGoogleCallbackRoute
+  '/api/public/outlook/callback': typeof ApiPublicOutlookCallbackRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -229,6 +237,7 @@ export interface FileRoutesByTo {
   '/api/tools/table': typeof ApiToolsTableRoute
   '/cases': typeof AuthenticatedCasesIndexRoute
   '/api/public/google/callback': typeof ApiPublicGoogleCallbackRoute
+  '/api/public/outlook/callback': typeof ApiPublicOutlookCallbackRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -259,6 +268,7 @@ export interface FileRoutesById {
   '/api/tools/table': typeof ApiToolsTableRoute
   '/_authenticated/cases/': typeof AuthenticatedCasesIndexRoute
   '/api/public/google/callback': typeof ApiPublicGoogleCallbackRoute
+  '/api/public/outlook/callback': typeof ApiPublicOutlookCallbackRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -289,6 +299,7 @@ export interface FileRouteTypes {
     | '/api/tools/table'
     | '/cases/'
     | '/api/public/google/callback'
+    | '/api/public/outlook/callback'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -316,6 +327,7 @@ export interface FileRouteTypes {
     | '/api/tools/table'
     | '/cases'
     | '/api/public/google/callback'
+    | '/api/public/outlook/callback'
   id:
     | '__root__'
     | '/'
@@ -345,6 +357,7 @@ export interface FileRouteTypes {
     | '/api/tools/table'
     | '/_authenticated/cases/'
     | '/api/public/google/callback'
+    | '/api/public/outlook/callback'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -356,6 +369,7 @@ export interface RootRouteChildren {
   ApiToolsPresentationRoute: typeof ApiToolsPresentationRoute
   ApiToolsTableRoute: typeof ApiToolsTableRoute
   ApiPublicGoogleCallbackRoute: typeof ApiPublicGoogleCallbackRoute
+  ApiPublicOutlookCallbackRoute: typeof ApiPublicOutlookCallbackRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -542,6 +556,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedCasesCaseIdRouteImport
       parentRoute: typeof AuthenticatedCasesRoute
     }
+    '/api/public/outlook/callback': {
+      id: '/api/public/outlook/callback'
+      path: '/api/public/outlook/callback'
+      fullPath: '/api/public/outlook/callback'
+      preLoaderRoute: typeof ApiPublicOutlookCallbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/google/callback': {
       id: '/api/public/google/callback'
       path: '/api/public/google/callback'
@@ -618,6 +639,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiToolsPresentationRoute: ApiToolsPresentationRoute,
   ApiToolsTableRoute: ApiToolsTableRoute,
   ApiPublicGoogleCallbackRoute: ApiPublicGoogleCallbackRoute,
+  ApiPublicOutlookCallbackRoute: ApiPublicOutlookCallbackRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
