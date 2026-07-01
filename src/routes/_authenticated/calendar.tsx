@@ -361,16 +361,25 @@ function CalendarPage() {
               </Button>
               <Label className="text-xs text-muted-foreground">Janela</Label>
               <Select
-                value={String(syncDays)}
+                value={syncMode === "custom" ? "custom" : String(syncDays)}
                 onValueChange={(v) => {
+                  if (v === "custom") {
+                    setSyncMode("custom");
+                    if (typeof window !== "undefined") {
+                      window.localStorage.setItem("calendar-sync-mode", "custom");
+                    }
+                    return;
+                  }
                   const n = Number(v);
+                  setSyncMode("preset");
                   setSyncDays(n);
                   if (typeof window !== "undefined") {
+                    window.localStorage.setItem("calendar-sync-mode", "preset");
                     window.localStorage.setItem("calendar-sync-days", String(n));
                   }
                 }}
               >
-                <SelectTrigger className="h-8 w-[160px]">
+                <SelectTrigger className="h-8 w-[180px]">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -378,8 +387,28 @@ function CalendarPage() {
                   <SelectItem value="90">Próximos 90 dias</SelectItem>
                   <SelectItem value="180">Próximos 180 dias</SelectItem>
                   <SelectItem value="365">Próximo ano</SelectItem>
+                  <SelectItem value="custom">Personalizado…</SelectItem>
                 </SelectContent>
               </Select>
+              {syncMode === "custom" && (
+                <Input
+                  type="date"
+                  className="h-8 w-[160px]"
+                  min={new Date(Date.now() + 24 * 3600 * 1000)
+                    .toISOString()
+                    .slice(0, 10)}
+                  value={customEndDate}
+                  onChange={(e) => {
+                    setCustomEndDate(e.target.value);
+                    if (typeof window !== "undefined") {
+                      window.localStorage.setItem(
+                        "calendar-sync-custom-end",
+                        e.target.value,
+                      );
+                    }
+                  }}
+                />
+              )}
             </div>
           </div>
         </CardHeader>
