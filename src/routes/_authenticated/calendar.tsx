@@ -15,7 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { CalendarDays, Plus, Trash2, Loader2, ExternalLink, Link2, Mail } from "lucide-react";
+import { CalendarDays, Plus, Trash2, Loader2, ExternalLink, Link2, Mail, RefreshCw } from "lucide-react";
 import { listEvents, createEvent, deleteEvent } from "@/lib/events.functions";
 import { getCases } from "@/lib/cases.functions";
 import {
