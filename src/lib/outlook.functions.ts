@@ -88,10 +88,10 @@ async function getValidOutlookAccessToken(userId: string): Promise<string | null
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { data: conn, error } = await supabaseAdmin
     .from("outlook_connections")
-    .select("access_token, refresh_token, expires_at")
+    .select("access_token, refresh_token, expires_at, is_active")
     .eq("user_id", userId)
     .maybeSingle();
-  if (error || !conn) return null;
+  if (error || !conn || conn.is_active === false) return null;
 
   const expiresAt = new Date(conn.expires_at).getTime();
   if (expiresAt - Date.now() > 60_000) return conn.access_token;
