@@ -415,6 +415,10 @@ function CalendarPage() {
                           <Badge variant="outline" className="border-blue-500/40 text-blue-600 dark:text-blue-400">
                             Google
                           </Badge>
+                        ) : ev.source === "outlook" ? (
+                          <Badge variant="outline" className="border-sky-500/40 text-sky-600 dark:text-sky-400">
+                            Outlook
+                          </Badge>
                         ) : (
                           <Badge variant="secondary">
                             {ev.event_type ? (TYPE_LABEL[ev.event_type] ?? ev.event_type) : "Evento"}
@@ -440,7 +444,7 @@ function CalendarPage() {
                         <p className="text-sm text-muted-foreground mt-1">{ev.description}</p>
                       )}
                     </div>
-                    {ev.source === "google" ? (
+                    {ev.source === "google" || ev.source === "outlook" ? (
                       ev.html_link && (
                         <a
                           href={ev.html_link}
