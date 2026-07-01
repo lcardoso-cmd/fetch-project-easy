@@ -261,6 +261,21 @@ function CaseDetailPage() {
             <CardTitle className="text-lg">Partes Envolvidas</CardTitle>
           </CardHeader>
           <CardContent>
+            <ul className="space-y-1">
+              {(caseData.parties as Array<{ role: string; name: string; relation?: string | null }>).map((party, i) => (
+                <li key={i} className="text-sm text-muted-foreground">
+                  <span className="font-medium text-foreground">
+                    {capitalize(party.role)}:
+                  </span>{" "}
+                  {party.name}
+                  {party.relation ? ` (${capitalize(party.relation)})` : ""}
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+      )}
+
 
       {editing && (
         <Card>
