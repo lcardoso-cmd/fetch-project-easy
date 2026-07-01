@@ -394,7 +394,7 @@ function CalendarPage() {
 
       {isLoading ? (
         <p className="text-muted-foreground">Carregando...</p>
-      ) : events.length === 0 ? (
+      ) : unified.length === 0 ? (
         <div className="rounded-xl border bg-card p-8 text-center shadow-sm">
           <CalendarDays className="mx-auto h-10 w-10 text-muted-foreground" />
           <p className="mt-3 text-muted-foreground">Nenhum evento agendado.</p>
