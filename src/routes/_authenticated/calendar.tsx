@@ -1,8 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,9 +15,15 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { CalendarDays, Plus, Trash2, Loader2 } from "lucide-react";
+import { CalendarDays, Plus, Trash2, Loader2, ExternalLink, Link2, Mail } from "lucide-react";
 import { listEvents, createEvent, deleteEvent } from "@/lib/events.functions";
 import { getCases } from "@/lib/cases.functions";
+import {
+  getGoogleAuthUrl,
+  getGoogleConnection,
+  disconnectGoogle,
+  listGoogleCalendarEvents,
+} from "@/lib/google.functions";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/calendar")({
