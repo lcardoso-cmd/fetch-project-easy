@@ -22,10 +22,21 @@ function ProposalPage() {
   const [output, setOutput] = useState("");
   const [form, setForm] = useState({
     client_name: "",
+    client_document: "",
+    client_address: "",
+    client_city_state: "",
     matter: "",
     scope: "",
     fees: "",
+    success_fee: "",
     deadline: "",
+    firm_name: "",
+    firm_practice_areas: "",
+    firm_address: "",
+    firm_phone: "",
+    firm_email: "",
+    lawyer_name: "",
+    lawyer_title: "",
     tone: "formal" as "formal" | "consultivo" | "direto",
   });
 
