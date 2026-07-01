@@ -22,14 +22,17 @@ import {
   getGoogleAuthUrl,
   getGoogleConnection,
   disconnectGoogle,
+  setGoogleActive,
   listGoogleCalendarEvents,
 } from "@/lib/google.functions";
 import {
   getOutlookAuthUrl,
   getOutlookConnection,
   disconnectOutlook,
+  setOutlookActive,
   listOutlookCalendarEvents,
 } from "@/lib/outlook.functions";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/calendar")({
