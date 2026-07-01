@@ -24,6 +24,12 @@ import {
   disconnectGoogle,
   listGoogleCalendarEvents,
 } from "@/lib/google.functions";
+import {
+  getOutlookAuthUrl,
+  getOutlookConnection,
+  disconnectOutlook,
+  listOutlookCalendarEvents,
+} from "@/lib/outlook.functions";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/calendar")({
