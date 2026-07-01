@@ -51,11 +51,51 @@ export const getGoogleConnection = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const { data, error } = await context.supabase
       .from("google_connections")
-      .select("google_email, scope, expires_at, created_at, updated_at, is_active, last_synced_at, sync_window_days, sync_end_date")
+      .select("google_email, scope, expires_at, created_at, updated_at, is_active, last_synced_at, sync_window_days, sync_end_date, selected_calendar_ids")
       .eq("user_id", context.userId)
       .maybeSingle();
     if (error) throw error;
     return data;
+  });
+
+export const setGoogleSelectedCalendars = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((i: unknown) =>
+    z.object({ calendar_ids: z.array(z.string()).nullable() }).parse(i),
+  )
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase
+      .from("google_connections")
+      .update({ selected_calendar_ids: data.calendar_ids })
+      .eq("user_id", context.userId);
+    if (error) throw error;
+    return { success: true };
+  });
+
+export const listGoogleCalendars = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const token = await getValidGoogleAccessToken(context.userId);
+    if (!token) return { connected: false as const, calendars: [] };
+    const res = await fetch(
+      "https://www.googleapis.com/calendar/v3/users/me/calendarList?maxResults=250",
+      { headers: { Authorization: `Bearer ${token}` } },
+    );
+    if (!res.ok) {
+      const txt = await res.text();
+      console.error("google calendarList failed", res.status, txt);
+      return { connected: true as const, calendars: [], error: `Google: ${res.status}` };
+    }
+    const j = (await res.json()) as {
+      items?: Array<{ id: string; summary?: string; primary?: boolean; backgroundColor?: string; accessRole?: string }>;
+    };
+    const calendars = (j.items ?? []).map((c) => ({
+      id: c.id,
+      summary: c.summary ?? c.id,
+      primary: Boolean(c.primary),
+      color: c.backgroundColor ?? null,
+    }));
+    return { connected: true as const, calendars };
   });
 
 export const disconnectGoogle = createServerFn({ method: "POST" })
