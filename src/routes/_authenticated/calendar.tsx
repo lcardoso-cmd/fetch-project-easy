@@ -75,26 +75,13 @@ function CalendarPage() {
     queryKey: ["google-connection"],
     queryFn: () => getGConn(),
   });
-  const [syncMode, setSyncMode] = useState<"preset" | "custom">(() => {
-    if (typeof window === "undefined") return "preset";
-    return window.localStorage.getItem("calendar-sync-mode") === "custom"
-      ? "custom"
-      : "preset";
-  });
-  const [syncDays, setSyncDays] = useState<number>(() => {
-    if (typeof window === "undefined") return 90;
-    const v = Number(window.localStorage.getItem("calendar-sync-days"));
-    return v === 30 || v === 90 || v === 180 || v === 365 ? v : 90;
-  });
-  const [customEndDate, setCustomEndDate] = useState<string>(() => {
-    if (typeof window === "undefined") return "";
-    const saved = window.localStorage.getItem("calendar-sync-custom-end");
-    if (saved) return saved;
-    // default: 90 days ahead
-    return new Date(Date.now() + 90 * 24 * 3600 * 1000)
-      .toISOString()
-      .slice(0, 10);
-  });
+  const setGSync = useServerFn(setGoogleSyncWindow);
+  const [syncMode, setSyncMode] = useState<"preset" | "custom">("preset");
+  const [syncDays, setSyncDays] = useState<number>(90);
+  const [customEndDate, setCustomEndDate] = useState<string>(() =>
+    new Date(Date.now() + 90 * 24 * 3600 * 1000).toISOString().slice(0, 10),
+  );
+  const [prefsHydrated, setPrefsHydrated] = useState(false);
 
   const effectiveEndMs = () => {
     if (syncMode === "custom" && customEndDate) {
