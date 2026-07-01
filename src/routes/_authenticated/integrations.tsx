@@ -149,6 +149,55 @@ function IntegrationsPage() {
         <Card>
           <CardHeader>
             <CardTitle className="font-heading flex items-center gap-2">
+              <Mail className="h-5 w-5" /> Outlook (Microsoft) Calendar
+              {outlookConnection && (
+                <Badge variant="secondary" className="ml-auto gap-1">
+                  <CheckCircle2 className="h-3 w-3" /> Conectado
+                </Badge>
+              )}
+            </CardTitle>
+            <CardDescription>
+              Sincronize seus eventos do Outlook / Microsoft 365 na Agenda do JurisMind.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {isLoadingO ? (
+              <div className="text-sm text-muted-foreground flex items-center gap-2">
+                <Loader2 className="h-4 w-4 animate-spin" /> Carregando…
+              </div>
+            ) : outlookConnection ? (
+              <>
+                <div className="text-sm">
+                  <span className="text-muted-foreground">Conta: </span>
+                  <span className="font-medium">{outlookConnection.outlook_email ?? "—"}</span>
+                </div>
+                <Button
+                  variant="outline"
+                  onClick={() => disconnectOutlookMut.mutate()}
+                  disabled={disconnectOutlookMut.isPending}
+                >
+                  {disconnectOutlookMut.isPending && (
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  )}
+                  Desconectar
+                </Button>
+              </>
+            ) : (
+              <Button
+                onClick={() => connectOutlookMut.mutate()}
+                disabled={connectOutlookMut.isPending}
+              >
+                {connectOutlookMut.isPending && (
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                )}
+                Conectar Outlook
+              </Button>
+            )}
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle className="font-heading flex items-center gap-2">
               <Puzzle className="h-5 w-5" /> Outras integrações
             </CardTitle>
             <CardDescription>
