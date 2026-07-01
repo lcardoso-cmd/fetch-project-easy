@@ -32,10 +32,17 @@ function IntegrationsPage() {
   const getConn = useServerFn(getGoogleConnection);
   const getUrl = useServerFn(getGoogleAuthUrl);
   const disconnect = useServerFn(disconnectGoogle);
+  const getOConn = useServerFn(getOutlookConnection);
+  const getOUrl = useServerFn(getOutlookAuthUrl);
+  const disconnectO = useServerFn(disconnectOutlook);
 
   const { data: connection, isLoading } = useQuery({
     queryKey: ["google-connection"],
     queryFn: () => getConn(),
+  });
+  const { data: outlookConnection, isLoading: isLoadingO } = useQuery({
+    queryKey: ["outlook-connection"],
+    queryFn: () => getOConn(),
   });
 
   const connectMut = useMutation({
@@ -55,15 +62,35 @@ function IntegrationsPage() {
     onError: (e: Error) => toast.error(e.message || "Falha ao desconectar"),
   });
 
+  const connectOutlookMut = useMutation({
+    mutationFn: async () => getOUrl({ data: { origin: window.location.origin } }),
+    onSuccess: (res) => {
+      window.location.href = res.url;
+    },
+    onError: (e: Error) => toast.error(e.message || "Falha ao iniciar conexão"),
+  });
+
+  const disconnectOutlookMut = useMutation({
+    mutationFn: () => disconnectO(),
+    onSuccess: () => {
+      toast.success("Outlook desconectado");
+      qc.invalidateQueries({ queryKey: ["outlook-connection"] });
+    },
+    onError: (e: Error) => toast.error(e.message || "Falha ao desconectar"),
+  });
+
   useEffect(() => {
     if (search.google === "success") toast.success("Google conectado com sucesso!");
     if (search.google === "error") toast.error(`Erro ao conectar Google: ${search.msg ?? ""}`);
-    if (search.google) {
+    if (search.outlook === "success") toast.success("Outlook conectado com sucesso!");
+    if (search.outlook === "error") toast.error(`Erro ao conectar Outlook: ${search.msg ?? ""}`);
+    if (search.google || search.outlook) {
       qc.invalidateQueries({ queryKey: ["google-connection"] });
+      qc.invalidateQueries({ queryKey: ["outlook-connection"] });
       window.history.replaceState({}, "", "/integrations");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search.google]);
+  }, [search.google, search.outlook]);
 
   return (
     <div className="space-y-6">
