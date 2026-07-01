@@ -46,7 +46,13 @@ function SettingsPage() {
   const listInvFn = useServerFn(listInvitations);
   const revokeInvFn = useServerFn(revokeInvitation);
   const updateProfileFn = useServerFn(updateMyProfile);
+  const isAdminFn = useServerFn(isCurrentUserAdmin);
   const { data: profile } = useProfile();
+  const { data: adminInfo } = useQuery({
+    queryKey: ["is-admin"],
+    queryFn: () => isAdminFn(),
+  });
+  const isAdmin = adminInfo?.isAdmin ?? false;
 
   const { data: team = [], isLoading } = useQuery({
     queryKey: ["team-members"],
