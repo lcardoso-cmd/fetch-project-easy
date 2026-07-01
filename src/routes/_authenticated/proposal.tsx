@@ -22,10 +22,21 @@ function ProposalPage() {
   const [output, setOutput] = useState("");
   const [form, setForm] = useState({
     client_name: "",
+    client_document: "",
+    client_address: "",
+    client_city_state: "",
     matter: "",
     scope: "",
     fees: "",
+    success_fee: "",
     deadline: "",
+    firm_name: "",
+    firm_practice_areas: "",
+    firm_address: "",
+    firm_phone: "",
+    firm_email: "",
+    lawyer_name: "",
+    lawyer_title: "",
     tone: "formal" as "formal" | "consultivo" | "direto",
   });
 
@@ -77,29 +88,97 @@ function ProposalPage() {
             <CardDescription>Preencha para gerar.</CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={submit} className="space-y-4">
-              <div>
-                <Label>Cliente</Label>
-                <Input value={form.client_name} onChange={(e) => setForm({ ...form, client_name: e.target.value })} />
-              </div>
-              <div>
-                <Label>Matéria / Caso</Label>
-                <Textarea rows={3} value={form.matter} onChange={(e) => setForm({ ...form, matter: e.target.value })} />
-              </div>
-              <div>
-                <Label>Escopo (opcional)</Label>
-                <Textarea rows={2} value={form.scope} onChange={(e) => setForm({ ...form, scope: e.target.value })} />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
+            <form onSubmit={submit} className="space-y-5">
+              <div className="space-y-3">
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Cliente</p>
                 <div>
-                  <Label>Honorários</Label>
-                  <Input value={form.fees} onChange={(e) => setForm({ ...form, fees: e.target.value })} />
+                  <Label>Nome / Razão social</Label>
+                  <Input value={form.client_name} onChange={(e) => setForm({ ...form, client_name: e.target.value })} />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label>CPF / CNPJ</Label>
+                    <Input value={form.client_document} onChange={(e) => setForm({ ...form, client_document: e.target.value })} />
+                  </div>
+                  <div>
+                    <Label>Cidade / Estado</Label>
+                    <Input value={form.client_city_state} onChange={(e) => setForm({ ...form, client_city_state: e.target.value })} />
+                  </div>
                 </div>
                 <div>
-                  <Label>Prazo</Label>
-                  <Input value={form.deadline} onChange={(e) => setForm({ ...form, deadline: e.target.value })} />
+                  <Label>Endereço</Label>
+                  <Input value={form.client_address} onChange={(e) => setForm({ ...form, client_address: e.target.value })} />
                 </div>
               </div>
+
+              <div className="space-y-3">
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Objeto</p>
+                <div>
+                  <Label>Matéria / Caso</Label>
+                  <Textarea rows={3} value={form.matter} onChange={(e) => setForm({ ...form, matter: e.target.value })} />
+                </div>
+                <div>
+                  <Label>Escopo (opcional)</Label>
+                  <Textarea rows={2} value={form.scope} onChange={(e) => setForm({ ...form, scope: e.target.value })} />
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Honorários e prazo</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label>Honorários</Label>
+                    <Input placeholder="Ex.: R$ 1.200/hora" value={form.fees} onChange={(e) => setForm({ ...form, fees: e.target.value })} />
+                  </div>
+                  <div>
+                    <Label>Honorários de êxito</Label>
+                    <Input placeholder="Ex.: 20%" value={form.success_fee} onChange={(e) => setForm({ ...form, success_fee: e.target.value })} />
+                  </div>
+                </div>
+                <div>
+                  <Label>Prazo estimado</Label>
+                  <Input placeholder="Ex.: 600 dias" value={form.deadline} onChange={(e) => setForm({ ...form, deadline: e.target.value })} />
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Escritório / Advogado</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label>Nome do escritório</Label>
+                    <Input value={form.firm_name} onChange={(e) => setForm({ ...form, firm_name: e.target.value })} />
+                  </div>
+                  <div>
+                    <Label>Áreas de atuação</Label>
+                    <Input placeholder="Ex.: Trabalhista, Cível" value={form.firm_practice_areas} onChange={(e) => setForm({ ...form, firm_practice_areas: e.target.value })} />
+                  </div>
+                </div>
+                <div>
+                  <Label>Endereço do escritório</Label>
+                  <Input value={form.firm_address} onChange={(e) => setForm({ ...form, firm_address: e.target.value })} />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label>Telefone</Label>
+                    <Input value={form.firm_phone} onChange={(e) => setForm({ ...form, firm_phone: e.target.value })} />
+                  </div>
+                  <div>
+                    <Label>E-mail</Label>
+                    <Input value={form.firm_email} onChange={(e) => setForm({ ...form, firm_email: e.target.value })} />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label>Advogado responsável</Label>
+                    <Input value={form.lawyer_name} onChange={(e) => setForm({ ...form, lawyer_name: e.target.value })} />
+                  </div>
+                  <div>
+                    <Label>Cargo / Título</Label>
+                    <Input placeholder="Ex.: OAB/SP 000.000" value={form.lawyer_title} onChange={(e) => setForm({ ...form, lawyer_title: e.target.value })} />
+                  </div>
+                </div>
+              </div>
+
               <div>
                 <Label>Tom</Label>
                 <Select value={form.tone} onValueChange={(v) => setForm({ ...form, tone: v as typeof form.tone })}>
