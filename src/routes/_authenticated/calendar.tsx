@@ -23,6 +23,7 @@ import {
   getGoogleConnection,
   disconnectGoogle,
   setGoogleActive,
+  setGoogleSyncWindow,
   listGoogleCalendarEvents,
 } from "@/lib/google.functions";
 import {
@@ -30,6 +31,7 @@ import {
   getOutlookConnection,
   disconnectOutlook,
   setOutlookActive,
+  setOutlookSyncWindow,
   listOutlookCalendarEvents,
 } from "@/lib/outlook.functions";
 import { Switch } from "@/components/ui/switch";
