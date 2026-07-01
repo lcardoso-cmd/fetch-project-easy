@@ -384,18 +384,13 @@ function CalendarPage() {
                 onValueChange={(v) => {
                   if (v === "custom") {
                     setSyncMode("custom");
-                    if (typeof window !== "undefined") {
-                      window.localStorage.setItem("calendar-sync-mode", "custom");
-                    }
+                    void persistWindow(syncDays, customEndDate || null);
                     return;
                   }
                   const n = Number(v);
                   setSyncMode("preset");
                   setSyncDays(n);
-                  if (typeof window !== "undefined") {
-                    window.localStorage.setItem("calendar-sync-mode", "preset");
-                    window.localStorage.setItem("calendar-sync-days", String(n));
-                  }
+                  void persistWindow(n, null);
                 }}
               >
                 <SelectTrigger className="h-8 w-[180px]">
@@ -419,12 +414,7 @@ function CalendarPage() {
                   value={customEndDate}
                   onChange={(e) => {
                     setCustomEndDate(e.target.value);
-                    if (typeof window !== "undefined") {
-                      window.localStorage.setItem(
-                        "calendar-sync-custom-end",
-                        e.target.value,
-                      );
-                    }
+                    if (e.target.value) void persistWindow(syncDays, e.target.value);
                   }}
                 />
               )}
