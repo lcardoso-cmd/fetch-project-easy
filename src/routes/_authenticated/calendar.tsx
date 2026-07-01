@@ -322,6 +322,34 @@ function CalendarPage() {
     onError: () => toast.error("Falha ao sincronizar agendas"),
   });
 
+  const syncGoogleMut = useMutation({
+    mutationFn: async () => {
+      const r = await listGCal({ data: { timeMax: syncTimeMax() } });
+      if (r && "error" in r && r.error) throw new Error(r.error);
+      return r;
+    },
+    onSuccess: (r) => {
+      qc.setQueryData(["google-calendar-events", rangeKey], r);
+      qc.invalidateQueries({ queryKey: ["google-connection"] });
+      toast.success("Google Agenda atualizado");
+    },
+    onError: (e: Error) => toast.error(e.message || "Falha ao atualizar Google"),
+  });
+
+  const syncOutlookMut = useMutation({
+    mutationFn: async () => {
+      const r = await listOCal({ data: { timeMax: syncTimeMax() } });
+      if (r && "error" in r && r.error) throw new Error(r.error);
+      return r;
+    },
+    onSuccess: (r) => {
+      qc.setQueryData(["outlook-calendar-events", rangeKey], r);
+      qc.invalidateQueries({ queryKey: ["outlook-connection"] });
+      toast.success("Outlook Agenda atualizado");
+    },
+    onError: (e: Error) => toast.error(e.message || "Falha ao atualizar Outlook"),
+  });
+
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [form, setForm] = useState({
@@ -578,6 +606,19 @@ function CalendarPage() {
                   <Button
                     variant="outline"
                     size="sm"
+                    onClick={() => syncGoogleMut.mutate()}
+                    disabled={syncGoogleMut.isPending}
+                  >
+                    {syncGoogleMut.isPending ? (
+                      <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <RefreshCw className="mr-1.5 h-3.5 w-3.5" />
+                    )}
+                    Atualizar agora
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
                     onClick={() => {
                       if (confirm("Remover conexão com Google Agenda?")) disconnectGoogleMut.mutate();
                     }}
@@ -635,6 +676,19 @@ function CalendarPage() {
                       onCheckedChange={(v) => toggleOutlookMut.mutate(v)}
                     />
                   </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => syncOutlookMut.mutate()}
+                    disabled={syncOutlookMut.isPending}
+                  >
+                    {syncOutlookMut.isPending ? (
+                      <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <RefreshCw className="mr-1.5 h-3.5 w-3.5" />
+                    )}
+                    Atualizar agora
+                  </Button>
                   <Button
                     variant="outline"
                     size="sm"
