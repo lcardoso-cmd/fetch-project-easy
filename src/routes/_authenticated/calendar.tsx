@@ -73,11 +73,20 @@ function CalendarPage() {
     queryKey: ["google-connection"],
     queryFn: () => getGConn(),
   });
+  const [syncDays, setSyncDays] = useState<number>(() => {
+    if (typeof window === "undefined") return 90;
+    const v = Number(window.localStorage.getItem("calendar-sync-days"));
+    return v === 30 || v === 90 || v === 180 || v === 365 ? v : 90;
+  });
+  const syncTimeMax = () =>
+    new Date(Date.now() + syncDays * 24 * 3600 * 1000).toISOString();
+
   const { data: gCal } = useQuery({
-    queryKey: ["google-calendar-events"],
-    queryFn: () => listGCal({ data: {} }),
+    queryKey: ["google-calendar-events", syncDays],
+    queryFn: () => listGCal({ data: { timeMax: syncTimeMax() } }),
     enabled: !!gConn && gConn.is_active !== false,
   });
+
 
   const connectGoogleMut = useMutation({
     mutationFn: async () => getGUrl({ data: { origin: window.location.origin } }),
@@ -115,8 +124,8 @@ function CalendarPage() {
     queryFn: () => getOConn(),
   });
   const { data: oCal } = useQuery({
-    queryKey: ["outlook-calendar-events"],
-    queryFn: () => listOCal({ data: {} }),
+    queryKey: ["outlook-calendar-events", syncDays],
+    queryFn: () => listOCal({ data: { timeMax: syncTimeMax() } }),
     enabled: !!oConn && oConn.is_active !== false,
   });
 
@@ -257,14 +266,42 @@ function CalendarPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-lg">
-            <Link2 className="h-5 w-5" /> Agendas conectadas
-          </CardTitle>
-          <CardDescription>
-            Sincronize com serviços externos para ver seus compromissos aqui.
-          </CardDescription>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Link2 className="h-5 w-5" /> Agendas conectadas
+              </CardTitle>
+              <CardDescription>
+                Sincronize com serviços externos para ver seus compromissos aqui.
+              </CardDescription>
+            </div>
+            <div className="flex items-center gap-2">
+              <Label className="text-xs text-muted-foreground">Janela</Label>
+              <Select
+                value={String(syncDays)}
+                onValueChange={(v) => {
+                  const n = Number(v);
+                  setSyncDays(n);
+                  if (typeof window !== "undefined") {
+                    window.localStorage.setItem("calendar-sync-days", String(n));
+                  }
+                }}
+              >
+                <SelectTrigger className="h-8 w-[160px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="30">Próximos 30 dias</SelectItem>
+                  <SelectItem value="90">Próximos 90 dias</SelectItem>
+                  <SelectItem value="180">Próximos 180 dias</SelectItem>
+                  <SelectItem value="365">Próximo ano</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
         </CardHeader>
         <CardContent className="grid gap-3 md:grid-cols-2">
+
           <div className="flex items-start justify-between gap-3 rounded-lg border p-3">
             <div className="min-w-0 flex-1">
               <p className="font-medium">Google Agenda</p>
