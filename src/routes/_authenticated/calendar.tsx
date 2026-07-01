@@ -266,14 +266,42 @@ function CalendarPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-lg">
-            <Link2 className="h-5 w-5" /> Agendas conectadas
-          </CardTitle>
-          <CardDescription>
-            Sincronize com serviços externos para ver seus compromissos aqui.
-          </CardDescription>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Link2 className="h-5 w-5" /> Agendas conectadas
+              </CardTitle>
+              <CardDescription>
+                Sincronize com serviços externos para ver seus compromissos aqui.
+              </CardDescription>
+            </div>
+            <div className="flex items-center gap-2">
+              <Label className="text-xs text-muted-foreground">Janela</Label>
+              <Select
+                value={String(syncDays)}
+                onValueChange={(v) => {
+                  const n = Number(v);
+                  setSyncDays(n);
+                  if (typeof window !== "undefined") {
+                    window.localStorage.setItem("calendar-sync-days", String(n));
+                  }
+                }}
+              >
+                <SelectTrigger className="h-8 w-[160px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="30">Próximos 30 dias</SelectItem>
+                  <SelectItem value="90">Próximos 90 dias</SelectItem>
+                  <SelectItem value="180">Próximos 180 dias</SelectItem>
+                  <SelectItem value="365">Próximo ano</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
         </CardHeader>
         <CardContent className="grid gap-3 md:grid-cols-2">
+
           <div className="flex items-start justify-between gap-3 rounded-lg border p-3">
             <div className="min-w-0 flex-1">
               <p className="font-medium">Google Agenda</p>
