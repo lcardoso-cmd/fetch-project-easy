@@ -322,6 +322,34 @@ function CalendarPage() {
     onError: () => toast.error("Falha ao sincronizar agendas"),
   });
 
+  const syncGoogleMut = useMutation({
+    mutationFn: async () => {
+      const r = await listGCal({ data: { timeMax: syncTimeMax() } });
+      if (r && "error" in r && r.error) throw new Error(r.error);
+      return r;
+    },
+    onSuccess: (r) => {
+      qc.setQueryData(["google-calendar-events", rangeKey], r);
+      qc.invalidateQueries({ queryKey: ["google-connection"] });
+      toast.success("Google Agenda atualizado");
+    },
+    onError: (e: Error) => toast.error(e.message || "Falha ao atualizar Google"),
+  });
+
+  const syncOutlookMut = useMutation({
+    mutationFn: async () => {
+      const r = await listOCal({ data: { timeMax: syncTimeMax() } });
+      if (r && "error" in r && r.error) throw new Error(r.error);
+      return r;
+    },
+    onSuccess: (r) => {
+      qc.setQueryData(["outlook-calendar-events", rangeKey], r);
+      qc.invalidateQueries({ queryKey: ["outlook-connection"] });
+      toast.success("Outlook Agenda atualizado");
+    },
+    onError: (e: Error) => toast.error(e.message || "Falha ao atualizar Outlook"),
+  });
+
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [form, setForm] = useState({
