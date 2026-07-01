@@ -606,6 +606,19 @@ function CalendarPage() {
                   <Button
                     variant="outline"
                     size="sm"
+                    onClick={() => syncGoogleMut.mutate()}
+                    disabled={syncGoogleMut.isPending}
+                  >
+                    {syncGoogleMut.isPending ? (
+                      <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <RefreshCw className="mr-1.5 h-3.5 w-3.5" />
+                    )}
+                    Atualizar agora
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
                     onClick={() => {
                       if (confirm("Remover conexão com Google Agenda?")) disconnectGoogleMut.mutate();
                     }}
@@ -663,6 +676,19 @@ function CalendarPage() {
                       onCheckedChange={(v) => toggleOutlookMut.mutate(v)}
                     />
                   </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => syncOutlookMut.mutate()}
+                    disabled={syncOutlookMut.isPending}
+                  >
+                    {syncOutlookMut.isPending ? (
+                      <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <RefreshCw className="mr-1.5 h-3.5 w-3.5" />
+                    )}
+                    Atualizar agora
+                  </Button>
                   <Button
                     variant="outline"
                     size="sm"
