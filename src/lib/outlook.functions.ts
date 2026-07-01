@@ -55,11 +55,51 @@ export const getOutlookConnection = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const { data, error } = await context.supabase
       .from("outlook_connections")
-      .select("outlook_email, scope, expires_at, created_at, updated_at, is_active, last_synced_at, sync_window_days, sync_end_date")
+      .select("outlook_email, scope, expires_at, created_at, updated_at, is_active, last_synced_at, sync_window_days, sync_end_date, selected_calendar_ids")
       .eq("user_id", context.userId)
       .maybeSingle();
     if (error) throw error;
     return data;
+  });
+
+export const setOutlookSelectedCalendars = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((i: unknown) =>
+    z.object({ calendar_ids: z.array(z.string()).nullable() }).parse(i),
+  )
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase
+      .from("outlook_connections")
+      .update({ selected_calendar_ids: data.calendar_ids })
+      .eq("user_id", context.userId);
+    if (error) throw error;
+    return { success: true };
+  });
+
+export const listOutlookCalendars = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const token = await getValidOutlookAccessToken(context.userId);
+    if (!token) return { connected: false as const, calendars: [] };
+    const res = await fetch(
+      "https://graph.microsoft.com/v1.0/me/calendars?$top=200&$select=id,name,isDefaultCalendar,hexColor,owner",
+      { headers: { Authorization: `Bearer ${token}` } },
+    );
+    if (!res.ok) {
+      const txt = await res.text();
+      console.error("outlook calendars failed", res.status, txt);
+      return { connected: true as const, calendars: [], error: `Outlook: ${res.status}` };
+    }
+    const j = (await res.json()) as {
+      value?: Array<{ id: string; name?: string; isDefaultCalendar?: boolean; hexColor?: string }>;
+    };
+    const calendars = (j.value ?? []).map((c) => ({
+      id: c.id,
+      summary: c.name ?? c.id,
+      primary: Boolean(c.isDefaultCalendar),
+      color: c.hexColor ?? null,
+    }));
+    return { connected: true as const, calendars };
   });
 
 export const disconnectOutlook = createServerFn({ method: "POST" })
