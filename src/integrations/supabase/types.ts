@@ -389,6 +389,7 @@ export type Database = {
           last_synced_at: string | null
           refresh_token: string
           scope: string | null
+          selected_calendar_ids: string[] | null
           sync_end_date: string | null
           sync_window_days: number
           updated_at: string
@@ -404,6 +405,7 @@ export type Database = {
           last_synced_at?: string | null
           refresh_token: string
           scope?: string | null
+          selected_calendar_ids?: string[] | null
           sync_end_date?: string | null
           sync_window_days?: number
           updated_at?: string
@@ -419,6 +421,7 @@ export type Database = {
           last_synced_at?: string | null
           refresh_token?: string
           scope?: string | null
+          selected_calendar_ids?: string[] | null
           sync_end_date?: string | null
           sync_window_days?: number
           updated_at?: string
@@ -578,6 +581,7 @@ export type Database = {
           outlook_email: string | null
           refresh_token: string
           scope: string | null
+          selected_calendar_ids: string[] | null
           sync_end_date: string | null
           sync_window_days: number
           updated_at: string
@@ -593,6 +597,7 @@ export type Database = {
           outlook_email?: string | null
           refresh_token: string
           scope?: string | null
+          selected_calendar_ids?: string[] | null
           sync_end_date?: string | null
           sync_window_days?: number
           updated_at?: string
@@ -608,6 +613,7 @@ export type Database = {
           outlook_email?: string | null
           refresh_token?: string
           scope?: string | null
+          selected_calendar_ids?: string[] | null
           sync_end_date?: string | null
           sync_window_days?: number
           updated_at?: string
