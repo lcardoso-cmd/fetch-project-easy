@@ -107,6 +107,7 @@ function CalendarPage() {
   const getOConn = useServerFn(getOutlookConnection);
   const getOUrl = useServerFn(getOutlookAuthUrl);
   const disconnectO = useServerFn(disconnectOutlook);
+  const setOActive = useServerFn(setOutlookActive);
   const listOCal = useServerFn(listOutlookCalendarEvents);
 
   const { data: oConn } = useQuery({
@@ -116,7 +117,7 @@ function CalendarPage() {
   const { data: oCal } = useQuery({
     queryKey: ["outlook-calendar-events"],
     queryFn: () => listOCal({ data: {} }),
-    enabled: !!oConn,
+    enabled: !!oConn && oConn.is_active !== false,
   });
 
   const connectOutlookMut = useMutation({
@@ -129,7 +130,15 @@ function CalendarPage() {
   const disconnectOutlookMut = useMutation({
     mutationFn: () => disconnectO(),
     onSuccess: () => {
-      toast.success("Outlook Agenda desconectado");
+      toast.success("Outlook Agenda removido");
+      qc.invalidateQueries({ queryKey: ["outlook-connection"] });
+      qc.invalidateQueries({ queryKey: ["outlook-calendar-events"] });
+    },
+  });
+  const toggleOutlookMut = useMutation({
+    mutationFn: (active: boolean) => setOActive({ data: { active } }),
+    onSuccess: (_r, active) => {
+      toast.success(active ? "Outlook Agenda ativado" : "Outlook Agenda desativado");
       qc.invalidateQueries({ queryKey: ["outlook-connection"] });
       qc.invalidateQueries({ queryKey: ["outlook-calendar-events"] });
     },
