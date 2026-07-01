@@ -40,9 +40,36 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 
+const calendarSearchSchema = z.object({
+  google: z.enum(["success", "error"]).optional(),
+  outlook: z.enum(["success", "error"]).optional(),
+  msg: z.string().optional(),
+  detail: z.string().optional(),
+});
+
 export const Route = createFileRoute("/_authenticated/calendar")({
+  validateSearch: calendarSearchSchema,
   component: CalendarPage,
 });
+
+const OAUTH_ERROR_HINTS: Record<string, string> = {
+  redirect_uri_mismatch:
+    "A URL de retorno registrada no provedor não bate com a que o app enviou. Copie a URL de callback (ex.: https://SEU_DOMÍNIO/api/public/google/callback) e adicione em 'Authorized redirect URIs' no Google Cloud Console (ou em Redirect URIs no Azure/Entra).",
+  access_denied: "Você cancelou o consentimento ou o provedor bloqueou o app.",
+  invalid_client: "Client ID/Secret inválidos ou não correspondem ao ambiente.",
+  invalid_scope: "Um dos escopos solicitados não é permitido pela configuração do app OAuth.",
+  unauthorized_client: "Este client não está autorizado a usar o tipo de grant solicitado.",
+  admin_policy_enforced: "Uma política de administrador do workspace está bloqueando o acesso.",
+  server_misconfigured: "Faltam credenciais OAuth no servidor. Configure GOOGLE_OAUTH_CLIENT_ID/SECRET ou MICROSOFT_*.",
+  no_refresh_token: "O provedor não devolveu refresh_token — remova o acesso do app na conta e conecte novamente.",
+  token_exchange_failed: "Falha ao trocar o código por tokens; verifique client_secret e redirect_uri.",
+  invalid_state: "State de OAuth inválido ou expirado. Tente conectar novamente.",
+  state_expired: "State de OAuth expirado. Tente conectar novamente.",
+  missing_code_or_state: "Retorno do provedor sem code/state. Tente novamente.",
+  save_failed: "Falha ao salvar a conexão no banco.",
+};
+
+
 
 const TYPE_LABEL: Record<string, string> = {
   deadline: "Prazo",
