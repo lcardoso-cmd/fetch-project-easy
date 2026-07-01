@@ -1,0 +1,2 @@
+ALTER TABLE public.google_connections ADD COLUMN IF NOT EXISTS last_synced_at timestamp with time zone NULL;
+ALTER TABLE public.outlook_connections ADD COLUMN IF NOT EXISTS last_synced_at timestamp with time zone NULL;
