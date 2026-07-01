@@ -28,6 +28,8 @@ import {
   setGoogleActive,
   setGoogleSyncWindow,
   listGoogleCalendarEvents,
+  listGoogleCalendars,
+  setGoogleSelectedCalendars,
 } from "@/lib/google.functions";
 import {
   getOutlookAuthUrl,
@@ -36,6 +38,8 @@ import {
   setOutlookActive,
   setOutlookSyncWindow,
   listOutlookCalendarEvents,
+  listOutlookCalendars,
+  setOutlookSelectedCalendars,
 } from "@/lib/outlook.functions";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
