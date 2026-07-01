@@ -80,6 +80,29 @@ function CalendarPage() {
   });
   const syncTimeMax = () =>
     new Date(Date.now() + syncDays * 24 * 3600 * 1000).toISOString();
+  const syncRangeLabel = () => {
+    const end = new Date(Date.now() + syncDays * 24 * 3600 * 1000);
+    const endStr = end.toLocaleDateString("pt-BR", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    });
+    return `Próximos ${syncDays} dias até ${endStr}`;
+  };
+  const formatLastSync = (iso: string | null | undefined) => {
+    if (!iso) return "Nunca sincronizada";
+    const d = new Date(iso);
+    const date = d.toLocaleDateString("pt-BR", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    });
+    const time = d.toLocaleTimeString("pt-BR", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+    return `Última sincronização: ${date}, ${time}`;
+  };
 
   const { data: gCal } = useQuery({
     queryKey: ["google-calendar-events", syncDays],
@@ -272,7 +295,7 @@ function CalendarPage() {
                 <Link2 className="h-5 w-5" /> Agendas conectadas
               </CardTitle>
               <CardDescription>
-                Sincronize com serviços externos para ver seus compromissos aqui.
+                {syncRangeLabel()}. Sincronize com serviços externos para ver seus compromissos aqui.
               </CardDescription>
             </div>
             <div className="flex items-center gap-2">
@@ -308,6 +331,9 @@ function CalendarPage() {
               {gConn ? (
                 <>
                   <p className="truncate text-xs text-muted-foreground">{gConn.google_email}</p>
+                  <p className="mt-1 text-[10px] text-muted-foreground">
+                    {formatLastSync(gConn.last_synced_at)}
+                  </p>
                   <div className="mt-2 flex items-center gap-2">
                     <Badge variant={gConn.is_active === false ? "secondary" : "default"} className="text-[10px]">
                       {gConn.is_active === false ? "Desativada" : "Ativa"}
@@ -365,6 +391,9 @@ function CalendarPage() {
               {oConn ? (
                 <>
                   <p className="truncate text-xs text-muted-foreground">{oConn.outlook_email}</p>
+                  <p className="mt-1 text-[10px] text-muted-foreground">
+                    {formatLastSync(oConn.last_synced_at)}
+                  </p>
                   <div className="mt-2 flex items-center gap-2">
                     <Badge variant={oConn.is_active === false ? "secondary" : "default"} className="text-[10px]">
                       {oConn.is_active === false ? "Desativada" : "Ativa"}

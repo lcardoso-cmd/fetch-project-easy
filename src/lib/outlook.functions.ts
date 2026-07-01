@@ -53,7 +53,7 @@ export const getOutlookConnection = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const { data, error } = await context.supabase
       .from("outlook_connections")
-      .select("outlook_email, scope, expires_at, created_at, is_active")
+      .select("outlook_email, scope, expires_at, created_at, updated_at, is_active, last_synced_at")
       .eq("user_id", context.userId)
       .maybeSingle();
     if (error) throw error;
@@ -202,5 +202,10 @@ export const listOutlookCalendarEvents = createServerFn({ method: "GET" })
         html_link: e.webLink ?? null,
       };
     });
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    await supabaseAdmin
+      .from("outlook_connections")
+      .update({ last_synced_at: new Date().toISOString() })
+      .eq("user_id", context.userId);
     return { connected: true as const, events };
   });
