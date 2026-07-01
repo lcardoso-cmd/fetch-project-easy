@@ -358,6 +358,28 @@ function SettingsPage() {
         </CardContent>
       </Card>
 
+      {isAdmin && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <KeyRound className="h-5 w-5" /> Credenciais OAuth
+            </CardTitle>
+            <CardDescription>
+              Configure Client ID e Client Secret do Google e do Microsoft/Outlook.
+              Valores criptografados no banco.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Link
+              to="/settings/oauth"
+              className="flex items-center justify-between rounded-lg border p-3 hover:bg-accent/50"
+            >
+              <span className="text-sm">Abrir configurações OAuth</span>
+              <ChevronRight className="h-4 w-4 text-muted-foreground" />
+            </Link>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
