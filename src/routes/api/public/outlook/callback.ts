@@ -11,14 +11,15 @@ export const Route = createFileRoute("/api/public/outlook/callback")({
         const errorDescription = url.searchParams.get("error_description");
 
         const origin = url.origin;
-        const redirectBack = (status: "success" | "error", msg?: string) => {
-          const target = new URL("/integrations", origin);
+        const redirectBack = (status: "success" | "error", msg?: string, detail?: string) => {
+          const target = new URL("/calendar", origin);
           target.searchParams.set("outlook", status);
           if (msg) target.searchParams.set("msg", msg);
+          if (detail) target.searchParams.set("detail", detail);
           return Response.redirect(target.toString(), 302);
         };
 
-        if (errorParam) return redirectBack("error", errorDescription ?? errorParam);
+        if (errorParam) return redirectBack("error", errorParam, errorDescription ?? undefined);
         if (!code || !state) return redirectBack("error", "missing_code_or_state");
 
         const clientId = process.env.MICROSOFT_OAUTH_CLIENT_ID;

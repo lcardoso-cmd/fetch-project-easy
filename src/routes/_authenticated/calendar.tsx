@@ -1,7 +1,10 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { z } from "zod";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { AlertCircle, X } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -37,9 +40,36 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 
+const calendarSearchSchema = z.object({
+  google: z.enum(["success", "error"]).optional(),
+  outlook: z.enum(["success", "error"]).optional(),
+  msg: z.string().optional(),
+  detail: z.string().optional(),
+});
+
 export const Route = createFileRoute("/_authenticated/calendar")({
+  validateSearch: calendarSearchSchema,
   component: CalendarPage,
 });
+
+const OAUTH_ERROR_HINTS: Record<string, string> = {
+  redirect_uri_mismatch:
+    "A URL de retorno registrada no provedor não bate com a que o app enviou. Copie a URL de callback (ex.: https://SEU_DOMÍNIO/api/public/google/callback) e adicione em 'Authorized redirect URIs' no Google Cloud Console (ou em Redirect URIs no Azure/Entra).",
+  access_denied: "Você cancelou o consentimento ou o provedor bloqueou o app.",
+  invalid_client: "Client ID/Secret inválidos ou não correspondem ao ambiente.",
+  invalid_scope: "Um dos escopos solicitados não é permitido pela configuração do app OAuth.",
+  unauthorized_client: "Este client não está autorizado a usar o tipo de grant solicitado.",
+  admin_policy_enforced: "Uma política de administrador do workspace está bloqueando o acesso.",
+  server_misconfigured: "Faltam credenciais OAuth no servidor. Configure GOOGLE_OAUTH_CLIENT_ID/SECRET ou MICROSOFT_*.",
+  no_refresh_token: "O provedor não devolveu refresh_token — remova o acesso do app na conta e conecte novamente.",
+  token_exchange_failed: "Falha ao trocar o código por tokens; verifique client_secret e redirect_uri.",
+  invalid_state: "State de OAuth inválido ou expirado. Tente conectar novamente.",
+  state_expired: "State de OAuth expirado. Tente conectar novamente.",
+  missing_code_or_state: "Retorno do provedor sem code/state. Tente novamente.",
+  save_failed: "Falha ao salvar a conexão no banco.",
+};
+
+
 
 const TYPE_LABEL: Record<string, string> = {
   deadline: "Prazo",
@@ -50,10 +80,61 @@ const TYPE_LABEL: Record<string, string> = {
 
 function CalendarPage() {
   const qc = useQueryClient();
+  const navigate = useNavigate();
+  const search = useSearch({ from: "/_authenticated/calendar" });
   const listFn = useServerFn(listEvents);
   const createFn = useServerFn(createEvent);
   const deleteFn = useServerFn(deleteEvent);
   const getCasesFn = useServerFn(getCases);
+
+  const [dismissedOAuth, setDismissedOAuth] = useState(false);
+  const oauthBanner = useMemo(() => {
+    if (dismissedOAuth) return null;
+    const provider = search.google
+      ? "google"
+      : search.outlook
+        ? "outlook"
+        : null;
+    if (!provider) return null;
+    const status = provider === "google" ? search.google : search.outlook;
+    const providerLabel = provider === "google" ? "Google" : "Outlook";
+    const code = search.msg ?? "";
+    const detail = search.detail ?? "";
+    const hint = code ? OAUTH_ERROR_HINTS[code] : undefined;
+    const callbackHost = typeof window !== "undefined" ? window.location.origin : "";
+    const callbackUrl =
+      provider === "google"
+        ? `${callbackHost}/api/public/google/callback`
+        : `${callbackHost}/api/public/outlook/callback`;
+    return { provider, providerLabel, status, code, detail, hint, callbackUrl };
+  }, [search, dismissedOAuth]);
+
+  useEffect(() => {
+    if (!search.google && !search.outlook) return;
+    if (search.google === "success" || search.outlook === "success") {
+      toast.success(
+        `${search.google ? "Google" : "Outlook"} conectado com sucesso`,
+      );
+      qc.invalidateQueries({ queryKey: ["google-connection"] });
+      qc.invalidateQueries({ queryKey: ["outlook-connection"] });
+      // clear params but keep the user on /calendar
+      navigate({
+        to: "/calendar",
+        search: {},
+        replace: true,
+      });
+      return;
+    }
+    // For errors, keep the params so the inline banner renders; user dismisses.
+    setDismissedOAuth(false);
+  }, [search.google, search.outlook, qc, navigate]);
+
+  const dismissOAuthBanner = () => {
+    setDismissedOAuth(true);
+    navigate({ to: "/calendar", search: {}, replace: true });
+  };
+
+
 
   const { data: events = [], isLoading } = useQuery({
     queryKey: ["events"],
@@ -421,7 +502,45 @@ function CalendarPage() {
             </div>
           </div>
         </CardHeader>
-        <CardContent className="grid gap-3 md:grid-cols-2">
+        <CardContent className="space-y-3">
+          {oauthBanner && oauthBanner.status === "error" && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle className="flex items-center justify-between gap-2">
+                <span>
+                  Erro ao conectar {oauthBanner.providerLabel}
+                  {oauthBanner.code ? ` — ${oauthBanner.code}` : ""}
+                </span>
+                <button
+                  type="button"
+                  onClick={dismissOAuthBanner}
+                  className="text-xs opacity-70 hover:opacity-100"
+                  aria-label="Dispensar"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </AlertTitle>
+              <AlertDescription className="space-y-2 text-xs">
+                {oauthBanner.detail && (
+                  <p className="break-words">
+                    <span className="font-medium">Detalhe do provedor:</span>{" "}
+                    {oauthBanner.detail}
+                  </p>
+                )}
+                {oauthBanner.hint && <p>{oauthBanner.hint}</p>}
+                {oauthBanner.code === "redirect_uri_mismatch" && (
+                  <p className="break-all">
+                    <span className="font-medium">URL de callback esperada:</span>{" "}
+                    <code className="rounded bg-black/10 px-1 py-0.5">
+                      {oauthBanner.callbackUrl}
+                    </code>
+                  </p>
+                )}
+              </AlertDescription>
+            </Alert>
+          )}
+          <div className="grid gap-3 md:grid-cols-2">
+
 
           <div className="flex items-start justify-between gap-3 rounded-lg border p-3">
             <div className="min-w-0 flex-1">
@@ -540,6 +659,7 @@ function CalendarPage() {
                 </Button>
               )}
             </div>
+          </div>
           </div>
         </CardContent>
       </Card>
