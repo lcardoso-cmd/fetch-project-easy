@@ -8,16 +8,19 @@ export const Route = createFileRoute("/api/public/google/callback")({
         const code = url.searchParams.get("code");
         const state = url.searchParams.get("state");
         const errorParam = url.searchParams.get("error");
+        const errorDescription = url.searchParams.get("error_description");
+        const errorUri = url.searchParams.get("error_uri");
 
         const origin = url.origin;
-        const redirectBack = (status: "success" | "error", msg?: string) => {
-          const target = new URL("/integrations", origin);
+        const redirectBack = (status: "success" | "error", msg?: string, detail?: string) => {
+          const target = new URL("/calendar", origin);
           target.searchParams.set("google", status);
           if (msg) target.searchParams.set("msg", msg);
+          if (detail) target.searchParams.set("detail", detail);
           return Response.redirect(target.toString(), 302);
         };
 
-        if (errorParam) return redirectBack("error", errorParam);
+        if (errorParam) return redirectBack("error", errorParam, errorDescription ?? errorUri ?? undefined);
         if (!code || !state) return redirectBack("error", "missing_code_or_state");
 
         const clientId = process.env.GOOGLE_OAUTH_CLIENT_ID;
