@@ -210,7 +210,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
               <BrainCircuit className="h-5 w-5" />
             </div>
-            <span className="font-heading text-lg font-bold">JurisMind AI</span>
+            <span className="font-heading text-lg font-bold">B2B | JurisMind Ai</span>
           </Link>
           <div className="flex items-center gap-1">
             <NotificationBell />
