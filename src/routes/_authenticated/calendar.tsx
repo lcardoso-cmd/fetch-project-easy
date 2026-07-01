@@ -1,8 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,9 +15,15 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { CalendarDays, Plus, Trash2, Loader2 } from "lucide-react";
+import { CalendarDays, Plus, Trash2, Loader2, ExternalLink, Link2, Mail } from "lucide-react";
 import { listEvents, createEvent, deleteEvent } from "@/lib/events.functions";
 import { getCases } from "@/lib/cases.functions";
+import {
+  getGoogleAuthUrl,
+  getGoogleConnection,
+  disconnectGoogle,
+  listGoogleCalendarEvents,
+} from "@/lib/google.functions";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/calendar")({
@@ -45,6 +51,38 @@ function CalendarPage() {
   const { data: cases = [] } = useQuery({
     queryKey: ["cases"],
     queryFn: () => getCasesFn(),
+  });
+
+  // External calendars
+  const getGConn = useServerFn(getGoogleConnection);
+  const getGUrl = useServerFn(getGoogleAuthUrl);
+  const disconnectG = useServerFn(disconnectGoogle);
+  const listGCal = useServerFn(listGoogleCalendarEvents);
+
+  const { data: gConn } = useQuery({
+    queryKey: ["google-connection"],
+    queryFn: () => getGConn(),
+  });
+  const { data: gCal } = useQuery({
+    queryKey: ["google-calendar-events"],
+    queryFn: () => listGCal({ data: {} }),
+    enabled: !!gConn,
+  });
+
+  const connectGoogleMut = useMutation({
+    mutationFn: async () => getGUrl({ data: { origin: window.location.origin } }),
+    onSuccess: (r) => {
+      window.location.href = r.url;
+    },
+    onError: (e: Error) => toast.error(e.message || "Falha ao conectar"),
+  });
+  const disconnectGoogleMut = useMutation({
+    mutationFn: () => disconnectG(),
+    onSuccess: () => {
+      toast.success("Google Agenda desconectado");
+      qc.invalidateQueries({ queryKey: ["google-connection"] });
+      qc.invalidateQueries({ queryKey: ["google-calendar-events"] });
+    },
   });
 
   const [open, setOpen] = useState(false);
@@ -94,9 +132,40 @@ function CalendarPage() {
   const caseTitle = (id: string | null) =>
     id ? cases.find((c) => c.id === id)?.title : null;
 
+  type UnifiedEvent = {
+    id: string;
+    title: string;
+    description: string | null;
+    starts_at: string;
+    event_type?: string;
+    case_id?: string | null;
+    source: "local" | "google";
+    html_link?: string | null;
+  };
+
+  const unified: UnifiedEvent[] = [
+    ...events.map((e) => ({
+      id: e.id,
+      title: e.title,
+      description: e.description ?? null,
+      starts_at: e.starts_at,
+      event_type: e.event_type,
+      case_id: e.case_id,
+      source: "local" as const,
+    })),
+    ...((gCal?.events ?? []).map((e) => ({
+      id: `gcal-${e.id}`,
+      title: e.title,
+      description: e.description,
+      starts_at: e.starts_at,
+      source: "google" as const,
+      html_link: e.html_link,
+    })) as UnifiedEvent[]),
+  ].sort((a, b) => a.starts_at.localeCompare(b.starts_at));
+
   // group by day
-  const groups = new Map<string, typeof events>();
-  for (const ev of events) {
+  const groups = new Map<string, UnifiedEvent[]>();
+  for (const ev of unified) {
     const d = new Date(ev.starts_at).toLocaleDateString("pt-BR", {
       weekday: "long",
       day: "2-digit",
@@ -118,6 +187,72 @@ function CalendarPage() {
           <Plus className="mr-2 h-4 w-4" /> Novo evento
         </Button>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <Link2 className="h-5 w-5" /> Agendas conectadas
+          </CardTitle>
+          <CardDescription>
+            Sincronize com serviços externos para ver seus compromissos aqui.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-3 md:grid-cols-2">
+          <div className="flex items-center justify-between rounded-lg border p-3">
+            <div className="min-w-0">
+              <p className="font-medium">Google Agenda</p>
+              {gConn ? (
+                <p className="truncate text-xs text-muted-foreground">{gConn.google_email}</p>
+              ) : (
+                <p className="text-xs text-muted-foreground">Não conectada</p>
+              )}
+            </div>
+            {gConn ? (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => disconnectGoogleMut.mutate()}
+                disabled={disconnectGoogleMut.isPending}
+              >
+                Desconectar
+              </Button>
+            ) : (
+              <Button
+                size="sm"
+                onClick={() => connectGoogleMut.mutate()}
+                disabled={connectGoogleMut.isPending}
+              >
+                {connectGoogleMut.isPending && (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                )}
+                Conectar
+              </Button>
+            )}
+          </div>
+          <div className="flex items-center justify-between rounded-lg border p-3">
+            <div className="min-w-0">
+              <p className="flex items-center gap-1.5 font-medium">
+                <Mail className="h-4 w-4" /> Outlook Agenda
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Requer configuração das credenciais Microsoft
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() =>
+                toast.info(
+                  "Para conectar o Outlook, precisamos das credenciais Microsoft OAuth. Confirme para eu iniciar a configuração.",
+                )
+              }
+            >
+              Configurar
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
 
       {open && (
         <Card>
@@ -218,7 +353,15 @@ function CalendarPage() {
                   <div key={ev.id} className="flex items-center justify-between gap-3 py-3">
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
-                        <Badge variant="secondary">{TYPE_LABEL[ev.event_type] ?? ev.event_type}</Badge>
+                        {ev.source === "google" ? (
+                          <Badge variant="outline" className="border-blue-500/40 text-blue-600 dark:text-blue-400">
+                            Google
+                          </Badge>
+                        ) : (
+                          <Badge variant="secondary">
+                            {ev.event_type ? (TYPE_LABEL[ev.event_type] ?? ev.event_type) : "Evento"}
+                          </Badge>
+                        )}
                         <p className="font-medium text-foreground">{ev.title}</p>
                       </div>
                       <p className="text-xs text-muted-foreground mt-1">
@@ -239,14 +382,27 @@ function CalendarPage() {
                         <p className="text-sm text-muted-foreground mt-1">{ev.description}</p>
                       )}
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => remove(ev.id)}
-                      className="text-muted-foreground hover:text-destructive"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    {ev.source === "google" ? (
+                      ev.html_link && (
+                        <a
+                          href={ev.html_link}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-muted-foreground hover:text-primary"
+                        >
+                          <ExternalLink className="h-4 w-4" />
+                        </a>
+                      )
+                    ) : (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => remove(ev.id)}
+                        className="text-muted-foreground hover:text-destructive"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
                   </div>
                 ))}
               </CardContent>
