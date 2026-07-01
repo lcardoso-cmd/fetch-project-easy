@@ -53,6 +53,38 @@ function CalendarPage() {
     queryFn: () => getCasesFn(),
   });
 
+  // External calendars
+  const getGConn = useServerFn(getGoogleConnection);
+  const getGUrl = useServerFn(getGoogleAuthUrl);
+  const disconnectG = useServerFn(disconnectGoogle);
+  const listGCal = useServerFn(listGoogleCalendarEvents);
+
+  const { data: gConn } = useQuery({
+    queryKey: ["google-connection"],
+    queryFn: () => getGConn(),
+  });
+  const { data: gCal } = useQuery({
+    queryKey: ["google-calendar-events"],
+    queryFn: () => listGCal({ data: {} }),
+    enabled: !!gConn,
+  });
+
+  const connectGoogleMut = useMutation({
+    mutationFn: async () => getGUrl({ data: { origin: window.location.origin } }),
+    onSuccess: (r) => {
+      window.location.href = r.url;
+    },
+    onError: (e: Error) => toast.error(e.message || "Falha ao conectar"),
+  });
+  const disconnectGoogleMut = useMutation({
+    mutationFn: () => disconnectG(),
+    onSuccess: () => {
+      toast.success("Google Agenda desconectado");
+      qc.invalidateQueries({ queryKey: ["google-connection"] });
+      qc.invalidateQueries({ queryKey: ["google-calendar-events"] });
+    },
+  });
+
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [form, setForm] = useState({
