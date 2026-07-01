@@ -353,7 +353,15 @@ function CalendarPage() {
                   <div key={ev.id} className="flex items-center justify-between gap-3 py-3">
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
-                        <Badge variant="secondary">{TYPE_LABEL[ev.event_type] ?? ev.event_type}</Badge>
+                        {ev.source === "google" ? (
+                          <Badge variant="outline" className="border-blue-500/40 text-blue-600 dark:text-blue-400">
+                            Google
+                          </Badge>
+                        ) : (
+                          <Badge variant="secondary">
+                            {ev.event_type ? (TYPE_LABEL[ev.event_type] ?? ev.event_type) : "Evento"}
+                          </Badge>
+                        )}
                         <p className="font-medium text-foreground">{ev.title}</p>
                       </div>
                       <p className="text-xs text-muted-foreground mt-1">
@@ -374,14 +382,27 @@ function CalendarPage() {
                         <p className="text-sm text-muted-foreground mt-1">{ev.description}</p>
                       )}
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => remove(ev.id)}
-                      className="text-muted-foreground hover:text-destructive"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    {ev.source === "google" ? (
+                      ev.html_link && (
+                        <a
+                          href={ev.html_link}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-muted-foreground hover:text-primary"
+                        >
+                          <ExternalLink className="h-4 w-4" />
+                        </a>
+                      )
+                    ) : (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => remove(ev.id)}
+                        className="text-muted-foreground hover:text-destructive"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
                   </div>
                 ))}
               </CardContent>
