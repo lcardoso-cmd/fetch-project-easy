@@ -5,13 +5,19 @@ import { useServerFn } from "@tanstack/react-start";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Puzzle, HardDrive, CheckCircle2, Loader2 } from "lucide-react";
+import { Puzzle, HardDrive, CheckCircle2, Loader2, Mail } from "lucide-react";
 import { toast } from "sonner";
 import { getGoogleAuthUrl, getGoogleConnection, disconnectGoogle } from "@/lib/google.functions";
+import {
+  getOutlookAuthUrl,
+  getOutlookConnection,
+  disconnectOutlook,
+} from "@/lib/outlook.functions";
 import { z } from "zod";
 
 const searchSchema = z.object({
   google: z.enum(["success", "error"]).optional(),
+  outlook: z.enum(["success", "error"]).optional(),
   msg: z.string().optional(),
 });
 
