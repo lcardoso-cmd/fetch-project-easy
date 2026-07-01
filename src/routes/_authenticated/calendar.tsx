@@ -155,6 +155,8 @@ function CalendarPage() {
   const disconnectG = useServerFn(disconnectGoogle);
   const setGActive = useServerFn(setGoogleActive);
   const listGCal = useServerFn(listGoogleCalendarEvents);
+  const listGCals = useServerFn(listGoogleCalendars);
+  const setGCals = useServerFn(setGoogleSelectedCalendars);
 
   const { data: gConn } = useQuery({
     queryKey: ["google-connection"],
