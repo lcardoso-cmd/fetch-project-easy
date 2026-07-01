@@ -73,11 +73,20 @@ function CalendarPage() {
     queryKey: ["google-connection"],
     queryFn: () => getGConn(),
   });
+  const [syncDays, setSyncDays] = useState<number>(() => {
+    if (typeof window === "undefined") return 90;
+    const v = Number(window.localStorage.getItem("calendar-sync-days"));
+    return v === 30 || v === 90 || v === 180 || v === 365 ? v : 90;
+  });
+  const syncTimeMax = () =>
+    new Date(Date.now() + syncDays * 24 * 3600 * 1000).toISOString();
+
   const { data: gCal } = useQuery({
-    queryKey: ["google-calendar-events"],
-    queryFn: () => listGCal({ data: {} }),
+    queryKey: ["google-calendar-events", syncDays],
+    queryFn: () => listGCal({ data: { timeMax: syncTimeMax() } }),
     enabled: !!gConn && gConn.is_active !== false,
   });
+
 
   const connectGoogleMut = useMutation({
     mutationFn: async () => getGUrl({ data: { origin: window.location.origin } }),
