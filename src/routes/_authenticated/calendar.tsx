@@ -502,7 +502,45 @@ function CalendarPage() {
             </div>
           </div>
         </CardHeader>
-        <CardContent className="grid gap-3 md:grid-cols-2">
+        <CardContent className="space-y-3">
+          {oauthBanner && oauthBanner.status === "error" && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle className="flex items-center justify-between gap-2">
+                <span>
+                  Erro ao conectar {oauthBanner.providerLabel}
+                  {oauthBanner.code ? ` — ${oauthBanner.code}` : ""}
+                </span>
+                <button
+                  type="button"
+                  onClick={dismissOAuthBanner}
+                  className="text-xs opacity-70 hover:opacity-100"
+                  aria-label="Dispensar"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </AlertTitle>
+              <AlertDescription className="space-y-2 text-xs">
+                {oauthBanner.detail && (
+                  <p className="break-words">
+                    <span className="font-medium">Detalhe do provedor:</span>{" "}
+                    {oauthBanner.detail}
+                  </p>
+                )}
+                {oauthBanner.hint && <p>{oauthBanner.hint}</p>}
+                {oauthBanner.code === "redirect_uri_mismatch" && (
+                  <p className="break-all">
+                    <span className="font-medium">URL de callback esperada:</span>{" "}
+                    <code className="rounded bg-black/10 px-1 py-0.5">
+                      {oauthBanner.callbackUrl}
+                    </code>
+                  </p>
+                )}
+              </AlertDescription>
+            </Alert>
+          )}
+          <div className="grid gap-3 md:grid-cols-2">
+
 
           <div className="flex items-start justify-between gap-3 rounded-lg border p-3">
             <div className="min-w-0 flex-1">
