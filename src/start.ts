@@ -3,7 +3,7 @@ import { createStart, createMiddleware } from "@tanstack/react-start";
 import { renderErrorPage } from "./lib/error-page";
 import { attachSupabaseAuth } from "@/integrations/supabase/auth-attacher";
 
-const errorMiddleware = createMiddleware().server(async ({ next }) => {
+const errorMiddleware = createMiddleware().server(async ({ next, request }) => {
   try {
     return await next();
   } catch (error) {
@@ -11,6 +11,13 @@ const errorMiddleware = createMiddleware().server(async ({ next }) => {
       throw error;
     }
     console.error(error);
+    // Only wrap SSR page requests with the HTML error page. Server-function
+    // (RPC) requests must propagate as errors so the client receives the
+    // proper serialized error response instead of an HTML 500.
+    const url = request ? new URL(request.url) : null;
+    if (url && url.pathname.startsWith("/_serverFn/")) {
+      throw error;
+    }
     return new Response(renderErrorPage(), {
       status: 500,
       headers: { "content-type": "text/html; charset=utf-8" },
