@@ -165,17 +165,6 @@ function CaseDetailPage() {
               Cliente: {caseData.client_name}
             </p>
           )}
-          <div className="mt-2 flex flex-wrap gap-2">
-            {caseData.case_number && (
-              <Badge variant="secondary">N° {caseData.case_number}</Badge>
-            )}
-            {caseData.jurisdiction && (
-              <Badge variant="secondary">{caseData.jurisdiction}</Badge>
-            )}
-            {caseData.case_type && (
-              <Badge variant="secondary">{caseData.case_type}</Badge>
-            )}
-          </div>
         </div>
         <div className="flex shrink-0 items-center gap-2">
           <Button
