@@ -49,6 +49,10 @@ import { FloatingTeamChat } from "@/components/chat/floating-team-chat";
 import { QuesitosCard } from "@/components/cases/quesitos-card";
 import type { MatterKind } from "@/lib/practice-labels";
 
+function capitalize(str: string): string {
+  return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
 export const Route = createFileRoute("/_authenticated/cases/$caseId")({
   component: CaseDetailPage,
 });
