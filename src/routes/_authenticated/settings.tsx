@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
@@ -13,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Trash2, Loader2, Users, UserCog } from "lucide-react";
+import { Plus, Trash2, Loader2, Users, UserCog, KeyRound, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import {
   listTeamMembers,
@@ -32,6 +32,8 @@ import {
   SPECIALTY_SUGGESTIONS,
 } from "@/lib/practice-labels";
 import { useProfile } from "@/hooks/use-profile";
+import { useQuery as useAdminQuery } from "@tanstack/react-query";
+import { isCurrentUserAdmin } from "@/lib/oauth-settings.functions";
 
 export const Route = createFileRoute("/_authenticated/settings")({
   component: SettingsPage,

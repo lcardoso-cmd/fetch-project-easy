@@ -32,6 +32,7 @@ import { Route as AuthenticatedCasesIndexRouteImport } from './routes/_authentic
 import { Route as ApiToolsTableRouteImport } from './routes/api/tools/table'
 import { Route as ApiToolsPresentationRouteImport } from './routes/api/tools/presentation'
 import { Route as ApiToolsPetitionRouteImport } from './routes/api/tools/petition'
+import { Route as AuthenticatedSettingsOauthRouteImport } from './routes/_authenticated/settings.oauth'
 import { Route as AuthenticatedCasesNewRouteImport } from './routes/_authenticated/cases.new'
 import { Route as AuthenticatedCasesBulkRouteImport } from './routes/_authenticated/cases.bulk'
 import { Route as AuthenticatedCasesCaseIdRouteImport } from './routes/_authenticated/cases.$caseId'
@@ -154,6 +155,12 @@ const ApiToolsPetitionRoute = ApiToolsPetitionRouteImport.update({
   path: '/api/tools/petition',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedSettingsOauthRoute =
+  AuthenticatedSettingsOauthRouteImport.update({
+    id: '/oauth',
+    path: '/oauth',
+    getParentRoute: () => AuthenticatedSettingsRoute,
+  } as any)
 const AuthenticatedCasesNewRoute = AuthenticatedCasesNewRouteImport.update({
   id: '/new',
   path: '/new',
@@ -199,11 +206,12 @@ export interface FileRoutesByFullPath {
   '/notifications': typeof AuthenticatedNotificationsRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
   '/proposal': typeof AuthenticatedProposalRoute
-  '/settings': typeof AuthenticatedSettingsRoute
+  '/settings': typeof AuthenticatedSettingsRouteWithChildren
   '/invite/$token': typeof InviteTokenRoute
   '/cases/$caseId': typeof AuthenticatedCasesCaseIdRoute
   '/cases/bulk': typeof AuthenticatedCasesBulkRoute
   '/cases/new': typeof AuthenticatedCasesNewRoute
+  '/settings/oauth': typeof AuthenticatedSettingsOauthRoute
   '/api/tools/petition': typeof ApiToolsPetitionRoute
   '/api/tools/presentation': typeof ApiToolsPresentationRoute
   '/api/tools/table': typeof ApiToolsTableRoute
@@ -227,11 +235,12 @@ export interface FileRoutesByTo {
   '/notifications': typeof AuthenticatedNotificationsRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
   '/proposal': typeof AuthenticatedProposalRoute
-  '/settings': typeof AuthenticatedSettingsRoute
+  '/settings': typeof AuthenticatedSettingsRouteWithChildren
   '/invite/$token': typeof InviteTokenRoute
   '/cases/$caseId': typeof AuthenticatedCasesCaseIdRoute
   '/cases/bulk': typeof AuthenticatedCasesBulkRoute
   '/cases/new': typeof AuthenticatedCasesNewRoute
+  '/settings/oauth': typeof AuthenticatedSettingsOauthRoute
   '/api/tools/petition': typeof ApiToolsPetitionRoute
   '/api/tools/presentation': typeof ApiToolsPresentationRoute
   '/api/tools/table': typeof ApiToolsTableRoute
@@ -258,11 +267,12 @@ export interface FileRoutesById {
   '/_authenticated/notifications': typeof AuthenticatedNotificationsRoute
   '/_authenticated/onboarding': typeof AuthenticatedOnboardingRoute
   '/_authenticated/proposal': typeof AuthenticatedProposalRoute
-  '/_authenticated/settings': typeof AuthenticatedSettingsRoute
+  '/_authenticated/settings': typeof AuthenticatedSettingsRouteWithChildren
   '/invite/$token': typeof InviteTokenRoute
   '/_authenticated/cases/$caseId': typeof AuthenticatedCasesCaseIdRoute
   '/_authenticated/cases/bulk': typeof AuthenticatedCasesBulkRoute
   '/_authenticated/cases/new': typeof AuthenticatedCasesNewRoute
+  '/_authenticated/settings/oauth': typeof AuthenticatedSettingsOauthRoute
   '/api/tools/petition': typeof ApiToolsPetitionRoute
   '/api/tools/presentation': typeof ApiToolsPresentationRoute
   '/api/tools/table': typeof ApiToolsTableRoute
@@ -294,6 +304,7 @@ export interface FileRouteTypes {
     | '/cases/$caseId'
     | '/cases/bulk'
     | '/cases/new'
+    | '/settings/oauth'
     | '/api/tools/petition'
     | '/api/tools/presentation'
     | '/api/tools/table'
@@ -322,6 +333,7 @@ export interface FileRouteTypes {
     | '/cases/$caseId'
     | '/cases/bulk'
     | '/cases/new'
+    | '/settings/oauth'
     | '/api/tools/petition'
     | '/api/tools/presentation'
     | '/api/tools/table'
@@ -352,6 +364,7 @@ export interface FileRouteTypes {
     | '/_authenticated/cases/$caseId'
     | '/_authenticated/cases/bulk'
     | '/_authenticated/cases/new'
+    | '/_authenticated/settings/oauth'
     | '/api/tools/petition'
     | '/api/tools/presentation'
     | '/api/tools/table'
@@ -535,6 +548,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiToolsPetitionRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/settings/oauth': {
+      id: '/_authenticated/settings/oauth'
+      path: '/oauth'
+      fullPath: '/settings/oauth'
+      preLoaderRoute: typeof AuthenticatedSettingsOauthRouteImport
+      parentRoute: typeof AuthenticatedSettingsRoute
+    }
     '/_authenticated/cases/new': {
       id: '/_authenticated/cases/new'
       path: '/new'
@@ -590,6 +610,19 @@ const AuthenticatedCasesRouteChildren: AuthenticatedCasesRouteChildren = {
 const AuthenticatedCasesRouteWithChildren =
   AuthenticatedCasesRoute._addFileChildren(AuthenticatedCasesRouteChildren)
 
+interface AuthenticatedSettingsRouteChildren {
+  AuthenticatedSettingsOauthRoute: typeof AuthenticatedSettingsOauthRoute
+}
+
+const AuthenticatedSettingsRouteChildren: AuthenticatedSettingsRouteChildren = {
+  AuthenticatedSettingsOauthRoute: AuthenticatedSettingsOauthRoute,
+}
+
+const AuthenticatedSettingsRouteWithChildren =
+  AuthenticatedSettingsRoute._addFileChildren(
+    AuthenticatedSettingsRouteChildren,
+  )
+
 interface AuthenticatedRouteChildren {
   AuthenticatedCalendarRoute: typeof AuthenticatedCalendarRoute
   AuthenticatedCasesRoute: typeof AuthenticatedCasesRouteWithChildren
@@ -605,7 +638,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedNotificationsRoute: typeof AuthenticatedNotificationsRoute
   AuthenticatedOnboardingRoute: typeof AuthenticatedOnboardingRoute
   AuthenticatedProposalRoute: typeof AuthenticatedProposalRoute
-  AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
+  AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRouteWithChildren
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
@@ -623,7 +656,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedNotificationsRoute: AuthenticatedNotificationsRoute,
   AuthenticatedOnboardingRoute: AuthenticatedOnboardingRoute,
   AuthenticatedProposalRoute: AuthenticatedProposalRoute,
-  AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
+  AuthenticatedSettingsRoute: AuthenticatedSettingsRouteWithChildren,
 }
 
 const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(

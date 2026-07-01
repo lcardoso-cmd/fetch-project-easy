@@ -16,7 +16,7 @@ import {
   isCurrentUserAdmin,
 } from "@/lib/oauth-settings.functions";
 
-export const Route = createFileRoute("/_authenticated/settings.oauth")({
+export const Route = createFileRoute("/_authenticated/settings/oauth")({
   component: OAuthSettingsPage,
 });
 
