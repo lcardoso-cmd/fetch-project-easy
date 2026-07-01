@@ -358,6 +358,68 @@ function CalendarPage() {
     onError: (e: Error) => toast.error(e.message || "Falha ao atualizar Outlook"),
   });
 
+  const { data: gCalsList } = useQuery({
+    queryKey: ["google-calendars"],
+    queryFn: () => listGCals(),
+    enabled: !!gConn,
+  });
+  const { data: oCalsList } = useQuery({
+    queryKey: ["outlook-calendars"],
+    queryFn: () => listOCals(),
+    enabled: !!oConn,
+  });
+
+  const setGCalsMut = useMutation({
+    mutationFn: (ids: string[] | null) => setGCals({ data: { calendar_ids: ids } }),
+    onSuccess: () => {
+      toast.success("Calendários do Google atualizados");
+      qc.invalidateQueries({ queryKey: ["google-connection"] });
+      qc.invalidateQueries({ queryKey: ["google-calendar-events"] });
+    },
+    onError: (e: Error) => toast.error(e.message || "Falha ao salvar"),
+  });
+  const setOCalsMut = useMutation({
+    mutationFn: (ids: string[] | null) => setOCals({ data: { calendar_ids: ids } }),
+    onSuccess: () => {
+      toast.success("Calendários do Outlook atualizados");
+      qc.invalidateQueries({ queryKey: ["outlook-connection"] });
+      qc.invalidateQueries({ queryKey: ["outlook-calendar-events"] });
+    },
+    onError: (e: Error) => toast.error(e.message || "Falha ao salvar"),
+  });
+
+  const isGCalSelected = (id: string, primary: boolean) => {
+    const sel = gConn?.selected_calendar_ids;
+    if (!sel || sel.length === 0) return primary;
+    return sel.includes(id);
+  };
+  const isOCalSelected = (id: string, primary: boolean) => {
+    const sel = oConn?.selected_calendar_ids;
+    if (!sel || sel.length === 0) return primary;
+    return sel.includes(id);
+  };
+  const toggleGCalendar = (id: string, checked: boolean) => {
+    const cals = gCalsList?.calendars ?? [];
+    const base = gConn?.selected_calendar_ids && gConn.selected_calendar_ids.length > 0
+      ? gConn.selected_calendar_ids
+      : cals.filter((c) => c.primary).map((c) => c.id);
+    const next = checked
+      ? Array.from(new Set([...base, id]))
+      : base.filter((x) => x !== id);
+    setGCalsMut.mutate(next.length > 0 ? next : null);
+  };
+  const toggleOCalendar = (id: string, checked: boolean) => {
+    const cals = oCalsList?.calendars ?? [];
+    const base = oConn?.selected_calendar_ids && oConn.selected_calendar_ids.length > 0
+      ? oConn.selected_calendar_ids
+      : cals.filter((c) => c.primary).map((c) => c.id);
+    const next = checked
+      ? Array.from(new Set([...base, id]))
+      : base.filter((x) => x !== id);
+    setOCalsMut.mutate(next.length > 0 ? next : null);
+  };
+
+
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [form, setForm] = useState({
