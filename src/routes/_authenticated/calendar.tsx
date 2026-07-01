@@ -177,7 +177,7 @@ function CalendarPage() {
     starts_at: string;
     event_type?: string;
     case_id?: string | null;
-    source: "local" | "google";
+    source: "local" | "google" | "outlook";
     html_link?: string | null;
   };
 
@@ -197,6 +197,14 @@ function CalendarPage() {
       description: e.description,
       starts_at: e.starts_at,
       source: "google" as const,
+      html_link: e.html_link,
+    })) as UnifiedEvent[]),
+    ...((oCal?.events ?? []).map((e) => ({
+      id: `ocal-${e.id}`,
+      title: e.title,
+      description: e.description,
+      starts_at: e.starts_at,
+      source: "outlook" as const,
       html_link: e.html_link,
     })) as UnifiedEvent[]),
   ].sort((a, b) => a.starts_at.localeCompare(b.starts_at));
