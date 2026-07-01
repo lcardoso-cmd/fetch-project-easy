@@ -53,7 +53,7 @@ export const getOutlookConnection = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const { data, error } = await context.supabase
       .from("outlook_connections")
-      .select("outlook_email, scope, expires_at, created_at, updated_at, is_active, last_synced_at")
+      .select("outlook_email, scope, expires_at, created_at, updated_at, is_active, last_synced_at, sync_window_days, sync_end_date")
       .eq("user_id", context.userId)
       .maybeSingle();
     if (error) throw error;
@@ -78,6 +78,28 @@ export const setOutlookActive = createServerFn({ method: "POST" })
     const { error } = await context.supabase
       .from("outlook_connections")
       .update({ is_active: data.active })
+      .eq("user_id", context.userId);
+    if (error) throw error;
+    return { success: true };
+  });
+
+export const setOutlookSyncWindow = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((i: unknown) =>
+    z
+      .object({
+        sync_window_days: z.number().int().min(1).max(3650),
+        sync_end_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable(),
+      })
+      .parse(i),
+  )
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase
+      .from("outlook_connections")
+      .update({
+        sync_window_days: data.sync_window_days,
+        sync_end_date: data.sync_end_date,
+      })
       .eq("user_id", context.userId);
     if (error) throw error;
     return { success: true };

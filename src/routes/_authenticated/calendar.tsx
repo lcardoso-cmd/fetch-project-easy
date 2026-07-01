@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,6 +23,7 @@ import {
   getGoogleConnection,
   disconnectGoogle,
   setGoogleActive,
+  setGoogleSyncWindow,
   listGoogleCalendarEvents,
 } from "@/lib/google.functions";
 import {
@@ -30,6 +31,7 @@ import {
   getOutlookConnection,
   disconnectOutlook,
   setOutlookActive,
+  setOutlookSyncWindow,
   listOutlookCalendarEvents,
 } from "@/lib/outlook.functions";
 import { Switch } from "@/components/ui/switch";
@@ -73,26 +75,13 @@ function CalendarPage() {
     queryKey: ["google-connection"],
     queryFn: () => getGConn(),
   });
-  const [syncMode, setSyncMode] = useState<"preset" | "custom">(() => {
-    if (typeof window === "undefined") return "preset";
-    return window.localStorage.getItem("calendar-sync-mode") === "custom"
-      ? "custom"
-      : "preset";
-  });
-  const [syncDays, setSyncDays] = useState<number>(() => {
-    if (typeof window === "undefined") return 90;
-    const v = Number(window.localStorage.getItem("calendar-sync-days"));
-    return v === 30 || v === 90 || v === 180 || v === 365 ? v : 90;
-  });
-  const [customEndDate, setCustomEndDate] = useState<string>(() => {
-    if (typeof window === "undefined") return "";
-    const saved = window.localStorage.getItem("calendar-sync-custom-end");
-    if (saved) return saved;
-    // default: 90 days ahead
-    return new Date(Date.now() + 90 * 24 * 3600 * 1000)
-      .toISOString()
-      .slice(0, 10);
-  });
+  const setGSync = useServerFn(setGoogleSyncWindow);
+  const [syncMode, setSyncMode] = useState<"preset" | "custom">("preset");
+  const [syncDays, setSyncDays] = useState<number>(90);
+  const [customEndDate, setCustomEndDate] = useState<string>(() =>
+    new Date(Date.now() + 90 * 24 * 3600 * 1000).toISOString().slice(0, 10),
+  );
+  const [prefsHydrated, setPrefsHydrated] = useState(false);
 
   const effectiveEndMs = () => {
     if (syncMode === "custom" && customEndDate) {
@@ -206,13 +195,43 @@ function CalendarPage() {
     },
   });
 
+  const setOSync = useServerFn(setOutlookSyncWindow);
+
+  // Hydrate window prefs from whichever connection exists (prefer Google)
+  useEffect(() => {
+    if (prefsHydrated) return;
+    const src = gConn ?? oConn;
+    if (!src) return;
+    if (src.sync_end_date) {
+      setSyncMode("custom");
+      setCustomEndDate(src.sync_end_date);
+    } else {
+      setSyncMode("preset");
+    }
+    if (src.sync_window_days) setSyncDays(src.sync_window_days);
+    setPrefsHydrated(true);
+  }, [gConn, oConn, prefsHydrated]);
+
+  const persistWindow = async (days: number, endDate: string | null) => {
+    const ops: Promise<unknown>[] = [];
+    if (gConn) ops.push(setGSync({ data: { sync_window_days: days, sync_end_date: endDate } }));
+    if (oConn) ops.push(setOSync({ data: { sync_window_days: days, sync_end_date: endDate } }));
+    if (ops.length === 0) return;
+    try {
+      await Promise.all(ops);
+      qc.invalidateQueries({ queryKey: ["google-connection"] });
+      qc.invalidateQueries({ queryKey: ["outlook-connection"] });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Falha ao salvar janela");
+    }
+  };
+
   const syncNowMut = useMutation({
     mutationFn: async () => {
       await qc.invalidateQueries({ queryKey: ["google-calendar-events"] });
       await qc.invalidateQueries({ queryKey: ["outlook-calendar-events"] });
       await qc.invalidateQueries({ queryKey: ["google-connection"] });
       await qc.invalidateQueries({ queryKey: ["outlook-connection"] });
-      // Refetch active calendar queries immediately
       await qc.refetchQueries({ queryKey: ["google-calendar-events", rangeKey] });
       await qc.refetchQueries({ queryKey: ["outlook-calendar-events", rangeKey] });
       await qc.refetchQueries({ queryKey: ["google-connection"] });
@@ -365,18 +384,13 @@ function CalendarPage() {
                 onValueChange={(v) => {
                   if (v === "custom") {
                     setSyncMode("custom");
-                    if (typeof window !== "undefined") {
-                      window.localStorage.setItem("calendar-sync-mode", "custom");
-                    }
+                    void persistWindow(syncDays, customEndDate || null);
                     return;
                   }
                   const n = Number(v);
                   setSyncMode("preset");
                   setSyncDays(n);
-                  if (typeof window !== "undefined") {
-                    window.localStorage.setItem("calendar-sync-mode", "preset");
-                    window.localStorage.setItem("calendar-sync-days", String(n));
-                  }
+                  void persistWindow(n, null);
                 }}
               >
                 <SelectTrigger className="h-8 w-[180px]">
@@ -400,12 +414,7 @@ function CalendarPage() {
                   value={customEndDate}
                   onChange={(e) => {
                     setCustomEndDate(e.target.value);
-                    if (typeof window !== "undefined") {
-                      window.localStorage.setItem(
-                        "calendar-sync-custom-end",
-                        e.target.value,
-                      );
-                    }
+                    if (e.target.value) void persistWindow(syncDays, e.target.value);
                   }}
                 />
               )}
