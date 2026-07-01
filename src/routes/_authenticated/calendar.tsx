@@ -80,10 +80,61 @@ const TYPE_LABEL: Record<string, string> = {
 
 function CalendarPage() {
   const qc = useQueryClient();
+  const navigate = useNavigate();
+  const search = useSearch({ from: "/_authenticated/calendar" });
   const listFn = useServerFn(listEvents);
   const createFn = useServerFn(createEvent);
   const deleteFn = useServerFn(deleteEvent);
   const getCasesFn = useServerFn(getCases);
+
+  const [dismissedOAuth, setDismissedOAuth] = useState(false);
+  const oauthBanner = useMemo(() => {
+    if (dismissedOAuth) return null;
+    const provider = search.google
+      ? "google"
+      : search.outlook
+        ? "outlook"
+        : null;
+    if (!provider) return null;
+    const status = provider === "google" ? search.google : search.outlook;
+    const providerLabel = provider === "google" ? "Google" : "Outlook";
+    const code = search.msg ?? "";
+    const detail = search.detail ?? "";
+    const hint = code ? OAUTH_ERROR_HINTS[code] : undefined;
+    const callbackHost = typeof window !== "undefined" ? window.location.origin : "";
+    const callbackUrl =
+      provider === "google"
+        ? `${callbackHost}/api/public/google/callback`
+        : `${callbackHost}/api/public/outlook/callback`;
+    return { provider, providerLabel, status, code, detail, hint, callbackUrl };
+  }, [search, dismissedOAuth]);
+
+  useEffect(() => {
+    if (!search.google && !search.outlook) return;
+    if (search.google === "success" || search.outlook === "success") {
+      toast.success(
+        `${search.google ? "Google" : "Outlook"} conectado com sucesso`,
+      );
+      qc.invalidateQueries({ queryKey: ["google-connection"] });
+      qc.invalidateQueries({ queryKey: ["outlook-connection"] });
+      // clear params but keep the user on /calendar
+      navigate({
+        to: "/calendar",
+        search: {},
+        replace: true,
+      });
+      return;
+    }
+    // For errors, keep the params so the inline banner renders; user dismisses.
+    setDismissedOAuth(false);
+  }, [search.google, search.outlook, qc, navigate]);
+
+  const dismissOAuthBanner = () => {
+    setDismissedOAuth(true);
+    navigate({ to: "/calendar", search: {}, replace: true });
+  };
+
+
 
   const { data: events = [], isLoading } = useQuery({
     queryKey: ["events"],
