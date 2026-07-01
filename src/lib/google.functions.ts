@@ -16,8 +16,10 @@ export const getGoogleAuthUrl = createServerFn({ method: "POST" })
     z.object({ origin: z.string().url() }).parse(input),
   )
   .handler(async ({ data, context }) => {
-    const clientId = process.env.GOOGLE_OAUTH_CLIENT_ID;
-    if (!clientId) throw new Error("GOOGLE_OAUTH_CLIENT_ID não configurado");
+    const { getProviderCredentials } = await import("@/lib/oauth-settings.server");
+    const creds = await getProviderCredentials("google");
+    if (!creds) throw new Error("Credenciais do Google não configuradas. Peça a um admin para preencher em Configurações → OAuth.");
+    const clientId = creds.clientId;
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
@@ -115,9 +117,10 @@ async function getValidGoogleAccessToken(userId: string): Promise<string | null>
   if (expiresAt - Date.now() > 60_000) return conn.access_token;
 
   // Refresh
-  const clientId = process.env.GOOGLE_OAUTH_CLIENT_ID;
-  const clientSecret = process.env.GOOGLE_OAUTH_CLIENT_SECRET;
-  if (!clientId || !clientSecret) return null;
+  const { getProviderCredentials } = await import("@/lib/oauth-settings.server");
+  const creds = await getProviderCredentials("google");
+  if (!creds) return null;
+  const { clientId, clientSecret } = creds;
 
   const res = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",
