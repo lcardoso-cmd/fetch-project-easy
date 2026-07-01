@@ -199,50 +199,83 @@ export const listGoogleCalendarEvents = createServerFn({ method: "GET" })
     const token = await getValidGoogleAccessToken(context.userId);
     if (!token) return { connected: false as const, events: [] };
 
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: connRow } = await supabaseAdmin
+      .from("google_connections")
+      .select("selected_calendar_ids")
+      .eq("user_id", context.userId)
+      .maybeSingle();
+    const calendarIds =
+      connRow?.selected_calendar_ids && connRow.selected_calendar_ids.length > 0
+        ? connRow.selected_calendar_ids
+        : ["primary"];
+
     const now = new Date();
     const in90 = new Date(now.getTime() + 90 * 24 * 3600 * 1000);
-    const params = new URLSearchParams({
-      timeMin: data.timeMin ?? now.toISOString(),
-      timeMax: data.timeMax ?? in90.toISOString(),
-      singleEvents: "true",
-      orderBy: "startTime",
-      maxResults: String(data.maxResults ?? 100),
-    });
+    const maxResults = String(data.maxResults ?? 100);
+    const timeMin = data.timeMin ?? now.toISOString();
+    const timeMax = data.timeMax ?? in90.toISOString();
 
-    const res = await fetch(
-      `https://www.googleapis.com/calendar/v3/calendars/primary/events?${params.toString()}`,
-      { headers: { Authorization: `Bearer ${token}` } },
-    );
-    if (!res.ok) {
-      const txt = await res.text();
-      console.error("google calendar list failed", res.status, txt);
-      return { connected: true as const, events: [], error: `Google Calendar: ${res.status}` };
+    const all: Array<{
+      id: string;
+      title: string;
+      description: string | null;
+      starts_at: string;
+      all_day: boolean;
+      location: string | null;
+      html_link: string | null;
+    }> = [];
+    let firstError: string | undefined;
+
+    for (const calId of calendarIds) {
+      const params = new URLSearchParams({
+        timeMin,
+        timeMax,
+        singleEvents: "true",
+        orderBy: "startTime",
+        maxResults,
+      });
+      const res = await fetch(
+        `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calId)}/events?${params.toString()}`,
+        { headers: { Authorization: `Bearer ${token}` } },
+      );
+      if (!res.ok) {
+        const txt = await res.text();
+        console.error("google calendar list failed", calId, res.status, txt);
+        firstError ??= `Google Calendar (${calId}): ${res.status}`;
+        continue;
+      }
+      const j = (await res.json()) as {
+        items?: Array<{
+          id: string;
+          summary?: string;
+          description?: string;
+          start?: { dateTime?: string; date?: string };
+          end?: { dateTime?: string; date?: string };
+          htmlLink?: string;
+          location?: string;
+        }>;
+      };
+      for (const e of j.items ?? []) {
+        all.push({
+          id: `${calId}:${e.id}`,
+          title: e.summary ?? "(sem título)",
+          description: e.description ?? null,
+          starts_at:
+            (e.start?.dateTime ?? (e.start?.date ? `${e.start.date}T00:00:00` : null)) as string,
+          all_day: Boolean(e.start?.date && !e.start?.dateTime),
+          location: e.location ?? null,
+          html_link: e.htmlLink ?? null,
+        });
+      }
     }
-    const j = (await res.json()) as {
-      items?: Array<{
-        id: string;
-        summary?: string;
-        description?: string;
-        start?: { dateTime?: string; date?: string };
-        end?: { dateTime?: string; date?: string };
-        htmlLink?: string;
-        location?: string;
-      }>;
-    };
-    const events = (j.items ?? []).map((e) => ({
-      id: e.id,
-      title: e.summary ?? "(sem título)",
-      description: e.description ?? null,
-      starts_at:
-        (e.start?.dateTime ?? (e.start?.date ? `${e.start.date}T00:00:00` : null)) as string,
-      all_day: Boolean(e.start?.date && !e.start?.dateTime),
-      location: e.location ?? null,
-      html_link: e.htmlLink ?? null,
-    }));
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    all.sort((a, b) => a.starts_at.localeCompare(b.starts_at));
     await supabaseAdmin
       .from("google_connections")
       .update({ last_synced_at: new Date().toISOString() })
       .eq("user_id", context.userId);
-    return { connected: true as const, events };
+    return firstError
+      ? { connected: true as const, events: all, error: firstError }
+      : { connected: true as const, events: all };
   });
