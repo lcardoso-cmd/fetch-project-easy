@@ -1,0 +1,2 @@
+ALTER TABLE public.google_connections ADD COLUMN IF NOT EXISTS is_active boolean NOT NULL DEFAULT true;
+ALTER TABLE public.outlook_connections ADD COLUMN IF NOT EXISTS is_active boolean NOT NULL DEFAULT true;

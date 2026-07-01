@@ -53,7 +53,7 @@ export const getOutlookConnection = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const { data, error } = await context.supabase
       .from("outlook_connections")
-      .select("outlook_email, scope, expires_at, created_at")
+      .select("outlook_email, scope, expires_at, created_at, is_active")
       .eq("user_id", context.userId)
       .maybeSingle();
     if (error) throw error;
@@ -71,14 +71,27 @@ export const disconnectOutlook = createServerFn({ method: "POST" })
     return { success: true };
   });
 
+export const setOutlookActive = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((i: unknown) => z.object({ active: z.boolean() }).parse(i))
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase
+      .from("outlook_connections")
+      .update({ is_active: data.active })
+      .eq("user_id", context.userId);
+    if (error) throw error;
+    return { success: true };
+  });
+
+
 async function getValidOutlookAccessToken(userId: string): Promise<string | null> {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { data: conn, error } = await supabaseAdmin
     .from("outlook_connections")
-    .select("access_token, refresh_token, expires_at")
+    .select("access_token, refresh_token, expires_at, is_active")
     .eq("user_id", userId)
     .maybeSingle();
-  if (error || !conn) return null;
+  if (error || !conn || conn.is_active === false) return null;
 
   const expiresAt = new Date(conn.expires_at).getTime();
   if (expiresAt - Date.now() > 60_000) return conn.access_token;

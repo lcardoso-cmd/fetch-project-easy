@@ -22,14 +22,17 @@ import {
   getGoogleAuthUrl,
   getGoogleConnection,
   disconnectGoogle,
+  setGoogleActive,
   listGoogleCalendarEvents,
 } from "@/lib/google.functions";
 import {
   getOutlookAuthUrl,
   getOutlookConnection,
   disconnectOutlook,
+  setOutlookActive,
   listOutlookCalendarEvents,
 } from "@/lib/outlook.functions";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/calendar")({
@@ -63,6 +66,7 @@ function CalendarPage() {
   const getGConn = useServerFn(getGoogleConnection);
   const getGUrl = useServerFn(getGoogleAuthUrl);
   const disconnectG = useServerFn(disconnectGoogle);
+  const setGActive = useServerFn(setGoogleActive);
   const listGCal = useServerFn(listGoogleCalendarEvents);
 
   const { data: gConn } = useQuery({
@@ -72,7 +76,7 @@ function CalendarPage() {
   const { data: gCal } = useQuery({
     queryKey: ["google-calendar-events"],
     queryFn: () => listGCal({ data: {} }),
-    enabled: !!gConn,
+    enabled: !!gConn && gConn.is_active !== false,
   });
 
   const connectGoogleMut = useMutation({
@@ -85,7 +89,15 @@ function CalendarPage() {
   const disconnectGoogleMut = useMutation({
     mutationFn: () => disconnectG(),
     onSuccess: () => {
-      toast.success("Google Agenda desconectado");
+      toast.success("Google Agenda removido");
+      qc.invalidateQueries({ queryKey: ["google-connection"] });
+      qc.invalidateQueries({ queryKey: ["google-calendar-events"] });
+    },
+  });
+  const toggleGoogleMut = useMutation({
+    mutationFn: (active: boolean) => setGActive({ data: { active } }),
+    onSuccess: (_r, active) => {
+      toast.success(active ? "Google Agenda ativado" : "Google Agenda desativado");
       qc.invalidateQueries({ queryKey: ["google-connection"] });
       qc.invalidateQueries({ queryKey: ["google-calendar-events"] });
     },
@@ -95,6 +107,7 @@ function CalendarPage() {
   const getOConn = useServerFn(getOutlookConnection);
   const getOUrl = useServerFn(getOutlookAuthUrl);
   const disconnectO = useServerFn(disconnectOutlook);
+  const setOActive = useServerFn(setOutlookActive);
   const listOCal = useServerFn(listOutlookCalendarEvents);
 
   const { data: oConn } = useQuery({
@@ -104,7 +117,7 @@ function CalendarPage() {
   const { data: oCal } = useQuery({
     queryKey: ["outlook-calendar-events"],
     queryFn: () => listOCal({ data: {} }),
-    enabled: !!oConn,
+    enabled: !!oConn && oConn.is_active !== false,
   });
 
   const connectOutlookMut = useMutation({
@@ -117,7 +130,15 @@ function CalendarPage() {
   const disconnectOutlookMut = useMutation({
     mutationFn: () => disconnectO(),
     onSuccess: () => {
-      toast.success("Outlook Agenda desconectado");
+      toast.success("Outlook Agenda removido");
+      qc.invalidateQueries({ queryKey: ["outlook-connection"] });
+      qc.invalidateQueries({ queryKey: ["outlook-calendar-events"] });
+    },
+  });
+  const toggleOutlookMut = useMutation({
+    mutationFn: (active: boolean) => setOActive({ data: { active } }),
+    onSuccess: (_r, active) => {
+      toast.success(active ? "Outlook Agenda ativado" : "Outlook Agenda desativado");
       qc.invalidateQueries({ queryKey: ["outlook-connection"] });
       qc.invalidateQueries({ queryKey: ["outlook-calendar-events"] });
     },
@@ -244,72 +265,121 @@ function CalendarPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-3 md:grid-cols-2">
-          <div className="flex items-center justify-between rounded-lg border p-3">
-            <div className="min-w-0">
+          <div className="flex items-start justify-between gap-3 rounded-lg border p-3">
+            <div className="min-w-0 flex-1">
               <p className="font-medium">Google Agenda</p>
               {gConn ? (
-                <p className="truncate text-xs text-muted-foreground">{gConn.google_email}</p>
+                <>
+                  <p className="truncate text-xs text-muted-foreground">{gConn.google_email}</p>
+                  <div className="mt-2 flex items-center gap-2">
+                    <Badge variant={gConn.is_active === false ? "secondary" : "default"} className="text-[10px]">
+                      {gConn.is_active === false ? "Desativada" : "Ativa"}
+                    </Badge>
+                    <span className="text-xs text-muted-foreground">
+                      {gCal?.events?.length ?? 0} evento(s)
+                    </span>
+                  </div>
+                </>
               ) : (
                 <p className="text-xs text-muted-foreground">Não conectada</p>
               )}
             </div>
-            {gConn ? (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => disconnectGoogleMut.mutate()}
-                disabled={disconnectGoogleMut.isPending}
-              >
-                Desconectar
-              </Button>
-            ) : (
-              <Button
-                size="sm"
-                onClick={() => connectGoogleMut.mutate()}
-                disabled={connectGoogleMut.isPending}
-              >
-                {connectGoogleMut.isPending && (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                )}
-                Conectar
-              </Button>
-            )}
+            <div className="flex flex-col items-end gap-2">
+              {gConn ? (
+                <>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground">Ativa</span>
+                    <Switch
+                      checked={gConn.is_active !== false}
+                      disabled={toggleGoogleMut.isPending}
+                      onCheckedChange={(v) => toggleGoogleMut.mutate(v)}
+                    />
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      if (confirm("Remover conexão com Google Agenda?")) disconnectGoogleMut.mutate();
+                    }}
+                    disabled={disconnectGoogleMut.isPending}
+                  >
+                    <Trash2 className="mr-1.5 h-3.5 w-3.5" /> Remover
+                  </Button>
+                </>
+              ) : (
+                <Button
+                  size="sm"
+                  onClick={() => connectGoogleMut.mutate()}
+                  disabled={connectGoogleMut.isPending}
+                >
+                  {connectGoogleMut.isPending && (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  )}
+                  Conectar
+                </Button>
+              )}
+            </div>
           </div>
-          <div className="flex items-center justify-between rounded-lg border p-3">
-            <div className="min-w-0">
+          <div className="flex items-start justify-between gap-3 rounded-lg border p-3">
+            <div className="min-w-0 flex-1">
               <p className="flex items-center gap-1.5 font-medium">
                 <Mail className="h-4 w-4" /> Outlook Agenda
               </p>
               {oConn ? (
-                <p className="truncate text-xs text-muted-foreground">{oConn.outlook_email}</p>
+                <>
+                  <p className="truncate text-xs text-muted-foreground">{oConn.outlook_email}</p>
+                  <div className="mt-2 flex items-center gap-2">
+                    <Badge variant={oConn.is_active === false ? "secondary" : "default"} className="text-[10px]">
+                      {oConn.is_active === false ? "Desativada" : "Ativa"}
+                    </Badge>
+                    <span className="text-xs text-muted-foreground">
+                      {oCal?.events?.length ?? 0} evento(s)
+                    </span>
+                  </div>
+                </>
               ) : (
                 <p className="text-xs text-muted-foreground">Não conectada</p>
               )}
             </div>
-            {oConn ? (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => disconnectOutlookMut.mutate()}
-                disabled={disconnectOutlookMut.isPending}
-              >
-                Desconectar
-              </Button>
-            ) : (
-              <Button
-                size="sm"
-                onClick={() => connectOutlookMut.mutate()}
-                disabled={connectOutlookMut.isPending}
-              >
-                {connectOutlookMut.isPending && (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                )}
-                Conectar
-              </Button>
-            )}
+            <div className="flex flex-col items-end gap-2">
+              {oConn ? (
+                <>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground">Ativa</span>
+                    <Switch
+                      checked={oConn.is_active !== false}
+                      disabled={toggleOutlookMut.isPending}
+                      onCheckedChange={(v) => toggleOutlookMut.mutate(v)}
+                    />
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      if (confirm("Remover conexão com Outlook Agenda?")) disconnectOutlookMut.mutate();
+                    }}
+                    disabled={disconnectOutlookMut.isPending}
+                  >
+                    <Trash2 className="mr-1.5 h-3.5 w-3.5" /> Remover
+                  </Button>
+                </>
+              ) : (
+                <Button
+                  size="sm"
+                  onClick={() => connectOutlookMut.mutate()}
+                  disabled={connectOutlookMut.isPending}
+                >
+                  {connectOutlookMut.isPending && (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  )}
+                  Conectar
+                </Button>
+              )}
+            </div>
           </div>
         </CardContent>
       </Card>
+
 
 
       {open && (
