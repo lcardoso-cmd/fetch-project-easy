@@ -15,7 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { CalendarDays, Plus, Trash2, Loader2, ExternalLink, Link2, Mail } from "lucide-react";
+import { CalendarDays, Plus, Trash2, Loader2, ExternalLink, Link2, Mail, RefreshCw } from "lucide-react";
 import { listEvents, createEvent, deleteEvent } from "@/lib/events.functions";
 import { getCases } from "@/lib/cases.functions";
 import {
@@ -176,6 +176,22 @@ function CalendarPage() {
     },
   });
 
+  const syncNowMut = useMutation({
+    mutationFn: async () => {
+      await qc.invalidateQueries({ queryKey: ["google-calendar-events"] });
+      await qc.invalidateQueries({ queryKey: ["outlook-calendar-events"] });
+      await qc.invalidateQueries({ queryKey: ["google-connection"] });
+      await qc.invalidateQueries({ queryKey: ["outlook-connection"] });
+      // Refetch active calendar queries immediately
+      await qc.refetchQueries({ queryKey: ["google-calendar-events", syncDays] });
+      await qc.refetchQueries({ queryKey: ["outlook-calendar-events", syncDays] });
+      await qc.refetchQueries({ queryKey: ["google-connection"] });
+      await qc.refetchQueries({ queryKey: ["outlook-connection"] });
+    },
+    onSuccess: () => toast.success("Agendas sincronizadas"),
+    onError: () => toast.error("Falha ao sincronizar agendas"),
+  });
+
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [form, setForm] = useState({
@@ -299,6 +315,20 @@ function CalendarPage() {
               </CardDescription>
             </div>
             <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 gap-1.5"
+                onClick={() => syncNowMut.mutate()}
+                disabled={syncNowMut.isPending}
+              >
+                {syncNowMut.isPending ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <RefreshCw className="h-3.5 w-3.5" />
+                )}
+                Sincronizar agora
+              </Button>
               <Label className="text-xs text-muted-foreground">Janela</Label>
               <Select
                 value={String(syncDays)}
