@@ -660,6 +660,7 @@ function CalendarPage() {
               )}
             </div>
           </div>
+          </div>
         </CardContent>
       </Card>
 
