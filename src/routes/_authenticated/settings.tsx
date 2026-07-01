@@ -32,7 +32,6 @@ import {
   SPECIALTY_SUGGESTIONS,
 } from "@/lib/practice-labels";
 import { useProfile } from "@/hooks/use-profile";
-import { useQuery as useAdminQuery } from "@tanstack/react-query";
 import { isCurrentUserAdmin } from "@/lib/oauth-settings.functions";
 
 export const Route = createFileRoute("/_authenticated/settings")({
