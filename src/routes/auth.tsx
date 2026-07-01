@@ -79,7 +79,7 @@ function AuthPage() {
           <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-primary text-primary-foreground">
             <BrainCircuit className="h-7 w-7" />
           </div>
-          <h1 className="text-3xl font-bold text-foreground">B2B | JurisMind Ai</h1>
+          <h1 className="text-3xl font-bold text-foreground">B2B | JurisMind AI</h1>
           <p className="mt-2 text-sm text-muted-foreground">
             Inteligência jurídica aplicada à advocacia
           </p>

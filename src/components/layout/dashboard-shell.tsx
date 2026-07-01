@@ -124,7 +124,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
               {!collapsed && (
                 <div className="flex flex-col min-w-0">
                   <h2 className="font-heading text-base font-semibold leading-tight truncate">
-                    B2B | JurisMind Ai
+                    B2B | JurisMind AI
                   </h2>
                   <span className="text-[11px] uppercase tracking-wider text-sidebar-foreground/60">
                     Cliente
@@ -210,7 +210,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
               <BrainCircuit className="h-5 w-5" />
             </div>
-            <span className="font-heading text-lg font-bold">B2B | JurisMind Ai</span>
+            <span className="font-heading text-lg font-bold">B2B | JurisMind AI</span>
           </Link>
           <div className="flex items-center gap-1">
             <NotificationBell />
