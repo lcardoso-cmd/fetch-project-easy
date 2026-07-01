@@ -315,6 +315,20 @@ function CalendarPage() {
               </CardDescription>
             </div>
             <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 gap-1.5"
+                onClick={() => syncNowMut.mutate()}
+                disabled={syncNowMut.isPending}
+              >
+                {syncNowMut.isPending ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <RefreshCw className="h-3.5 w-3.5" />
+                )}
+                Sincronizar agora
+              </Button>
               <Label className="text-xs text-muted-foreground">Janela</Label>
               <Select
                 value={String(syncDays)}
