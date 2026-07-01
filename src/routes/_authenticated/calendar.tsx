@@ -18,7 +18,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { CalendarDays, Plus, Trash2, Loader2, ExternalLink, Link2, Mail, RefreshCw } from "lucide-react";
+import { CalendarDays, Plus, Trash2, Loader2, ExternalLink, Link2, Mail, RefreshCw, ListFilter } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { listEvents, createEvent, deleteEvent } from "@/lib/events.functions";
 import { getCases } from "@/lib/cases.functions";
 import {
@@ -28,6 +30,8 @@ import {
   setGoogleActive,
   setGoogleSyncWindow,
   listGoogleCalendarEvents,
+  listGoogleCalendars,
+  setGoogleSelectedCalendars,
 } from "@/lib/google.functions";
 import {
   getOutlookAuthUrl,
@@ -36,6 +40,8 @@ import {
   setOutlookActive,
   setOutlookSyncWindow,
   listOutlookCalendarEvents,
+  listOutlookCalendars,
+  setOutlookSelectedCalendars,
 } from "@/lib/outlook.functions";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
@@ -151,6 +157,8 @@ function CalendarPage() {
   const disconnectG = useServerFn(disconnectGoogle);
   const setGActive = useServerFn(setGoogleActive);
   const listGCal = useServerFn(listGoogleCalendarEvents);
+  const listGCals = useServerFn(listGoogleCalendars);
+  const setGCals = useServerFn(setGoogleSelectedCalendars);
 
   const { data: gConn } = useQuery({
     queryKey: ["google-connection"],
@@ -241,6 +249,8 @@ function CalendarPage() {
   const disconnectO = useServerFn(disconnectOutlook);
   const setOActive = useServerFn(setOutlookActive);
   const listOCal = useServerFn(listOutlookCalendarEvents);
+  const listOCals = useServerFn(listOutlookCalendars);
+  const setOCals = useServerFn(setOutlookSelectedCalendars);
 
   const { data: oConn } = useQuery({
     queryKey: ["outlook-connection"],
@@ -349,6 +359,68 @@ function CalendarPage() {
     },
     onError: (e: Error) => toast.error(e.message || "Falha ao atualizar Outlook"),
   });
+
+  const { data: gCalsList } = useQuery({
+    queryKey: ["google-calendars"],
+    queryFn: () => listGCals(),
+    enabled: !!gConn,
+  });
+  const { data: oCalsList } = useQuery({
+    queryKey: ["outlook-calendars"],
+    queryFn: () => listOCals(),
+    enabled: !!oConn,
+  });
+
+  const setGCalsMut = useMutation({
+    mutationFn: (ids: string[] | null) => setGCals({ data: { calendar_ids: ids } }),
+    onSuccess: () => {
+      toast.success("Calendários do Google atualizados");
+      qc.invalidateQueries({ queryKey: ["google-connection"] });
+      qc.invalidateQueries({ queryKey: ["google-calendar-events"] });
+    },
+    onError: (e: Error) => toast.error(e.message || "Falha ao salvar"),
+  });
+  const setOCalsMut = useMutation({
+    mutationFn: (ids: string[] | null) => setOCals({ data: { calendar_ids: ids } }),
+    onSuccess: () => {
+      toast.success("Calendários do Outlook atualizados");
+      qc.invalidateQueries({ queryKey: ["outlook-connection"] });
+      qc.invalidateQueries({ queryKey: ["outlook-calendar-events"] });
+    },
+    onError: (e: Error) => toast.error(e.message || "Falha ao salvar"),
+  });
+
+  const isGCalSelected = (id: string, primary: boolean) => {
+    const sel = gConn?.selected_calendar_ids;
+    if (!sel || sel.length === 0) return primary;
+    return sel.includes(id);
+  };
+  const isOCalSelected = (id: string, primary: boolean) => {
+    const sel = oConn?.selected_calendar_ids;
+    if (!sel || sel.length === 0) return primary;
+    return sel.includes(id);
+  };
+  const toggleGCalendar = (id: string, checked: boolean) => {
+    const cals = gCalsList?.calendars ?? [];
+    const base = gConn?.selected_calendar_ids && gConn.selected_calendar_ids.length > 0
+      ? gConn.selected_calendar_ids
+      : cals.filter((c) => c.primary).map((c) => c.id);
+    const next = checked
+      ? Array.from(new Set([...base, id]))
+      : base.filter((x) => x !== id);
+    setGCalsMut.mutate(next.length > 0 ? next : null);
+  };
+  const toggleOCalendar = (id: string, checked: boolean) => {
+    const cals = oCalsList?.calendars ?? [];
+    const base = oConn?.selected_calendar_ids && oConn.selected_calendar_ids.length > 0
+      ? oConn.selected_calendar_ids
+      : cals.filter((c) => c.primary).map((c) => c.id);
+    const next = checked
+      ? Array.from(new Set([...base, id]))
+      : base.filter((x) => x !== id);
+    setOCalsMut.mutate(next.length > 0 ? next : null);
+  };
+
 
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -603,6 +675,48 @@ function CalendarPage() {
                       onCheckedChange={(v) => toggleGoogleMut.mutate(v)}
                     />
                   </div>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" size="sm">
+                        <ListFilter className="mr-1.5 h-3.5 w-3.5" />
+                        Calendários ({(gConn.selected_calendar_ids?.length) || (gCalsList?.calendars ?? []).filter((c) => c.primary).length || "padrão"})
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent align="end" className="w-72 p-2">
+                      <p className="px-2 py-1 text-xs font-medium text-muted-foreground">
+                        Escolha quais calendários sincronizar
+                      </p>
+                      <div className="max-h-64 overflow-auto">
+                        {!gCalsList ? (
+                          <p className="p-2 text-xs text-muted-foreground">Carregando…</p>
+                        ) : (gCalsList.calendars ?? []).length === 0 ? (
+                          <p className="p-2 text-xs text-muted-foreground">Nenhum calendário encontrado.</p>
+                        ) : (
+                          gCalsList.calendars.map((c) => (
+                            <label
+                              key={c.id}
+                              className="flex items-center gap-2 rounded px-2 py-1.5 text-sm hover:bg-muted"
+                            >
+                              <Checkbox
+                                checked={isGCalSelected(c.id, c.primary)}
+                                onCheckedChange={(v) => toggleGCalendar(c.id, Boolean(v))}
+                              />
+                              {c.color && (
+                                <span
+                                  className="inline-block h-3 w-3 rounded-sm border"
+                                  style={{ backgroundColor: c.color }}
+                                />
+                              )}
+                              <span className="min-w-0 flex-1 truncate">{c.summary}</span>
+                              {c.primary && (
+                                <span className="text-[10px] text-muted-foreground">principal</span>
+                              )}
+                            </label>
+                          ))
+                        )}
+                      </div>
+                    </PopoverContent>
+                  </Popover>
                   <Button
                     variant="outline"
                     size="sm"
@@ -676,6 +790,48 @@ function CalendarPage() {
                       onCheckedChange={(v) => toggleOutlookMut.mutate(v)}
                     />
                   </div>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" size="sm">
+                        <ListFilter className="mr-1.5 h-3.5 w-3.5" />
+                        Calendários ({(oConn.selected_calendar_ids?.length) || (oCalsList?.calendars ?? []).filter((c) => c.primary).length || "padrão"})
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent align="end" className="w-72 p-2">
+                      <p className="px-2 py-1 text-xs font-medium text-muted-foreground">
+                        Escolha quais calendários sincronizar
+                      </p>
+                      <div className="max-h-64 overflow-auto">
+                        {!oCalsList ? (
+                          <p className="p-2 text-xs text-muted-foreground">Carregando…</p>
+                        ) : (oCalsList.calendars ?? []).length === 0 ? (
+                          <p className="p-2 text-xs text-muted-foreground">Nenhum calendário encontrado.</p>
+                        ) : (
+                          oCalsList.calendars.map((c) => (
+                            <label
+                              key={c.id}
+                              className="flex items-center gap-2 rounded px-2 py-1.5 text-sm hover:bg-muted"
+                            >
+                              <Checkbox
+                                checked={isOCalSelected(c.id, c.primary)}
+                                onCheckedChange={(v) => toggleOCalendar(c.id, Boolean(v))}
+                              />
+                              {c.color && (
+                                <span
+                                  className="inline-block h-3 w-3 rounded-sm border"
+                                  style={{ backgroundColor: c.color }}
+                                />
+                              )}
+                              <span className="min-w-0 flex-1 truncate">{c.summary}</span>
+                              {c.primary && (
+                                <span className="text-[10px] text-muted-foreground">principal</span>
+                              )}
+                            </label>
+                          ))
+                        )}
+                      </div>
+                    </PopoverContent>
+                  </Popover>
                   <Button
                     variant="outline"
                     size="sm"
