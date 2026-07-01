@@ -124,8 +124,8 @@ function CalendarPage() {
     queryFn: () => getOConn(),
   });
   const { data: oCal } = useQuery({
-    queryKey: ["outlook-calendar-events"],
-    queryFn: () => listOCal({ data: {} }),
+    queryKey: ["outlook-calendar-events", syncDays],
+    queryFn: () => listOCal({ data: { timeMax: syncTimeMax() } }),
     enabled: !!oConn && oConn.is_active !== false,
   });
 
