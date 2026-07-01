@@ -7,11 +7,11 @@ export const Route = createFileRoute("/")({
   component: LandingPage,
   head: () => ({
     meta: [
-      { title: "JurisMind — Inteligência para advogados, peritos e assistentes técnicos" },
+      { title: "B2B | JurisMind Ai — Inteligência para advogados, peritos e assistentes técnicos" },
       {
         name: "description",
         content:
-          "JurisMind: plataforma de IA jurídica para advogados, peritos judiciais e assistentes técnicos. RAG de documentos, prazos e modelos de petição, laudo e parecer.",
+          "B2B | JurisMind Ai: plataforma de IA jurídica para advogados, peritos judiciais e assistentes técnicos. RAG de documentos, prazos e modelos de petição, laudo e parecer.",
       },
     ],
   }),
@@ -22,13 +22,13 @@ const features = [
     icon: BrainCircuit,
     title: "Chat com seus documentos",
     description:
-      "Pergunte qualquer coisa sobre seus processos, perícias ou laudos. O JurisMind busca trechos relevantes e responde citando as fontes.",
+      "Pergunte qualquer coisa sobre seus processos, perícias ou laudos. O JurisMind Ai busca trechos relevantes e responde citando as fontes.",
   },
   {
     icon: FileText,
     title: "Análise automática",
     description:
-      "Faça upload de PDFs, contratos, despachos de nomeação e laudos. O JurisMind extrai, indexa e gera resumos em segundos.",
+      "Faça upload de PDFs, contratos, despachos de nomeação e laudos. O JurisMind Ai extrai, indexa e gera resumos em segundos.",
   },
   {
     icon: ListTodo,
