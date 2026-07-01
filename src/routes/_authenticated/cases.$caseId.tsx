@@ -165,17 +165,6 @@ function CaseDetailPage() {
               Cliente: {caseData.client_name}
             </p>
           )}
-          <div className="mt-2 flex flex-wrap gap-2">
-            {caseData.case_number && (
-              <Badge variant="secondary">N° {caseData.case_number}</Badge>
-            )}
-            {caseData.jurisdiction && (
-              <Badge variant="secondary">{caseData.jurisdiction}</Badge>
-            )}
-            {caseData.case_type && (
-              <Badge variant="secondary">{caseData.case_type}</Badge>
-            )}
-          </div>
         </div>
         <div className="flex shrink-0 items-center gap-2">
           <Button
@@ -234,6 +223,37 @@ function CaseDetailPage() {
         </div>
       </div>
 
+      {/* Dados do caso — quadro branco */}
+      {(caseData.case_number || caseData.jurisdiction || caseData.case_type) && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Dados do caso</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ul className="space-y-1">
+              {caseData.case_number && (
+                <li className="text-sm text-muted-foreground">
+                  <span className="font-medium text-foreground">Número do processo:</span>{" "}
+                  {caseData.case_number}
+                </li>
+              )}
+              {caseData.jurisdiction && (
+                <li className="text-sm text-muted-foreground">
+                  <span className="font-medium text-foreground">Vara / Tribunal:</span>{" "}
+                  {caseData.jurisdiction}
+                </li>
+              )}
+              {caseData.case_type && (
+                <li className="text-sm text-muted-foreground">
+                  <span className="font-medium text-foreground">Área:</span>{" "}
+                  {caseData.case_type}
+                </li>
+              )}
+            </ul>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Partes envolvidas — quadro branco */}
       {caseData.parties && (caseData.parties as Array<{ role: string; name: string; relation?: string | null }>).length > 0 && (
         <Card>
@@ -255,6 +275,7 @@ function CaseDetailPage() {
           </CardContent>
         </Card>
       )}
+
 
       {editing && (
         <Card>
