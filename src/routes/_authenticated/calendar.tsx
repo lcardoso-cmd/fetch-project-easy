@@ -132,9 +132,40 @@ function CalendarPage() {
   const caseTitle = (id: string | null) =>
     id ? cases.find((c) => c.id === id)?.title : null;
 
+  type UnifiedEvent = {
+    id: string;
+    title: string;
+    description: string | null;
+    starts_at: string;
+    event_type?: string;
+    case_id?: string | null;
+    source: "local" | "google";
+    html_link?: string | null;
+  };
+
+  const unified: UnifiedEvent[] = [
+    ...events.map((e) => ({
+      id: e.id,
+      title: e.title,
+      description: e.description ?? null,
+      starts_at: e.starts_at,
+      event_type: e.event_type,
+      case_id: e.case_id,
+      source: "local" as const,
+    })),
+    ...((gCal?.events ?? []).map((e) => ({
+      id: `gcal-${e.id}`,
+      title: e.title,
+      description: e.description,
+      starts_at: e.starts_at,
+      source: "google" as const,
+      html_link: e.html_link,
+    })) as UnifiedEvent[]),
+  ].sort((a, b) => a.starts_at.localeCompare(b.starts_at));
+
   // group by day
-  const groups = new Map<string, typeof events>();
-  for (const ev of events) {
+  const groups = new Map<string, UnifiedEvent[]>();
+  for (const ev of unified) {
     const d = new Date(ev.starts_at).toLocaleDateString("pt-BR", {
       weekday: "long",
       day: "2-digit",
@@ -156,6 +187,72 @@ function CalendarPage() {
           <Plus className="mr-2 h-4 w-4" /> Novo evento
         </Button>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <Link2 className="h-5 w-5" /> Agendas conectadas
+          </CardTitle>
+          <CardDescription>
+            Sincronize com serviços externos para ver seus compromissos aqui.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-3 md:grid-cols-2">
+          <div className="flex items-center justify-between rounded-lg border p-3">
+            <div className="min-w-0">
+              <p className="font-medium">Google Agenda</p>
+              {gConn ? (
+                <p className="truncate text-xs text-muted-foreground">{gConn.google_email}</p>
+              ) : (
+                <p className="text-xs text-muted-foreground">Não conectada</p>
+              )}
+            </div>
+            {gConn ? (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => disconnectGoogleMut.mutate()}
+                disabled={disconnectGoogleMut.isPending}
+              >
+                Desconectar
+              </Button>
+            ) : (
+              <Button
+                size="sm"
+                onClick={() => connectGoogleMut.mutate()}
+                disabled={connectGoogleMut.isPending}
+              >
+                {connectGoogleMut.isPending && (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                )}
+                Conectar
+              </Button>
+            )}
+          </div>
+          <div className="flex items-center justify-between rounded-lg border p-3">
+            <div className="min-w-0">
+              <p className="flex items-center gap-1.5 font-medium">
+                <Mail className="h-4 w-4" /> Outlook Agenda
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Requer configuração das credenciais Microsoft
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() =>
+                toast.info(
+                  "Para conectar o Outlook, precisamos das credenciais Microsoft OAuth. Confirme para eu iniciar a configuração.",
+                )
+              }
+            >
+              Configurar
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
 
       {open && (
         <Card>
