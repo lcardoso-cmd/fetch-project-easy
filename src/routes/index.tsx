@@ -157,7 +157,7 @@ function LandingPage() {
             Pronto para experimentar?
           </h2>
           <p className="mt-3 text-muted-foreground">
-            Crie sua conta gratuita, suba seus primeiros documentos e converse com o JurisMind.
+            Crie sua conta gratuita, suba seus primeiros documentos e converse com o B2B | JurisMind Ai.
           </p>
           <Button size="lg" asChild className="mt-6">
             <Link to={user ? "/dashboard" : "/auth"}>
@@ -169,7 +169,7 @@ function LandingPage() {
 
       <footer className="border-t">
         <div className="mx-auto max-w-6xl px-4 py-6 text-center text-sm text-muted-foreground">
-          © {new Date().getFullYear()} JurisMind. Feito para advogados.
+          © {new Date().getFullYear()} B2B | JurisMind Ai. Feito para advogados.
         </div>
       </footer>
     </div>
