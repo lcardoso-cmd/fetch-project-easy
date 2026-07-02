@@ -33,6 +33,7 @@ import {
   AlertCircle,
   BrainCircuit,
   CalendarIcon,
+  ChevronDown,
   FileText,
   ImagePlus,
   Loader2,
@@ -40,10 +41,23 @@ import {
   Mic,
   Search,
   Send,
-  Sparkles,
   Square,
   X,
 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { JurisMindMark } from "@/components/brand/jurismind-mark";
+
+function capitalize(s: string) {
+  if (!s) return s;
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
 import type { DocItem } from "@/components/documents/document-list";
 import {
   PDFCard,
@@ -92,7 +106,9 @@ interface CaseSummary {
 
 type ModelTier = "fast" | "balanced" | "max";
 
-const QUICK_ACTIONS: Array<{ label: string; prompt: string }> = [
+type QuickAction = { label: string; prompt: string };
+
+const PRIMARY_ACTIONS: QuickAction[] = [
   {
     label: "Resumo do caso",
     prompt:
@@ -114,64 +130,82 @@ const QUICK_ACTIONS: Array<{ label: string; prompt: string }> = [
       "Faça uma análise de risco completa em tabela: cenário, probabilidade (alta/média/baixa), impacto financeiro estimado, medida mitigadora e fonte [n].",
   },
   {
-    label: "Quesitos periciais",
-    prompt:
-      "Proponha 12 quesitos periciais técnicos pertinentes ao objeto da causa, organizados por tema e fundamentados nos documentos.",
-  },
-  {
-    label: "Petição inicial",
-    prompt:
-      "Use create_petition para redigir uma petição inicial COMPLETA (endereçamento, qualificação das partes, fatos, fundamentos jurídicos com citações doutrinárias/legais, pedidos e valor da causa) a partir dos documentos selecionados. Use HTML semântico simples.",
-  },
-  {
-    label: "Contestação",
-    prompt:
-      "Use create_petition para redigir contestação completa com preliminares (se houver), impugnação dos fatos, teses de mérito, pedidos e requerimentos finais.",
-  },
-  {
-    label: "Manifestação técnica",
-    prompt:
-      "Use create_petition para elaborar manifestação técnica respondendo aos pontos centrais do laudo, com tópicos e fundamentação técnica e jurídica.",
-  },
-  {
-    label: "Contrarrazões",
-    prompt:
-      "Use create_petition para redigir contrarrazões de recurso, atacando tese por tese, com fundamentação e pedido de improvimento.",
-  },
-  {
-    label: "Alegações finais",
-    prompt:
-      "Use create_petition para redigir alegações finais/memoriais escritos, revisando as provas produzidas e reforçando os pedidos.",
-  },
-  {
-    label: "Notificação extrajudicial",
-    prompt:
-      "Use create_petition para redigir notificação extrajudicial formal com os fatos, base jurídica e prazo para atendimento.",
-  },
-  {
-    label: "Parecer técnico",
-    prompt:
-      "Use create_petition para produzir parecer jurídico técnico com fundamentação doutrinária, jurisprudencial e conclusão objetiva.",
-  },
-  {
-    label: "Planilha de cálculo",
-    prompt:
-      "Use create_table para gerar planilha detalhada com os valores envolvidos no caso (rubrica, base de cálculo, índice, valor original, valor corrigido, total).",
-  },
-  {
-    label: "Apresentação",
-    prompt:
-      "Use create_presentation para preparar apresentação executiva com 10 slides cobrindo: contexto, partes, fatos, teses da parte, teses adversas, prova produzida, pontos críticos, valores, estratégia e próximos passos.",
-  },
-  {
-    label: "Extrair partes",
-    prompt:
-      "Use create_table para gerar quadro completo das partes envolvidas (nome, qualificação, CPF/CNPJ, endereço, papel processual, advogado). Extraia dos documentos.",
-  },
-  {
     label: "Extrair prazos",
     prompt:
       "Liste todos os prazos processuais e datas relevantes identificados nos documentos, e para cada um chame create_event para criar um lembrete na agenda (5 dias úteis antes).",
+  },
+];
+
+const ACTION_GROUPS: Array<{ label: string; actions: QuickAction[] }> = [
+  {
+    label: "Peças jurídicas",
+    actions: [
+      {
+        label: "Petição inicial",
+        prompt:
+          "Use create_petition para redigir uma petição inicial COMPLETA (endereçamento, qualificação das partes, fatos, fundamentos jurídicos com citações doutrinárias/legais, pedidos e valor da causa) a partir dos documentos selecionados. Use HTML semântico simples.",
+      },
+      {
+        label: "Contestação",
+        prompt:
+          "Use create_petition para redigir contestação completa com preliminares (se houver), impugnação dos fatos, teses de mérito, pedidos e requerimentos finais.",
+      },
+      {
+        label: "Contrarrazões",
+        prompt:
+          "Use create_petition para redigir contrarrazões de recurso, atacando tese por tese, com fundamentação e pedido de improvimento.",
+      },
+      {
+        label: "Alegações finais",
+        prompt:
+          "Use create_petition para redigir alegações finais/memoriais escritos, revisando as provas produzidas e reforçando os pedidos.",
+      },
+      {
+        label: "Notificação extrajudicial",
+        prompt:
+          "Use create_petition para redigir notificação extrajudicial formal com os fatos, base jurídica e prazo para atendimento.",
+      },
+    ],
+  },
+  {
+    label: "Perícia / Técnica",
+    actions: [
+      {
+        label: "Quesitos periciais",
+        prompt:
+          "Proponha 12 quesitos periciais técnicos pertinentes ao objeto da causa, organizados por tema e fundamentados nos documentos.",
+      },
+      {
+        label: "Manifestação técnica",
+        prompt:
+          "Use create_petition para elaborar manifestação técnica respondendo aos pontos centrais do laudo, com tópicos e fundamentação técnica e jurídica.",
+      },
+      {
+        label: "Parecer técnico",
+        prompt:
+          "Use create_petition para produzir parecer jurídico técnico com fundamentação doutrinária, jurisprudencial e conclusão objetiva.",
+      },
+      {
+        label: "Planilha de cálculo",
+        prompt:
+          "Use create_table para gerar planilha detalhada com os valores envolvidos no caso (rubrica, base de cálculo, índice, valor original, valor corrigido, total).",
+      },
+      {
+        label: "Apresentação",
+        prompt:
+          "Use create_presentation para preparar apresentação executiva com 10 slides cobrindo: contexto, partes, fatos, teses da parte, teses adversas, prova produzida, pontos críticos, valores, estratégia e próximos passos.",
+      },
+    ],
+  },
+  {
+    label: "Utilidades",
+    actions: [
+      {
+        label: "Extrair partes",
+        prompt:
+          "Use create_table para gerar quadro completo das partes envolvidas (nome, qualificação, CPF/CNPJ, endereço, papel processual, advogado). Extraia dos documentos.",
+      },
+    ],
   },
 ];
 
@@ -509,7 +543,7 @@ export function JurisMindChat({
                 </span>{" "}
                 {caseInfo.represented_party.name}
                 {caseInfo.represented_party.role
-                  ? ` (${caseInfo.represented_party.role})`
+                  ? ` (${capitalize(caseInfo.represented_party.role)})`
                   : ""}
               </p>
             )}
@@ -540,7 +574,7 @@ export function JurisMindChat({
                   {caseInfo.parties.map((p, i) => (
                     <li key={i} className="flex gap-1.5">
                       <span className="rounded bg-muted px-1.5 py-0.5 font-medium text-foreground">
-                        {p.role}
+                        {capitalize(p.role)}
                       </span>
                       <span className="truncate">{p.name}</span>
                     </li>
@@ -714,7 +748,7 @@ export function JurisMindChat({
           <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4">
             {messages.length === 0 ? (
               <div className="flex h-full flex-col items-center justify-center gap-3 text-center text-muted-foreground">
-                <Sparkles className="h-10 w-10 text-primary" />
+                <JurisMindMark size={56} />
                 <p className="font-medium text-foreground">
                   Pergunte sobre os documentos do caso
                 </p>
