@@ -346,6 +346,15 @@ export const attachExistingDocument = createServerFn({ method: "POST" })
         .eq("content_hash", src.content_hash)
         .maybeSingle();
       if (byHash) {
+        await logAudit(context.supabase, context.userId, {
+          case_id: data.case_id,
+          action: "duplicate_ignored",
+          document_id: byHash.id as string,
+          filename: src.filename as string,
+          content_hash: src.content_hash,
+          reason: "Importação ignorada — hash idêntico",
+          metadata: { existing_filename: byHash.filename },
+        });
         return {
           duplicate: true as const,
           reason: "content_hash" as const,
@@ -363,6 +372,14 @@ export const attachExistingDocument = createServerFn({ method: "POST" })
       .eq("filename", src.filename as string)
       .maybeSingle();
     if (byName) {
+      await logAudit(context.supabase, context.userId, {
+        case_id: data.case_id,
+        action: "duplicate_ignored",
+        document_id: byName.id as string,
+        filename: src.filename as string,
+        reason: "Importação ignorada — nome já existente",
+        metadata: { existing_filename: byName.filename },
+      });
       return {
         duplicate: true as const,
         reason: "filename" as const,
@@ -387,17 +404,33 @@ export const attachExistingDocument = createServerFn({ method: "POST" })
       .select()
       .single();
     if (error) throw error;
+    await logAudit(context.supabase, context.userId, {
+      case_id: data.case_id,
+      action: "imported",
+      document_id: (row as { id: string }).id,
+      filename: src.filename as string,
+      content_hash: src.content_hash as string | null,
+      reason: "Importado de outro caso",
+      metadata: { source_document_id: data.source_document_id },
+    });
     return { duplicate: false as const, document: row };
   });
 
 export const deleteDocument = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((i: unknown) => z.object({ id: z.string().uuid() }).parse(i))
+  .inputValidator((i: unknown) =>
+    z
+      .object({
+        id: z.string().uuid(),
+        reason: z.string().max(500).optional(),
+      })
+      .parse(i),
+  )
   .handler(async ({ data, context }) => {
     // Buscar para apagar do storage — mas só se nenhum outro documento reusar o mesmo path
     const { data: doc } = await context.supabase
       .from("documents")
-      .select("storage_path")
+      .select("storage_path, case_id, filename, content_hash")
       .eq("id", data.id)
       .eq("user_id", context.userId)
       .single();
@@ -419,5 +452,51 @@ export const deleteDocument = createServerFn({ method: "POST" })
       .eq("id", data.id)
       .eq("user_id", context.userId);
     if (error) throw error;
+    if (doc?.case_id) {
+      await logAudit(context.supabase, context.userId, {
+        case_id: doc.case_id as string,
+        action: "deleted",
+        document_id: data.id,
+        filename: (doc.filename as string) ?? null,
+        content_hash: (doc.content_hash as string) ?? null,
+        reason: data.reason ?? null,
+      });
+    }
     return { ok: true };
+  });
+
+/**
+ * Retorna os eventos de auditoria (importações, substituições, cancelamentos,
+ * exclusões) de documentos vinculados ao caso, do mais recente para o mais
+ * antigo, com o nome do usuário responsável quando disponível.
+ */
+export const listDocumentAuditEvents = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((i: unknown) =>
+    z.object({ case_id: z.string().uuid(), limit: z.number().int().min(1).max(200).optional() }).parse(i),
+  )
+  .handler(async ({ data, context }) => {
+    const { data: rows, error } = await context.supabase
+      .from("document_audit_events")
+      .select(
+        "id, action, reason, filename, content_hash, metadata, created_at, user_id, document_id, profiles:user_id(full_name)",
+      )
+      .eq("case_id", data.case_id)
+      .order("created_at", { ascending: false })
+      .limit(data.limit ?? 100);
+    if (error) throw error;
+    return (rows ?? []).map((r) => ({
+      id: r.id as string,
+      action: r.action as AuditAction,
+      reason: (r.reason as string | null) ?? null,
+      filename: (r.filename as string | null) ?? null,
+      content_hash: (r.content_hash as string | null) ?? null,
+      metadata: (r.metadata as Record<string, unknown>) ?? {},
+      created_at: r.created_at as string,
+      user_id: r.user_id as string,
+      document_id: (r.document_id as string | null) ?? null,
+      user_name:
+        (r.profiles as { full_name?: string | null } | null)?.full_name ??
+        null,
+    }));
   });
