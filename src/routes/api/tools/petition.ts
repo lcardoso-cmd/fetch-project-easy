@@ -1,10 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Packer } from "docx";
+import { createClient } from "@supabase/supabase-js";
+import type { Database } from "@/integrations/supabase/types";
 import {
   createStyledDocument,
   htmlToDocxChildren,
   plainTextToDocxChildren,
 } from "@/lib/docx/template";
+import { loadBrandingForUser } from "@/lib/docx/branding.server";
 
 function sanitize(name: string) {
   return (
@@ -16,6 +19,25 @@ function sanitize(name: string) {
       .replace(/[^\w-.]/g, "")
       .replace(/_{2,}/g, "_") || "peticao"
   );
+}
+
+async function resolveUserId(authHeader: string | null): Promise<string | null> {
+  if (!authHeader?.startsWith("Bearer ")) return null;
+  const token = authHeader.slice("Bearer ".length).trim();
+  if (!token || token.split(".").length !== 3) return null;
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_PUBLISHABLE_KEY;
+  if (!url || !key) return null;
+  try {
+    const client = createClient<Database>(url, key, {
+      auth: { storage: undefined, persistSession: false, autoRefreshToken: false },
+    });
+    const { data, error } = await client.auth.getClaims(token);
+    if (error || !data?.claims?.sub) return null;
+    return data.claims.sub as string;
+  } catch {
+    return null;
+  }
 }
 
 export const Route = createFileRoute("/api/tools/petition")({
@@ -36,17 +58,19 @@ export const Route = createFileRoute("/api/tools/petition")({
             ? htmlToDocxChildren(html)
             : plainTextToDocxChildren(String(conteudo));
 
-          const headerLabel = /proposta/i.test(titulo)
-            ? "Proposta comercial"
-            : "Petição";
+          const headerLabel = /proposta/i.test(titulo) ? "Proposta comercial" : "Petição";
+
+          const userId = await resolveUserId(request.headers.get("authorization"));
+          const branding = userId ? await loadBrandingForUser(userId) : null;
 
           const doc = createStyledDocument({
             title: String(titulo),
             children,
             meta: {
               header: headerLabel,
-              creator: "B2B | JurisMind AI",
+              creator: branding?.firmName || "B2B | JurisMind AI",
               description: String(titulo),
+              branding,
             },
           });
 

@@ -35,6 +35,7 @@ import { Route as ApiToolsPresentationRouteImport } from './routes/api/tools/pre
 import { Route as ApiToolsPetitionRouteImport } from './routes/api/tools/petition'
 import { Route as ApiToolsPdfRouteImport } from './routes/api/tools/pdf'
 import { Route as AuthenticatedSettingsOauthRouteImport } from './routes/_authenticated/settings.oauth'
+import { Route as AuthenticatedSettingsFirmRouteImport } from './routes/_authenticated/settings.firm'
 import { Route as AuthenticatedCasesNewRouteImport } from './routes/_authenticated/cases.new'
 import { Route as AuthenticatedCasesBulkRouteImport } from './routes/_authenticated/cases.bulk'
 import { Route as AuthenticatedCasesCaseIdRouteImport } from './routes/_authenticated/cases.$caseId'
@@ -174,6 +175,12 @@ const AuthenticatedSettingsOauthRoute =
     path: '/oauth',
     getParentRoute: () => AuthenticatedSettingsRoute,
   } as any)
+const AuthenticatedSettingsFirmRoute =
+  AuthenticatedSettingsFirmRouteImport.update({
+    id: '/firm',
+    path: '/firm',
+    getParentRoute: () => AuthenticatedSettingsRoute,
+  } as any)
 const AuthenticatedCasesNewRoute = AuthenticatedCasesNewRouteImport.update({
   id: '/new',
   path: '/new',
@@ -230,6 +237,7 @@ export interface FileRoutesByFullPath {
   '/cases/$caseId': typeof AuthenticatedCasesCaseIdRouteWithChildren
   '/cases/bulk': typeof AuthenticatedCasesBulkRoute
   '/cases/new': typeof AuthenticatedCasesNewRoute
+  '/settings/firm': typeof AuthenticatedSettingsFirmRoute
   '/settings/oauth': typeof AuthenticatedSettingsOauthRoute
   '/api/tools/pdf': typeof ApiToolsPdfRoute
   '/api/tools/petition': typeof ApiToolsPetitionRoute
@@ -262,6 +270,7 @@ export interface FileRoutesByTo {
   '/cases/$caseId': typeof AuthenticatedCasesCaseIdRouteWithChildren
   '/cases/bulk': typeof AuthenticatedCasesBulkRoute
   '/cases/new': typeof AuthenticatedCasesNewRoute
+  '/settings/firm': typeof AuthenticatedSettingsFirmRoute
   '/settings/oauth': typeof AuthenticatedSettingsOauthRoute
   '/api/tools/pdf': typeof ApiToolsPdfRoute
   '/api/tools/petition': typeof ApiToolsPetitionRoute
@@ -297,6 +306,7 @@ export interface FileRoutesById {
   '/_authenticated/cases/$caseId': typeof AuthenticatedCasesCaseIdRouteWithChildren
   '/_authenticated/cases/bulk': typeof AuthenticatedCasesBulkRoute
   '/_authenticated/cases/new': typeof AuthenticatedCasesNewRoute
+  '/_authenticated/settings/firm': typeof AuthenticatedSettingsFirmRoute
   '/_authenticated/settings/oauth': typeof AuthenticatedSettingsOauthRoute
   '/api/tools/pdf': typeof ApiToolsPdfRoute
   '/api/tools/petition': typeof ApiToolsPetitionRoute
@@ -332,6 +342,7 @@ export interface FileRouteTypes {
     | '/cases/$caseId'
     | '/cases/bulk'
     | '/cases/new'
+    | '/settings/firm'
     | '/settings/oauth'
     | '/api/tools/pdf'
     | '/api/tools/petition'
@@ -364,6 +375,7 @@ export interface FileRouteTypes {
     | '/cases/$caseId'
     | '/cases/bulk'
     | '/cases/new'
+    | '/settings/firm'
     | '/settings/oauth'
     | '/api/tools/pdf'
     | '/api/tools/petition'
@@ -398,6 +410,7 @@ export interface FileRouteTypes {
     | '/_authenticated/cases/$caseId'
     | '/_authenticated/cases/bulk'
     | '/_authenticated/cases/new'
+    | '/_authenticated/settings/firm'
     | '/_authenticated/settings/oauth'
     | '/api/tools/pdf'
     | '/api/tools/petition'
@@ -608,6 +621,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSettingsOauthRouteImport
       parentRoute: typeof AuthenticatedSettingsRoute
     }
+    '/_authenticated/settings/firm': {
+      id: '/_authenticated/settings/firm'
+      path: '/firm'
+      fullPath: '/settings/firm'
+      preLoaderRoute: typeof AuthenticatedSettingsFirmRouteImport
+      parentRoute: typeof AuthenticatedSettingsRoute
+    }
     '/_authenticated/cases/new': {
       id: '/_authenticated/cases/new'
       path: '/new'
@@ -685,10 +705,12 @@ const AuthenticatedCasesRouteWithChildren =
   AuthenticatedCasesRoute._addFileChildren(AuthenticatedCasesRouteChildren)
 
 interface AuthenticatedSettingsRouteChildren {
+  AuthenticatedSettingsFirmRoute: typeof AuthenticatedSettingsFirmRoute
   AuthenticatedSettingsOauthRoute: typeof AuthenticatedSettingsOauthRoute
 }
 
 const AuthenticatedSettingsRouteChildren: AuthenticatedSettingsRouteChildren = {
+  AuthenticatedSettingsFirmRoute: AuthenticatedSettingsFirmRoute,
   AuthenticatedSettingsOauthRoute: AuthenticatedSettingsOauthRoute,
 }
 

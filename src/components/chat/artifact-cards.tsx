@@ -14,11 +14,20 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { RichTextEditor } from "@/components/chat/rich-text-editor";
+import { supabase } from "@/integrations/supabase/client";
 
 async function downloadBlob(url: string, body: unknown, filename: string) {
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  try {
+    const { data } = await supabase.auth.getSession();
+    const token = data.session?.access_token;
+    if (token) headers.Authorization = `Bearer ${token}`;
+  } catch {
+    // segue sem branding
+  }
   const res = await fetch(url, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers,
     body: JSON.stringify(body),
   });
   if (!res.ok) {

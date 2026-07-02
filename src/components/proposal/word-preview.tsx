@@ -1,4 +1,7 @@
 import { useEffect, useRef, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
+import { getFirmProfile } from "@/lib/firm-profile.functions";
 
 /**
  * WordPreview — página em formato US Letter que espelha o template DOCX
@@ -16,6 +19,20 @@ const PAGE_W = 816;
 const PAGE_H = 1056;
 
 export function WordPreview({ html, title, headerLabel = "Proposta comercial" }: WordPreviewProps) {
+  const getFirmFn = useServerFn(getFirmProfile);
+  const { data: firm } = useQuery({
+    queryKey: ["firm-profile"],
+    queryFn: () => getFirmFn(),
+    staleTime: 60_000,
+  });
+  const brandName = firm?.firm_name?.trim() || firm?.full_name?.trim() || "B2B | JurisMind AI";
+  const footerLeft = [
+    firm?.firm_name?.trim() || "Documento gerado por B2B | JurisMind AI",
+    firm?.tax_id?.trim(),
+    firm?.firm_website?.trim(),
+  ]
+    .filter(Boolean)
+    .join(" · ");
   const shellRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
 
@@ -59,7 +76,17 @@ export function WordPreview({ html, title, headerLabel = "Proposta comercial" }:
         >
           {/* Cabeçalho */}
           <div className="word-page__header">
-            <span className="word-page__brand">B2B | JurisMind AI</span>
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              {firm?.logo_url && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={firm.logo_url}
+                  alt=""
+                  style={{ maxHeight: 40, maxWidth: 160, objectFit: "contain" }}
+                />
+              )}
+              <span className="word-page__brand">{brandName}</span>
+            </div>
             <span className="word-page__header-label">{headerLabel}</span>
           </div>
 
@@ -74,7 +101,7 @@ export function WordPreview({ html, title, headerLabel = "Proposta comercial" }:
 
           {/* Rodapé */}
           <div className="word-page__footer">
-            <span>Documento gerado por B2B | JurisMind AI</span>
+            <span>{footerLeft}</span>
             <span>Página 1</span>
           </div>
         </div>

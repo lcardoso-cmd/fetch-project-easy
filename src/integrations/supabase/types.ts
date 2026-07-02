@@ -736,35 +736,53 @@ export type Database = {
       profiles: {
         Row: {
           created_at: string
+          entity_type: string
+          firm_address: string | null
+          firm_name: string | null
+          firm_website: string | null
           full_name: string | null
           id: string
+          logo_path: string | null
           oab_number: string | null
           onboarding_completed: boolean
           phone: string | null
           practice_type: string
           specialty: string | null
+          tax_id: string | null
           updated_at: string
         }
         Insert: {
           created_at?: string
+          entity_type?: string
+          firm_address?: string | null
+          firm_name?: string | null
+          firm_website?: string | null
           full_name?: string | null
           id: string
+          logo_path?: string | null
           oab_number?: string | null
           onboarding_completed?: boolean
           phone?: string | null
           practice_type?: string
           specialty?: string | null
+          tax_id?: string | null
           updated_at?: string
         }
         Update: {
           created_at?: string
+          entity_type?: string
+          firm_address?: string | null
+          firm_name?: string | null
+          firm_website?: string | null
           full_name?: string | null
           id?: string
+          logo_path?: string | null
           oab_number?: string | null
           onboarding_completed?: boolean
           phone?: string | null
           practice_type?: string
           specialty?: string | null
+          tax_id?: string | null
           updated_at?: string
         }
         Relationships: []
