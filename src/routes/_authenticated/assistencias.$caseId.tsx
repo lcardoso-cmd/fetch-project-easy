@@ -228,25 +228,25 @@ function CaseDetailPage() {
           <CardContent>
             <ul className="space-y-1">
               {caseData.client_name && (
-                <li className="text-sm text-muted-foreground">
+                <li className="text-sm text-muted-foreground break-words">
                   <span className="font-medium text-foreground">Cliente:</span>{" "}
                   {caseData.client_name}
                 </li>
               )}
               {caseData.case_number && (
-                <li className="text-sm text-muted-foreground">
+                <li className="text-sm text-muted-foreground break-words">
                   <span className="font-medium text-foreground">Número do processo:</span>{" "}
                   {caseData.case_number}
                 </li>
               )}
               {caseData.jurisdiction && (
-                <li className="text-sm text-muted-foreground">
+                <li className="text-sm text-muted-foreground break-words">
                   <span className="font-medium text-foreground">Vara / Tribunal:</span>{" "}
                   {caseData.jurisdiction}
                 </li>
               )}
               {caseData.case_type && (
-                <li className="text-sm text-muted-foreground">
+                <li className="text-sm text-muted-foreground break-words">
                   <span className="font-medium text-foreground">Área:</span>{" "}
                   {caseData.case_type}
                 </li>
