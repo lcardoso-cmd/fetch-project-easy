@@ -1,59 +1,39 @@
 ## Objetivo
 
-Quando um segmento de transcrição falhar por causa transitória (rede caindo, 429 rate-limit, 5xx do gateway), o chat tenta novamente sozinho com backoff exponencial e teto de tentativas — sem exigir clique manual em "Tentar novamente".
+Facilitar a localização de solicitações no painel `/contratar-b2b` adicionando filtro por status e busca por título.
 
-## Escopo
+## Onde
 
-Somente `src/components/chat/jurismind-chat.tsx`. Nenhuma mudança de backend, banco ou UI de outras telas.
+`src/routes/_authenticated/contratar-b2b.index.tsx` — seção "Minhas solicitações".
 
-## Comportamento
+## Mudanças
 
-**Erros que disparam retry automático** (transitórios):
-- Falha de rede (`fetch` rejeita, sem `res.status`)
-- HTTP 429 (rate-limit)
-- HTTP 408 / 425 / 500 / 502 / 503 / 504
-- Timeout do próprio segmento (novo, ver abaixo)
+1. **Persistir filtros na URL** via `validateSearch` (Zod + `fallback`) da rota:
+   - `q?: string` (busca)
+   - `status?: B2bRequestStatus | "todos"` (default `todos`)
+   Assim o estado sobrevive à navegação para o detalhe e volta.
 
-**Erros que NÃO disparam retry** (mostram banner imediato como hoje):
-- 401 / 403 (sessão)
-- 402 (créditos)
-- 413 (áudio grande)
-- 400 (payload inválido)
-- `AbortError` por cancelamento explícito do usuário (parar gravação, novo segmento)
+2. **UI de filtros** logo abaixo do título "Minhas solicitações":
+   - `Input` com ícone de busca (placeholder "Buscar por título…") — debounce leve (150 ms) para não redigitar a URL a cada tecla.
+   - `Select` com opções: Todos, Novo, Em análise, Proposta enviada, Aceita, Recusada, Cancelada, Concluído (usando `B2B_REQUEST_STATUS_LABEL`).
+   - Botão "Limpar" aparece quando há filtro ativo.
+   - Layout responsivo: linha única em desktop, empilhado em mobile.
 
-**Política de backoff**:
-- Máx. 3 tentativas por segmento
-- Delays: 500 ms → 1200 ms → 2500 ms (com jitter ±20%)
-- Respeita `Retry-After` do servidor quando presente (usa o maior entre header e delay calculado)
-- Cada tentativa cria novo `AbortController`; um `abort` externo (usuário parou / novo segmento) interrompe imediatamente e não conta como falha para retry
+3. **Filtragem client-side** (a lista já vem completa de `listMyB2bRequests`, então nada de servidor):
+   - Match por `status` exato quando ≠ "todos".
+   - Match por título via `includes` case/acento-insensível (`String.prototype.normalize("NFD").replace(/\p{Diacritic}/gu,"")`).
 
-**Segmentos parciais (durante gravação)**:
-- Retry silencioso em background (não mostra toast/banner nas tentativas intermediárias)
-- Se todas falharem, apenas incrementa um contador interno; só marca `micError` se **2 segmentos consecutivos** esgotarem retries (evita banner por soluço momentâneo)
+4. **Feedback**:
+   - Contador "X de Y solicitações" acima da lista.
+   - Empty state distinto quando há solicitações mas nenhuma bate com o filtro ("Nenhuma solicitação corresponde aos filtros" + botão limpar), diferente do empty state atual (nenhuma criada).
 
-**Segmento final (`final=true`, ao parar)**:
-- Retry visível: mostra pequeno indicador "Reprocessando… (tentativa 2/3)" na mesma área de status
-- Se esgotar, mantém banner atual com "Tentar novamente" manual como fallback
+## Detalhes técnicos
 
-**Cancelamento pelo usuário**:
-- Botão "Cancelar" existente e parar gravação abortam a cadeia de retries em curso
-- Um novo segmento também aborta retries pendentes do anterior
+- `validateSearch` com `zodValidator(z.object({ q: fallback(z.string(),"").default(""), status: fallback(z.enum([...,"todos"]),"todos").default("todos") }))`.
+- Atualização dos filtros via `useNavigate({ from: Route.fullPath })` com `search: (prev) => ({ ...prev, q: novo })` para preservar params.
+- Nada muda em backend/server functions nem no schema.
 
-## Implementação técnica
+## Fora de escopo
 
-1. Novo helper `fetchTranscribeWithRetry(body, { signal, final, onAttempt })` dentro do componente:
-   - encapsula o `fetch` + parse SSE hoje inline em `flushSegment`
-   - loop `for (let attempt = 1; attempt <= 3; attempt++)`
-   - classifica erro via helper `isRetryableTranscribeError(status | error)`
-   - `await sleepWithAbort(delay, signal)` entre tentativas
-2. Refatorar `flushSegment` para delegar rede/parse ao helper e manter apenas a lógica de partial/committed.
-3. Novo estado `retryInfo: { attempt: number; max: number } | null` para o indicador visível no flush final. Renderizar dentro do bloco de status existente (linhas ~1750), sem novos componentes.
-4. Ref `consecutiveSegmentFailuresRef` para a regra de 2-strikes em parciais.
-5. Constantes no topo do módulo: `TRANSCRIBE_MAX_ATTEMPTS = 3`, `TRANSCRIBE_BACKOFF_MS = [500, 1200, 2500]`, `SEGMENT_TIMEOUT_MS = 15000`.
-6. Timeout por tentativa: `AbortController` interno + `setTimeout` que aborta; combinado com o signal externo via helper simples.
-
-## Fora do escopo
-
-- Retry no endpoint SSE do chat (`/api/chat/stream`) — só transcrição.
-- Persistência de tentativas.
-- Retry para erros de permissão de mic (não é transcrição).
+- Filtro por serviço/data (pode virar iteração futura).
+- Filtros no painel administrativo `plataforma.solicitacoes.index.tsx`.
