@@ -492,6 +492,11 @@ export function JurisMindChat({
       else localStorage.removeItem(MIC_STORAGE_KEY);
     } catch {}
     setMicPickerOpen(false);
+    const label = deviceId
+      ? mics.find((d) => d.deviceId === deviceId)?.label || "dispositivo selecionado"
+      : "padrão do sistema";
+    setSrStatus(`Microfone alterado para ${label}.`);
+    window.setTimeout(() => setSrStatus((s) => (s.startsWith("Microfone alterado") ? "" : s)), 2000);
   };
 
   useEffect(() => {
