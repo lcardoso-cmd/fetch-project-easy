@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
+import { Link } from "@tanstack/react-router";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { askWithRag } from "@/lib/chat.functions";
-import { stripMarkdown } from "@/lib/strip-markdown";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Card,
   CardContent,
@@ -16,6 +17,13 @@ import {
 } from "@/components/ui/card";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import type { DateRange } from "react-day-picker";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -27,6 +35,7 @@ import {
   FileText,
   ImagePlus,
   Loader2,
+  Maximize2,
   Search,
   Send,
   Sparkles,
@@ -34,6 +43,7 @@ import {
 } from "lucide-react";
 import type { DocItem } from "@/components/documents/document-list";
 import {
+  PDFCard,
   PetitionCard,
   PresentationCard,
   TableCard,
@@ -76,16 +86,18 @@ interface CaseSummary {
   represented_party?: { role: string; name: string } | null;
 }
 
+type ModelTier = "fast" | "balanced" | "max";
+
 const QUICK_ACTIONS: Array<{ label: string; prompt: string }> = [
   {
     label: "Resumo do caso",
     prompt:
-      "Faça um resumo executivo do caso em até 8 linhas: partes, objeto, pedidos, valor envolvido e estágio atual. Cite as fontes.",
+      "Faça um resumo executivo do caso em até 10 linhas: partes, objeto, pedidos, valor envolvido e estágio atual. Cite as fontes com [n].",
   },
   {
     label: "Linha do tempo",
     prompt:
-      "Monte uma linha do tempo cronológica dos principais atos processuais e fatos relevantes, com datas (dd/mm/aaaa) e fonte de cada item.",
+      "Monte uma linha do tempo cronológica dos principais atos processuais e fatos relevantes, com datas (dd/mm/aaaa) e fonte [n] de cada item.",
   },
   {
     label: "Pontos críticos",
@@ -93,31 +105,77 @@ const QUICK_ACTIONS: Array<{ label: string; prompt: string }> = [
       "Liste os pontos críticos, riscos e teses adversas mais fortes contra a parte representada, com nível de risco (alto/médio/baixo) e citação das fontes.",
   },
   {
+    label: "Análise de risco",
+    prompt:
+      "Faça uma análise de risco completa em tabela: cenário, probabilidade (alta/média/baixa), impacto financeiro estimado, medida mitigadora e fonte [n].",
+  },
+  {
     label: "Quesitos periciais",
     prompt:
-      "Proponha 10 quesitos periciais técnicos pertinentes ao objeto da causa, organizados por tema e fundamentados nos documentos do caso.",
+      "Proponha 12 quesitos periciais técnicos pertinentes ao objeto da causa, organizados por tema e fundamentados nos documentos.",
   },
   {
     label: "Petição inicial",
     prompt:
-      "Use a ferramenta create_petition para redigir uma petição inicial completa (qualificação, fatos, fundamentos, pedidos e valor da causa) a partir dos documentos selecionados.",
+      "Use create_petition para redigir uma petição inicial COMPLETA (endereçamento, qualificação das partes, fatos, fundamentos jurídicos com citações doutrinárias/legais, pedidos e valor da causa) a partir dos documentos selecionados. Use HTML semântico simples.",
+  },
+  {
+    label: "Contestação",
+    prompt:
+      "Use create_petition para redigir contestação completa com preliminares (se houver), impugnação dos fatos, teses de mérito, pedidos e requerimentos finais.",
   },
   {
     label: "Manifestação técnica",
     prompt:
-      "Use create_petition para elaborar uma manifestação técnica respondendo aos pontos centrais do laudo, com tópicos e fundamentação técnica e jurídica.",
+      "Use create_petition para elaborar manifestação técnica respondendo aos pontos centrais do laudo, com tópicos e fundamentação técnica e jurídica.",
+  },
+  {
+    label: "Contrarrazões",
+    prompt:
+      "Use create_petition para redigir contrarrazões de recurso, atacando tese por tese, com fundamentação e pedido de improvimento.",
+  },
+  {
+    label: "Alegações finais",
+    prompt:
+      "Use create_petition para redigir alegações finais/memoriais escritos, revisando as provas produzidas e reforçando os pedidos.",
+  },
+  {
+    label: "Notificação extrajudicial",
+    prompt:
+      "Use create_petition para redigir notificação extrajudicial formal com os fatos, base jurídica e prazo para atendimento.",
+  },
+  {
+    label: "Parecer técnico",
+    prompt:
+      "Use create_petition para produzir parecer jurídico técnico com fundamentação doutrinária, jurisprudencial e conclusão objetiva.",
   },
   {
     label: "Planilha de cálculo",
     prompt:
-      "Use create_table para gerar uma planilha com os valores envolvidos no caso (rubrica, base de cálculo, índice, valor original, valor corrigido).",
+      "Use create_table para gerar planilha detalhada com os valores envolvidos no caso (rubrica, base de cálculo, índice, valor original, valor corrigido, total).",
   },
   {
     label: "Apresentação",
     prompt:
-      "Use create_presentation para preparar uma apresentação executiva com 8 slides cobrindo: contexto, partes, fatos, teses, pontos críticos, valores, estratégia e próximos passos.",
+      "Use create_presentation para preparar apresentação executiva com 10 slides cobrindo: contexto, partes, fatos, teses da parte, teses adversas, prova produzida, pontos críticos, valores, estratégia e próximos passos.",
+  },
+  {
+    label: "Extrair partes",
+    prompt:
+      "Use create_table para gerar quadro completo das partes envolvidas (nome, qualificação, CPF/CNPJ, endereço, papel processual, advogado). Extraia dos documentos.",
+  },
+  {
+    label: "Extrair prazos",
+    prompt:
+      "Liste todos os prazos processuais e datas relevantes identificados nos documentos, e para cada um chame create_event para criar um lembrete na agenda (5 dias úteis antes).",
   },
 ];
+
+const MODEL_LABELS: Record<ModelTier, string> = {
+  fast: "Rápido",
+  balanced: "Balanceado",
+  max: "Máximo",
+};
 
 export function JurisMindChat({
   caseId,
@@ -127,6 +185,7 @@ export function JurisMindChat({
   onToggleSelect,
   onSelectAll,
   onDeselectAll,
+  fullscreen = false,
 }: {
   caseId: string;
   caseInfo: CaseSummary;
@@ -135,6 +194,7 @@ export function JurisMindChat({
   onToggleSelect: (id: string) => void;
   onSelectAll: () => void;
   onDeselectAll: () => void;
+  fullscreen?: boolean;
 }) {
   const askFn = useServerFn(askWithRag);
   const [messages, setMessages] = useState<Msg[]>([]);
@@ -143,13 +203,27 @@ export function JurisMindChat({
   const [search, setSearch] = useState("");
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const [images, setImages] = useState<string[]>([]);
+  const [modelTier, setModelTier] = useState<ModelTier>(() => {
+    if (typeof window === "undefined") return "fast";
+    return (localStorage.getItem("jurismind:model") as ModelTier) || "fast";
+  });
   const fileRef = useRef<HTMLInputElement>(null);
   const endRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
 
-  const onPickImages = async (files: FileList | null) => {
-    if (!files) return;
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("jurismind:model", modelTier);
+    }
+  }, [modelTier]);
+
+  useEffect(() => {
+    inputRef.current?.focus();
+  }, []);
+
+  const readFilesAsImages = async (files: File[]) => {
     const list: string[] = [];
-    for (const f of Array.from(files).slice(0, 6 - images.length)) {
+    for (const f of files.slice(0, 6 - images.length)) {
       if (!f.type.startsWith("image/")) continue;
       if (f.size > 8 * 1024 * 1024) {
         toast.error(`${f.name} maior que 8MB`);
@@ -164,7 +238,12 @@ export function JurisMindChat({
         }),
       );
     }
-    setImages((prev) => [...prev, ...list]);
+    if (list.length) setImages((prev) => [...prev, ...list]);
+  };
+
+  const onPickImages = (files: FileList | null) => {
+    if (!files) return;
+    void readFilesAsImages(Array.from(files));
   };
 
   useEffect(() => {
@@ -203,10 +282,10 @@ export function JurisMindChat({
       });
   }, [readyDocs, search, dateRange]);
 
-  const send = async () => {
-    const q = input.trim();
+  const send = async (overridePrompt?: string) => {
+    const q = (overridePrompt ?? input).trim();
     if ((!q && images.length === 0) || busy) return;
-    setInput("");
+    if (!overridePrompt) setInput("");
     const sentImages = images;
     setImages([]);
     const userMsg: Msg = {
@@ -230,13 +309,14 @@ export function JurisMindChat({
           history,
           selected_doc_ids: selected.length ? selected : undefined,
           images: sentImages.length ? sentImages : undefined,
+          model_tier: modelTier,
         },
       });
       setMessages([
         ...next,
         {
           role: "assistant",
-          content: stripMarkdown(res.answer),
+          content: res.answer,
           citations: res.citations,
           steps: res.steps,
         },
@@ -246,18 +326,56 @@ export function JurisMindChat({
       setMessages([...next, { role: "assistant", content: `Erro: ${msg}` }]);
     } finally {
       setBusy(false);
+      setTimeout(() => inputRef.current?.focus(), 50);
     }
   };
 
+  // Drag & drop and paste of images anywhere in the chat area
+  const chatRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = chatRef.current;
+    if (!el) return;
+    const onPaste = (e: ClipboardEvent) => {
+      const files: File[] = [];
+      for (const item of Array.from(e.clipboardData?.items ?? [])) {
+        if (item.kind === "file") {
+          const f = item.getAsFile();
+          if (f) files.push(f);
+        }
+      }
+      if (files.length) {
+        e.preventDefault();
+        void readFilesAsImages(files);
+      }
+    };
+    const onDrop = (e: DragEvent) => {
+      if (!e.dataTransfer?.files?.length) return;
+      e.preventDefault();
+      void readFilesAsImages(Array.from(e.dataTransfer.files));
+    };
+    const prevent = (e: DragEvent) => e.preventDefault();
+    el.addEventListener("paste", onPaste);
+    el.addEventListener("drop", onDrop);
+    el.addEventListener("dragover", prevent);
+    return () => {
+      el.removeEventListener("paste", onPaste);
+      el.removeEventListener("drop", onDrop);
+      el.removeEventListener("dragover", prevent);
+    };
+  }, [images.length]);
+
   return (
-    <div className="grid h-full min-h-0 grid-cols-1 gap-4 p-4 lg:grid-cols-3">
+    <div
+      ref={chatRef}
+      className="grid h-full min-h-0 grid-cols-1 gap-4 p-4 lg:grid-cols-3"
+    >
       {/* Sidebar */}
       <aside className="flex min-h-0 flex-col gap-4 lg:col-span-1">
-        <Card>
+        <Card className="shrink-0">
           <CardHeader className="pb-3">
             <CardTitle className="text-base">Detalhes do caso</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-2 text-sm text-muted-foreground">
+          <CardContent className="space-y-1.5 text-sm text-muted-foreground">
             {caseInfo.client_name && (
               <p>
                 <span className="font-medium text-foreground">Cliente:</span>{" "}
@@ -273,12 +391,6 @@ export function JurisMindChat({
                 {caseInfo.represented_party.role
                   ? ` (${caseInfo.represented_party.role})`
                   : ""}
-              </p>
-            )}
-            {caseInfo.status && (
-              <p>
-                <span className="font-medium text-foreground">Status:</span>{" "}
-                {caseInfo.status}
               </p>
             )}
             {caseInfo.case_number && (
@@ -323,7 +435,7 @@ export function JurisMindChat({
           <CardHeader className="pb-2">
             <CardTitle className="text-base">Documentos do caso</CardTitle>
             <CardDescription>
-              Selecione os arquivos para basear a busca.
+              Todos vêm marcados. Desmarque para focar em alguns.
             </CardDescription>
             <div className="space-y-2 pt-2">
               <div className="relative">
@@ -402,44 +514,42 @@ export function JurisMindChat({
               </div>
             </div>
           </CardHeader>
-          <CardContent className="min-h-0 flex-1 p-2">
-            <ScrollArea className="h-[40vh] pr-2">
-              <div className="space-y-1">
-                {filteredDocs.length === 0 ? (
-                  <p className="py-4 text-center text-sm text-muted-foreground">
-                    Nenhum documento pronto encontrado.
-                  </p>
-                ) : (
-                  filteredDocs.map((d) => (
-                    <label
-                      key={d.id}
-                      className="flex cursor-pointer items-start gap-2 rounded-md p-2 hover:bg-muted"
-                    >
-                      <Checkbox
-                        className="mt-0.5"
-                        checked={selectedDocIds.has(d.id)}
-                        onCheckedChange={() => onToggleSelect(d.id)}
-                      />
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm">{d.filename}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {d.created_at
-                            ? new Date(d.created_at).toLocaleDateString("pt-BR")
-                            : ""}
-                        </p>
-                      </div>
-                    </label>
-                  ))
-                )}
-              </div>
-            </ScrollArea>
+          <CardContent className="min-h-0 flex-1 overflow-y-auto p-2">
+            <div className="space-y-1">
+              {filteredDocs.length === 0 ? (
+                <p className="py-4 text-center text-sm text-muted-foreground">
+                  Nenhum documento pronto encontrado.
+                </p>
+              ) : (
+                filteredDocs.map((d) => (
+                  <label
+                    key={d.id}
+                    className="flex cursor-pointer items-start gap-2 rounded-md p-2 hover:bg-muted"
+                  >
+                    <Checkbox
+                      className="mt-0.5"
+                      checked={selectedDocIds.has(d.id)}
+                      onCheckedChange={() => onToggleSelect(d.id)}
+                    />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm">{d.filename}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {d.created_at
+                          ? new Date(d.created_at).toLocaleDateString("pt-BR")
+                          : ""}
+                      </p>
+                    </div>
+                  </label>
+                ))
+              )}
+            </div>
           </CardContent>
         </Card>
       </aside>
 
       {/* Main chat */}
       <div className="flex min-h-0 flex-col lg:col-span-2">
-        <div className="flex flex-1 flex-col rounded-xl border bg-card">
+        <div className="flex min-h-0 flex-1 flex-col rounded-xl border bg-card">
           {pendingDocs > 0 && (
             <div className="flex items-start gap-2 border-b bg-amber-50 px-4 py-2 text-xs text-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
               <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
@@ -449,19 +559,39 @@ export function JurisMindChat({
               </span>
             </div>
           )}
-          <div className="flex items-center gap-2 border-b px-4 py-3">
+          <div className="flex shrink-0 items-center gap-2 border-b px-4 py-3">
             <BrainCircuit className="h-5 w-5 text-primary" />
-            <div className="min-w-0">
+            <div className="min-w-0 flex-1">
               <p className="truncate font-semibold">JurisMind AI</p>
               <p className="truncate text-xs text-muted-foreground">
                 {selectedDocIds.size > 0
-                  ? `${selectedDocIds.size} documento(s) selecionado(s)`
-                  : `Busca em todos os ${readyDocs.length} documento(s) prontos`}
+                  ? `${selectedDocIds.size} de ${readyDocs.length} documento(s) selecionado(s)`
+                  : `Sem seleção — vai buscar em todos os ${readyDocs.length} documento(s)`}
               </p>
             </div>
+            <Select
+              value={modelTier}
+              onValueChange={(v) => setModelTier(v as ModelTier)}
+            >
+              <SelectTrigger className="h-8 w-[130px]">
+                <SelectValue>{MODEL_LABELS[modelTier]}</SelectValue>
+              </SelectTrigger>
+              <SelectContent align="end">
+                <SelectItem value="fast">Rápido · Flash</SelectItem>
+                <SelectItem value="balanced">Balanceado · 2.5 Flash</SelectItem>
+                <SelectItem value="max">Máximo · 2.5 Pro</SelectItem>
+              </SelectContent>
+            </Select>
+            {!fullscreen && (
+              <Button asChild variant="ghost" size="icon" title="Abrir em tela cheia">
+                <Link to="/cases/$caseId/chat" params={{ caseId }}>
+                  <Maximize2 className="h-4 w-4" />
+                </Link>
+              </Button>
+            )}
           </div>
 
-          <div className="flex-1 space-y-4 overflow-y-auto p-4">
+          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4">
             {messages.length === 0 ? (
               <div className="flex h-full flex-col items-center justify-center gap-3 text-center text-muted-foreground">
                 <Sparkles className="h-10 w-10 text-primary" />
@@ -469,8 +599,7 @@ export function JurisMindChat({
                   Pergunte sobre os documentos do caso
                 </p>
                 <p className="max-w-md text-sm">
-                  O JurisMind busca os trechos relevantes, responde citando as
-                  fontes e pode criar prazos na sua agenda.
+                  O JurisMind já sabe que você está trabalhando em <span className="font-medium text-foreground">{caseInfo.title}</span>. Pergunte, peça peças jurídicas, planilhas, apresentações, PDFs — tudo direto do caso.
                 </p>
               </div>
             ) : (
@@ -484,13 +613,21 @@ export function JurisMindChat({
                 >
                   <div
                     className={cn(
-                      "max-w-[85%] rounded-lg px-4 py-3 text-sm whitespace-pre-wrap",
+                      "max-w-[92%] rounded-lg px-4 py-3 text-sm",
                       m.role === "user"
-                        ? "bg-primary text-primary-foreground"
+                        ? "bg-primary text-primary-foreground whitespace-pre-wrap"
                         : "bg-muted text-foreground",
                     )}
                   >
-                    {m.content}
+                    {m.role === "assistant" ? (
+                      <div className="prose prose-sm dark:prose-invert max-w-none prose-p:my-2 prose-headings:mt-3 prose-headings:mb-2 prose-ul:my-2 prose-ol:my-2">
+                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                          {m.content}
+                        </ReactMarkdown>
+                      </div>
+                    ) : (
+                      m.content
+                    )}
                     {m.images && m.images.length > 0 && (
                       <div className="mt-2 flex flex-wrap gap-2">
                         {m.images.map((src, idx) => (
@@ -518,7 +655,15 @@ export function JurisMindChat({
                           return (
                             <PetitionCard
                               key={idx}
-                              titulo={r.titulo ?? "Petição"}
+                              titulo={r.titulo ?? "Peça jurídica"}
+                              conteudo={r.conteudo ?? ""}
+                            />
+                          );
+                        if (r.kind === "pdf")
+                          return (
+                            <PDFCard
+                              key={idx}
+                              titulo={r.titulo ?? "Documento"}
                               conteudo={r.conteudo ?? ""}
                             />
                           );
@@ -573,7 +718,7 @@ export function JurisMindChat({
             <div ref={endRef} />
           </div>
 
-          <div className="border-t p-3">
+          <div className="shrink-0 border-t p-3">
             {messages.length === 0 && (
               <div className="mb-2 flex flex-wrap gap-1.5">
                 {QUICK_ACTIONS.map((qa) => (
@@ -581,10 +726,7 @@ export function JurisMindChat({
                     key={qa.label}
                     type="button"
                     disabled={busy}
-                    onClick={() => {
-                      setInput(qa.prompt);
-                      setTimeout(() => send(), 0);
-                    }}
+                    onClick={() => send(qa.prompt)}
                     className="rounded-full border bg-background px-2.5 py-1 text-xs text-foreground hover:bg-muted disabled:opacity-50"
                   >
                     {qa.label}
@@ -610,7 +752,7 @@ export function JurisMindChat({
                 ))}
               </div>
             )}
-            <div className="flex gap-2">
+            <div className="flex items-end gap-2">
               <input
                 ref={fileRef}
                 type="file"
@@ -628,29 +770,31 @@ export function JurisMindChat({
                 variant="outline"
                 onClick={() => fileRef.current?.click()}
                 disabled={busy || images.length >= 6}
-                title="Anexar imagens"
+                title="Anexar imagens (ou arraste / cole)"
+                className="h-10 w-10 shrink-0"
               >
                 <ImagePlus className="h-4 w-4" />
               </Button>
               <Textarea
+                ref={inputRef}
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key === "Enter" && !e.shiftKey) {
                     e.preventDefault();
-                    send();
+                    void send();
                   }
                 }}
-                placeholder="Pergunte, peça uma minuta de petição, planilha ou apresentação…"
+                placeholder="Pergunte, peça peça jurídica, planilha, apresentação ou PDF…"
                 rows={2}
-                className="resize-none"
+                className="min-h-[42px] resize-none"
                 disabled={busy}
               />
               <Button
-                onClick={send}
+                onClick={() => void send()}
                 disabled={busy || (!input.trim() && images.length === 0)}
                 size="icon"
-                className="h-auto"
+                className="h-10 w-10 shrink-0"
               >
                 <Send className="h-4 w-4" />
               </Button>
@@ -663,11 +807,14 @@ export function JurisMindChat({
 }
 
 const TOOL_LABELS: Record<string, string> = {
-  create_petition: "Minuta de petição",
-  create_table: "Planilha gerada",
-  create_presentation: "Apresentação gerada",
-  search_documents: "Busca em documentos",
+  create_petition: "Peça jurídica (Word)",
+  create_pdf: "Documento (PDF)",
+  create_table: "Planilha (Excel)",
+  create_presentation: "Apresentação (PPTX)",
+  create_event: "Evento na agenda",
   create_task: "Tarefa criada",
+  list_case_events: "Consultou eventos do caso",
+  list_case_tasks: "Consultou tarefas do caso",
 };
 
 function friendlyToolName(name: string) {
@@ -680,7 +827,6 @@ function SourcesBlock({
   citations: Array<{ filename: string; similarity: number }>;
 }) {
   const [open, setOpen] = useState(false);
-  // Dedupe by filename, keep highest similarity
   const unique = Array.from(
     citations
       .reduce((acc, c) => {
