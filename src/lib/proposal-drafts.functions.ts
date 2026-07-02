@@ -203,3 +203,25 @@ export const deleteProposalVersion = createServerFn({ method: "POST" })
     if (error) throw error;
     return { ok: true };
   });
+
+/**
+ * Apaga TODAS as versões (incluindo fixadas) do usuário no escopo do case_id
+ * informado (ou "sem caso" quando null).
+ */
+export const deleteAllProposalVersions = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((i: unknown) =>
+    z.object({ case_id: optionalUuid }).parse(i ?? {}),
+  )
+  .handler(async ({ data, context }) => {
+    const caseId = data.case_id ?? null;
+    let q = context.supabase
+      .from("proposal_versions")
+      .delete()
+      .eq("user_id", context.userId);
+    q = caseId === null ? q.is("case_id", null) : q.eq("case_id", caseId);
+    const { error } = await q;
+    if (error) throw error;
+    return { ok: true };
+  });
+

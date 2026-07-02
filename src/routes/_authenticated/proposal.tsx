@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Handshake, Loader2, Copy, Download, FileText, Check, Trash2, History, Save, Cloud, CloudOff } from "lucide-react";
+import { Handshake, Loader2, Copy, Download, FileText, Check, Trash2, History, Save, Cloud, CloudOff, Eraser } from "lucide-react";
 import { toast } from "sonner";
 import { generateProposal } from "@/lib/generators.functions";
 import { getCases } from "@/lib/cases.functions";
@@ -27,8 +27,22 @@ import {
   getProposalDraft,
   upsertProposalDraft,
   createProposalVersion,
+  deleteProposalDraft,
+  deleteAllProposalVersions,
   type ProposalVersion,
 } from "@/lib/proposal-drafts.functions";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+
 
 const LEGACY_DRAFT_KEY = "jurismind:proposal-draft:v1";
 const DRAFT_DEBOUNCE_MS = 900;
@@ -116,6 +130,8 @@ function ProposalPage() {
   const getDraftFn = useServerFn(getProposalDraft);
   const upsertDraftFn = useServerFn(upsertProposalDraft);
   const createVersionFn = useServerFn(createProposalVersion);
+  const deleteDraftFn = useServerFn(deleteProposalDraft);
+  const deleteAllVersionsFn = useServerFn(deleteAllProposalVersions);
   const { data: profile } = useProfile();
   const { user } = useAuth();
   const qc = useQueryClient();
@@ -278,6 +294,34 @@ function ProposalPage() {
       toast.success("Rascunho descartado");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Falha ao descartar");
+    }
+  };
+
+  const [clearing, setClearing] = useState(false);
+  const [clearOpen, setClearOpen] = useState(false);
+  const clearAll = async () => {
+    setClearing(true);
+    try {
+      // Backend: apaga versões e rascunho para o escopo atual.
+      await deleteAllVersionsFn({ data: { case_id: activeCaseId } });
+      await deleteDraftFn({ data: { case_id: activeCaseId } });
+      // Estado local
+      setForm(EMPTY);
+      setOutput("");
+      setErrors({});
+      setSavedAt(null);
+      lastSerializedRef.current = "";
+      // Rascunho legado no navegador
+      if (typeof window !== "undefined") {
+        try { window.localStorage.removeItem(LEGACY_DRAFT_KEY); } catch { /* ignora */ }
+      }
+      qc.invalidateQueries({ queryKey: ["proposal-versions", activeCaseId ?? "none"] });
+      toast.success("Histórico e rascunho apagados");
+      setClearOpen(false);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Falha ao limpar");
+    } finally {
+      setClearing(false);
     }
   };
 
@@ -567,6 +611,38 @@ function ProposalPage() {
           <Button size="sm" variant="outline" onClick={() => setVersionsOpen(true)} className="h-7 px-2">
             <History className="mr-1 h-3.5 w-3.5" /> Histórico
           </Button>
+          <AlertDialog open={clearOpen} onOpenChange={setClearOpen}>
+            <AlertDialogTrigger asChild>
+              <Button size="sm" variant="outline" className="h-7 px-2 text-destructive hover:text-destructive">
+                <Eraser className="mr-1 h-3.5 w-3.5" /> Limpar tudo
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Limpar histórico e rascunho?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Isso apaga <strong>todas as versões salvas</strong> (inclusive fixadas) e o
+                  rascunho atual {activeCaseId ? "deste caso" : "sem caso vinculado"}, além do
+                  rascunho antigo guardado neste navegador. Esta ação não pode ser desfeita.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel disabled={clearing}>Cancelar</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={(e) => {
+                    e.preventDefault();
+                    clearAll();
+                  }}
+                  disabled={clearing}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
+                  {clearing && <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />}
+                  Apagar tudo
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+
           <ConvertToCasePopover
             disabled={!!activeCaseId}
             attachmentIds={attachmentIds}
