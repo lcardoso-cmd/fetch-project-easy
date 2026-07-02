@@ -50,7 +50,17 @@ function textToHtml(text: string) {
     .join("");
 }
 
-export function PetitionCard({ titulo, conteudo }: { titulo: string; conteudo: string }) {
+function EditorCard({
+  titulo,
+  conteudo,
+  icon,
+  color,
+}: {
+  titulo: string;
+  conteudo: string;
+  icon: React.ReactNode;
+  color: string;
+}) {
   const initialHtml = useMemo(
     () => (/<\w+/.test(conteudo) ? conteudo : textToHtml(conteudo)),
     [conteudo],
@@ -59,7 +69,8 @@ export function PetitionCard({ titulo, conteudo }: { titulo: string; conteudo: s
   const [html, setHtml] = useState(initialHtml);
   const [open, setOpen] = useState(false);
   const [full, setFull] = useState(false);
-  const [busy, setBusy] = useState(false);
+  const [busyDocx, setBusyDocx] = useState(false);
+  const [busyPdf, setBusyPdf] = useState(false);
 
   const preview = useMemo(() => {
     const text = html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
@@ -73,8 +84,9 @@ export function PetitionCard({ titulo, conteudo }: { titulo: string; conteudo: s
         onClick={() => setOpen((v) => !v)}
         className="flex w-full items-center justify-between gap-2 border-b bg-muted/40 px-3 py-2 text-left text-sm font-semibold hover:bg-muted"
       >
-        <span className="flex items-center gap-2">
-          <FileText className="h-4 w-4 text-primary" /> {t || "Minuta gerada"}
+        <span className={`flex items-center gap-2 ${color}`}>
+          {icon}
+          <span className="text-foreground">{t || "Documento gerado"}</span>
         </span>
         <span className="flex items-center gap-1 text-xs font-normal text-muted-foreground">
           {open ? "Recolher" : "Abrir editor"}
@@ -89,9 +101,7 @@ export function PetitionCard({ titulo, conteudo }: { titulo: string; conteudo: s
       {open && (
         <div
           className={
-            full
-              ? "fixed inset-0 z-50 flex flex-col bg-background p-4"
-              : "p-3"
+            full ? "fixed inset-0 z-50 flex flex-col bg-background p-4" : "p-3"
           }
         >
           <div className="mb-2 flex items-center gap-2">
@@ -99,7 +109,7 @@ export function PetitionCard({ titulo, conteudo }: { titulo: string; conteudo: s
               value={t}
               onChange={(e) => setT(e.target.value)}
               className="font-semibold"
-              placeholder="Título da peça"
+              placeholder="Título"
             />
             <Button
               type="button"
@@ -112,13 +122,9 @@ export function PetitionCard({ titulo, conteudo }: { titulo: string; conteudo: s
             </Button>
           </div>
           <div className={full ? "min-h-0 flex-1 overflow-auto" : ""}>
-            <RichTextEditor
-              html={html}
-              onChange={setHtml}
-              minHeight={full ? 600 : 360}
-            />
+            <RichTextEditor html={html} onChange={setHtml} minHeight={full ? 600 : 360} />
           </div>
-          <div className="mt-2 flex justify-end gap-2">
+          <div className="mt-2 flex flex-wrap justify-end gap-2">
             {full && (
               <Button size="sm" variant="outline" onClick={() => setFull(false)}>
                 Fechar
@@ -126,23 +132,61 @@ export function PetitionCard({ titulo, conteudo }: { titulo: string; conteudo: s
             )}
             <Button
               size="sm"
-              disabled={busy}
+              variant="outline"
+              disabled={busyPdf}
               onClick={async () => {
-                setBusy(true);
+                setBusyPdf(true);
+                await downloadBlob(
+                  "/api/tools/pdf",
+                  { titulo: t, html },
+                  `${t || "documento"}.pdf`,
+                );
+                setBusyPdf(false);
+              }}
+            >
+              <Download className="mr-1.5 h-4 w-4" /> PDF
+            </Button>
+            <Button
+              size="sm"
+              disabled={busyDocx}
+              onClick={async () => {
+                setBusyDocx(true);
                 await downloadBlob(
                   "/api/tools/petition",
                   { titulo: t, html },
-                  `${t || "peticao"}.docx`,
+                  `${t || "documento"}.docx`,
                 );
-                setBusy(false);
+                setBusyDocx(false);
               }}
             >
-              <Download className="mr-1.5 h-4 w-4" /> Baixar Word
+              <Download className="mr-1.5 h-4 w-4" /> Word
             </Button>
           </div>
         </div>
       )}
     </div>
+  );
+}
+
+export function PetitionCard({ titulo, conteudo }: { titulo: string; conteudo: string }) {
+  return (
+    <EditorCard
+      titulo={titulo}
+      conteudo={conteudo}
+      icon={<FileText className="h-4 w-4 text-primary" />}
+      color="text-primary"
+    />
+  );
+}
+
+export function PDFCard({ titulo, conteudo }: { titulo: string; conteudo: string }) {
+  return (
+    <EditorCard
+      titulo={titulo}
+      conteudo={conteudo}
+      icon={<FileText className="h-4 w-4 text-rose-600" />}
+      color="text-rose-600"
+    />
   );
 }
 

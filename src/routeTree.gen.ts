@@ -32,12 +32,14 @@ import { Route as AuthenticatedCasesIndexRouteImport } from './routes/_authentic
 import { Route as ApiToolsTableRouteImport } from './routes/api/tools/table'
 import { Route as ApiToolsPresentationRouteImport } from './routes/api/tools/presentation'
 import { Route as ApiToolsPetitionRouteImport } from './routes/api/tools/petition'
+import { Route as ApiToolsPdfRouteImport } from './routes/api/tools/pdf'
 import { Route as AuthenticatedSettingsOauthRouteImport } from './routes/_authenticated/settings.oauth'
 import { Route as AuthenticatedCasesNewRouteImport } from './routes/_authenticated/cases.new'
 import { Route as AuthenticatedCasesBulkRouteImport } from './routes/_authenticated/cases.bulk'
 import { Route as AuthenticatedCasesCaseIdRouteImport } from './routes/_authenticated/cases.$caseId'
 import { Route as ApiPublicOutlookCallbackRouteImport } from './routes/api/public/outlook/callback'
 import { Route as ApiPublicGoogleCallbackRouteImport } from './routes/api/public/google/callback'
+import { Route as AuthenticatedCasesCaseIdChatRouteImport } from './routes/_authenticated/cases.$caseId.chat'
 
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
@@ -155,6 +157,11 @@ const ApiToolsPetitionRoute = ApiToolsPetitionRouteImport.update({
   path: '/api/tools/petition',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiToolsPdfRoute = ApiToolsPdfRouteImport.update({
+  id: '/api/tools/pdf',
+  path: '/api/tools/pdf',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedSettingsOauthRoute =
   AuthenticatedSettingsOauthRouteImport.update({
     id: '/oauth',
@@ -188,6 +195,12 @@ const ApiPublicGoogleCallbackRoute = ApiPublicGoogleCallbackRouteImport.update({
   path: '/api/public/google/callback',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedCasesCaseIdChatRoute =
+  AuthenticatedCasesCaseIdChatRouteImport.update({
+    id: '/chat',
+    path: '/chat',
+    getParentRoute: () => AuthenticatedCasesCaseIdRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -208,14 +221,16 @@ export interface FileRoutesByFullPath {
   '/proposal': typeof AuthenticatedProposalRoute
   '/settings': typeof AuthenticatedSettingsRouteWithChildren
   '/invite/$token': typeof InviteTokenRoute
-  '/cases/$caseId': typeof AuthenticatedCasesCaseIdRoute
+  '/cases/$caseId': typeof AuthenticatedCasesCaseIdRouteWithChildren
   '/cases/bulk': typeof AuthenticatedCasesBulkRoute
   '/cases/new': typeof AuthenticatedCasesNewRoute
   '/settings/oauth': typeof AuthenticatedSettingsOauthRoute
+  '/api/tools/pdf': typeof ApiToolsPdfRoute
   '/api/tools/petition': typeof ApiToolsPetitionRoute
   '/api/tools/presentation': typeof ApiToolsPresentationRoute
   '/api/tools/table': typeof ApiToolsTableRoute
   '/cases/': typeof AuthenticatedCasesIndexRoute
+  '/cases/$caseId/chat': typeof AuthenticatedCasesCaseIdChatRoute
   '/api/public/google/callback': typeof ApiPublicGoogleCallbackRoute
   '/api/public/outlook/callback': typeof ApiPublicOutlookCallbackRoute
 }
@@ -237,14 +252,16 @@ export interface FileRoutesByTo {
   '/proposal': typeof AuthenticatedProposalRoute
   '/settings': typeof AuthenticatedSettingsRouteWithChildren
   '/invite/$token': typeof InviteTokenRoute
-  '/cases/$caseId': typeof AuthenticatedCasesCaseIdRoute
+  '/cases/$caseId': typeof AuthenticatedCasesCaseIdRouteWithChildren
   '/cases/bulk': typeof AuthenticatedCasesBulkRoute
   '/cases/new': typeof AuthenticatedCasesNewRoute
   '/settings/oauth': typeof AuthenticatedSettingsOauthRoute
+  '/api/tools/pdf': typeof ApiToolsPdfRoute
   '/api/tools/petition': typeof ApiToolsPetitionRoute
   '/api/tools/presentation': typeof ApiToolsPresentationRoute
   '/api/tools/table': typeof ApiToolsTableRoute
   '/cases': typeof AuthenticatedCasesIndexRoute
+  '/cases/$caseId/chat': typeof AuthenticatedCasesCaseIdChatRoute
   '/api/public/google/callback': typeof ApiPublicGoogleCallbackRoute
   '/api/public/outlook/callback': typeof ApiPublicOutlookCallbackRoute
 }
@@ -269,14 +286,16 @@ export interface FileRoutesById {
   '/_authenticated/proposal': typeof AuthenticatedProposalRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRouteWithChildren
   '/invite/$token': typeof InviteTokenRoute
-  '/_authenticated/cases/$caseId': typeof AuthenticatedCasesCaseIdRoute
+  '/_authenticated/cases/$caseId': typeof AuthenticatedCasesCaseIdRouteWithChildren
   '/_authenticated/cases/bulk': typeof AuthenticatedCasesBulkRoute
   '/_authenticated/cases/new': typeof AuthenticatedCasesNewRoute
   '/_authenticated/settings/oauth': typeof AuthenticatedSettingsOauthRoute
+  '/api/tools/pdf': typeof ApiToolsPdfRoute
   '/api/tools/petition': typeof ApiToolsPetitionRoute
   '/api/tools/presentation': typeof ApiToolsPresentationRoute
   '/api/tools/table': typeof ApiToolsTableRoute
   '/_authenticated/cases/': typeof AuthenticatedCasesIndexRoute
+  '/_authenticated/cases/$caseId/chat': typeof AuthenticatedCasesCaseIdChatRoute
   '/api/public/google/callback': typeof ApiPublicGoogleCallbackRoute
   '/api/public/outlook/callback': typeof ApiPublicOutlookCallbackRoute
 }
@@ -305,10 +324,12 @@ export interface FileRouteTypes {
     | '/cases/bulk'
     | '/cases/new'
     | '/settings/oauth'
+    | '/api/tools/pdf'
     | '/api/tools/petition'
     | '/api/tools/presentation'
     | '/api/tools/table'
     | '/cases/'
+    | '/cases/$caseId/chat'
     | '/api/public/google/callback'
     | '/api/public/outlook/callback'
   fileRoutesByTo: FileRoutesByTo
@@ -334,10 +355,12 @@ export interface FileRouteTypes {
     | '/cases/bulk'
     | '/cases/new'
     | '/settings/oauth'
+    | '/api/tools/pdf'
     | '/api/tools/petition'
     | '/api/tools/presentation'
     | '/api/tools/table'
     | '/cases'
+    | '/cases/$caseId/chat'
     | '/api/public/google/callback'
     | '/api/public/outlook/callback'
   id:
@@ -365,10 +388,12 @@ export interface FileRouteTypes {
     | '/_authenticated/cases/bulk'
     | '/_authenticated/cases/new'
     | '/_authenticated/settings/oauth'
+    | '/api/tools/pdf'
     | '/api/tools/petition'
     | '/api/tools/presentation'
     | '/api/tools/table'
     | '/_authenticated/cases/'
+    | '/_authenticated/cases/$caseId/chat'
     | '/api/public/google/callback'
     | '/api/public/outlook/callback'
   fileRoutesById: FileRoutesById
@@ -378,6 +403,7 @@ export interface RootRouteChildren {
   AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
   AuthRoute: typeof AuthRoute
   InviteTokenRoute: typeof InviteTokenRoute
+  ApiToolsPdfRoute: typeof ApiToolsPdfRoute
   ApiToolsPetitionRoute: typeof ApiToolsPetitionRoute
   ApiToolsPresentationRoute: typeof ApiToolsPresentationRoute
   ApiToolsTableRoute: typeof ApiToolsTableRoute
@@ -548,6 +574,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiToolsPetitionRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/tools/pdf': {
+      id: '/api/tools/pdf'
+      path: '/api/tools/pdf'
+      fullPath: '/api/tools/pdf'
+      preLoaderRoute: typeof ApiToolsPdfRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_authenticated/settings/oauth': {
       id: '/_authenticated/settings/oauth'
       path: '/oauth'
@@ -590,18 +623,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicGoogleCallbackRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/cases/$caseId/chat': {
+      id: '/_authenticated/cases/$caseId/chat'
+      path: '/chat'
+      fullPath: '/cases/$caseId/chat'
+      preLoaderRoute: typeof AuthenticatedCasesCaseIdChatRouteImport
+      parentRoute: typeof AuthenticatedCasesCaseIdRoute
+    }
   }
 }
 
+interface AuthenticatedCasesCaseIdRouteChildren {
+  AuthenticatedCasesCaseIdChatRoute: typeof AuthenticatedCasesCaseIdChatRoute
+}
+
+const AuthenticatedCasesCaseIdRouteChildren: AuthenticatedCasesCaseIdRouteChildren =
+  {
+    AuthenticatedCasesCaseIdChatRoute: AuthenticatedCasesCaseIdChatRoute,
+  }
+
+const AuthenticatedCasesCaseIdRouteWithChildren =
+  AuthenticatedCasesCaseIdRoute._addFileChildren(
+    AuthenticatedCasesCaseIdRouteChildren,
+  )
+
 interface AuthenticatedCasesRouteChildren {
-  AuthenticatedCasesCaseIdRoute: typeof AuthenticatedCasesCaseIdRoute
+  AuthenticatedCasesCaseIdRoute: typeof AuthenticatedCasesCaseIdRouteWithChildren
   AuthenticatedCasesBulkRoute: typeof AuthenticatedCasesBulkRoute
   AuthenticatedCasesNewRoute: typeof AuthenticatedCasesNewRoute
   AuthenticatedCasesIndexRoute: typeof AuthenticatedCasesIndexRoute
 }
 
 const AuthenticatedCasesRouteChildren: AuthenticatedCasesRouteChildren = {
-  AuthenticatedCasesCaseIdRoute: AuthenticatedCasesCaseIdRoute,
+  AuthenticatedCasesCaseIdRoute: AuthenticatedCasesCaseIdRouteWithChildren,
   AuthenticatedCasesBulkRoute: AuthenticatedCasesBulkRoute,
   AuthenticatedCasesNewRoute: AuthenticatedCasesNewRoute,
   AuthenticatedCasesIndexRoute: AuthenticatedCasesIndexRoute,
@@ -668,6 +722,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRoute: AuthenticatedRouteWithChildren,
   AuthRoute: AuthRoute,
   InviteTokenRoute: InviteTokenRoute,
+  ApiToolsPdfRoute: ApiToolsPdfRoute,
   ApiToolsPetitionRoute: ApiToolsPetitionRoute,
   ApiToolsPresentationRoute: ApiToolsPresentationRoute,
   ApiToolsTableRoute: ApiToolsTableRoute,

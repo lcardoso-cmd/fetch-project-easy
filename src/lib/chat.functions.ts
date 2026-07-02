@@ -3,7 +3,7 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 const AskSchema = z.object({
-  case_id: z.string().uuid().optional(),
+  case_id: z.string().uuid(),
   question: z.string().min(1).max(8000),
   selected_doc_ids: z.array(z.string().uuid()).optional(),
   images: z.array(z.string()).max(6).optional(),
@@ -16,6 +16,7 @@ const AskSchema = z.object({
     )
     .max(20)
     .optional(),
+  model_tier: z.enum(["fast", "balanced", "max"]).optional(),
 });
 
 interface Citation {
@@ -31,6 +32,37 @@ interface ToolStep {
   result_json: string;
 }
 
+const MODEL_MAP: Record<"fast" | "balanced" | "max", string> = {
+  fast: "google/gemini-3-flash-preview",
+  balanced: "google/gemini-2.5-flash",
+  max: "google/gemini-2.5-pro",
+};
+
+interface PartyRow {
+  role?: string | null;
+  name?: string | null;
+  document?: string | null;
+  relation?: string | null;
+}
+
+function fmtDateTime() {
+  return new Intl.DateTimeFormat("pt-BR", {
+    dateStyle: "full",
+    timeStyle: "short",
+    timeZone: "America/Sao_Paulo",
+  }).format(new Date());
+}
+
+function partiesBlock(parties: PartyRow[] | null | undefined) {
+  if (!parties || parties.length === 0) return "";
+  return parties
+    .map((p) => {
+      const bits = [p.role, p.name, p.document, p.relation].filter(Boolean);
+      return `- ${bits.join(" — ")}`;
+    })
+    .join("\n");
+}
+
 export const askWithRag = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((i: unknown) => AskSchema.parse(i))
@@ -38,70 +70,113 @@ export const askWithRag = createServerFn({ method: "POST" })
     const { embedTexts, chatWithTools } = await import("./ai.server");
     type ToolDef = import("./ai.server").ToolDef;
 
-    // 1. Embedding da pergunta + busca semântica
-    const [qEmb] = await embedTexts([data.question]);
-    if (!qEmb) throw new Error("Falha ao gerar embedding");
+    // 0. Metadados do caso (contexto injetado no prompt)
+    const { data: caseRow } = await context.supabase
+      .from("cases")
+      .select(
+        "id, title, case_number, jurisdiction, case_type, matter_kind, client_name, description, summary, status, parties, represented_party",
+      )
+      .eq("id", data.case_id)
+      .eq("user_id", context.userId)
+      .single();
 
-    const { data: matches, error } = await context.supabase.rpc("match_chunks", {
-      query_embedding: qEmb as unknown as string,
-      match_count: 8,
-      filter_user_id: context.userId,
-    });
-    if (error) throw error;
+    if (!caseRow) {
+      throw new Error("Caso não encontrado ou você não tem acesso a ele.");
+    }
 
-    const allowedDocs =
+    // Documentos disponíveis (para o modelo saber sobre o que pode falar)
+    const { data: allDocs } = await context.supabase
+      .from("documents")
+      .select("id, filename, processing_status")
+      .eq("case_id", data.case_id)
+      .eq("user_id", context.userId)
+      .order("created_at", { ascending: false });
+
+    const selectedSet =
       data.selected_doc_ids && data.selected_doc_ids.length > 0
         ? new Set(data.selected_doc_ids)
         : null;
-    const filtered = (matches ?? []).filter(
-      (m: { case_id: string; document_id: string }) =>
-        (!data.case_id || m.case_id === data.case_id) &&
-        (!allowedDocs || allowedDocs.has(m.document_id)),
+
+    const activeDocs = (allDocs ?? []).filter(
+      (d) =>
+        d.processing_status === "ready" &&
+        (!selectedSet || selectedSet.has(d.id)),
     );
 
-    const docIds = Array.from(new Set(filtered.map((m: { document_id: string }) => m.document_id)));
+    // 1. Embedding + busca semântica JÁ FILTRADA no banco pelo caso e docs selecionados
+    const [qEmb] = await embedTexts([data.question]);
+    if (!qEmb) throw new Error("Falha ao gerar embedding");
+
+    const activeDocIds = activeDocs.map((d) => d.id);
+    const rpcArgs: {
+      query_embedding: string;
+      filter_user_id: string;
+      filter_case_id: string;
+      filter_doc_ids?: string[];
+      match_count: number;
+    } = {
+      query_embedding: qEmb as unknown as string,
+      filter_user_id: context.userId,
+      filter_case_id: data.case_id,
+      match_count: 24,
+    };
+    if (activeDocIds.length > 0) rpcArgs.filter_doc_ids = activeDocIds;
+    const { data: matches, error } = await context.supabase.rpc(
+      "match_chunks_scoped",
+      rpcArgs,
+    );
+    if (error) throw error;
+
+    const rows = (matches ?? []) as Array<{
+      document_id: string;
+      content: string;
+      similarity: number;
+    }>;
+
+    const docIds = Array.from(new Set(rows.map((m) => m.document_id)));
     const { data: docs } = await context.supabase
       .from("documents")
       .select("id, filename")
-      .in("id", docIds.length ? docIds : ["00000000-0000-0000-0000-000000000000"]);
+      .in(
+        "id",
+        docIds.length ? docIds : ["00000000-0000-0000-0000-000000000000"],
+      );
     const nameById = new Map((docs ?? []).map((d) => [d.id, d.filename]));
 
-    const citations: Citation[] = filtered.map(
-      (m: { document_id: string; content: string; similarity: number }) => ({
-        document_id: m.document_id,
-        filename: nameById.get(m.document_id) ?? "documento",
-        snippet: m.content.slice(0, 400),
-        similarity: m.similarity,
-      }),
-    );
+    const citations: Citation[] = rows.map((m) => ({
+      document_id: m.document_id,
+      filename: nameById.get(m.document_id) ?? "documento",
+      snippet: m.content.slice(0, 400),
+      similarity: m.similarity,
+    }));
 
-    const contextBlock = filtered.length
-      ? filtered
+    const contextBlock = rows.length
+      ? rows
           .map(
-            (m: { content: string; document_id: string }, idx: number) =>
+            (m, idx) =>
               `[${idx + 1}] (${nameById.get(m.document_id) ?? "doc"})\n${m.content}`,
           )
           .join("\n\n---\n\n")
-      : "(Nenhum trecho relevante encontrado nos documentos indexados.)";
+      : "(Nenhum trecho relevante encontrado nos documentos indexados. Se a pergunta depender dos autos, avise o usuário e sugira selecionar/enviar mais documentos.)";
 
-    // 2. Tools disponíveis para o modelo
+    // 2. Tools do agente — todas escopadas ao caso atual
     const tools: ToolDef[] = [
       {
         type: "function",
         function: {
           name: "create_event",
           description:
-            "Cria um evento na agenda do(a) advogado(a) (prazo, audiência, reunião). Use quando o usuário pedir agendar algo ou quando identificar prazo nos documentos.",
+            "Cria um evento (prazo, audiência, reunião) na agenda, sempre vinculado ao caso atual.",
           parameters: {
             type: "object",
             properties: {
-              title: { type: "string", description: "Título curto do evento" },
+              title: { type: "string" },
               description: { type: "string" },
               starts_at: {
                 type: "string",
-                description: "Data/hora ISO 8601 (ex: 2026-07-15T14:00:00-03:00)",
+                description: "ISO 8601 (ex: 2026-07-15T14:00:00-03:00)",
               },
-              ends_at: { type: "string", description: "Opcional, ISO 8601" },
+              ends_at: { type: "string" },
               event_type: {
                 type: "string",
                 enum: ["deadline", "hearing", "meeting", "task"],
@@ -115,20 +190,46 @@ export const askWithRag = createServerFn({ method: "POST" })
       {
         type: "function",
         function: {
-          name: "list_cases",
-          description: "Lista os casos do(a) advogado(a) (id, título, cliente, status).",
-          parameters: { type: "object", properties: {} },
+          name: "create_task",
+          description:
+            "Cria uma tarefa vinculada ao caso atual (checklist interno do escritório).",
+          parameters: {
+            type: "object",
+            properties: {
+              title: { type: "string" },
+              description: { type: "string" },
+              priority: {
+                type: "string",
+                enum: ["low", "medium", "high", "urgent"],
+              },
+              due_date: { type: "string", description: "ISO 8601" },
+            },
+            required: ["title"],
+          },
         },
       },
       {
         type: "function",
         function: {
-          name: "list_upcoming_events",
-          description: "Lista próximos eventos/prazos a partir de hoje.",
+          name: "list_case_events",
+          description: "Lista próximos eventos deste caso.",
           parameters: {
             type: "object",
-            properties: { days: { type: "number", description: "Janela em dias (default 30)" } },
+            properties: {
+              days: {
+                type: "number",
+                description: "Janela em dias a partir de hoje (default 60).",
+              },
+            },
           },
+        },
+      },
+      {
+        type: "function",
+        function: {
+          name: "list_case_tasks",
+          description: "Lista tarefas em aberto deste caso.",
+          parameters: { type: "object", properties: {} },
         },
       },
       {
@@ -136,15 +237,34 @@ export const askWithRag = createServerFn({ method: "POST" })
         function: {
           name: "create_petition",
           description:
-            "Gera uma minuta de petição/parecer/contrato para o usuário editar e baixar em Word. Use quando pedirem para 'redigir', 'minutar', 'fazer petição', 'contestação', 'parecer', etc.",
+            "Gera uma minuta editável em Word (petição, parecer, contestação, alegações, contrarrazões, laudo, notificação, contrato). Chame com o texto COMPLETO e finalizado; a UI mostrará um editor com botão de download.",
           parameters: {
             type: "object",
             properties: {
-              titulo: { type: "string", description: "Título do documento" },
+              titulo: { type: "string" },
               conteudo: {
                 type: "string",
                 description:
-                  "Texto completo da peça em parágrafos separados por quebras de linha. Use linguagem jurídica formal.",
+                  "Texto completo da peça. Use HTML semântico simples (<h1>, <h2>, <p>, <ul>, <li>, <strong>) ou parágrafos separados por quebras de linha duplas. Nunca deixe placeholders '[…]' se você tem o dado no contexto.",
+              },
+            },
+            required: ["titulo", "conteudo"],
+          },
+        },
+      },
+      {
+        type: "function",
+        function: {
+          name: "create_pdf",
+          description:
+            "Entrega o mesmo conteúdo formatado pronto para baixar como PDF. Use quando o usuário pedir explicitamente PDF, ou como complemento do create_petition.",
+          parameters: {
+            type: "object",
+            properties: {
+              titulo: { type: "string" },
+              conteudo: {
+                type: "string",
+                description: "HTML semântico ou texto simples.",
               },
             },
             required: ["titulo", "conteudo"],
@@ -156,7 +276,7 @@ export const askWithRag = createServerFn({ method: "POST" })
         function: {
           name: "create_table",
           description:
-            "Cria uma planilha (.xlsx) a partir de dados estruturados. Use quando pedirem tabela, cronograma, planilha de custas, comparativo, etc.",
+            "Gera uma planilha (.xlsx). Use para valores, cronogramas, comparativos, quadros de partes/prazos etc.",
           parameters: {
             type: "object",
             properties: {
@@ -164,7 +284,7 @@ export const askWithRag = createServerFn({ method: "POST" })
               rows: {
                 type: "array",
                 description:
-                  "Linhas como array de objetos. As chaves de cada objeto viram colunas.",
+                  "Linhas como objetos. As chaves de cada objeto viram colunas.",
                 items: { type: "object" },
               },
             },
@@ -177,7 +297,7 @@ export const askWithRag = createServerFn({ method: "POST" })
         function: {
           name: "create_presentation",
           description:
-            "Cria uma apresentação PowerPoint (.pptx). Use para resumir um caso/processo em slides.",
+            "Cria uma apresentação PowerPoint (.pptx) — visão executiva, audiência, reunião com cliente.",
           parameters: {
             type: "object",
             properties: {
@@ -192,7 +312,6 @@ export const askWithRag = createServerFn({ method: "POST" })
                     content: {
                       type: "array",
                       items: { type: "string" },
-                      description: "Tópicos em bullets",
                     },
                   },
                   required: ["title", "content"],
@@ -205,18 +324,56 @@ export const askWithRag = createServerFn({ method: "POST" })
       },
     ];
 
-    const systemPrompt = `Você é o JurisMind, assistente jurídico em português brasileiro.
-Use EXCLUSIVAMENTE o contexto fornecido para responder à pergunta. Cite as fontes ao final no formato [n] indicando o número entre colchetes do trecho.
-Se o contexto for insuficiente, diga claramente.
-Você possui ferramentas: use-as quando o usuário pedir ação concreta (criar prazo, listar casos, redigir uma peça/petição, montar planilha, criar apresentação). Para create_petition, create_table e create_presentation, NÃO descreva o resultado em texto — chame a tool com o conteúdo completo e depois apenas confirme em uma frase curta que o arquivo está pronto para baixar.
-Se o usuário enviar imagens, analise o que está visível nelas (documento fotografado, print de processo, identidade, foto de local etc.) e leve isso em conta.
+    // 3. System prompt: identidade + metadados do caso + documentos + trechos
+    const parties = (caseRow.parties ?? []) as PartyRow[];
+    const rep = caseRow.represented_party as PartyRow | null;
 
-IMPORTANTE: Responda em TEXTO CORRIDO, sem Markdown. NÃO use **negrito**, *itálico*, # títulos, listas com - ou *, nem blocos de código. Use parágrafos simples e, quando necessário, títulos em MAIÚSCULAS seguidos de dois-pontos.
+    const caseBlock = [
+      `TÍTULO: ${caseRow.title}`,
+      caseRow.case_number && `NÚMERO: ${caseRow.case_number}`,
+      caseRow.jurisdiction && `JURISDIÇÃO: ${caseRow.jurisdiction}`,
+      caseRow.case_type && `TIPO: ${caseRow.case_type}`,
+      caseRow.matter_kind && `NATUREZA: ${caseRow.matter_kind}`,
+      caseRow.client_name && `CLIENTE: ${caseRow.client_name}`,
+      rep?.name && `PARTE REPRESENTADA: ${rep.name}${rep.role ? ` (${rep.role})` : ""}`,
+      caseRow.status && `STATUS: ${caseRow.status}`,
+      caseRow.description && `DESCRIÇÃO: ${caseRow.description}`,
+      caseRow.summary && `RESUMO: ${caseRow.summary}`,
+      parties.length > 0 && `PARTES ENVOLVIDAS:\n${partiesBlock(parties)}`,
+    ]
+      .filter(Boolean)
+      .join("\n");
 
-CONTEXTO DOS DOCUMENTOS:
-${contextBlock}`;
+    const docsBlock =
+      activeDocs.length > 0
+        ? activeDocs.map((d, i) => `[${i + 1}] ${d.filename}`).join("\n")
+        : "(nenhum documento selecionado)";
 
-    // Mensagem do usuário (multimodal se houver imagens)
+    const systemPrompt = `Você é o JurisMind, agente jurídico especializado em português brasileiro. Você atua EXCLUSIVAMENTE dentro do caso abaixo — nunca pergunte "qual caso", "qual cliente" ou "qual matéria": você JÁ ESTÁ dentro dele. Não invente fatos que não estejam no contexto ou nos documentos.
+
+Data/hora atual: ${fmtDateTime()}.
+
+=== SOBRE O CASO ===
+${caseBlock}
+
+=== DOCUMENTOS ATIVOS (marcados pelo usuário) ===
+${docsBlock}
+
+=== TRECHOS RELEVANTES DOS DOCUMENTOS ===
+${contextBlock}
+
+INSTRUÇÕES:
+- Responda de forma direta, técnica e completa. Use Markdown quando ajudar a clareza (títulos, listas, negrito, tabelas).
+- Sempre que uma afirmação vier de um trecho, cite a fonte no formato [n] (o mesmo número entre colchetes acima).
+- Se o contexto for insuficiente, diga claramente e sugira quais documentos podem faltar.
+- Se o usuário enviar imagens, analise o que está visível (documento fotografado, print, foto de local, gráfico, assinatura) e leve em conta na resposta.
+- QUANDO O USUÁRIO PEDIR UMA PEÇA (petição, contestação, parecer, laudo, contrato, notificação, alegações, contrarrazões, memoriais, quesitos), CHAME create_petition (e opcionalmente create_pdf) com o texto integral e finalizado. Não coloque placeholders "[…]" se você tem o dado.
+- QUANDO PEDIR TABELA, PLANILHA, CÁLCULO, CRONOGRAMA, COMPARATIVO — chame create_table.
+- QUANDO PEDIR APRESENTAÇÃO / SLIDES — chame create_presentation.
+- QUANDO IDENTIFICAR PRAZO OU AUDIÊNCIA — chame create_event.
+- QUANDO PEDIR PARA REGISTRAR TAREFA / TO-DO — chame create_task.
+- Após chamar uma tool que gera arquivo (petition/pdf/table/presentation), confirme em UMA frase curta que o arquivo está pronto — não repita o conteúdo em texto.`;
+
     const userContent:
       | string
       | Array<Record<string, unknown>> =
@@ -240,7 +397,7 @@ ${contextBlock}`;
       if (name === "create_event") {
         const ev = {
           user_id: context.userId,
-          case_id: data.case_id ?? null,
+          case_id: data.case_id,
           title: String(args.title ?? "Evento"),
           description: args.description ? String(args.description) : null,
           starts_at: String(args.starts_at),
@@ -256,31 +413,58 @@ ${contextBlock}`;
         if (e) return { error: e.message };
         return { ok: true, event: row };
       }
-      if (name === "list_cases") {
-        const { data: cs } = await context.supabase
-          .from("cases")
-          .select("id, title, client_name, status")
-          .eq("user_id", context.userId)
-          .order("updated_at", { ascending: false })
-          .limit(50);
-        return { cases: cs ?? [] };
+      if (name === "create_task") {
+        const t = {
+          user_id: context.userId,
+          case_id: data.case_id,
+          title: String(args.title ?? "Tarefa"),
+          description: args.description ? String(args.description) : null,
+          priority: String(args.priority ?? "medium"),
+          status: "pending",
+          due_date: args.due_date ? String(args.due_date) : null,
+        };
+        const { data: row, error: e } = await context.supabase
+          .from("tasks")
+          .insert(t)
+          .select()
+          .single();
+        if (e) return { error: e.message };
+        return { ok: true, task: row };
       }
-      if (name === "list_upcoming_events") {
-        const days = Number(args.days ?? 30);
+      if (name === "list_case_events") {
+        const days = Number(args.days ?? 60);
         const until = new Date(Date.now() + days * 86400_000).toISOString();
         const { data: evs } = await context.supabase
           .from("events")
-          .select("id, title, starts_at, event_type, case_id")
+          .select("id, title, starts_at, event_type")
           .eq("user_id", context.userId)
+          .eq("case_id", data.case_id)
           .gte("starts_at", new Date().toISOString())
           .lte("starts_at", until)
           .order("starts_at", { ascending: true });
         return { events: evs ?? [] };
       }
+      if (name === "list_case_tasks") {
+        const { data: ts } = await context.supabase
+          .from("tasks")
+          .select("id, title, status, priority, due_date")
+          .eq("user_id", context.userId)
+          .eq("case_id", data.case_id)
+          .neq("status", "done")
+          .order("created_at", { ascending: false });
+        return { tasks: ts ?? [] };
+      }
       if (name === "create_petition") {
         return {
           kind: "petition",
           titulo: String(args.titulo ?? "Petição"),
+          conteudo: String(args.conteudo ?? ""),
+        };
+      }
+      if (name === "create_pdf") {
+        return {
+          kind: "pdf",
+          titulo: String(args.titulo ?? "Documento"),
           conteudo: String(args.conteudo ?? ""),
         };
       }
@@ -302,8 +486,11 @@ ${contextBlock}`;
       return { error: `Tool desconhecida: ${name}` };
     };
 
+    const tier = data.model_tier ?? "fast";
     const { content, steps } = await chatWithTools(messages, tools, executor, {
+      model: MODEL_MAP[tier],
       temperature: 0.2,
+      maxSteps: 6,
     });
 
     return {
