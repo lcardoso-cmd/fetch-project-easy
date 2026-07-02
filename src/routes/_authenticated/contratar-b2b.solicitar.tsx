@@ -28,6 +28,8 @@ import { supabase } from "@/integrations/supabase/client";
 const searchSchema = z.object({
   service: z.string().optional(),
   case_id: z.string().uuid().optional(),
+  title: z.string().optional(),
+  description: z.string().optional(),
 });
 
 export const Route = createFileRoute("/_authenticated/contratar-b2b/solicitar")({
@@ -53,8 +55,8 @@ function HireB2bRequestForm() {
   });
 
   const [serviceSlug, setServiceSlug] = useState(search.service ?? "");
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
+  const [title, setTitle] = useState(search.title ?? "");
+  const [description, setDescription] = useState(search.description ?? "");
   const [urgency, setUrgency] = useState<"normal" | "alta" | "critica">("normal");
   const [deadline, setDeadline] = useState("");
   const [email, setEmail] = useState(user?.email ?? "");
