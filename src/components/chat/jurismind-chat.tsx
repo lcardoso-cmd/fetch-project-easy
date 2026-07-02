@@ -370,6 +370,17 @@ export function JurisMindChat({
   const [segmentInFlight, setSegmentInFlight] = useState(false);
   const liveSupportedRef = useRef<boolean>(true);
 
+  // Seletor de microfone
+  const MIC_STORAGE_KEY = "jurismind:mic-device-id";
+  const [mics, setMics] = useState<MediaDeviceInfo[]>([]);
+  const [selectedMicId, setSelectedMicId] = useState<string | null>(() => {
+    if (typeof window === "undefined") return null;
+    return localStorage.getItem(MIC_STORAGE_KEY);
+  });
+  const [micPickerOpen, setMicPickerOpen] = useState(false);
+  const [micLabelsUnlocked, setMicLabelsUnlocked] = useState(false);
+  const [unlockingLabels, setUnlockingLabels] = useState(false);
+
   const [modelTier, setModelTier] = useState<ModelTier>(() => {
     if (typeof window === "undefined") return "fast";
     return (localStorage.getItem("jurismind:model") as ModelTier) || "fast";
