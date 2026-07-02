@@ -38,6 +38,7 @@ import {
   type UploadItem,
 } from "./upload-progress-list";
 import { ImportFromLibraryDialog } from "./import-from-library-dialog";
+import { FilePreviewCard } from "./file-preview-card";
 
 const ACCEPTED_TYPES = [
   "application/pdf",
