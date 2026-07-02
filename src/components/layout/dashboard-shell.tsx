@@ -319,7 +319,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
               aria-label="Ir para o Dashboard"
               className="group flex items-center gap-3 overflow-hidden rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-sidebar"
             >
-              <JurisMindMark size={32} context="sidebar" interactive />
+              <JurisMindMark size={32} context={JURISMIND_CONTEXT.sidebar} interactive />
               {!collapsed && (
                 <h2 className="font-heading text-base font-semibold leading-tight truncate">
                   B2B | JurisMind AI
@@ -446,7 +446,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
               aria-label="Ir para o Dashboard"
               className="group flex min-w-0 flex-1 items-center gap-2 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             >
-              <JurisMindMark size={28} context="header" interactive />
+              <JurisMindMark size={28} context={JURISMIND_CONTEXT.header} interactive />
 
               <span className="font-heading text-base font-bold whitespace-nowrap truncate sm:text-lg">
                 B2B | JurisMind AI

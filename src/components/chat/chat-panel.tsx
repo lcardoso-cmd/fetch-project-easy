@@ -84,7 +84,7 @@ export function ChatPanel({
 
         {messages.length === 0 ? (
           <div className="flex h-full flex-col items-center justify-center gap-3 text-center text-muted-foreground">
-            <JurisMindMark size={56} context="chat" />
+            <JurisMindMark size={56} context={JURISMIND_CONTEXT.chat} />
             <p className="font-medium text-foreground">Pergunte sobre seus documentos</p>
             <p className="text-sm">O JurisMind busca os trechos relevantes e responde citando as fontes.</p>
           </div>
