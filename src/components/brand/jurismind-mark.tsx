@@ -1,3 +1,4 @@
+import sidebarIcon from "@/assets/brain-sidebar.png.asset.json";
 import squareNavy from "@/assets/brain-square-navy.png.asset.json";
 import squareWhite from "@/assets/brain-square-white.png.asset.json";
 import glyphNavy from "@/assets/brain-glyph-navy.png.asset.json";
@@ -6,8 +7,9 @@ import fullLogo from "@/assets/jurismind-logo.png.asset.json";
 import { cn } from "@/lib/utils";
 
 /**
- * JurisMind brand mark — 5 official variants, all derived from the same brain icon.
+ * JurisMind brand mark — 6 official variants, all derived from the same brain icon.
  *
+ * - "sidebar"      : white rounded square + navy brain (official app/sidebar icon)
  * - "square-navy"  : navy square + white brain (use on light backgrounds, standalone)
  * - "square-white" : white square + navy brain (use on dark/colored backgrounds, standalone)
  * - "glyph-navy"   : brain only, navy on transparent (use next to text on light bg)
@@ -15,6 +17,7 @@ import { cn } from "@/lib/utils";
  * - "full"         : complete boxed logo with "B2B | JurisMind AI" text (use ONLY alone, never next to the text)
  */
 export type JurisMindVariant =
+  | "sidebar"
   | "square-navy"
   | "square-white"
   | "glyph-navy"
@@ -22,6 +25,7 @@ export type JurisMindVariant =
   | "full";
 
 const SOURCES: Record<JurisMindVariant, string> = {
+  sidebar: sidebarIcon.url,
   "square-navy": squareNavy.url,
   "square-white": squareWhite.url,
   "glyph-navy": glyphNavy.url,
@@ -42,7 +46,7 @@ export function JurisMindMark({
   rounded?: boolean;
 }) {
   const src = SOURCES[variant];
-  const isSquare = variant.startsWith("square") || variant === "full";
+  const isSquare = variant.startsWith("square") || variant === "sidebar" || variant === "full";
   return (
     <img
       src={src}
