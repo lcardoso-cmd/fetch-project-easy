@@ -64,6 +64,49 @@ function AuthPage() {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [mode, setMode] = useState<"login" | "signup">("login");
+  const [pendingEmail, setPendingEmail] = useState<string | null>(null);
+  const [resendCooldown, setResendCooldown] = useState(0);
+  const [isResending, setIsResending] = useState(false);
+
+  // Timer para o cooldown do botão de reenviar confirmação.
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const t = setTimeout(() => setResendCooldown((s) => Math.max(0, s - 1)), 1000);
+    return () => clearTimeout(t);
+  }, [resendCooldown]);
+
+  const isUnconfirmedError = (msg: string) => {
+    const m = msg.toLowerCase();
+    return (
+      m.includes("email not confirmed") ||
+      m.includes("not confirmed") ||
+      m.includes("confirme") ||
+      m.includes("email_not_confirmed")
+    );
+  };
+
+  const handleResendConfirmation = async () => {
+    if (!pendingEmail || resendCooldown > 0 || isResending) return;
+    setIsResending(true);
+    try {
+      const { error } = await supabase.auth.resend({
+        type: "signup",
+        email: pendingEmail,
+        options: { emailRedirectTo: window.location.origin },
+      });
+      if (error) throw error;
+      toast.success("Email de confirmação reenviado", {
+        description: `Verifique a caixa de entrada de ${pendingEmail}.`,
+      });
+      setResendCooldown(60);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Falha ao reenviar";
+      toast.error("Não foi possível reenviar", { description: message });
+    } finally {
+      setIsResending(false);
+    }
+  };
+
 
   // Resolve destino pós-login: query ?redirect=, senão sessionStorage (OAuth), senão /painel.
   const resolveRedirect = (): string => {
