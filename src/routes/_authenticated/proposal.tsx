@@ -611,6 +611,38 @@ function ProposalPage() {
           <Button size="sm" variant="outline" onClick={() => setVersionsOpen(true)} className="h-7 px-2">
             <History className="mr-1 h-3.5 w-3.5" /> Histórico
           </Button>
+          <AlertDialog open={clearOpen} onOpenChange={setClearOpen}>
+            <AlertDialogTrigger asChild>
+              <Button size="sm" variant="outline" className="h-7 px-2 text-destructive hover:text-destructive">
+                <Eraser className="mr-1 h-3.5 w-3.5" /> Limpar tudo
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Limpar histórico e rascunho?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Isso apaga <strong>todas as versões salvas</strong> (inclusive fixadas) e o
+                  rascunho atual {activeCaseId ? "deste caso" : "sem caso vinculado"}, além do
+                  rascunho antigo guardado neste navegador. Esta ação não pode ser desfeita.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel disabled={clearing}>Cancelar</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={(e) => {
+                    e.preventDefault();
+                    clearAll();
+                  }}
+                  disabled={clearing}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
+                  {clearing && <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />}
+                  Apagar tudo
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+
           <ConvertToCasePopover
             disabled={!!activeCaseId}
             attachmentIds={attachmentIds}
