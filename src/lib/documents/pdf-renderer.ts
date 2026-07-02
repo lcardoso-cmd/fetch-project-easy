@@ -563,6 +563,183 @@ function drawHeaderFooter(
   void degrees; // silence unused import guard
 }
 
+function drawCoverPage(
+  page: PDFPage,
+  cover: PdfCoverData,
+  title: string,
+  branding: DocBranding | null | undefined,
+  fonts: Fonts,
+  layout: ReturnType<typeof resolvePageLayout>,
+) {
+  const firmName = sanitize(branding?.firmName?.trim() || DEFAULT_BRAND_NAME);
+  const accent = hexToRgb01(COLORS.accent);
+  const ink = hexToRgb01(COLORS.ink);
+  const muted = hexToRgb01(COLORS.muted);
+  const border = hexToRgb01(COLORS.border);
+  const cx = layout.width / 2;
+
+  // Firma centralizada no topo
+  const firmSize = 12;
+  const firmUpper = firmName.toUpperCase();
+  const firmW = widthOf(fonts.bold, firmUpper, firmSize);
+  drawTextSafe(
+    page,
+    firmUpper,
+    cx - firmW / 2,
+    layout.height - layout.marginTop - 20,
+    fonts.bold,
+    firmSize,
+    accent,
+  );
+
+  // Linha decorativa
+  const ruleY = layout.height - layout.marginTop - 40;
+  page.drawLine({
+    start: { x: cx - 60, y: ruleY },
+    end: { x: cx + 60, y: ruleY },
+    thickness: 1,
+    color: rgb(accent[0], accent[1], accent[2]),
+  });
+
+  // Título grande centralizado
+  const titleSize = Math.round(FONT_SIZES_PT.title * 1.4);
+  const titleY = layout.height / 2 + 80;
+  const sanitizedTitle = sanitize(title);
+  const titleMax = layout.width - layout.marginLeft - layout.marginRight;
+  const titleRuns: StyledRun[] = [
+    { text: sanitizedTitle, face: "bold", sizePt: titleSize },
+  ];
+  const laidTitle = layoutRuns(titleRuns, titleMax, fonts);
+  let ty = titleY;
+  for (const line of laidTitle.lines) {
+    const w = line.width;
+    let cursor = cx - w / 2;
+    for (const seg of line.segments) {
+      const f = fonts[seg.face];
+      drawTextSafe(page, seg.text, cursor, ty, f, seg.sizePt, ink);
+      cursor += widthOf(f, seg.text, seg.sizePt);
+    }
+    ty -= titleSize * 1.2;
+  }
+
+  // Bloco "Preparado para"
+  const blockX = layout.marginLeft;
+  const blockW = layout.width - layout.marginLeft - layout.marginRight;
+  let by = layout.height / 2 - 40;
+
+  drawTextSafe(page, "PREPARADO PARA", blockX, by, fonts.bold, 9, muted);
+  by -= 6;
+  page.drawLine({
+    start: { x: blockX, y: by },
+    end: { x: blockX + blockW, y: by },
+    thickness: 0.5,
+    color: rgb(border[0], border[1], border[2]),
+  });
+  by -= 22;
+
+  const rows: Array<[string, string | undefined]> = [
+    ["Cliente", cover.clientName],
+    ["Documento", cover.clientDocument],
+    ["Endereço", cover.clientAddress],
+    ["Assunto", cover.matter],
+  ];
+  for (const [label, value] of rows) {
+    if (!value) continue;
+    drawTextSafe(page, sanitize(label), blockX, by, fonts.bold, 9, muted);
+    // Valor pode ter mais de uma linha
+    const valRuns: StyledRun[] = [
+      { text: sanitize(value), face: "body", sizePt: 12 },
+    ];
+    const laid = layoutRuns(valRuns, blockW - 100, fonts);
+    let vy = by;
+    for (let i = 0; i < laid.lines.length; i++) {
+      const line = laid.lines[i];
+      let cursor = blockX + 100;
+      for (const seg of line.segments) {
+        const f = fonts[seg.face];
+        drawTextSafe(page, seg.text, cursor, vy, f, seg.sizePt, ink);
+        cursor += widthOf(f, seg.text, seg.sizePt);
+      }
+      vy -= 14;
+    }
+    by = vy - 10;
+  }
+
+  // Rodapé da capa: referência + data
+  const footerY = layout.marginBottom + 40;
+  page.drawLine({
+    start: { x: blockX, y: footerY + 22 },
+    end: { x: blockX + blockW, y: footerY + 22 },
+    thickness: 0.5,
+    color: rgb(border[0], border[1], border[2]),
+  });
+  if (cover.reference) {
+    drawTextSafe(
+      page,
+      sanitize(cover.reference),
+      blockX,
+      footerY,
+      fonts.body,
+      10,
+      muted,
+    );
+  }
+  const dateStr =
+    cover.date ??
+    new Date().toLocaleDateString("pt-BR", {
+      day: "2-digit",
+      month: "long",
+      year: "numeric",
+    });
+  const dateS = sanitize(dateStr);
+  const dw = widthOf(fonts.body, dateS, 10);
+  drawTextSafe(
+    page,
+    dateS,
+    blockX + blockW - dw,
+    footerY,
+    fonts.body,
+    10,
+    muted,
+  );
+}
+
+function drawWatermark(
+  page: PDFPage,
+  wm: PdfWatermark,
+  fonts: Fonts,
+  layout: ReturnType<typeof resolvePageLayout>,
+) {
+  const text = sanitize(wm.text).toUpperCase();
+  if (!text) return;
+  const opacity = Math.max(0.05, Math.min(0.5, wm.opacity ?? 0.12));
+  const font = fonts.bold;
+  // Tamanho proporcional à largura da página
+  const size = Math.min(120, Math.max(60, layout.width * 0.14));
+  const textWidth = widthOf(font, text, size);
+  const cx = layout.width / 2;
+  const cy = layout.height / 2;
+  const angle = Math.PI / 4; // 45°
+  // Para centralizar texto rotacionado, deslocamos pela metade da largura
+  // usando componentes trigonométricos.
+  const x = cx - (Math.cos(angle) * textWidth) / 2 + Math.sin(angle) * size * 0.35;
+  const y = cy - (Math.sin(angle) * textWidth) / 2 - Math.cos(angle) * size * 0.35;
+  const gray = hexToRgb01("9CA3AF");
+  try {
+    page.drawText(text, {
+      x,
+      y,
+      size,
+      font,
+      color: rgb(gray[0], gray[1], gray[2]),
+      opacity,
+      rotate: degrees(45),
+    });
+  } catch {
+    // ignora silenciosamente
+  }
+}
+
 
 // ---------------------------------------------------------------------------
 // Entry point
@@ -573,7 +750,16 @@ function drawHeaderFooter(
  * — a API é assíncrona porque o pdf-lib embute fontes de forma async.
  */
 export async function renderPdf(input: RenderPdfInput): Promise<Uint8Array> {
-  const { title, blocks, branding, headerLabel, bare, page: pageCfg } = input;
+  const {
+    title,
+    blocks,
+    branding,
+    headerLabel,
+    bare,
+    page: pageCfg,
+    cover,
+    watermark,
+  } = input;
   const layout = resolvePageLayout(pageCfg);
   const contentWidth = layout.width - layout.marginLeft - layout.marginRight;
   const contentX = layout.marginLeft;
@@ -609,11 +795,19 @@ export async function renderPdf(input: RenderPdfInput): Promise<Uint8Array> {
   const pages = paginate(lines, usableHeight);
   const totalPages = pages.length;
 
+  // Capa (opcional) — primeira página, sem header/footer/numeração
+  if (cover) {
+    const coverPage = doc.addPage([layout.width, layout.height]);
+    drawCoverPage(coverPage, cover, title, branding, fonts, layout);
+    if (watermark) drawWatermark(coverPage, watermark, fonts, layout);
+  }
+
   for (let i = 0; i < pages.length; i++) {
     const page = doc.addPage([layout.width, layout.height]);
     if (!bare) {
       drawHeaderFooter(page, branding, headerLabel, i + 1, totalPages, fonts, layout);
     }
+    if (watermark) drawWatermark(page, watermark, fonts, layout);
     let cursorY = topY;
     for (const line of pages[i]) {
       cursorY -= line.sizePt * SPACING.lineHeight;
@@ -635,3 +829,4 @@ export function renderPdfSync(): never {
 
 // Silencia lint por import não usado no fallback
 void StandardFonts;
+
