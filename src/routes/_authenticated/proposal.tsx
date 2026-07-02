@@ -559,6 +559,21 @@ function ProposalPage() {
           <Button size="sm" variant="outline" onClick={() => setVersionsOpen(true)} className="h-7 px-2">
             <History className="mr-1 h-3.5 w-3.5" /> Histórico
           </Button>
+          <ConvertToCasePopover
+            disabled={!!activeCaseId}
+            attachmentIds={attachmentIds}
+            fromCaseId={activeCaseId}
+            defaults={{
+              title: form.matter || `Proposta — ${form.client_name || "Cliente"}`,
+              client_name: form.client_name || "",
+              description: form.scope || "",
+              case_type: "",
+              jurisdiction: "",
+            }}
+            onConverted={(newCaseId) => {
+              setForm((f) => ({ ...f, case_id: newCaseId }));
+            }}
+          />
         </div>
       </div>
 
