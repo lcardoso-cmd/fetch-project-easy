@@ -139,8 +139,22 @@ const CONTEXT_TO_VARIANT: Record<JurisMindContext, JurisMindVariant> = {
   "inline-dark": "glyph-white",
 };
 
-export function variantForContext(context: JurisMindContext): JurisMindVariant {
-  return CONTEXT_TO_VARIANT[context];
+/**
+ * Fallback context used when a caller passes `null`, `undefined` or an
+ * unknown value. `sidebar` is the safest default because its asset renders
+ * legibly on both light and dark surfaces.
+ */
+export const DEFAULT_JURISMIND_CONTEXT: JurisMindContext = "sidebar";
+
+export function variantForContext(
+  context: JurisMindContext | null | undefined,
+): JurisMindVariant {
+  const safe = isJurisMindContext(context) ? context : DEFAULT_JURISMIND_CONTEXT;
+  return CONTEXT_TO_VARIANT[safe];
+}
+
+function isJurisMindVariant(value: unknown): value is JurisMindVariant {
+  return typeof value === "string" && value in SOURCES;
 }
 
 /**
@@ -160,9 +174,9 @@ export function JurisMindMark({
   className?: string;
   size?: number;
   /** Explicit variant. Prefer `context` unless you need a specific asset. */
-  variant?: JurisMindVariant;
+  variant?: JurisMindVariant | null;
   /** Semantic layout context; resolves to the correct variant automatically. */
-  context?: JurisMindContext;
+  context?: JurisMindContext | null;
   /** Force rounded corners. Square variants are rounded by default. */
   rounded?: boolean;
   /**
@@ -172,8 +186,9 @@ export function JurisMindMark({
    */
   interactive?: boolean;
 }) {
-  const resolved: JurisMindVariant =
-    variant ?? (context ? CONTEXT_TO_VARIANT[context] : "sidebar");
+  const resolved: JurisMindVariant = isJurisMindVariant(variant)
+    ? variant
+    : variantForContext(context);
   const isSquare =
     resolved === "sidebar" || resolved === "square-navy" || resolved === "square-white";
   const shouldRound = rounded ?? isSquare;
