@@ -39,11 +39,15 @@ import {
   Loader2,
   Maximize2,
   Mic,
+  RefreshCw,
   Search,
   Send,
+  Settings2,
   Square,
   X,
 } from "lucide-react";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -366,6 +370,17 @@ export function JurisMindChat({
   const [segmentInFlight, setSegmentInFlight] = useState(false);
   const liveSupportedRef = useRef<boolean>(true);
 
+  // Seletor de microfone
+  const MIC_STORAGE_KEY = "jurismind:mic-device-id";
+  const [mics, setMics] = useState<MediaDeviceInfo[]>([]);
+  const [selectedMicId, setSelectedMicId] = useState<string | null>(() => {
+    if (typeof window === "undefined") return null;
+    return localStorage.getItem(MIC_STORAGE_KEY);
+  });
+  const [micPickerOpen, setMicPickerOpen] = useState(false);
+  const [micLabelsUnlocked, setMicLabelsUnlocked] = useState(false);
+  const [unlockingLabels, setUnlockingLabels] = useState(false);
+
   const [modelTier, setModelTier] = useState<ModelTier>(() => {
     if (typeof window === "undefined") return "fast";
     return (localStorage.getItem("jurismind:model") as ModelTier) || "fast";
@@ -383,6 +398,65 @@ export function JurisMindChat({
 
   useEffect(() => {
     inputRef.current?.focus();
+  }, []);
+
+  // ---------- Enumeração de microfones ----------
+  const refreshMics = async () => {
+    if (typeof navigator === "undefined" || !navigator.mediaDevices?.enumerateDevices) {
+      return;
+    }
+    try {
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const inputs = devices.filter((d) => d.kind === "audioinput");
+      setMics(inputs);
+      if (inputs.some((d) => d.label)) setMicLabelsUnlocked(true);
+      if (
+        selectedMicId &&
+        inputs.length > 0 &&
+        !inputs.some((d) => d.deviceId === selectedMicId)
+      ) {
+        setSelectedMicId(null);
+        try {
+          localStorage.removeItem(MIC_STORAGE_KEY);
+        } catch {}
+      }
+    } catch {
+      // silencioso — sem permissão ainda
+    }
+  };
+
+  const unlockMicLabels = async () => {
+    if (unlockingLabels) return;
+    setUnlockingLabels(true);
+    try {
+      const s = await navigator.mediaDevices.getUserMedia({ audio: true });
+      s.getTracks().forEach((t) => t.stop());
+      await refreshMics();
+    } catch (e) {
+      toast.error(humanizeMicError(e));
+    } finally {
+      setUnlockingLabels(false);
+    }
+  };
+
+  const chooseMic = (deviceId: string | null) => {
+    setSelectedMicId(deviceId);
+    try {
+      if (deviceId) localStorage.setItem(MIC_STORAGE_KEY, deviceId);
+      else localStorage.removeItem(MIC_STORAGE_KEY);
+    } catch {}
+    setMicPickerOpen(false);
+  };
+
+  useEffect(() => {
+    void refreshMics();
+    if (typeof navigator === "undefined" || !navigator.mediaDevices) return;
+    const handler = () => void refreshMics();
+    navigator.mediaDevices.addEventListener?.("devicechange", handler);
+    return () => {
+      navigator.mediaDevices.removeEventListener?.("devicechange", handler);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Carregar histórico ao trocar de thread
@@ -634,8 +708,39 @@ export function JurisMindChat({
       return;
     }
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const buildConstraints = (deviceId: string | null): MediaStreamConstraints => ({
+        audio: deviceId ? { deviceId: { exact: deviceId } } : true,
+      });
+      let stream: MediaStream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia(
+          buildConstraints(selectedMicId),
+        );
+      } catch (err) {
+        const name = (err as { name?: string })?.name;
+        if (
+          selectedMicId &&
+          (name === "OverconstrainedError" ||
+            name === "NotFoundError" ||
+            name === "NotReadableError")
+        ) {
+          try {
+            localStorage.removeItem(MIC_STORAGE_KEY);
+          } catch {}
+          setSelectedMicId(null);
+          toast.message(
+            "Microfone selecionado indisponível — usando o padrão.",
+          );
+          stream = await navigator.mediaDevices.getUserMedia(
+            buildConstraints(null),
+          );
+        } else {
+          throw err;
+        }
+      }
       streamRef.current = stream;
+      // Após conceder permissão, labels ficam disponíveis — re-enumera.
+      void refreshMics();
       const mime = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
         ? "audio/webm;codecs=opus"
         : "audio/webm";
@@ -1595,6 +1700,13 @@ export function JurisMindChat({
                     <span className="flex-1">{micError}</span>
                     <button
                       type="button"
+                      onClick={() => setMicPickerOpen(true)}
+                      className="rounded px-1.5 py-0.5 text-xs font-medium hover:bg-destructive/10"
+                    >
+                      Trocar microfone
+                    </button>
+                    <button
+                      type="button"
                       onClick={() => void startRecording()}
                       className="rounded px-1.5 py-0.5 text-xs font-medium hover:bg-destructive/10"
                     >
@@ -1669,6 +1781,111 @@ export function JurisMindChat({
                   <Mic className="h-4 w-4" />
                 )}
               </Button>
+              <Popover open={micPickerOpen} onOpenChange={setMicPickerOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="outline"
+                    disabled={recording || transcribing}
+                    aria-label="Escolher microfone"
+                    title={
+                      recording
+                        ? "Pare a gravação para trocar o microfone"
+                        : "Escolher microfone"
+                    }
+                    className="h-10 w-10 shrink-0"
+                    onClick={() => void refreshMics()}
+                  >
+                    <Settings2 className="h-4 w-4" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent align="end" className="w-72 p-3">
+                  <div className="mb-2 flex items-center justify-between">
+                    <div className="text-sm font-medium">Microfone</div>
+                    <button
+                      type="button"
+                      onClick={() => void refreshMics()}
+                      className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs text-muted-foreground hover:bg-muted"
+                      title="Atualizar lista"
+                    >
+                      <RefreshCw className="h-3 w-3" />
+                      Atualizar
+                    </button>
+                  </div>
+                  {!micLabelsUnlocked && mics.every((d) => !d.label) && (
+                    <div className="mb-2 rounded-md border bg-muted/40 p-2 text-xs text-muted-foreground">
+                      <p className="mb-2">
+                        Autorize o acesso ao microfone para ver os nomes dos
+                        dispositivos.
+                      </p>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => void unlockMicLabels()}
+                        disabled={unlockingLabels}
+                        className="h-7 w-full"
+                      >
+                        {unlockingLabels ? (
+                          <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                        ) : null}
+                        Autorizar
+                      </Button>
+                    </div>
+                  )}
+                  <RadioGroup
+                    value={selectedMicId ?? "__default__"}
+                    onValueChange={(v) =>
+                      chooseMic(v === "__default__" ? null : v)
+                    }
+                    className="max-h-64 space-y-1 overflow-y-auto"
+                  >
+                    <div className="flex items-center gap-2 rounded-md px-2 py-1.5 hover:bg-muted/50">
+                      <RadioGroupItem value="__default__" id="mic-default" />
+                      <Label
+                        htmlFor="mic-default"
+                        className="flex-1 cursor-pointer text-sm font-normal"
+                      >
+                        Padrão do sistema
+                      </Label>
+                    </div>
+                    {mics.length === 0 && (
+                      <p className="px-2 py-1 text-xs text-muted-foreground">
+                        Nenhum microfone detectado.
+                      </p>
+                    )}
+                    {mics.map((d, idx) => {
+                      const id = `mic-${d.deviceId || idx}`;
+                      const label =
+                        d.label ||
+                        (d.deviceId === "default"
+                          ? "Microfone padrão"
+                          : `Microfone ${idx + 1}`);
+                      return (
+                        <div
+                          key={d.deviceId || idx}
+                          className="flex items-center gap-2 rounded-md px-2 py-1.5 hover:bg-muted/50"
+                        >
+                          <RadioGroupItem value={d.deviceId} id={id} />
+                          <Label
+                            htmlFor={id}
+                            className="flex-1 cursor-pointer truncate text-sm font-normal"
+                            title={label}
+                          >
+                            {label}
+                          </Label>
+                        </div>
+                      );
+                    })}
+                  </RadioGroup>
+                  {recording && (
+                    <p className="mt-2 text-[11px] text-muted-foreground">
+                      Pare a gravação para trocar o microfone.
+                    </p>
+                  )}
+                </PopoverContent>
+              </Popover>
               <Textarea
                 ref={inputRef}
                 value={input}

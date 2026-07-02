@@ -1,55 +1,67 @@
 ## Objetivo
 
-Trocar a transcrição single-shot atual (só após parar) por transcrição segmentada em tempo real, com o texto aparecendo dentro do próprio input do chat enquanto o usuário fala.
+Permitir escolher qual microfone é usado pelo chat de voz, com destaque quando ocorrer falha (`NotReadableError`, silêncio persistente, permissão negada em um dispositivo específico), e reutilizar o mesmo dispositivo em gravações futuras.
 
-## Estratégia
+## Escopo
 
-Rodar dois pipelines de captura em paralelo enquanto o botão do microfone está ativo:
+Alterações restritas a `src/components/chat/jurismind-chat.tsx` (frontend). Nenhuma mudança de backend/servidor.
 
-1. **MediaRecorder** (já existente) — preserva o blob `.webm` completo para persistência/replay do áudio (não muda).
-2. **Web Audio API + ScriptProcessor/AudioWorklet** — buffer PCM contínuo. A cada ~3s, o buffer acumulado é fatiado em uma janela auto-contida, codificado como WAV 16 kHz mono e enviado para um novo endpoint SSE de transcrição.
+## Comportamento
 
-Cada segmento retorna deltas via SSE do Lovable AI Gateway (`openai/gpt-4o-mini-transcribe`, `stream: "true"`). O texto de cada segmento fechado é **appendado** ao input; o segmento ainda em processamento aparece como "partial" com opacidade reduzida (mesma caixa, sem bolha extra).
+1. **Enumeração**
+   - Ao montar o componente e ao clicar no seletor, chamar `navigator.mediaDevices.enumerateDevices()` e filtrar `kind === "audioinput"`.
+   - Se os `label`s estiverem vazios (permissão nunca concedida), mostrar apenas "Microfone padrão" e um botão "Autorizar para listar dispositivos" que faz um `getUserMedia({audio:true})` curto só para liberar os labels e depois re-enumera.
+   - Ouvir `navigator.mediaDevices.ondevicechange` para atualizar a lista quando um mic é conectado/desconectado.
 
-Ao parar a gravação: cancela segmentos em voo, mantém o texto já commitado, e sobe o blob `.webm` no envio da mensagem (fluxo atual de `pendingAudioRef` intacto). Não há re-transcrição final — evita custo duplicado.
+2. **Persistência**
+   - Guardar o `deviceId` escolhido em `localStorage` (`jurismind:mic-device-id`) e num `state` (`selectedMicId`).
+   - Se o `deviceId` salvo não existir mais na lista, cair para `default` e limpar o storage.
 
-## Arquivos afetados
+3. **Uso na gravação**
+   - `startRecording` passa `{ audio: selectedMicId ? { deviceId: { exact: selectedMicId } } : true }` para `getUserMedia`.
+   - Em `OverconstrainedError`, fazer fallback automático para `{ audio: true }`, mostrar toast leve ("Dispositivo indisponível — usando padrão") e limpar `selectedMicId`.
 
-### Novo: `src/routes/api/tools/transcribe-stream.ts`
-- POST recebe `{ audio_base64, format: "wav" }`.
-- Chama `POST https://ai.gateway.lovable.dev/v1/audio/transcriptions` como `multipart/form-data` com `model=openai/gpt-4o-mini-transcribe` e `stream=true`.
-- Faz *passthrough* do `response.body` SSE (mesmo padrão do skill `ai-speech-to-text`), preservando `Content-Type: text/event-stream`.
-- Erros (402/429/500) retornam JSON com status apropriado.
+4. **UI**
+   - Novo `Popover` acionado por um botão discreto (ícone `Settings2` ou `ChevronDown`) posicionado ao lado do botão de microfone existente na barra do composer. Não aumentar a altura da barra.
+   - Conteúdo do popover:
+     - Título "Microfone".
+     - Lista de opções com `RadioGroup`: cada item mostra o `label` do dispositivo (ou "Microfone {n}" quando vazio); o item ativo recebe check.
+     - Botão "Atualizar lista" (re-enumera).
+     - Rodapé com o `deviceId` atual em fonte mono truncada (útil para debug) — opcional, discreto.
+   - No banner de erro existente (`micError`), adicionar um botão secundário "Trocar microfone" que abre o mesmo popover.
+   - Desabilitar a troca enquanto `recording === true` (mostrar dica: "Pare a gravação para trocar").
 
-### Editar: `src/components/chat/jurismind-chat.tsx`
-- Novo helper `src/lib/audio/wav-encoder.ts` (mono 16 kHz, header PCM 16-bit).
-- Em `startRecording`:
-  - Além do `MediaRecorder`, criar `AudioContext` + `ScriptProcessorNode` (já existe o `analyser`; adicionar um `processor` paralelo que empilha `Float32Array` em `pcmChunksRef`).
-  - Timer a cada 3000 ms: se há PCM novo desde o último flush, fatia a janela, codifica WAV, `fetch("/api/tools/transcribe-stream")`, itera o SSE (`event: transcript.text.delta` → atualiza `livePartial`; `transcript.text.done` → move `livePartial` para `committedSegments`), controlado por `AbortController` armazenado em ref.
-  - Novos estados: `liveTranscript` (string com o commit corrente + partial), `baseInput` (snapshot do input antes de gravar).
-  - Reflete no textarea via `setInput(baseInput + " " + committed + partial)` respeitando espaços.
-- Em `stopRecording`:
-  - Aborta segmento em voo, para o processor, faz *flush* final de qualquer PCM residual (>0.3s) em uma última chamada SSE bloqueante curta (~2s timeout) para não perder as últimas palavras.
-  - Mantém `input` como está; remove o marcador de partial (`livePartial = ""`).
-  - Continua salvando `pendingAudioRef` com o blob do MediaRecorder para upload posterior.
-- Remove o passo `onstop` de transcrição completa via `/api/tools/transcribe` (deixa o endpoint antigo intacto para fallback/uso externo, mas não é mais chamado do chat).
-- Indicador visual: enquanto `livePartial` não vazio, exibir o trecho parcial no textarea com um `<span>` cinza-itálico não é possível dentro de `<textarea>` puro; solução: manter o parcial no próprio textarea (já foi o pedido), e adicionar um badge discreto "transcrevendo..." ao lado de "REC" quando `segmentInFlight`.
-- Fallback: se o navegador não expõe `AudioContext`/`ScriptProcessorNode`, cai no comportamento atual (single-shot ao parar) sem quebrar UX.
+5. **Acessibilidade**
+   - `aria-label` no botão do seletor: "Escolher microfone".
+   - Popover fecha ao selecionar; foco retorna ao botão do mic.
 
-### Editar: `src/routes/api/tools/transcribe.ts`
-- Sem mudança funcional. Fica como fallback e para uso por outras rotas.
+## Detalhes técnicos
 
-## Considerações técnicas
+- Novos estados/refs em `jurismind-chat.tsx`:
+  - `const [mics, setMics] = useState<MediaDeviceInfo[]>([])`
+  - `const [selectedMicId, setSelectedMicId] = useState<string | null>(...)` inicializado do `localStorage`.
+  - `const [micPickerOpen, setMicPickerOpen] = useState(false)`
+  - `const [micLabelsUnlocked, setMicLabelsUnlocked] = useState(false)`
+- Helper `refreshMics()` isolado, chamado em `useEffect` inicial, no `ondevicechange`, ao abrir o popover e após o `getUserMedia` de qualquer gravação (onde os labels ficam disponíveis).
+- Ajuste em `startRecording`:
+  ```ts
+  const constraints: MediaStreamConstraints = {
+    audio: selectedMicId ? { deviceId: { exact: selectedMicId } } : true,
+  };
+  try { stream = await navigator.mediaDevices.getUserMedia(constraints); }
+  catch (e) {
+    if ((e as DOMException).name === "OverconstrainedError" && selectedMicId) {
+      setSelectedMicId(null); localStorage.removeItem("jurismind:mic-device-id");
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      toast.message("Microfone selecionado indisponível — usando o padrão.");
+    } else { throw e; }
+  }
+  ```
+- Cleanup: garantir que qualquer stream aberto para "desbloquear labels" seja imediatamente parado (`stream.getTracks().forEach(t => t.stop())`).
+- Sem novas dependências; `Popover`, `RadioGroup`, `Button` já existem no projeto.
 
-- **Custo**: cada segmento consome créditos do Lovable AI, proporcional à duração real. Janela de 3s equilibra latência vs. custo. Se o segmento estiver em silêncio (RMS < 0.02 durante toda a janela), pula o envio.
-- **Idempotência de segmentos**: cada WAV é auto-contido (header PCM 16-bit + amostras), o gateway aceita normalmente. Nada de fragmentos de container webm.
-- **Race condition**: um `Map<segmentId, AbortController>` garante que o `stopRecording` cancela tudo em voo.
-- **Downsample**: `AudioContext.sampleRate` geralmente é 44.1/48 kHz; downsample linear para 16 kHz reduz upload sem perder qualidade da voz.
-- **Sem persistência de partial**: o texto final que vai para o backend é o mesmo que o usuário vê no input no momento de enviar — não muda contrato de `persistChatTurn`.
-- **Auto-stop 60s** e monitoramento de silêncio permanecem inalterados.
+## Fora de escopo
 
-## Fora do escopo
-
-- Não trocar por ElevenLabs Realtime (foi descartado na pergunta).
-- Não mudar UX do envio, upload de áudio, ou storage.
-- Não mexer em outras telas que usam gravação (se houver, permanecem no fluxo antigo).
+- Seleção de dispositivo de saída (alto-falantes) — o chat não reproduz áudio próprio.
+- Testes de latência/ganho por dispositivo.
+- Persistência por-usuário no backend (só `localStorage`).
