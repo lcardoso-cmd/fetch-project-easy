@@ -1111,6 +1111,62 @@ export function JurisMindChat({
                 ))}
               </div>
             )}
+            {(recording || transcribing || micError) && (
+              <div
+                aria-live="polite"
+                className="mb-2 flex flex-wrap items-center gap-2 text-xs"
+              >
+                {recording && (
+                  <div className="flex items-center gap-2 rounded-full border border-destructive/40 bg-destructive/10 px-2.5 py-1 text-destructive">
+                    <span className="relative flex h-2 w-2">
+                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-destructive opacity-75" />
+                      <span className="relative inline-flex h-2 w-2 rounded-full bg-destructive" />
+                    </span>
+                    <span className="font-medium tabular-nums">
+                      REC {formatRecordingTime(recordingMs)}
+                    </span>
+                    <div className="h-1.5 w-16 overflow-hidden rounded-full bg-destructive/20">
+                      <div
+                        className="h-full bg-destructive transition-[width] duration-100"
+                        style={{ width: `${Math.round(audioLevel * 100)}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
+                {recording && micSilent && (
+                  <span className="text-muted-foreground">
+                    Microfone parece silencioso — verifique o dispositivo.
+                  </span>
+                )}
+                {transcribing && (
+                  <div className="flex items-center gap-2 rounded-full border bg-muted px-2.5 py-1 text-muted-foreground">
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                    <span>Transcrevendo…</span>
+                  </div>
+                )}
+                {!recording && !transcribing && micError && (
+                  <div className="flex flex-1 items-center gap-2 rounded-md border border-destructive/40 bg-destructive/5 px-2.5 py-1.5 text-destructive">
+                    <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+                    <span className="flex-1">{micError}</span>
+                    <button
+                      type="button"
+                      onClick={() => void startRecording()}
+                      className="rounded px-1.5 py-0.5 text-xs font-medium hover:bg-destructive/10"
+                    >
+                      Tentar novamente
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setMicError(null)}
+                      aria-label="Fechar"
+                      className="rounded p-0.5 hover:bg-destructive/10"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
             <div className="flex items-end gap-2">
               <input
                 ref={fileRef}
