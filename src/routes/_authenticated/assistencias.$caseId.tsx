@@ -492,6 +492,7 @@ function CaseDetailPage() {
       )}
       {/* Chat flutuante da equipe (canto inferior direito) */}
       <FloatingTeamChat caseId={caseId} />
+      {unsavedDialog}
     </div>
   );
 }
