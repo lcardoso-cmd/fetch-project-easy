@@ -32,6 +32,7 @@ import { Route as AuthenticatedCasesIndexRouteImport } from './routes/_authentic
 import { Route as ApiToolsTableRouteImport } from './routes/api/tools/table'
 import { Route as ApiToolsPresentationRouteImport } from './routes/api/tools/presentation'
 import { Route as ApiToolsPetitionRouteImport } from './routes/api/tools/petition'
+import { Route as ApiToolsPdfRouteImport } from './routes/api/tools/pdf'
 import { Route as AuthenticatedSettingsOauthRouteImport } from './routes/_authenticated/settings.oauth'
 import { Route as AuthenticatedCasesNewRouteImport } from './routes/_authenticated/cases.new'
 import { Route as AuthenticatedCasesBulkRouteImport } from './routes/_authenticated/cases.bulk'
@@ -156,6 +157,11 @@ const ApiToolsPetitionRoute = ApiToolsPetitionRouteImport.update({
   path: '/api/tools/petition',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiToolsPdfRoute = ApiToolsPdfRouteImport.update({
+  id: '/api/tools/pdf',
+  path: '/api/tools/pdf',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedSettingsOauthRoute =
   AuthenticatedSettingsOauthRouteImport.update({
     id: '/oauth',
@@ -219,6 +225,7 @@ export interface FileRoutesByFullPath {
   '/cases/bulk': typeof AuthenticatedCasesBulkRoute
   '/cases/new': typeof AuthenticatedCasesNewRoute
   '/settings/oauth': typeof AuthenticatedSettingsOauthRoute
+  '/api/tools/pdf': typeof ApiToolsPdfRoute
   '/api/tools/petition': typeof ApiToolsPetitionRoute
   '/api/tools/presentation': typeof ApiToolsPresentationRoute
   '/api/tools/table': typeof ApiToolsTableRoute
@@ -249,6 +256,7 @@ export interface FileRoutesByTo {
   '/cases/bulk': typeof AuthenticatedCasesBulkRoute
   '/cases/new': typeof AuthenticatedCasesNewRoute
   '/settings/oauth': typeof AuthenticatedSettingsOauthRoute
+  '/api/tools/pdf': typeof ApiToolsPdfRoute
   '/api/tools/petition': typeof ApiToolsPetitionRoute
   '/api/tools/presentation': typeof ApiToolsPresentationRoute
   '/api/tools/table': typeof ApiToolsTableRoute
@@ -282,6 +290,7 @@ export interface FileRoutesById {
   '/_authenticated/cases/bulk': typeof AuthenticatedCasesBulkRoute
   '/_authenticated/cases/new': typeof AuthenticatedCasesNewRoute
   '/_authenticated/settings/oauth': typeof AuthenticatedSettingsOauthRoute
+  '/api/tools/pdf': typeof ApiToolsPdfRoute
   '/api/tools/petition': typeof ApiToolsPetitionRoute
   '/api/tools/presentation': typeof ApiToolsPresentationRoute
   '/api/tools/table': typeof ApiToolsTableRoute
@@ -315,6 +324,7 @@ export interface FileRouteTypes {
     | '/cases/bulk'
     | '/cases/new'
     | '/settings/oauth'
+    | '/api/tools/pdf'
     | '/api/tools/petition'
     | '/api/tools/presentation'
     | '/api/tools/table'
@@ -345,6 +355,7 @@ export interface FileRouteTypes {
     | '/cases/bulk'
     | '/cases/new'
     | '/settings/oauth'
+    | '/api/tools/pdf'
     | '/api/tools/petition'
     | '/api/tools/presentation'
     | '/api/tools/table'
@@ -377,6 +388,7 @@ export interface FileRouteTypes {
     | '/_authenticated/cases/bulk'
     | '/_authenticated/cases/new'
     | '/_authenticated/settings/oauth'
+    | '/api/tools/pdf'
     | '/api/tools/petition'
     | '/api/tools/presentation'
     | '/api/tools/table'
@@ -391,6 +403,7 @@ export interface RootRouteChildren {
   AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
   AuthRoute: typeof AuthRoute
   InviteTokenRoute: typeof InviteTokenRoute
+  ApiToolsPdfRoute: typeof ApiToolsPdfRoute
   ApiToolsPetitionRoute: typeof ApiToolsPetitionRoute
   ApiToolsPresentationRoute: typeof ApiToolsPresentationRoute
   ApiToolsTableRoute: typeof ApiToolsTableRoute
@@ -561,6 +574,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiToolsPetitionRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/tools/pdf': {
+      id: '/api/tools/pdf'
+      path: '/api/tools/pdf'
+      fullPath: '/api/tools/pdf'
+      preLoaderRoute: typeof ApiToolsPdfRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_authenticated/settings/oauth': {
       id: '/_authenticated/settings/oauth'
       path: '/oauth'
@@ -702,6 +722,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRoute: AuthenticatedRouteWithChildren,
   AuthRoute: AuthRoute,
   InviteTokenRoute: InviteTokenRoute,
+  ApiToolsPdfRoute: ApiToolsPdfRoute,
   ApiToolsPetitionRoute: ApiToolsPetitionRoute,
   ApiToolsPresentationRoute: ApiToolsPresentationRoute,
   ApiToolsTableRoute: ApiToolsTableRoute,

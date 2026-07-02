@@ -361,7 +361,7 @@ export const Route = createFileRoute("/api/tools/pdf")({
           void alignMap;
 
           const pdfBytes = buildSimplePdf(String(titulo), blocks);
-          return new Response(pdfBytes, {
+          return new Response(pdfBytes as unknown as BodyInit, {
             status: 200,
             headers: {
               "Content-Type": "application/pdf",
