@@ -226,32 +226,32 @@ function CaseDetailPage() {
             <CardTitle className="text-lg">Dados do caso</CardTitle>
           </CardHeader>
           <CardContent>
-            <ul className="space-y-1">
+            <dl className="grid grid-cols-1 gap-x-4 gap-y-2 text-sm sm:grid-cols-[max-content_1fr]">
               {caseData.client_name && (
-                <li className="text-sm text-muted-foreground break-words">
-                  <span className="font-medium text-foreground">Cliente:</span>{" "}
-                  {caseData.client_name}
-                </li>
+                <>
+                  <dt className="font-medium text-foreground sm:pr-2">Cliente</dt>
+                  <dd className="text-muted-foreground break-words min-w-0">{caseData.client_name}</dd>
+                </>
               )}
               {caseData.case_number && (
-                <li className="text-sm text-muted-foreground break-words">
-                  <span className="font-medium text-foreground">Número do processo:</span>{" "}
-                  {caseData.case_number}
-                </li>
+                <>
+                  <dt className="font-medium text-foreground sm:pr-2">Número do processo</dt>
+                  <dd className="text-muted-foreground break-all min-w-0">{caseData.case_number}</dd>
+                </>
               )}
               {caseData.jurisdiction && (
-                <li className="text-sm text-muted-foreground break-words">
-                  <span className="font-medium text-foreground">Vara / Tribunal:</span>{" "}
-                  {caseData.jurisdiction}
-                </li>
+                <>
+                  <dt className="font-medium text-foreground sm:pr-2">Vara / Tribunal</dt>
+                  <dd className="text-muted-foreground break-words min-w-0">{caseData.jurisdiction}</dd>
+                </>
               )}
               {caseData.case_type && (
-                <li className="text-sm text-muted-foreground break-words">
-                  <span className="font-medium text-foreground">Área:</span>{" "}
-                  {caseData.case_type}
-                </li>
+                <>
+                  <dt className="font-medium text-foreground sm:pr-2">Área</dt>
+                  <dd className="text-muted-foreground break-words min-w-0">{caseData.case_type}</dd>
+                </>
               )}
-            </ul>
+            </dl>
           </CardContent>
         </Card>
       )}
