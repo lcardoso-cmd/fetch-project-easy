@@ -391,8 +391,24 @@ function ProposalPage() {
               <Trash2 className="mr-1 h-3.5 w-3.5" /> Descartar
             </Button>
           )}
+          <Button size="sm" variant="outline" onClick={saveVersionManually} className="h-7 px-2">
+            <Save className="mr-1 h-3.5 w-3.5" /> Salvar versão
+          </Button>
+          <Button size="sm" variant="outline" onClick={() => setVersionsOpen(true)} className="h-7 px-2">
+            <History className="mr-1 h-3.5 w-3.5" /> Histórico
+          </Button>
         </div>
       </div>
+
+      <ProposalVersionsDialog<FormState>
+        open={versionsOpen}
+        onOpenChange={setVersionsOpen}
+        currentForm={form}
+        currentOutput={output}
+        onRestore={restoreVersion}
+        refreshKey={versionsRefresh}
+      />
+
 
 
       <div className="grid gap-6 lg:grid-cols-2">
