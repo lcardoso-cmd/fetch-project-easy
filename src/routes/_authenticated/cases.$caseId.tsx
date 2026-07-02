@@ -160,12 +160,8 @@ function CaseDetailPage() {
           <h1 className="text-3xl font-bold tracking-tight text-foreground">
             {caseData.title}
           </h1>
-          {caseData.client_name && (
-            <p className="mt-1 text-muted-foreground">
-              Cliente: {caseData.client_name}
-            </p>
-          )}
         </div>
+
         <div className="flex shrink-0 items-center gap-2">
           <Button
             variant="outline"
@@ -224,13 +220,19 @@ function CaseDetailPage() {
       </div>
 
       {/* Dados do caso — quadro branco */}
-      {(caseData.case_number || caseData.jurisdiction || caseData.case_type) && (
+      {(caseData.client_name || caseData.case_number || caseData.jurisdiction || caseData.case_type) && (
         <Card>
           <CardHeader>
             <CardTitle className="text-lg">Dados do caso</CardTitle>
           </CardHeader>
           <CardContent>
             <ul className="space-y-1">
+              {caseData.client_name && (
+                <li className="text-sm text-muted-foreground">
+                  <span className="font-medium text-foreground">Cliente:</span>{" "}
+                  {caseData.client_name}
+                </li>
+              )}
               {caseData.case_number && (
                 <li className="text-sm text-muted-foreground">
                   <span className="font-medium text-foreground">Número do processo:</span>{" "}
@@ -253,6 +255,7 @@ function CaseDetailPage() {
           </CardContent>
         </Card>
       )}
+
 
       {/* Partes envolvidas — quadro branco */}
       {caseData.parties && (caseData.parties as Array<{ role: string; name: string; relation?: string | null }>).length > 0 && (
