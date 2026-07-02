@@ -505,28 +505,25 @@ function ProposalPage() {
 
   const downloadPdf = async () => {
     try {
+      const titulo = `Proposta - ${form.client_name || "Cliente"}`;
       const filenameBase = `proposta-${(form.client_name || "cliente").replace(/\s+/g, "-").toLowerCase()}`;
-      const container = document.createElement("div");
-      container.className = "proposal-preview";
-      container.style.cssText =
-        "padding:24mm 20mm;width:210mm;box-sizing:border-box;background:#fff;color:#0f172a;font-family:Inter,system-ui,sans-serif;font-size:11pt;line-height:1.55;";
-      container.innerHTML = output;
-      document.body.appendChild(container);
-      try {
-        const html2pdf = (await import("html2pdf.js")).default;
-        await html2pdf()
-          .set({
-            margin: 0,
-            filename: `${filenameBase}.pdf`,
-            image: { type: "jpeg", quality: 0.98 },
-            html2canvas: { scale: 2, useCORS: true, backgroundColor: "#ffffff" },
-            jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
-          } as never)
-          .from(container)
-          .save();
-      } finally {
-        container.remove();
-      }
+      const { supabase } = await import("@/integrations/supabase/client");
+      const { data: sess } = await supabase.auth.getSession();
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (sess.session?.access_token) headers.Authorization = `Bearer ${sess.session.access_token}`;
+      const res = await fetch("/api/tools/pdf", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ titulo, html: output }),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${filenameBase}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Falha ao gerar PDF");
     }
