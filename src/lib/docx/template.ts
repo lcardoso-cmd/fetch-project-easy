@@ -14,6 +14,7 @@ import {
   Footer,
   Header,
   HeadingLevel,
+  ImageRun,
   LevelFormat,
   PageNumber,
   PageOrientation,
@@ -25,6 +26,7 @@ import {
   TabStopPosition,
   TabStopType,
   TextRun,
+  VerticalAlign,
   WidthType,
   type ISectionOptions,
 } from "docx";
