@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SemPermissaoRouteImport } from './routes/sem-permissao'
 import { Route as EntrarRouteImport } from './routes/entrar'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
@@ -80,6 +81,11 @@ import { Route as AuthenticatedPlataformaClientesIdRouteImport } from './routes/
 import { Route as AuthenticatedCasesCaseIdChatRouteImport } from './routes/_authenticated/cases.$caseId.chat'
 import { Route as AuthenticatedAssistenciasCaseIdChatRouteImport } from './routes/_authenticated/assistencias.$caseId.chat'
 
+const SemPermissaoRoute = SemPermissaoRouteImport.update({
+  id: '/sem-permissao',
+  path: '/sem-permissao',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const EntrarRoute = EntrarRouteImport.update({
   id: '/entrar',
   path: '/entrar',
@@ -467,6 +473,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/entrar': typeof EntrarRoute
+  '/sem-permissao': typeof SemPermissaoRoute
   '/agenda': typeof AuthenticatedAgendaRoute
   '/assistencias': typeof AuthenticatedAssistenciasRouteWithChildren
   '/assistente': typeof AuthenticatedAssistenteRoute
@@ -538,6 +545,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/entrar': typeof EntrarRoute
+  '/sem-permissao': typeof SemPermissaoRoute
   '/agenda': typeof AuthenticatedAgendaRoute
   '/assistente': typeof AuthenticatedAssistenteRoute
   '/boas-vindas': typeof AuthenticatedBoasVindasRoute
@@ -609,6 +617,7 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/auth': typeof AuthRoute
   '/entrar': typeof EntrarRoute
+  '/sem-permissao': typeof SemPermissaoRoute
   '/_authenticated/agenda': typeof AuthenticatedAgendaRoute
   '/_authenticated/assistencias': typeof AuthenticatedAssistenciasRouteWithChildren
   '/_authenticated/assistente': typeof AuthenticatedAssistenteRoute
@@ -682,6 +691,7 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/entrar'
+    | '/sem-permissao'
     | '/agenda'
     | '/assistencias'
     | '/assistente'
@@ -753,6 +763,7 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/entrar'
+    | '/sem-permissao'
     | '/agenda'
     | '/assistente'
     | '/boas-vindas'
@@ -823,6 +834,7 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/auth'
     | '/entrar'
+    | '/sem-permissao'
     | '/_authenticated/agenda'
     | '/_authenticated/assistencias'
     | '/_authenticated/assistente'
@@ -896,6 +908,7 @@ export interface RootRouteChildren {
   AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
   AuthRoute: typeof AuthRoute
   EntrarRoute: typeof EntrarRoute
+  SemPermissaoRoute: typeof SemPermissaoRoute
   ConviteTokenRoute: typeof ConviteTokenRoute
   InviteTokenRoute: typeof InviteTokenRoute
   ApiToolsPdfRoute: typeof ApiToolsPdfRoute
@@ -909,6 +922,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/sem-permissao': {
+      id: '/sem-permissao'
+      path: '/sem-permissao'
+      fullPath: '/sem-permissao'
+      preLoaderRoute: typeof SemPermissaoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/entrar': {
       id: '/entrar'
       path: '/entrar'
@@ -1609,6 +1629,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRoute: AuthenticatedRouteWithChildren,
   AuthRoute: AuthRoute,
   EntrarRoute: EntrarRoute,
+  SemPermissaoRoute: SemPermissaoRoute,
   ConviteTokenRoute: ConviteTokenRoute,
   InviteTokenRoute: InviteTokenRoute,
   ApiToolsPdfRoute: ApiToolsPdfRoute,
