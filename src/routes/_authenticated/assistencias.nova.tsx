@@ -677,10 +677,25 @@ function NewCasePage() {
                 className="flex flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed border-border bg-muted/30 p-8 text-center"
               >
                 {extracting ? (
-                  <>
-                    <Loader2 className="h-8 w-8 animate-spin text-accent" />
-                    <p className="text-sm font-medium">Lendo documento e extraindo dados...</p>
-                  </>
+                  <div className="w-full max-w-sm space-y-3">
+                    <div className="flex items-center justify-center gap-2">
+                      <Loader2 className="h-5 w-5 animate-spin text-accent" />
+                      <p className="text-sm font-medium">
+                        {uploadPhase === "uploading"
+                          ? `Enviando arquivo… ${Math.round(uploadPct)}%`
+                          : "Lendo documento e extraindo dados…"}
+                      </p>
+                    </div>
+                    <Progress
+                      value={uploadPhase === "uploading" ? uploadPct : 100}
+                      className="h-2"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      {uploadPhase === "uploading"
+                        ? "Não feche esta janela até o upload terminar."
+                        : "Extração pode levar alguns segundos para documentos grandes."}
+                    </p>
+                  </div>
                 ) : (
                   <>
                     <UploadCloud className="h-8 w-8 text-muted-foreground" />
