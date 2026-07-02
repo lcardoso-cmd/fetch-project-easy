@@ -148,7 +148,7 @@ function LandingPage() {
             const Icon = p.icon;
             return (
               <div key={p.title} className="flex items-start gap-3 rounded-2xl border bg-card p-4">
-                <IconBox icon={Icon} size={40} iconSize={20} />
+                <IconBox icon={Icon} size="md" />
                 <div>
                   <h3 className="font-heading font-bold text-foreground">{p.title}</h3>
                   <p className="text-sm text-muted-foreground">{p.text}</p>
@@ -178,7 +178,7 @@ function LandingPage() {
                 key={f.title}
                 className="rounded-2xl border bg-card p-6 shadow-sm transition-shadow hover:shadow-md"
               >
-                <IconBox icon={Icon} size={40} iconSize={20} className="mb-4" />
+                <IconBox icon={Icon} size="md" className="mb-4" />
                 <h3 className="font-heading text-xl font-bold text-foreground">{f.title}</h3>
                 <p className="mt-2 text-sm text-muted-foreground">{f.description}</p>
               </div>
