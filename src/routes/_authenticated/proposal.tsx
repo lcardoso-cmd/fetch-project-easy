@@ -8,13 +8,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Handshake, Loader2, Copy, Download, FileText, Check, Trash2 } from "lucide-react";
+import { Handshake, Loader2, Copy, Download, FileText, Check, Trash2, History, Save } from "lucide-react";
 import { toast } from "sonner";
 import { generateProposal } from "@/lib/generators.functions";
 import { getCases } from "@/lib/cases.functions";
 import { useProfile } from "@/hooks/use-profile";
 import { RichTextEditor } from "@/components/chat/rich-text-editor";
 import { z } from "zod";
+import { ProposalVersionsDialog } from "@/components/proposal/proposal-versions-dialog";
+import { addVersion } from "@/lib/proposal-versions";
 
 const DRAFT_KEY = "jurismind:proposal-draft:v1";
 const DRAFT_DEBOUNCE_MS = 800;
