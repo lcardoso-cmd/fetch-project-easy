@@ -1,29 +1,38 @@
 ## Objetivo
+Permitir visualizar mais que as últimas 5 solicitações de Parecer Técnico em `/parecer-tecnico` com carregamento incremental, sem travar a página.
 
-Na página `/parecer-tecnico`, mostrar um estado vazio informativo quando o usuário ainda não tiver nenhuma solicitação B2B do serviço `parecer-tecnico`, com sugestão de ação clara.
-
-## Onde
-
-`src/routes/_authenticated/parecer-tecnico.tsx` — seção "Minhas solicitações de Parecer Técnico" (hoje só renderiza quando `parecerRequests.length > 0`).
+## Escopo
+Apenas a listagem "Minhas solicitações recentes" em `src/routes/_authenticated/parecer-tecnico.tsx`. O painel geral `/contratar-b2b` já lista até 200 com filtros e não será alterado.
 
 ## Mudanças
 
-1. Remover o gate `parecerRequests.length > 0 && …` e sempre renderizar o Card "Minhas solicitações de Parecer Técnico" (após a query terminar).
+### 1. Backend (`src/lib/b2b-services.functions.ts`)
+Estender `listMyB2bRequests` para aceitar input opcional e retornar dados paginados:
+- Input Zod: `{ service?: string, limit?: number (default 10, max 50), offset?: number (default 0) }`.
+- Consulta usa `.eq("service", …)` quando informado, `.range(offset, offset+limit-1)` e `select("*", { count: "exact" })`.
+- Retorna `{ items: B2bServiceRequest[], total: number }`.
+- Manter compatibilidade: `contratar-b2b.index.tsx` passa a chamar sem filtro (recebe `items`); ajustar esse consumidor para ler `res.items` — nenhuma outra lógica muda.
 
-2. Enquanto a query estiver carregando, exibir um skeleton discreto (2-3 linhas) para evitar flash do empty state.
+### 2. Frontend `parecer-tecnico.tsx`
+- Query passa a usar `{ service: "parecer-tecnico", limit: 5, offset: 0 }` como estado inicial.
+- Adicionar `useState<number>` para `pageSize` (5 → cresce em +5 via botão).
+- Refetch quando `pageSize` muda; `queryKey` inclui pageSize.
+- Renderizar `items` diretamente (remover `.slice(0,5)` e filtro client-side, já feito no servidor).
+- Abaixo da lista:
+  - Botão **"Carregar mais"** quando `items.length < total`, mostra "(exibindo X de Y)".
+  - Enquanto refetching, botão fica desabilitado com spinner e texto "Carregando…".
+  - Quando `items.length === total > 5`, botão vira **"Mostrar menos"** que volta pageSize para 5 e faz scroll ao topo da seção.
+- Manter o estado vazio (Inbox card) e o Skeleton atuais.
 
-3. Quando `parecerRequests.length === 0` e a query já resolveu:
-   - Renderizar bloco central com ícone `Inbox` (lucide) esmaecido.
-   - Título: "Nenhuma solicitação encontrada".
-   - Texto: "Você ainda não abriu solicitações de Parecer Técnico com a B2B Consulting. Crie uma agora para receber orçamento e acompanhar o andamento por aqui."
-   - CTA primário `Button` → mesmo `Link` do card "Não tem perito no escritório?" (`/contratar-b2b/solicitar` com `service`, `title` e `description` pré-preenchidos — extrair o objeto de search para uma constante `PARECER_PREFILL` no topo do arquivo para reutilizar nos dois pontos e evitar drift).
-   - CTA secundário `Button variant="ghost"` → `/contratar-b2b` ("Ver catálogo B2B").
-   - `role="status"` no wrapper para leitores de tela.
+### 3. Acessibilidade
+- Anunciar mudanças via `role="status"` no contador "Exibindo X de Y".
+- Foco vai para o primeiro item novo após "Carregar mais" (via `ref` no início do bloco recém-adicionado) para leitores de tela.
 
-4. Quando houver solicitações, comportamento atual mantido (accordion + botão "Ver catálogo B2B").
+## Detalhes técnicos
+- Usar `keepPreviousData: true` no `useQuery` para evitar flicker durante o refetch incremental.
+- Sem mudanças de banco/RLS; apenas paginação via `range` do PostgREST.
+- Ordem `created_at desc` mantida.
 
-## Fora de escopo
-
-- Alterações no painel `/contratar-b2b`.
-- Filtro por serviço no painel geral.
-- Backend / server functions.
+## Fora do escopo
+- Infinite scroll automático (mantemos botão explícito para não travar em listas grandes).
+- Paginação server-side no painel `/contratar-b2b` (já filtra e limita a 200).

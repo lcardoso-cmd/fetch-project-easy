@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from "react";
 import { createFileRoute, redirect, Link } from "@tanstack/react-router";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -77,14 +78,35 @@ const PARECER_PREFILL = {
 
 function ExpertOpinionPage() {
   const listMy = useServerFn(listMyB2bRequests);
-  const { data: requests, isPending } = useQuery({
-    queryKey: ["b2b-my-requests"],
-    queryFn: () => listMy(),
-  });
-  const parecerRequests = (requests ?? [])
-    .filter((r) => r.service_slug === "parecer-tecnico")
-    .slice(0, 5);
+  const [pageSize, setPageSize] = useState(5);
+  const firstNewItemRef = useRef<HTMLDivElement | null>(null);
+  const prevCountRef = useRef(0);
 
+  const { data, isPending, isFetching } = useQuery({
+    queryKey: ["b2b-my-requests", "parecer-tecnico", pageSize],
+    queryFn: () =>
+      listMy({ data: { service: "parecer-tecnico", limit: pageSize, offset: 0 } }),
+    placeholderData: (prev) => prev,
+  });
+
+  const parecerRequests = data?.items ?? [];
+  const total = data?.total ?? 0;
+  const hasMore = parecerRequests.length < total;
+
+  useEffect(() => {
+    if (parecerRequests.length > prevCountRef.current && prevCountRef.current > 0) {
+      firstNewItemRef.current?.focus();
+    }
+    prevCountRef.current = parecerRequests.length;
+  }, [parecerRequests.length]);
+
+  function handleLoadMore() {
+    setPageSize((n: number) => n + 5);
+  }
+  function handleShowLess() {
+    setPageSize(5);
+    prevCountRef.current = 0;
+  }
 
   return (
     <div className="space-y-6 max-w-4xl">
@@ -172,32 +194,60 @@ function ExpertOpinionPage() {
           ) : (
             <>
               <Accordion type="multiple" className="w-full">
-                {parecerRequests.map((r) => (
+                {parecerRequests.map((r, idx) => (
                   <AccordionItem key={r.id} value={r.id}>
-                    <AccordionTrigger className="hover:no-underline">
-                      <div className="flex items-center gap-3 w-full pr-2 min-w-0">
-                        <div className="min-w-0 flex-1 text-left">
-                          <p className="font-medium truncate">{r.title}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {new Date(r.created_at).toLocaleDateString("pt-BR", {
-                              day: "2-digit",
-                              month: "short",
-                              year: "numeric",
-                            })}
-                          </p>
+                    <div
+                      ref={idx === prevCountRef.current ? firstNewItemRef : null}
+                      tabIndex={-1}
+                      className="outline-none"
+                    >
+                      <AccordionTrigger className="hover:no-underline">
+                        <div className="flex items-center gap-3 w-full pr-2 min-w-0">
+                          <div className="min-w-0 flex-1 text-left">
+                            <p className="font-medium truncate">{r.title}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {new Date(r.created_at).toLocaleDateString("pt-BR", {
+                                day: "2-digit",
+                                month: "short",
+                                year: "numeric",
+                              })}
+                            </p>
+                          </div>
+                          <Badge variant={statusVariant(r.status)}>
+                            {B2B_REQUEST_STATUS_LABEL[r.status]}
+                          </Badge>
                         </div>
-                        <Badge variant={statusVariant(r.status)}>
-                          {B2B_REQUEST_STATUS_LABEL[r.status]}
-                        </Badge>
-                      </div>
-                    </AccordionTrigger>
+                      </AccordionTrigger>
+                    </div>
                     <AccordionContent>
                       <RequestPanel requestId={r.id} />
                     </AccordionContent>
                   </AccordionItem>
                 ))}
               </Accordion>
-              <div className="pt-3 flex gap-2">
+              <div className="pt-3 flex flex-wrap items-center gap-2">
+                <p
+                  role="status"
+                  aria-live="polite"
+                  className="text-xs text-muted-foreground mr-auto"
+                >
+                  Exibindo {parecerRequests.length} de {total}{" "}
+                  {total === 1 ? "solicitação" : "solicitações"}
+                </p>
+                {hasMore ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleLoadMore}
+                    disabled={isFetching}
+                  >
+                    {isFetching ? "Carregando…" : "Carregar mais"}
+                  </Button>
+                ) : total > 5 ? (
+                  <Button variant="ghost" size="sm" onClick={handleShowLess}>
+                    Mostrar menos
+                  </Button>
+                ) : null}
                 <Button asChild variant="ghost" size="sm">
                   <Link to="/contratar-b2b">Ver catálogo B2B</Link>
                 </Button>
@@ -206,6 +256,7 @@ function ExpertOpinionPage() {
           )}
         </CardContent>
       </Card>
+
 
 
 
