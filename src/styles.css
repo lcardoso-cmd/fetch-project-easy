@@ -69,6 +69,14 @@
 :root {
   --radius: 0.5rem;
 
+  /* Cores fixas da marca — idênticas em light/dark. */
+  --brand-navy: oklch(0.143 0.13 278);       /* #000038 */
+  --brand-on-navy: oklch(1 0 0);             /* glyph branco sobre navy */
+  --brand-surface: oklch(1 0 0);             /* quadrado branco */
+  --brand-on-surface: oklch(0.143 0.13 278); /* glyph navy sobre branco */
+
+
+
   /* B2B Consulting — deep navy #000038, cyan #00FFFF, white */
   --background: oklch(0.985 0.003 250);
   --foreground: oklch(0.18 0.12 275);
