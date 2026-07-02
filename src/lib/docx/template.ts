@@ -787,6 +787,7 @@ export function htmlToDocxChildren(html: string): Paragraph[] {
         }),
       );
     } else if (tag === "li") {
+      flushPendingBreak();
       out.push(
         new Paragraph({
           numbering: { reference: inOrdered ? "numbers" : "bullets", level: 0 },
@@ -795,6 +796,7 @@ export function htmlToDocxChildren(html: string): Paragraph[] {
         }),
       );
     } else if (tag === "blockquote") {
+      flushPendingBreak();
       out.push(
         new Paragraph({
           style: "Quote",
@@ -806,8 +808,12 @@ export function htmlToDocxChildren(html: string): Paragraph[] {
       // p, div
       const stripped = inner.replace(/<[^>]+>/g, "").trim();
       if (!stripped) {
-        out.push(new Paragraph({ children: [new TextRun("")] }));
+        // não emite pendingPageBreak nem parágrafos vazios após quebra
+        if (!pendingPageBreak) {
+          out.push(new Paragraph({ children: [new TextRun("")] }));
+        }
       } else {
+        flushPendingBreak();
         out.push(
           new Paragraph({
             alignment: explicitAlign ?? AlignmentType.JUSTIFIED,
@@ -818,7 +824,8 @@ export function htmlToDocxChildren(html: string): Paragraph[] {
     }
     hasEmittedContent = true;
 
-    if (pageBreakAfterStyle(attrs)) out.push(pageBreakParagraph());
+    if (pageBreakAfterStyle(attrs)) pendingPageBreak = true;
+
 
     lastIndex = blockRegex.lastIndex;
   }
