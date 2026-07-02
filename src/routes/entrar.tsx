@@ -6,11 +6,12 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { JurisMindMark } from "@/components/brand/jurismind-mark";
 import { IconBox } from "@/components/ui/icon-box";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable";
 import { useNavigate } from "@tanstack/react-router";
-import { ArrowLeft, Mail, Lock, User, LogIn, UserPlus } from "lucide-react";
+import { ArrowLeft, Mail, Lock, User, LogIn, UserPlus, MailCheck } from "lucide-react";
+
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -63,6 +64,49 @@ function AuthPage() {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [mode, setMode] = useState<"login" | "signup">("login");
+  const [pendingEmail, setPendingEmail] = useState<string | null>(null);
+  const [resendCooldown, setResendCooldown] = useState(0);
+  const [isResending, setIsResending] = useState(false);
+
+  // Timer para o cooldown do botão de reenviar confirmação.
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const t = setTimeout(() => setResendCooldown((s) => Math.max(0, s - 1)), 1000);
+    return () => clearTimeout(t);
+  }, [resendCooldown]);
+
+  const isUnconfirmedError = (msg: string) => {
+    const m = msg.toLowerCase();
+    return (
+      m.includes("email not confirmed") ||
+      m.includes("not confirmed") ||
+      m.includes("confirme") ||
+      m.includes("email_not_confirmed")
+    );
+  };
+
+  const handleResendConfirmation = async () => {
+    if (!pendingEmail || resendCooldown > 0 || isResending) return;
+    setIsResending(true);
+    try {
+      const { error } = await supabase.auth.resend({
+        type: "signup",
+        email: pendingEmail,
+        options: { emailRedirectTo: window.location.origin },
+      });
+      if (error) throw error;
+      toast.success("Email de confirmação reenviado", {
+        description: `Verifique a caixa de entrada de ${pendingEmail}.`,
+      });
+      setResendCooldown(60);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Falha ao reenviar";
+      toast.error("Não foi possível reenviar", { description: message });
+    } finally {
+      setIsResending(false);
+    }
+  };
+
 
   // Resolve destino pós-login: query ?redirect=, senão sessionStorage (OAuth), senão /painel.
   const resolveRedirect = (): string => {
@@ -102,10 +146,14 @@ function AuthPage() {
     } catch (err) {
       const message = err instanceof Error ? err.message : "Erro ao entrar";
       setError(message);
+      if (isUnconfirmedError(message) && email) {
+        setPendingEmail(email);
+      }
       toast.error("Não foi possível entrar", { description: message });
     } finally {
       setIsLoading(false);
     }
+
   };
 
   const handleSignup = async (e: React.FormEvent) => {
@@ -129,11 +177,12 @@ function AuthPage() {
         });
         goPostLogin();
       } else {
-
+        setPendingEmail(email);
         toast.success("Confirme seu email", {
           description: "Enviamos um link de confirmação para " + email + ".",
         });
       }
+
     } catch (err) {
       const message = err instanceof Error ? err.message : "Erro ao criar conta";
       setError(message);
@@ -183,6 +232,51 @@ function AuthPage() {
               Inteligência para advogados, peritos e assistentes técnicos
             </p>
           </div>
+
+          {pendingEmail && (
+            <div
+              role="status"
+              aria-live="polite"
+              className="flex flex-col gap-3 rounded-2xl border border-amber-300/60 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-500/30 dark:bg-amber-950/40 dark:text-amber-100 sm:flex-row sm:items-center sm:justify-between"
+            >
+              <div className="flex items-start gap-2">
+                <IconBox icon={MailCheck} size="xs" bgColor="bg-amber-500/15" iconColor="text-amber-700 dark:text-amber-300" />
+                <div className="min-w-0">
+                  <p className="font-medium">Confirme seu email</p>
+                  <p className="text-xs opacity-80">
+                    Enviamos um link para <span className="font-medium">{pendingEmail}</span>. Não recebeu?
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="gap-2"
+                  onClick={handleResendConfirmation}
+                  disabled={isResending || resendCooldown > 0}
+                >
+                  {isResending
+                    ? "Reenviando..."
+                    : resendCooldown > 0
+                      ? `Aguarde ${resendCooldown}s`
+                      : "Reenviar confirmação"}
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setPendingEmail(null)}
+                  aria-label="Dispensar aviso"
+                >
+                  ✕
+                </Button>
+              </div>
+            </div>
+          )}
+
+
 
           <Tabs value={mode} onValueChange={(v) => { setMode(v as "login" | "signup"); setError(null); }} className="w-full">
             <TabsList className="grid w-full grid-cols-2 rounded-2xl">
