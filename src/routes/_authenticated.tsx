@@ -4,6 +4,9 @@ import { useEffect } from "react";
 import { Loader2 } from "lucide-react";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { useProfile } from "@/hooks/use-profile";
+import { useCapabilities } from "@/hooks/use-capabilities";
+import { requiredCapabilityForPath } from "@/lib/route-capabilities";
+import { AccessDenied } from "@/components/access-denied";
 
 export const Route = createFileRoute("/_authenticated")({
   component: AuthenticatedLayout,
@@ -65,7 +68,24 @@ function Gate({ path }: { path: string }) {
   // Onboarding já concluído mas o usuário voltou para editar perfil → mantemos o shell.
   return (
     <DashboardShell>
-      <Outlet />
+      <GatedOutlet path={path} />
     </DashboardShell>
   );
+}
+
+function GatedOutlet({ path }: { path: string }) {
+  const required = requiredCapabilityForPath(path);
+  const { has, isLoading } = useCapabilities();
+  if (!required) return <Outlet />;
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-16">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+  if (!has(required)) {
+    return <AccessDenied requires={required} attemptedPath={path} />;
+  }
+  return <Outlet />;
 }
