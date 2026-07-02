@@ -52,6 +52,7 @@ import {
   attachDocumentToCase,
   type ExtractedCaseData,
 } from "@/lib/cases.functions";
+import { buildCaseTitle } from "@/lib/case-title";
 import { listTeamMembers, createTeamMember } from "@/lib/team.functions";
 import { indexDocument } from "@/lib/rag.functions";
 import { createUploadSignedUrl } from "@/lib/documents.functions";
