@@ -101,7 +101,7 @@ function ExpertOpinionPage() {
   }, [parecerRequests.length]);
 
   function handleLoadMore() {
-    setPageSize((n) => n + 5);
+    setPageSize((n: number) => n + 5);
   }
   function handleShowLess() {
     setPageSize(5);
