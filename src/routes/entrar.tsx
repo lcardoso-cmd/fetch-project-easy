@@ -47,6 +47,7 @@ function AuthPage() {
   const [fullName, setFullName] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [mode, setMode] = useState<"login" | "signup">("login");
 
   if (user) {
     navigate({ to: "/painel", replace: true });
