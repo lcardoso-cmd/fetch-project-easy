@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
-import { BrainCircuit, ListTodo, Scale, FileText, ArrowRight, Microscope } from "lucide-react";
+import { IconBox } from "@/components/ui/icon-box";
+import { ListTodo, Scale, FileText, ArrowRight, Microscope } from "lucide-react";
 import { JurisMindMark } from "@/components/brand/jurismind-mark";
 import { useAuth } from "@/hooks/use-auth";
 
