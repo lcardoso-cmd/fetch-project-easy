@@ -125,12 +125,19 @@ export function variantForContext(context: JurisMindContext): JurisMindVariant {
   return CONTEXT_TO_VARIANT[context];
 }
 
+/**
+ * Shared rounding token for square brand marks. Keep in sync with `IconBox`
+ * so that mark + icon backgrounds visually match at the same size.
+ */
+export const JURISMIND_ROUND_CLASS = "rounded-[22%]";
+
 export function JurisMindMark({
   className,
   size = 20,
   variant,
   context,
   rounded,
+  interactive = false,
 }: {
   className?: string;
   size?: number;
@@ -140,6 +147,12 @@ export function JurisMindMark({
   context?: JurisMindContext;
   /** Force rounded corners. Square variants are rounded by default. */
   rounded?: boolean;
+  /**
+   * Adds hover/active/focus affordances (subtle scale + opacity + ring).
+   * Enable when the mark sits inside a clickable link/button so the whole
+   * app shares the same interaction feel across desktop and mobile.
+   */
+  interactive?: boolean;
 }) {
   const resolved: JurisMindVariant =
     variant ?? (context ? CONTEXT_TO_VARIANT[context] : "sidebar");
@@ -153,10 +166,13 @@ export function JurisMindMark({
       width={size}
       height={size}
       loading="lazy"
+      draggable={false}
       className={cn(
-        "inline-block shrink-0",
+        "block shrink-0 select-none align-middle",
         isSquare ? "object-cover" : "object-contain",
-        shouldRound && "rounded-[22%]",
+        shouldRound && JURISMIND_ROUND_CLASS,
+        interactive &&
+          "transition-transform duration-150 ease-out will-change-transform hover:scale-[1.04] active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
         className,
       )}
       style={{ width: size, height: size }}
