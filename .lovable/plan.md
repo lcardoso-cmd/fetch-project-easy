@@ -1,42 +1,74 @@
-Instalar e configurar Storybook para o projeto, depois criar uma story completa para o JurisMindMark.
 
 ## Contexto
-O projeto usa TanStack Start + Vite 8 + Tailwind v4 e ainda não tem Storybook instalado. O usuário pediu uma seção de Storybook para o componente `JurisMindMark` mostrando cada `context` e o efeito de `variant` como override. A recomendação é instalar o Storybook, que é a ferramenta padrão (e gratuita) para documentação visual de componentes.
 
-## Passos
+A tela de Proposta já tem autosave e histórico locais (localStorage). Vamos evoluir para persistência no backend por caso/usuário, diff textual real e versões nomeadas/fixadas — sincronizadas entre dispositivos.
 
-1. Instalar Storybook e addons necessários
-   - `storybook` (framework)
-   - `@storybook/react-vite` (renderer para React + Vite)
-   - `@storybook/addon-essentials` (controls, docs, actions)
-   - `@storybook/addon-interactions` (opcional, para testes de interação)
-   - `@storybook/test` (auxiliares de teste, já inclui `@storybook/testing-library`)
+## O que muda
 
-2. Inicializar configuração do Storybook
-   - Criar `.storybook/main.ts` apontando para arquivos `*.stories.tsx` dentro de `src/components/brand/` (ou `src/**/*.stories.tsx`).
-   - Criar `.storybook/preview.ts` importando os estilos globais (`src/styles.css`) para que o Tailwind v4 e os tokens funcionem nos stories.
-   - Configurar path aliases (`@/`) e framework Vite corretamente.
+1. **Rascunho por caso, no backend** — 1 rascunho ativo por (usuário, caso). Autosave debounced continua no cliente, mas grava no banco. Fallback pra localStorage quando offline; ao reconectar, sincroniza.
+2. **Histórico de versões no backend** — cada "Gerar proposta" e cada "Salvar versão" cria uma linha imutável vinculada ao caso, com snapshot completo do formulário + HTML gerado.
+3. **Rótulos e versões fixadas** — usuário pode renomear, adicionar descrição e fixar (pin) versões importantes; fixadas nunca são descartadas pelo limite.
+4. **Diff aprimorado** — comparação lado a lado passa a mostrar diff textual real (adições em verde, remoções em vermelho, palavra a palavra) no HTML gerado, e um resumo campo a campo das diferenças no formulário.
 
-3. Garantir compatibilidade com Tailwind v4
-   - O Tailwind v4 carrega via `@import "tailwindcss"` no CSS. A preview do Storybook deve importar `src/styles.css` para que as classes utilitárias e os temas funcionem.
-   - Verificar se `storybook dev` renderiza corretamente sem erros de CSS/PostCSS.
+## Estrutura de dados
 
-4. Criar a story de JurisMindMark
-   - Arquivo: `src/components/brand/jurismind-mark.stories.tsx`.
-   - Meta com `argTypes` para `context`, `variant`, `size`, `rounded` e `className`.
-   - Uma story padrão para brincar com os controls.
-   - Uma story "All Contexts" que renderiza todos os contextos em grid com labels.
-   - Uma story "Variant Override" mostrando o mesmo contexto com diferentes variantes, para deixar explícito o efeito de override.
+Duas tabelas novas no schema `public`:
 
-5. Ajustar scripts no `package.json`
-   - `storybook`: `storybook dev -p 6006`
-   - `build-storybook`: `storybook build`
+```text
+proposal_drafts
+  id, user_id, case_id (nullable — rascunho "sem caso"), form (jsonb),
+  output (text), updated_at
+  unique (user_id, case_id)
 
-6. Verificar
-   - Rodar `bun storybook` (ou `storybook dev`) para garantir que inicia sem erros.
-   - Verificar que as imagens dos assets aparecem corretamente nas stories (o Storybook via Vite deve respeitar os imports de `.asset.json`).
+proposal_versions
+  id, user_id, case_id (nullable), label, description, origin
+  ('manual' | 'auto-generate' | 'auto-restore'), pinned (bool),
+  form (jsonb), output (text), created_at
+```
 
-## Notas técnicas
-- Storybook 8+ é compatível com Vite 5/6/7/8. Usar a versão mais recente estável.
-- Não alterar o runtime de produção do app (rotas, server functions, etc.) — o Storybook vive fora do fluxo principal.
-- Se a instalação do Storybook padrão conflitar com o Vite 8 beta, usar flags para forçar a versão compatível ou ajustar manualmente os pacotes.
+RLS: cada usuário vê/edita apenas as próprias linhas (`auth.uid() = user_id`). GRANTs padrão para `authenticated` + `service_role`. Índice em `(user_id, case_id, created_at desc)` para listagem rápida.
+
+Limite: manter até 50 versões não-fixadas por (user_id, case_id); ao exceder, a mais antiga não-fixada é removida via trigger `AFTER INSERT`.
+
+## Server functions (`src/lib/proposal-drafts.functions.ts`)
+
+Todas com `requireSupabaseAuth`:
+
+- `getProposalDraft({ caseId? })` → `{ form, output, updatedAt } | null`
+- `upsertProposalDraft({ caseId?, form, output })` → grava rascunho ativo
+- `listProposalVersions({ caseId? })` → lista ordenada desc, com `pinned` primeiro
+- `createProposalVersion({ caseId?, label, description?, origin, form, output, pinned? })`
+- `updateProposalVersion({ id, label?, description?, pinned? })`
+- `deleteProposalVersion({ id })`
+
+## UI
+
+`src/routes/_authenticated/proposal.tsx`:
+
+- Substituir helpers de `localStorage` por chamadas às server fns via TanStack Query (`useQuery` para carregar rascunho e histórico, `useMutation` para salvar/atualizar/excluir/upsert).
+- Autosave debounced (800ms) chama `upsertProposalDraft`; badge no cabeçalho mostra "Salvando…", "Salvo há Xs" e um estado "offline — salvo localmente" (fallback pra localStorage caso a mutation falhe; reenvia ao voltar).
+- Novo botão **"Salvar versão"** abre um pequeno popover para digitar rótulo e descrição opcional antes de gravar.
+- Ao **gerar proposta**, criar versão automática com rótulo padrão editável.
+
+`src/components/proposal/proposal-versions-dialog.tsx` (evolução):
+
+- Lista de versões vinda do backend, com seção "Fixadas" no topo.
+- Cada item: ícone de pin (toggle), botão de editar rótulo/descrição inline, excluir, restaurar.
+- Aba **Comparar com atual** passa a mostrar:
+  - **Diff do texto gerado**: HTML normalizado (converte para texto preservando blocos), diff palavra a palavra com `diff` (biblioteca `diff` do npm), renderizado com `<ins>` verde e `<del>` vermelho.
+  - **Diff do formulário**: tabela com colunas "Campo | Versão | Atual" mostrando apenas os campos que mudaram.
+
+## Migração e dependências
+
+- 1 migration criando as duas tabelas, GRANTs, RLS, policies (`auth.uid() = user_id` para SELECT/INSERT/UPDATE/DELETE), trigger de `updated_at` e trigger de limite de 50 não-fixadas.
+- `bun add diff` e `@types/diff` para o diff textual.
+
+## Migração dos dados locais existentes
+
+No mount, se existir `jurismind:proposal-draft:v1` ou `jurismind:proposal-versions:v1` no `localStorage` e o backend estiver vazio para o caso atual (ou "sem caso"), importar automaticamente uma única vez, marcar como migrado (`jurismind:proposal-migrated:v1`) e limpar as chaves antigas. Toast confirmando "Rascunho e X versão(ões) migrados para a nuvem".
+
+## Fora de escopo
+
+- Compartilhamento entre membros do time (fica só do dono do caso por ora).
+- Diff visual dentro do RichTextEditor (apenas no diálogo de histórico).
+- Exportar histórico como .zip.

@@ -769,6 +769,91 @@ export type Database = {
         }
         Relationships: []
       }
+      proposal_drafts: {
+        Row: {
+          case_id: string | null
+          created_at: string
+          form: Json
+          id: string
+          output: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          case_id?: string | null
+          created_at?: string
+          form?: Json
+          id?: string
+          output?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          case_id?: string | null
+          created_at?: string
+          form?: Json
+          id?: string
+          output?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "proposal_drafts_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      proposal_versions: {
+        Row: {
+          case_id: string | null
+          created_at: string
+          description: string | null
+          form: Json
+          id: string
+          label: string
+          origin: string
+          output: string
+          pinned: boolean
+          user_id: string
+        }
+        Insert: {
+          case_id?: string | null
+          created_at?: string
+          description?: string | null
+          form?: Json
+          id?: string
+          label: string
+          origin: string
+          output?: string
+          pinned?: boolean
+          user_id: string
+        }
+        Update: {
+          case_id?: string | null
+          created_at?: string
+          description?: string | null
+          form?: Json
+          id?: string
+          label?: string
+          origin?: string
+          output?: string
+          pinned?: boolean
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "proposal_versions_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tasks: {
         Row: {
           assigned_to_user_id: string | null
