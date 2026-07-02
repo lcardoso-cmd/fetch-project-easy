@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { z } from "zod";
 import { toast } from "sonner";
 import { ArrowLeft } from "lucide-react";
@@ -68,6 +68,22 @@ function HireB2bRequestForm() {
     () => catalog.find((c) => c.slug === serviceSlug),
     [catalog, serviceSlug],
   );
+
+  const prefillNoticeShown = useRef(false);
+  useEffect(() => {
+    if (prefillNoticeShown.current) return;
+    if (!catalog.length) return;
+    const hasPrefill = Boolean(search.service && search.description);
+    if (!hasPrefill) return;
+    const svc = catalog.find((c) => c.slug === search.service);
+    prefillNoticeShown.current = true;
+    toast.success("Solicitação pré-preenchida", {
+      description: svc
+        ? `Serviço "${svc.title}" e contexto do parecer já foram preenchidos. Ajuste os detalhes antes de enviar.`
+        : "Serviço e contexto do parecer já foram preenchidos. Ajuste os detalhes antes de enviar.",
+    });
+  }, [catalog, search.service, search.description]);
+
 
   const handleFiles = (list: FileList | null) => {
     if (!list) return;
