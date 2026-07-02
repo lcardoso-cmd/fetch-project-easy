@@ -651,18 +651,29 @@ function alignMap(a?: BlockAlign): (typeof AlignmentType)[keyof typeof Alignment
 
 /**
  * Converte HTML do editor (h1/h2/h3, p, ul/ol, li, br, strong/em/u,
- * alinhamento inline via style="text-align:...") em Paragraph[] usando
- * os estilos nomeados do template.
+ * blockquote, hr, alinhamento inline via style="text-align:...") em
+ * Paragraph[] usando os estilos nomeados do template.
+ *
+ * Regras de formatação profissional aplicadas por padrão:
+ * - Parágrafos <p>/<div> sem alinhamento explícito → JUSTIFIED
+ * - H1/H2/H3 recebem `keepNext` (não ficam órfãos no fim da página)
+ * - H1 recebe `pageBreakBefore` automático (exceto o primeiro bloco),
+ *   funcionando como separador de seção
+ * - <hr>, elementos com class "page-break" ou style
+ *   "page-break-before:always" / "page-break-after:always" viram quebra
+ *   de página explícita
  */
 export function htmlToDocxChildren(html: string): Paragraph[] {
-  // Preserva <br> como marcador para inlineToTextRuns emitir break: 1.
   const normalized = String(html || "").replace(/\r/g, "");
   const out: Paragraph[] = [];
-  const blockRegex = /<(h1|h2|h3|p|li|div|blockquote)([^>]*)>([\s\S]*?)<\/\1>/gi;
+  // Inclui hr no set de blocos reconhecidos (self-closing tratado abaixo).
+  const blockRegex =
+    /<hr\b[^>]*\/?>|<(h1|h2|h3|p|li|div|blockquote)([^>]*)>([\s\S]*?)<\/\1>/gi;
 
   let m: RegExpExecArray | null;
   let lastIndex = 0;
   let hasMatch = false;
+  let hasEmittedContent = false; // controla pageBreakBefore em H1
   // Rastreia se o LI está dentro de <ol> ou <ul>
   let inOrdered = false;
   const olOpen = /<ol[\s>]/gi;
@@ -681,47 +692,121 @@ export function htmlToDocxChildren(html: string): Paragraph[] {
     return depth > 0;
   }
 
+  function pageBreakParagraph(): Paragraph {
+    return new Paragraph({
+      spacing: { before: 0, after: 0 },
+      pageBreakBefore: true,
+      children: [new TextRun("")],
+    });
+  }
+  function hasClass(attrs: string, name: string): boolean {
+    const re = new RegExp(`class\\s*=\\s*["'][^"']*\\b${name}\\b[^"']*["']`, "i");
+    return re.test(attrs);
+  }
+  function pageBreakBeforeStyle(attrs: string): boolean {
+    return /page-break-before\s*:\s*always|break-before\s*:\s*(page|always)/i.test(attrs);
+  }
+  function pageBreakAfterStyle(attrs: string): boolean {
+    return /page-break-after\s*:\s*always|break-after\s*:\s*(page|always)/i.test(attrs);
+  }
+
   while ((m = blockRegex.exec(normalized)) !== null) {
     hasMatch = true;
     if (m.index > lastIndex) {
       const between = normalized.slice(lastIndex, m.index);
       const stripped = between.replace(/<[^>]+>/g, "").trim();
       if (stripped) {
-        out.push(new Paragraph({ children: inlineToTextRuns(between) }));
+        out.push(
+          new Paragraph({
+            alignment: AlignmentType.JUSTIFIED,
+            children: inlineToTextRuns(between),
+          }),
+        );
+        hasEmittedContent = true;
       }
     }
+
+    const full = m[0];
+    // <hr /> como quebra de página / separador de seção
+    if (/^<hr\b/i.test(full)) {
+      if (hasEmittedContent) out.push(pageBreakParagraph());
+      lastIndex = blockRegex.lastIndex;
+      continue;
+    }
+
     const tag = m[1].toLowerCase();
     const attrs = m[2] || "";
     const inner = m[3];
     const alignMatch = attrs.match(/text-align\s*:\s*(left|center|right|justify)/i);
-    const align = alignMap(alignMatch?.[1] as BlockAlign | undefined);
+    const explicitAlign = alignMap(alignMatch?.[1] as BlockAlign | undefined);
     inOrdered = tag === "li" ? isOrderedAt(m.index) : inOrdered;
 
+    // Quebra de página antes deste bloco (via class ou style)
+    const forceBreakBefore = hasClass(attrs, "page-break") || pageBreakBeforeStyle(attrs);
+    if (forceBreakBefore && hasEmittedContent) out.push(pageBreakParagraph());
+
     if (tag === "h1") {
-      out.push(new Paragraph({ heading: HeadingLevel.HEADING_1, alignment: align, children: inlineToTextRuns(inner) }));
+      out.push(
+        new Paragraph({
+          heading: HeadingLevel.HEADING_1,
+          alignment: explicitAlign,
+          keepNext: true,
+          pageBreakBefore: hasEmittedContent && !forceBreakBefore,
+          children: inlineToTextRuns(inner),
+        }),
+      );
     } else if (tag === "h2") {
-      out.push(new Paragraph({ heading: HeadingLevel.HEADING_2, alignment: align, children: inlineToTextRuns(inner) }));
+      out.push(
+        new Paragraph({
+          heading: HeadingLevel.HEADING_2,
+          alignment: explicitAlign,
+          keepNext: true,
+          children: inlineToTextRuns(inner),
+        }),
+      );
     } else if (tag === "h3") {
-      out.push(new Paragraph({ heading: HeadingLevel.HEADING_3, alignment: align, children: inlineToTextRuns(inner) }));
+      out.push(
+        new Paragraph({
+          heading: HeadingLevel.HEADING_3,
+          alignment: explicitAlign,
+          keepNext: true,
+          children: inlineToTextRuns(inner),
+        }),
+      );
     } else if (tag === "li") {
       out.push(
         new Paragraph({
           numbering: { reference: inOrdered ? "numbers" : "bullets", level: 0 },
-          alignment: align,
+          alignment: explicitAlign,
           children: inlineToTextRuns(inner),
         }),
       );
     } else if (tag === "blockquote") {
-      out.push(new Paragraph({ style: "Quote", alignment: align, children: inlineToTextRuns(inner) }));
+      out.push(
+        new Paragraph({
+          style: "Quote",
+          alignment: explicitAlign,
+          children: inlineToTextRuns(inner),
+        }),
+      );
     } else {
       // p, div
       const stripped = inner.replace(/<[^>]+>/g, "").trim();
       if (!stripped) {
         out.push(new Paragraph({ children: [new TextRun("")] }));
       } else {
-        out.push(new Paragraph({ alignment: align, children: inlineToTextRuns(inner) }));
+        out.push(
+          new Paragraph({
+            alignment: explicitAlign ?? AlignmentType.JUSTIFIED,
+            children: inlineToTextRuns(inner),
+          }),
+        );
       }
     }
+    hasEmittedContent = true;
+
+    if (pageBreakAfterStyle(attrs)) out.push(pageBreakParagraph());
+
     lastIndex = blockRegex.lastIndex;
   }
 
@@ -730,12 +815,24 @@ export function htmlToDocxChildren(html: string): Paragraph[] {
     const lines = normalized.split(/\n+/);
     for (const line of lines) {
       const stripped = line.replace(/<[^>]+>/g, "").trim();
-      if (stripped) out.push(new Paragraph({ children: inlineToTextRuns(line) }));
+      if (stripped)
+        out.push(
+          new Paragraph({
+            alignment: AlignmentType.JUSTIFIED,
+            children: inlineToTextRuns(line),
+          }),
+        );
     }
   } else if (lastIndex < normalized.length) {
     const tail = normalized.slice(lastIndex);
     const stripped = tail.replace(/<[^>]+>/g, "").trim();
-    if (stripped) out.push(new Paragraph({ children: inlineToTextRuns(tail) }));
+    if (stripped)
+      out.push(
+        new Paragraph({
+          alignment: AlignmentType.JUSTIFIED,
+          children: inlineToTextRuns(tail),
+        }),
+      );
   }
 
   if (out.length === 0) out.push(new Paragraph({ children: [new TextRun("")] }));
