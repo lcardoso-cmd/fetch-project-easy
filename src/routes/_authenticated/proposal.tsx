@@ -332,12 +332,33 @@ function ProposalPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold font-heading tracking-tight">Proposta Comercial</h1>
-        <p className="mt-1 text-muted-foreground">
-          Escolha um caso existente para preencher os dados do cliente automaticamente. Campos marcados com <span className="text-destructive">*</span> são obrigatórios.
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="min-w-0">
+          <h1 className="text-3xl font-bold font-heading tracking-tight">Proposta Comercial</h1>
+          <p className="mt-1 text-muted-foreground">
+            Escolha um caso existente para preencher os dados do cliente automaticamente. Campos marcados com <span className="text-destructive">*</span> são obrigatórios.
+          </p>
+        </div>
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          {saving ? (
+            <span className="inline-flex items-center gap-1.5">
+              <Loader2 className="h-3.5 w-3.5 animate-spin" /> Salvando rascunho…
+            </span>
+          ) : savedAt ? (
+            <span className="inline-flex items-center gap-1.5">
+              <Check className="h-3.5 w-3.5 text-emerald-600" /> Rascunho salvo {formatSavedAt(savedAt)}
+            </span>
+          ) : (
+            <span>Alterações são salvas automaticamente</span>
+          )}
+          {savedAt && (
+            <Button size="sm" variant="ghost" onClick={discardDraft} className="h-7 px-2">
+              <Trash2 className="mr-1 h-3.5 w-3.5" /> Descartar
+            </Button>
+          )}
+        </div>
       </div>
+
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
