@@ -400,6 +400,65 @@ export function JurisMindChat({
     inputRef.current?.focus();
   }, []);
 
+  // ---------- Enumeração de microfones ----------
+  const refreshMics = async () => {
+    if (typeof navigator === "undefined" || !navigator.mediaDevices?.enumerateDevices) {
+      return;
+    }
+    try {
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const inputs = devices.filter((d) => d.kind === "audioinput");
+      setMics(inputs);
+      if (inputs.some((d) => d.label)) setMicLabelsUnlocked(true);
+      if (
+        selectedMicId &&
+        inputs.length > 0 &&
+        !inputs.some((d) => d.deviceId === selectedMicId)
+      ) {
+        setSelectedMicId(null);
+        try {
+          localStorage.removeItem(MIC_STORAGE_KEY);
+        } catch {}
+      }
+    } catch {
+      // silencioso — sem permissão ainda
+    }
+  };
+
+  const unlockMicLabels = async () => {
+    if (unlockingLabels) return;
+    setUnlockingLabels(true);
+    try {
+      const s = await navigator.mediaDevices.getUserMedia({ audio: true });
+      s.getTracks().forEach((t) => t.stop());
+      await refreshMics();
+    } catch (e) {
+      toast.error(humanizeMicError(e));
+    } finally {
+      setUnlockingLabels(false);
+    }
+  };
+
+  const chooseMic = (deviceId: string | null) => {
+    setSelectedMicId(deviceId);
+    try {
+      if (deviceId) localStorage.setItem(MIC_STORAGE_KEY, deviceId);
+      else localStorage.removeItem(MIC_STORAGE_KEY);
+    } catch {}
+    setMicPickerOpen(false);
+  };
+
+  useEffect(() => {
+    void refreshMics();
+    if (typeof navigator === "undefined" || !navigator.mediaDevices) return;
+    const handler = () => void refreshMics();
+    navigator.mediaDevices.addEventListener?.("devicechange", handler);
+    return () => {
+      navigator.mediaDevices.removeEventListener?.("devicechange", handler);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Carregar histórico ao trocar de thread
   useEffect(() => {
     if (!threadId) {
