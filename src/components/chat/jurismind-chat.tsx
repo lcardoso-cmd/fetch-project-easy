@@ -439,6 +439,20 @@ export function JurisMindChat({
       clearTimeout(autoStopRef.current);
       autoStopRef.current = null;
     }
+    if (flushIntervalRef.current) {
+      clearInterval(flushIntervalRef.current);
+      flushIntervalRef.current = null;
+    }
+    try {
+      processorRef.current?.disconnect();
+    } catch {}
+    processorRef.current = null;
+    try {
+      activeSegCtrlRef.current?.abort();
+    } catch {}
+    activeSegCtrlRef.current = null;
+    pcmChunksRef.current = [];
+    setSegmentInFlight(false);
     try {
       analyserRef.current?.disconnect();
     } catch {}
@@ -453,6 +467,134 @@ export function JurisMindChat({
     setAudioLevel(0);
     setMicSilent(false);
   };
+
+  // Reflete base + committed + partial no textarea sem sobrescrever edições do usuário fora dos segmentos.
+  const syncLiveInput = () => {
+    const parts = [
+      baseInputRef.current.trim(),
+      committedRef.current.trim(),
+      livePartialRef.current.trim(),
+    ].filter(Boolean);
+    setInput(parts.join(" "));
+  };
+
+  const setPartial = (text: string) => {
+    livePartialRef.current = text;
+    syncLiveInput();
+  };
+
+  const appendCommitted = (text: string) => {
+    const clean = text.trim();
+    if (!clean) return;
+    committedRef.current = committedRef.current
+      ? committedRef.current + " " + clean
+      : clean;
+    livePartialRef.current = "";
+    syncLiveInput();
+  };
+
+  // Envia um segmento WAV e consome o SSE, atualizando partial/committed.
+  const flushSegment = async (final: boolean): Promise<void> => {
+    const srcRate = pcmSampleRateRef.current;
+    const chunks = pcmChunksRef.current;
+    pcmChunksRef.current = [];
+    if (chunks.length === 0) return;
+    const merged = concatFloat32(chunks);
+    // Descarta segmento muito curto (<400ms) se não for final.
+    const minSamples = Math.floor(srcRate * 0.4);
+    if (!final && merged.length < minSamples) {
+      // devolve os chunks para o próximo flush não perder áudio
+      pcmChunksRef.current.unshift(merged);
+      return;
+    }
+    // Silêncio? Descarta.
+    if (rmsOf(merged) < 0.008) return;
+
+    const down = downsampleTo(merged, srcRate, 16000);
+    const wav = encodeWavPcm16(down, 16000);
+    if (wav.size < 1024) return;
+    const b64 = await blobToBase64(wav);
+
+    // Segmentos sequenciais: aborta o anterior se ainda não terminou.
+    try {
+      activeSegCtrlRef.current?.abort();
+    } catch {}
+    const ctrl = new AbortController();
+    activeSegCtrlRef.current = ctrl;
+    setSegmentInFlight(true);
+    let segmentText = "";
+    try {
+      const res = await fetch("/api/tools/transcribe-stream", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ audio_base64: b64, format: "wav" }),
+        signal: ctrl.signal,
+      });
+      if (!res.ok || !res.body) {
+        if (res.status === 402) {
+          toast.error("Créditos de IA esgotados.");
+        } else if (res.status === 429) {
+          // silencioso — próximo segmento tenta de novo
+        } else if (final) {
+          toast.error(humanizeTranscribeError(res.status));
+        }
+        return;
+      }
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        let idx;
+        while ((idx = buffer.indexOf("\n\n")) >= 0) {
+          const raw = buffer.slice(0, idx);
+          buffer = buffer.slice(idx + 2);
+          const line = raw
+            .split("\n")
+            .filter((l) => l.startsWith("data:"))
+            .map((l) => l.slice(5).trim())
+            .join("");
+          if (!line || line === "[DONE]") continue;
+          try {
+            const evt = JSON.parse(line) as {
+              type?: string;
+              delta?: string;
+              text?: string;
+            };
+            if (evt.type === "transcript.text.delta" && evt.delta) {
+              segmentText += evt.delta;
+              setPartial(segmentText);
+            } else if (evt.type === "transcript.text.done") {
+              segmentText = evt.text ?? segmentText;
+            }
+          } catch {
+            // ignore
+          }
+        }
+      }
+      appendCommitted(segmentText);
+    } catch (e) {
+      const name = (e as { name?: string })?.name;
+      if (name === "AbortError") {
+        // segmento cancelado — preserva o que já veio como parcial (ficará como committed no próximo done, ou descartado ao parar)
+        if (segmentText && final) appendCommitted(segmentText);
+        return;
+      }
+      if (final) {
+        toast.error(
+          e instanceof Error ? e.message : "Erro ao transcrever segmento.",
+        );
+      }
+    } finally {
+      if (activeSegCtrlRef.current === ctrl) {
+        activeSegCtrlRef.current = null;
+        setSegmentInFlight(false);
+      }
+    }
+  };
+
 
   const humanizeMicError = (e: unknown): string => {
     const err = e as { name?: string; message?: string } | undefined;
