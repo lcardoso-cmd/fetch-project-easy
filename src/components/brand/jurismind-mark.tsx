@@ -99,16 +99,30 @@ const SOURCES: Record<JurisMindVariant, string> = {
  * Semantic contexts where the mark is rendered. Prefer passing `context`
  * instead of hand-picking a `variant`, so the layout stays consistent if
  * the design token for a context changes.
+ *
+ * Single source of truth — the union type, the runtime list and the
+ * variant mapping are all derived from `JURISMIND_CONTEXTS`, so TypeScript
+ * autocompletion, exhaustiveness checks and iteration stay in sync.
  */
-export type JurisMindContext =
-  | "sidebar"
-  | "header"
-  | "landing"
-  | "auth"
-  | "chat"
-  | "chip-dark"
-  | "inline-light"
-  | "inline-dark";
+export const JURISMIND_CONTEXTS = [
+  "sidebar",
+  "header",
+  "landing",
+  "auth",
+  "chat",
+  "chip-dark",
+  "inline-light",
+  "inline-dark",
+] as const;
+
+export type JurisMindContext = (typeof JURISMIND_CONTEXTS)[number];
+
+export function isJurisMindContext(value: unknown): value is JurisMindContext {
+  return (
+    typeof value === "string" &&
+    (JURISMIND_CONTEXTS as readonly string[]).includes(value)
+  );
+}
 
 // Regra global de contraste do quadrado da marca:
 //   • Fundo CLARO  → quadrado ESCURO (square-navy)
