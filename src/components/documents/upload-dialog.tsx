@@ -82,8 +82,13 @@ function putWithProgress(
   signedUrl: string,
   file: File,
   onProgress: (pct: number) => void,
+  signal?: AbortSignal,
 ): Promise<void> {
   return new Promise((resolve, reject) => {
+    if (signal?.aborted) {
+      reject(new DOMException("Upload cancelado", "AbortError"));
+      return;
+    }
     const xhr = new XMLHttpRequest();
     xhr.open("PUT", signedUrl);
     xhr.setRequestHeader(
@@ -98,6 +103,12 @@ function putWithProgress(
       else reject(new Error(`Upload falhou (HTTP ${xhr.status})`));
     };
     xhr.onerror = () => reject(new Error("Erro de rede durante upload"));
+    xhr.onabort = () => reject(new DOMException("Upload cancelado", "AbortError"));
+    const onAbort = () => {
+      try { xhr.abort(); } catch { /* ignore */ }
+    };
+    signal?.addEventListener("abort", onAbort, { once: true });
+    xhr.onloadend = () => signal?.removeEventListener("abort", onAbort);
     xhr.send(file);
   });
 }
