@@ -55,7 +55,7 @@ function LandingPage() {
       <header className="border-b">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4">
           <div className="flex items-center gap-2">
-            <JurisMindMark size={32} variant="square-navy" rounded />
+            <JurisMindMark size={32} context="header" rounded />
             <span className="font-heading text-xl font-extrabold tracking-tight text-foreground">
               B2B | JurisMind AI
             </span>
@@ -91,7 +91,7 @@ function LandingPage() {
         />
         <div className="relative mx-auto max-w-6xl px-4 py-24 text-center">
           <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-accent/20 px-3 py-1 text-xs font-semibold text-accent">
-            <JurisMindMark size={14} variant="glyph-white" />
+            <JurisMindMark size={14} context="inline-dark" />
             Para advogados, peritos e assistentes técnicos
           </div>
           <h1 className="font-heading text-5xl font-extrabold tracking-tight md:text-6xl">
