@@ -125,13 +125,15 @@ export function isJurisMindContext(value: unknown): value is JurisMindContext {
 }
 
 // Regra global de contraste do quadrado da marca:
-//   • Fundo CLARO  → quadrado ESCURO (square-navy)
-//   • Fundo ESCURO → quadrado BRANCO (square-white)
-// Contextos "theme-aware" abaixo trocam automaticamente conforme `.dark`.
-// Mantenha esse mapeamento — não use variantes que quebrem o contraste.
+//   • Fundo CLARO  → quadrado NAVY  (bg-brand-navy    + glyph-white)
+//   • Fundo ESCURO → quadrado BRANCO (bg-brand-surface + glyph-navy)
+// A cor do quadrado vem de tokens do tema (--color-brand-*), NUNCA hardcoded.
+// Assets legado (`sidebar`, `square-navy`, `square-white`) permanecem apenas
+// para overrides explícitos via `variant=`; o caminho de `context=` usa o
+// composto CSS (wrapper com bg tokenizado + glyph transparente).
 const CONTEXT_TO_VARIANT: Record<JurisMindContext, JurisMindVariant> = {
-  sidebar: "square-white",   // sidebar tem bg escuro (navy) fixo
-  header: "square-navy",     // header/topbar tem bg claro (card) no tema light
+  sidebar: "square-white",
+  header: "square-navy",
   landing: "square-navy",
   auth: "square-navy",
   chat: "square-navy",
@@ -141,22 +143,26 @@ const CONTEXT_TO_VARIANT: Record<JurisMindContext, JurisMindVariant> = {
 };
 
 /**
- * Contextos cujo quadrado deve inverter (navy ↔ white) conforme o tema.
- * O par light/dark é renderizado com `dark:` para funcionar em SSR sem flash.
- * Sidebar e chip-dark ficam de fora porque seus fundos são fixos por design.
+ * Tipos de composição do mark quando derivado de `context`:
+ * - `square-token`: wrapper com bg tokenizado (fixo por contexto);
+ * - `square-token-theme-aware`: wrapper que troca navy↔branco via `.dark`;
+ * - `glyph`: apenas o glyph transparente, sem quadrado.
+ * Sidebar/chip-dark são fixos porque seus fundos são fixos por design.
  */
-const THEME_AWARE_CONTEXTS: Record<
-  JurisMindContext,
-  { light: JurisMindVariant; dark: JurisMindVariant } | null
-> = {
-  sidebar: null,
-  header: { light: "square-navy", dark: "square-white" },
-  landing: { light: "square-navy", dark: "square-white" },
-  auth: { light: "square-navy", dark: "square-white" },
-  chat: { light: "square-navy", dark: "square-white" },
-  "chip-dark": null,
-  "inline-light": { light: "glyph-navy", dark: "glyph-white" },
-  "inline-dark": { light: "glyph-navy", dark: "glyph-white" },
+type ContextComposition =
+  | { kind: "square-token"; tone: "navy" | "surface" }
+  | { kind: "square-token-theme-aware" }
+  | { kind: "glyph"; tone: "navy" | "white" };
+
+const CONTEXT_COMPOSITION: Record<JurisMindContext, ContextComposition> = {
+  sidebar: { kind: "square-token", tone: "surface" },      // sidebar navy fixa
+  header: { kind: "square-token-theme-aware" },
+  landing: { kind: "square-token-theme-aware" },
+  auth: { kind: "square-token-theme-aware" },
+  chat: { kind: "square-token-theme-aware" },
+  "chip-dark": { kind: "square-token", tone: "surface" },  // chip sempre em bg escuro
+  "inline-light": { kind: "glyph", tone: "navy" },
+  "inline-dark": { kind: "glyph", tone: "white" },
 };
 
 /**
@@ -183,6 +189,93 @@ function isJurisMindVariant(value: unknown): value is JurisMindVariant {
  */
 export const JURISMIND_ROUND_CLASS = "rounded-[22%]";
 
+const INTERACTIVE_CLASS =
+  "transition-transform duration-150 ease-out will-change-transform hover:scale-[1.04] active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background";
+
+/** Glyph transparente renderizado dentro de um quadrado tokenizado. */
+function BrandGlyph({ tone, size }: { tone: "navy" | "white"; size: number }) {
+  const src = tone === "navy" ? SOURCES["glyph-navy"] : SOURCES["glyph-white"];
+  // O glyph ocupa ~72% do quadrado (mesma proporção visual dos PNGs antigos).
+  const inner = Math.round(size * 0.72);
+  return (
+    <img
+      src={src}
+      alt=""
+      aria-hidden="true"
+      width={inner}
+      height={inner}
+      loading="lazy"
+      draggable={false}
+      className="block object-contain select-none pointer-events-none"
+      style={{ width: inner, height: inner }}
+    />
+  );
+}
+
+/**
+ * Quadrado da marca desenhado via CSS + tokens (`bg-brand-navy` /
+ * `bg-brand-surface`) com o glyph transparente sobreposto. Substitui os
+ * quadrados embutidos nos PNGs (`square-navy`, `square-white`) para que
+ * mudanças de tema/paleta se propaguem automaticamente.
+ */
+function BrandSquare({
+  tone,
+  size,
+  rounded,
+  interactive,
+  className,
+  themeAware,
+}: {
+  tone?: "navy" | "surface";
+  size: number;
+  rounded: boolean;
+  interactive: boolean;
+  className?: string;
+  /** Quando true ignora `tone` e alterna navy↔surface via `.dark`. */
+  themeAware?: boolean;
+}) {
+  const commonWrapper = cn(
+    "inline-flex items-center justify-center shrink-0 select-none align-middle overflow-hidden",
+    rounded && JURISMIND_ROUND_CLASS,
+    interactive && INTERACTIVE_CLASS,
+    className,
+  );
+  const style = { width: size, height: size } as const;
+
+  if (themeAware) {
+    return (
+      <span
+        role="img"
+        aria-label="JurisMind AI"
+        className={cn(commonWrapper, "bg-brand-navy dark:bg-brand-surface")}
+        style={style}
+      >
+        {/* light: quadrado navy → glyph branco */}
+        <span className="contents dark:hidden">
+          <BrandGlyph tone="white" size={size} />
+        </span>
+        {/* dark: quadrado branco → glyph navy */}
+        <span className="contents hidden dark:inline">
+          <BrandGlyph tone="navy" size={size} />
+        </span>
+      </span>
+    );
+  }
+
+  const bg = tone === "navy" ? "bg-brand-navy" : "bg-brand-surface";
+  const glyphTone: "navy" | "white" = tone === "navy" ? "white" : "navy";
+  return (
+    <span
+      role="img"
+      aria-label="JurisMind AI"
+      className={cn(commonWrapper, bg)}
+      style={style}
+    >
+      <BrandGlyph tone={glyphTone} size={size} />
+    </span>
+  );
+}
+
 export function JurisMindMark({
   className,
   size = 20,
@@ -206,69 +299,71 @@ export function JurisMindMark({
    */
   interactive?: boolean;
 }) {
-  // Se `variant` foi passado explicitamente, respeita — é o override documentado.
   const explicitVariant = isJurisMindVariant(variant) ? variant : null;
-  const safeContext: JurisMindContext = isJurisMindContext(context)
-    ? context
-    : DEFAULT_JURISMIND_CONTEXT;
-  const themePair = explicitVariant ? null : THEME_AWARE_CONTEXTS[safeContext];
 
-  const baseClass = (v: JurisMindVariant) => {
+  // Override explícito → mantém o PNG legado (compat total).
+  if (explicitVariant) {
     const isSquare =
-      v === "sidebar" || v === "square-navy" || v === "square-white";
+      explicitVariant === "sidebar" ||
+      explicitVariant === "square-navy" ||
+      explicitVariant === "square-white";
     const shouldRound = rounded ?? isSquare;
-    return cn(
-      "block shrink-0 select-none align-middle",
-      isSquare ? "object-cover" : "object-contain",
-      shouldRound && JURISMIND_ROUND_CLASS,
-      interactive &&
-        "transition-transform duration-150 ease-out will-change-transform hover:scale-[1.04] active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
-      className,
-    );
-  };
-
-  // Contexto theme-aware: renderiza os dois assets e alterna via `.dark`.
-  if (themePair) {
     return (
-      <>
-        <img
-          src={SOURCES[themePair.light]}
-          alt="JurisMind AI"
-          width={size}
-          height={size}
-          loading="lazy"
-          draggable={false}
-          className={cn(baseClass(themePair.light), "dark:hidden")}
-          style={{ width: size, height: size }}
-        />
-        <img
-          src={SOURCES[themePair.dark]}
-          alt=""
-          aria-hidden="true"
-          width={size}
-          height={size}
-          loading="lazy"
-          draggable={false}
-          className={cn(baseClass(themePair.dark), "hidden dark:block")}
-          style={{ width: size, height: size }}
-        />
-      </>
+      <img
+        src={SOURCES[explicitVariant]}
+        alt="JurisMind AI"
+        width={size}
+        height={size}
+        loading="lazy"
+        draggable={false}
+        className={cn(
+          "block shrink-0 select-none align-middle",
+          isSquare ? "object-cover" : "object-contain",
+          shouldRound && JURISMIND_ROUND_CLASS,
+          interactive && INTERACTIVE_CLASS,
+          className,
+        )}
+        style={{ width: size, height: size }}
+      />
     );
   }
 
-  const resolved: JurisMindVariant =
-    explicitVariant ?? variantForContext(safeContext);
+  const safeContext: JurisMindContext = isJurisMindContext(context)
+    ? context
+    : DEFAULT_JURISMIND_CONTEXT;
+  const composition = CONTEXT_COMPOSITION[safeContext];
+
+  if (composition.kind === "glyph") {
+    const shouldRound = rounded ?? false;
+    return (
+      <img
+        src={SOURCES[composition.tone === "navy" ? "glyph-navy" : "glyph-white"]}
+        alt="JurisMind AI"
+        width={size}
+        height={size}
+        loading="lazy"
+        draggable={false}
+        className={cn(
+          "block shrink-0 select-none align-middle object-contain",
+          shouldRound && JURISMIND_ROUND_CLASS,
+          interactive && INTERACTIVE_CLASS,
+          className,
+        )}
+        style={{ width: size, height: size }}
+      />
+    );
+  }
+
   return (
-    <img
-      src={SOURCES[resolved]}
-      alt="JurisMind AI"
-      width={size}
-      height={size}
-      loading="lazy"
-      draggable={false}
-      className={baseClass(resolved)}
-      style={{ width: size, height: size }}
+    <BrandSquare
+      size={size}
+      rounded={rounded ?? true}
+      interactive={interactive}
+      className={className}
+      themeAware={composition.kind === "square-token-theme-aware"}
+      tone={composition.kind === "square-token" ? composition.tone : undefined}
     />
   );
 }
+
 
