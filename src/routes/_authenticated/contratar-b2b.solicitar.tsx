@@ -302,7 +302,10 @@ function HireB2bRequestForm() {
           <div className="space-y-2">
             <Label>Tipo de serviço *</Label>
             <Select value={serviceSlug} onValueChange={setServiceSlug}>
-              <SelectTrigger>
+              <SelectTrigger
+                aria-invalid={!serviceSlug}
+                className={!serviceSlug ? "border-destructive focus-visible:ring-destructive" : ""}
+              >
                 <SelectValue placeholder="Selecione o serviço" />
               </SelectTrigger>
               <SelectContent>
@@ -313,6 +316,11 @@ function HireB2bRequestForm() {
                 ))}
               </SelectContent>
             </Select>
+            {!serviceSlug && (
+              <p className="text-xs text-destructive" role="alert">
+                Selecione um serviço para continuar.
+              </p>
+            )}
             {selectedService && (
               <p className="text-xs text-muted-foreground">
                 {selectedService.description}
@@ -326,8 +334,16 @@ function HireB2bRequestForm() {
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Ex.: Parecer contábil em ação de apuração de haveres"
+              aria-invalid={title.trim().length < 3}
+              className={title.trim().length < 3 ? "border-destructive focus-visible:ring-destructive" : ""}
             />
+            {title.trim().length < 3 && (
+              <p className="text-xs text-destructive" role="alert">
+                Informe um título com pelo menos 3 caracteres.
+              </p>
+            )}
           </div>
+
 
           <div className="space-y-2">
             <Label>Descrição da demanda *</Label>
