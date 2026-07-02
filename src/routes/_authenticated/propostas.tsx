@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Handshake, Loader2, Copy, Download, FileText, Check, Trash2, History, Save, Cloud, CloudOff, Eraser } from "lucide-react";
+import { Handshake, Loader2, Copy, Download, FileText, Check, Trash2, History, Save, Cloud, CloudOff, Eraser, Settings2 } from "lucide-react";
 import { toast } from "sonner";
 import { generateProposal } from "@/lib/generators.functions";
 import { getCases } from "@/lib/cases.functions";
@@ -145,6 +145,12 @@ function ProposalPage() {
 
   const [loading, setLoading] = useState(false);
   const [output, setOutput] = useState("");
+  // PDF export settings — persistidos entre geração/download
+  const [pdfFormat, setPdfFormat] = useState<"A4" | "Letter">("A4");
+  const [pdfOrientation, setPdfOrientation] = useState<"portrait" | "landscape">("portrait");
+  // Margens em milímetros na UI (convertidas para pt no envio)
+  const [pdfMargins, setPdfMargins] = useState({ top: 25, right: 25, bottom: 25, left: 25 });
+  const [pdfSettingsOpen, setPdfSettingsOpen] = useState(false);
   const [form, setForm] = useState<FormState>(EMPTY);
   const [errors, setErrors] = useState<FieldErrors>({});
   const [savedAt, setSavedAt] = useState<number | null>(null);
@@ -519,10 +525,25 @@ function ProposalPage() {
       const { data: sess } = await supabase.auth.getSession();
       const headers: Record<string, string> = { "Content-Type": "application/json" };
       if (sess.session?.access_token) headers.Authorization = `Bearer ${sess.session.access_token}`;
+      // Converte mm -> pt (1 mm ≈ 2,8346 pt)
+      const mmToPt = (mm: number) => Math.round(mm * 2.83464567);
       const res = await fetch("/api/tools/pdf", {
         method: "POST",
         headers,
-        body: JSON.stringify({ titulo, html: output }),
+        body: JSON.stringify({
+          titulo,
+          html: output,
+          page: {
+            format: pdfFormat,
+            orientation: pdfOrientation,
+            margins: {
+              top: mmToPt(pdfMargins.top),
+              right: mmToPt(pdfMargins.right),
+              bottom: mmToPt(pdfMargins.bottom),
+              left: mmToPt(pdfMargins.left),
+            },
+          },
+        }),
       });
       if (!res.ok) throw new Error(await res.text());
       const blob = await res.blob();
@@ -842,10 +863,120 @@ function ProposalPage() {
               <CardDescription>Edite livremente antes de baixar.</CardDescription>
             </div>
             {output && (
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 <Button size="sm" variant="outline" onClick={copy}>
                   <Copy className="h-4 w-4 mr-1" /> Copiar
                 </Button>
+                <Popover open={pdfSettingsOpen} onOpenChange={setPdfSettingsOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      title="Configurar página do PDF"
+                    >
+                      <Settings2 className="h-4 w-4 mr-1" />
+                      {pdfFormat} · {pdfOrientation === "portrait" ? "Retrato" : "Paisagem"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent align="end" className="w-80 space-y-4">
+                    <div>
+                      <p className="text-sm font-medium">Configurações do PDF</p>
+                      <p className="text-xs text-muted-foreground">
+                        Ajuste tamanho, orientação e margens antes de baixar.
+                      </p>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <Label className="text-xs">Tamanho</Label>
+                        <Select
+                          value={pdfFormat}
+                          onValueChange={(v) => setPdfFormat(v as "A4" | "Letter")}
+                        >
+                          <SelectTrigger className="h-8">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="A4">A4 (210 × 297 mm)</SelectItem>
+                            <SelectItem value="Letter">Carta (216 × 279 mm)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs">Orientação</Label>
+                        <Select
+                          value={pdfOrientation}
+                          onValueChange={(v) =>
+                            setPdfOrientation(v as "portrait" | "landscape")
+                          }
+                        >
+                          <SelectTrigger className="h-8">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="portrait">Retrato</SelectItem>
+                            <SelectItem value="landscape">Paisagem</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <Label className="text-xs">Margens (mm)</Label>
+                        <button
+                          type="button"
+                          className="text-[11px] text-muted-foreground hover:text-foreground underline"
+                          onClick={() =>
+                            setPdfMargins({ top: 25, right: 25, bottom: 25, left: 25 })
+                          }
+                        >
+                          Redefinir
+                        </button>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        {(["top", "right", "bottom", "left"] as const).map((side) => (
+                          <div key={side} className="space-y-1">
+                            <Label className="text-[11px] capitalize text-muted-foreground">
+                              {side === "top"
+                                ? "Superior"
+                                : side === "right"
+                                  ? "Direita"
+                                  : side === "bottom"
+                                    ? "Inferior"
+                                    : "Esquerda"}
+                            </Label>
+                            <Input
+                              type="number"
+                              min={5}
+                              max={60}
+                              step={1}
+                              value={pdfMargins[side]}
+                              onChange={(e) => {
+                                const n = Number(e.target.value);
+                                setPdfMargins((prev) => ({
+                                  ...prev,
+                                  [side]: Number.isFinite(n)
+                                    ? Math.max(5, Math.min(60, n))
+                                    : prev[side],
+                                }));
+                              }}
+                              className="h-8"
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    <Button
+                      size="sm"
+                      className="w-full"
+                      onClick={() => {
+                        setPdfSettingsOpen(false);
+                        void downloadPdf();
+                      }}
+                    >
+                      <FileText className="h-4 w-4 mr-1" /> Confirmar e baixar PDF
+                    </Button>
+                  </PopoverContent>
+                </Popover>
                 <Button size="sm" variant="outline" onClick={downloadPdf}>
                   <FileText className="h-4 w-4 mr-1" /> Baixar PDF
                 </Button>

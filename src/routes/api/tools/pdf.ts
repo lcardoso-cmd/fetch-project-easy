@@ -40,11 +40,22 @@ export const Route = createFileRoute("/api/tools/pdf")({
     handlers: {
       POST: async ({ request }) => {
         try {
-          const { titulo, conteudo, html } = (await request.json()) as {
+          const body = (await request.json()) as {
             titulo?: string;
             conteudo?: string;
             html?: string;
+            page?: {
+              format?: "A4" | "Letter";
+              orientation?: "portrait" | "landscape";
+              margins?: {
+                top?: number;
+                right?: number;
+                bottom?: number;
+                left?: number;
+              };
+            };
           };
+          const { titulo, conteudo, html, page: pageCfg } = body;
           if (!titulo || (!conteudo && !html)) {
             return new Response("titulo e conteudo obrigatórios", { status: 400 });
           }
@@ -68,6 +79,7 @@ export const Route = createFileRoute("/api/tools/pdf")({
             blocks,
             branding,
             headerLabel,
+            page: pageCfg,
           });
           return new Response(pdfBytes as unknown as BodyInit, {
             status: 200,

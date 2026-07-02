@@ -19,7 +19,7 @@ import {
   COLORS,
   DEFAULT_BRAND_NAME,
   FONT_SIZES_PT,
-  PAGE_PT,
+  
   SPACING,
   hexToRgb01,
   type DocBranding,
@@ -31,6 +31,21 @@ import { CARLITO_BYTES } from "./fonts/carlito";
 // Tipos
 // ---------------------------------------------------------------------------
 
+export type PdfPageFormat = "A4" | "Letter";
+export type PdfPageOrientation = "portrait" | "landscape";
+export interface PdfPageMargins {
+  /** Margens em pontos (72 pt = 1 in ≈ 25,4 mm). */
+  top: number;
+  right: number;
+  bottom: number;
+  left: number;
+}
+export interface PdfPageConfig {
+  format?: PdfPageFormat;
+  orientation?: PdfPageOrientation;
+  margins?: Partial<PdfPageMargins>;
+}
+
 export interface RenderPdfInput {
   title: string;
   blocks: DocBlock[];
@@ -39,7 +54,39 @@ export interface RenderPdfInput {
   headerLabel?: string;
   /** Se true, oculta cabeçalho e rodapé. */
   bare?: boolean;
+  /** Configuração de página (tamanho, orientação e margens). */
+  page?: PdfPageConfig;
 }
+
+// Dimensões base em pontos (72 pt = 1 in). Landscape troca w/h.
+const PAGE_SIZES_PT: Record<PdfPageFormat, { width: number; height: number }> = {
+  Letter: { width: 612, height: 792 }, // 8.5 x 11 in
+  A4: { width: 595.28, height: 841.89 }, // 210 x 297 mm
+};
+
+function resolvePageLayout(cfg?: PdfPageConfig) {
+  const format: PdfPageFormat = cfg?.format ?? "Letter";
+  const orientation: PdfPageOrientation = cfg?.orientation ?? "portrait";
+  const base = PAGE_SIZES_PT[format];
+  const width = orientation === "landscape" ? base.height : base.width;
+  const height = orientation === "landscape" ? base.width : base.height;
+  const m = cfg?.margins ?? {};
+  const clamp = (v: number | undefined, fallback: number) => {
+    if (typeof v !== "number" || !Number.isFinite(v)) return fallback;
+    // limite: entre 18pt (~0,25in) e 40% da menor dimensão
+    const max = Math.min(width, height) * 0.4;
+    return Math.max(18, Math.min(max, v));
+  };
+  return {
+    width,
+    height,
+    marginTop: clamp(m.top, 72),
+    marginRight: clamp(m.right, 72),
+    marginBottom: clamp(m.bottom, 72),
+    marginLeft: clamp(m.left, 72),
+  };
+}
+
 
 type Fonts = Record<PdfFontFace, PDFFont>;
 
@@ -455,6 +502,7 @@ function drawHeaderFooter(
   pageIndex: number,
   totalPages: number,
   fonts: Fonts,
+  layout: ReturnType<typeof resolvePageLayout>,
 ) {
   const firmName = sanitize(branding?.firmName?.trim() || DEFAULT_BRAND_NAME);
   const muted = hexToRgb01(COLORS.muted);
@@ -462,18 +510,18 @@ function drawHeaderFooter(
   const border = hexToRgb01(COLORS.border);
 
   // Header
-  const headerY = PAGE_PT.height - 48;
-  drawTextSafe(page, firmName, PAGE_PT.marginLeft, headerY, fonts.bold, 10, ink);
+  const headerY = layout.height - 48;
+  drawTextSafe(page, firmName, layout.marginLeft, headerY, fonts.bold, 10, ink);
   if (headerLabel) {
     const label = sanitize(headerLabel);
     const w = widthOf(fonts.body, label, 10);
-    const x = PAGE_PT.width - PAGE_PT.marginRight - w;
+    const x = layout.width - layout.marginRight - w;
     drawTextSafe(page, label, x, headerY, fonts.body, 10, muted);
   }
   const headerBorderY = headerY - 6;
   page.drawLine({
-    start: { x: PAGE_PT.marginLeft, y: headerBorderY },
-    end: { x: PAGE_PT.width - PAGE_PT.marginRight, y: headerBorderY },
+    start: { x: layout.marginLeft, y: headerBorderY },
+    end: { x: layout.width - layout.marginRight, y: headerBorderY },
     thickness: 0.5,
     color: rgb(border[0], border[1], border[2]),
   });
@@ -482,21 +530,22 @@ function drawHeaderFooter(
   const footerY = 40;
   const footerBorderY = footerY + 14;
   page.drawLine({
-    start: { x: PAGE_PT.marginLeft, y: footerBorderY },
-    end: { x: PAGE_PT.width - PAGE_PT.marginRight, y: footerBorderY },
+    start: { x: layout.marginLeft, y: footerBorderY },
+    end: { x: layout.width - layout.marginRight, y: footerBorderY },
     thickness: 0.5,
     color: rgb(border[0], border[1], border[2]),
   });
   const footerLeft = sanitize(
     [firmName, branding?.taxId, branding?.website].filter(Boolean).join(" · "),
   );
-  drawTextSafe(page, footerLeft, PAGE_PT.marginLeft, footerY, fonts.body, 9, muted);
+  drawTextSafe(page, footerLeft, layout.marginLeft, footerY, fonts.body, 9, muted);
   const pageText = `Página ${pageIndex} de ${totalPages}`;
   const pw = widthOf(fonts.body, pageText, 9);
-  const px = PAGE_PT.width - PAGE_PT.marginRight - pw;
+  const px = layout.width - layout.marginRight - pw;
   drawTextSafe(page, pageText, px, footerY, fonts.body, 9, muted);
   void degrees; // silence unused import guard
 }
+
 
 // ---------------------------------------------------------------------------
 // Entry point
@@ -507,9 +556,10 @@ function drawHeaderFooter(
  * — a API é assíncrona porque o pdf-lib embute fontes de forma async.
  */
 export async function renderPdf(input: RenderPdfInput): Promise<Uint8Array> {
-  const { title, blocks, branding, headerLabel, bare } = input;
-  const contentWidth = PAGE_PT.width - PAGE_PT.marginLeft - PAGE_PT.marginRight;
-  const contentX = PAGE_PT.marginLeft;
+  const { title, blocks, branding, headerLabel, bare, page: pageCfg } = input;
+  const layout = resolvePageLayout(pageCfg);
+  const contentWidth = layout.width - layout.marginLeft - layout.marginRight;
+  const contentX = layout.marginLeft;
 
   const doc = await PDFDocument.create();
   doc.registerFontkit(fontkit);
@@ -535,17 +585,17 @@ export async function renderPdf(input: RenderPdfInput): Promise<Uint8Array> {
   const headerReserved = bare ? 0 : 72;
   const footerReserved = bare ? 0 : 60;
   const usableHeight =
-    PAGE_PT.height - PAGE_PT.marginTop - PAGE_PT.marginBottom - headerReserved - footerReserved;
-  const topY = PAGE_PT.height - PAGE_PT.marginTop - headerReserved;
+    layout.height - layout.marginTop - layout.marginBottom - headerReserved - footerReserved;
+  const topY = layout.height - layout.marginTop - headerReserved;
 
   const lines = layoutBlocks(blocks, contentWidth, title, fonts);
   const pages = paginate(lines, usableHeight);
   const totalPages = pages.length;
 
   for (let i = 0; i < pages.length; i++) {
-    const page = doc.addPage([PAGE_PT.width, PAGE_PT.height]);
+    const page = doc.addPage([layout.width, layout.height]);
     if (!bare) {
-      drawHeaderFooter(page, branding, headerLabel, i + 1, totalPages, fonts);
+      drawHeaderFooter(page, branding, headerLabel, i + 1, totalPages, fonts, layout);
     }
     let cursorY = topY;
     for (const line of pages[i]) {
@@ -559,6 +609,7 @@ export async function renderPdf(input: RenderPdfInput): Promise<Uint8Array> {
   const bytes = await doc.save({ useObjectStreams: true });
   return bytes;
 }
+
 
 /** @deprecated compat — chamadores devem migrar para `await renderPdf(...)`. */
 export function renderPdfSync(): never {
