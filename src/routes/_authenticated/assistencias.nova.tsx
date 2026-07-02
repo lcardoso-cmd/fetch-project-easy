@@ -1281,6 +1281,7 @@ function NewCasePage() {
           </div>
         </DialogContent>
       </Dialog>
+      {unsavedDialog}
     </div>
   );
 }
