@@ -48,6 +48,7 @@ import { CaseTasksDialog } from "@/components/tasks/case-tasks-dialog";
 import { FloatingTeamChat } from "@/components/chat/floating-team-chat";
 import { QuesitosCard } from "@/components/cases/quesitos-card";
 import type { MatterKind } from "@/lib/practice-labels";
+import { useUnsavedChangesGuard } from "@/hooks/use-unsaved-changes-guard";
 
 function capitalize(str: string): string {
   return str.charAt(0).toUpperCase() + str.slice(1);
