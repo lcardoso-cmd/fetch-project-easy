@@ -1,44 +1,55 @@
-## Problema
+## Objetivo
+Melhorar a UX do microfone no chat do JurisMind com feedback visual claro de status (gravando/processando), timer, indicador de nível de áudio e mensagens de erro mais úteis quando a transcrição falhar.
 
-Hoje o editor de proposta tem dois pontos que quebram a edição livre e a fidelidade do `.docx`:
+## Escopo
+Apenas frontend em `src/components/chat/jurismind-chat.tsx` (mais um pequeno componente auxiliar). Sem mudanças no backend `/api/tools/transcribe`.
 
-1. **`RichTextEditor` só sincroniza o HTML no mount** (`useEffect(..., [])`). Quando o `output` muda por fora — geração pela IA, restauração de versão, migração do rascunho do servidor, "limpar campos" — o `contenteditable` continua exibindo o conteúdo antigo (ou vazio). O usuário digita "por cima" de um estado defasado, e ao salvar/exportar o que vai é o HTML antigo. Também não dá para editar depois de restaurar uma versão.
-2. **O conversor `htmlToDocxChildren`** cobre `<h1-3>`, `<p>`, `<li>`, `<div>`, `<blockquote>` e inline `<b/strong>`, `<i/em>`, `<u>`, mas ignora dois artefatos comuns do `document.execCommand` que costumam surgir com edição livre e colagens:
-   - `<span style="font-weight:bold|font-style:italic|text-decoration:underline">` (Chrome/Safari emitem isso ao aplicar bold em seleções parciais).
-   - Alinhamento aplicado via `<div align="...">` ou `style="text-align:..."` em `<div>` sem `<p>` interno — hoje já pega, mas parágrafo com múltiplos `<div>` filhos vira 1 parágrafo por `<div>` sem preservar quebra.
+## Mudanças
 
-## Correções
+### 1. Estado e refs adicionais
+- `recordingMs` (número, atualizado por intervalo a cada 250 ms) para timer "0:12".
+- `audioLevel` (0–1) via `AnalyserNode` para mostrar barra de volume — detecta microfone mudo.
+- `micError` (string | null) exibido inline abaixo do input quando a última transcrição falha, com botão "Tentar novamente" (reabre gravação) e "Fechar".
+- Refs: `analyserRef`, `audioCtxRef`, `rafRef`, `timerRef`, `startedAtRef`.
 
-### 1. Sincronizar o editor com props (sem quebrar o cursor)
+### 2. Status visual do botão do microfone
+- **Idle**: ícone `Mic`, tooltip "Ditar mensagem".
+- **Gravando**: variante `destructive`, ícone `Square`, badge pulsante vermelho + timer "0:12" ao lado do botão, barra fina de nível de áudio.
+- **Processando**: `Loader2` girando, tooltip "Transcrevendo…", desabilitado.
+- **Erro** (transitório): ícone `AlertCircle` por 2s antes de voltar a idle, além do toast e do banner inline.
 
-`src/components/chat/rich-text-editor.tsx`:
+### 3. Feedback contextual
+- Pequeno pill "● REC 0:12" ao lado do botão enquanto grava (aria-live="polite").
+- Se `audioLevel` ficar ~0 por >2s durante gravação, mostra dica "Microfone parece silencioso — verifique o dispositivo".
+- Auto-stop de segurança em 60s com toast informativo.
 
-- Guardar o último HTML emitido pelo próprio editor num `useRef` (`lastEmittedRef`).
-- No `useEffect` **sem** array vazio: quando `html` prop muda **e** difere tanto de `ref.current.innerHTML` quanto de `lastEmittedRef.current`, atualizar `innerHTML` e restaurar o foco no final. Isso trata carga inicial, restauração de versão e regeneração pela IA, sem provocar reset de cursor a cada tecla.
-- No `onInput`, atualizar `lastEmittedRef.current` antes de chamar `onChange`.
-- Adicionar `onPaste` que faz `e.preventDefault()` e injeta `text/html` sanitizado (remover `<script>`, `<style>`, atributos `on*` e `class`/`id`) via `document.execCommand("insertHTML", ...)`. Fallback para `text/plain` como parágrafos.
-- Expor `aria-label` e `role="textbox"` no div editável.
+### 4. Tratamento de erro aprimorado
+Traduzir os erros mais comuns em mensagens acionáveis (toast + banner inline):
+- `NotAllowedError` / `PermissionDeniedError` → "Permissão de microfone negada. Habilite nas configurações do navegador."
+- `NotFoundError` → "Nenhum microfone encontrado."
+- `NotReadableError` → "Microfone ocupado por outro aplicativo."
+- HTTP 401/403 do endpoint → "Sessão expirada. Faça login novamente."
+- HTTP 413 → "Áudio muito grande. Grave um trecho mais curto."
+- HTTP 429 → "Muitas requisições. Aguarde alguns segundos."
+- HTTP 5xx / rede → "Falha no serviço de transcrição. Tente novamente."
+- Áudio curto (<500 bytes) → mensagem clara "Nada capturado — segure o botão e fale."
+- Timeout de 30s no `fetch` (AbortController) → "A transcrição demorou demais."
 
-### 2. Robustecer `htmlToDocxChildren`
+### 5. Acessibilidade
+- `aria-pressed` no botão do mic refletindo `recording`.
+- `aria-live="polite"` na região do timer/status.
+- `aria-label` dinâmico ("Iniciar gravação" / "Parar gravação (0:12)" / "Transcrevendo").
 
-`src/lib/docx/template.ts`:
+### 6. Limpeza
+- `useEffect` de cleanup ao desmontar: parar `MediaRecorder`, fechar `AudioContext`, cancelar `requestAnimationFrame`, limpar `setInterval`, encerrar tracks do stream.
 
-- Ampliar `parseInline` para reconhecer `<span>` com `style="font-weight:bold|700"`, `font-style:italic`, `text-decoration:underline` — empilhando o run com o atributo correspondente e desempilhando no `</span>`.
-- Reconhecer `<s>` / `<strike>` / `<del>` como `strike: true` no `TextRun`.
-- Tratar `<br>` dentro de um bloco como quebra de linha real, usando `TextRun({ break: 1 })` ao invés de `\n` (evita perder a quebra ao normalizar).
-- Manter `<div>` como bloco (já funciona), mas se um `<p>`/`<div>` contiver `<div>`s aninhados (Chrome faz isso), achatar em parágrafos separados.
-- Preservar `text-align` também quando aparece em `<p style="text-align:justify">` (adicionar `justify` ao `alignMap`).
+## Detalhes técnicos
+- Nível de áudio: `AudioContext` → `MediaStreamSource` → `AnalyserNode` (fftSize 256), amostra RMS por `requestAnimationFrame`.
+- Timer: `setInterval(250ms)` calculando `Date.now() - startedAtRef.current`.
+- Renderizar o pill de status e a barra de nível ao lado do botão (dentro do mesmo container flex do input) para não quebrar o layout responsivo.
+- Nenhuma alteração no backend; o corpo de request e o parsing da resposta permanecem iguais.
 
-### 3. Ajuste no fluxo do `proposal.tsx`
-
-Nenhuma mudança de lógica de negócio. Apenas garantir que, ao restaurar uma versão (`restoreVersion`) ou receber saída da IA (`generate`), `setOutput(newHtml)` continua sendo a única fonte da verdade — a correção do editor (#1) faz o resto.
-
-### 4. Verificação
-
-- Rodar Playwright em `/proposal`: gerar proposta, editar (digitar, negrito, lista, alinhar centro), restaurar versão anterior, editar de novo, exportar `.docx`. Descompactar o arquivo resultante e conferir que negrito/itálico/listas/alinhamento aplicados aparecem no `document.xml`.
-- Conferir também que o log do console não solta warning de "cursor jumped" nem re-render infinito.
-
-## Fora do escopo
-
-- Trocar `contentEditable + execCommand` por Tiptap/ProseMirror (mudança grande; fica para depois).
-- Suporte a tabelas / imagens dentro do editor (o template DOCX já tem `styledTable`, mas nem a UI nem o conversor tratam `<table>` do editor hoje).
+## Fora de escopo
+- Streaming/SSE de transcrição parcial (usa endpoint atual não-streaming).
+- Mudar provider/model de transcrição.
+- Aplicar a mesma UX no editor da proposta (fazemos depois se pedir).
