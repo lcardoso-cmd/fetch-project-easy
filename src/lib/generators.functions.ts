@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireCapability } from "@/lib/capability-middleware";
 import { chatComplete } from "./ai.server";
 
 const ProposalSchema = z.object({
