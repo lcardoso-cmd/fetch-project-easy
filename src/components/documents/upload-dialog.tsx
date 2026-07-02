@@ -31,7 +31,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { FilePlus2, FolderInput, Loader2, UploadCloud } from "lucide-react";
+import { FilePlus2, FolderInput, Loader2, StopCircle, UploadCloud } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   UploadProgressList,
