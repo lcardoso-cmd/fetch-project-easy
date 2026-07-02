@@ -153,7 +153,7 @@ function CaseDetailPage() {
       form.case_type !== (caseData.case_type ?? "") ||
       form.client_name !== (caseData.client_name ?? "") ||
       form.description !== (caseData.description ?? ""));
-  useUnsavedChangesGuard({ when: editDirty });
+  const { dialog: unsavedDialog } = useUnsavedChangesGuard({ when: editDirty });
 
   if (isLoading)
     return <p className="text-muted-foreground">Carregando...</p>;
