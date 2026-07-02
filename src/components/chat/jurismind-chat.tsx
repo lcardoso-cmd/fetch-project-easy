@@ -1135,7 +1135,21 @@ export function JurisMindChat({
                         </ReactMarkdown>
                       </div>
                     ) : (
-                      m.content
+                      <>
+                        {m.input_kind === "voice" && (
+                          <VoiceMessagePlayback
+                            messageId={m.id}
+                            audioBlobUrl={m.audio_blob_url}
+                            hasAudio={
+                              Boolean(m.audio_blob_url) ||
+                              Boolean(m.audio_path && m.id)
+                            }
+                            durationMs={m.audio_duration_ms ?? null}
+                            getAudioUrl={getAudioUrlFn}
+                          />
+                        )}
+                        <div className="whitespace-pre-wrap">{m.content}</div>
+                      </>
                     )}
                     {m.images && m.images.length > 0 && (
                       <div className="mt-2 flex flex-wrap gap-2">
