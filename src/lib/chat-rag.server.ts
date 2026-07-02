@@ -580,6 +580,9 @@ export async function persistChatTurn(opts: {
   content: string;
   toolSteps: ToolStep[];
   citations: Citation[];
+  inputKind?: "text" | "voice";
+  audioPath?: string | null;
+  audioDurationMs?: number | null;
 }) {
   const {
     supabase,
@@ -591,6 +594,9 @@ export async function persistChatTurn(opts: {
     content,
     toolSteps,
     citations,
+    inputKind,
+    audioPath,
+    audioDurationMs,
   } = opts;
   try {
     await supabase.from("ai_chat_messages").insert([
@@ -601,6 +607,9 @@ export async function persistChatTurn(opts: {
         content: question,
         images: images ?? null,
         model_tier: tier,
+        input_kind: inputKind ?? "text",
+        audio_path: audioPath ?? null,
+        audio_duration_ms: audioDurationMs ?? null,
       },
       {
         thread_id: threadId,

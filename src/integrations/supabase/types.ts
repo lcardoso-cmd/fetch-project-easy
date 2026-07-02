@@ -16,11 +16,14 @@ export type Database = {
     Tables: {
       ai_chat_messages: {
         Row: {
+          audio_duration_ms: number | null
+          audio_path: string | null
           citations: Json | null
           content: string
           created_at: string
           id: string
           images: Json | null
+          input_kind: string
           model_tier: string | null
           role: string
           thread_id: string
@@ -28,11 +31,14 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          audio_duration_ms?: number | null
+          audio_path?: string | null
           citations?: Json | null
           content?: string
           created_at?: string
           id?: string
           images?: Json | null
+          input_kind?: string
           model_tier?: string | null
           role: string
           thread_id: string
@@ -40,11 +46,14 @@ export type Database = {
           user_id: string
         }
         Update: {
+          audio_duration_ms?: number | null
+          audio_path?: string | null
           citations?: Json | null
           content?: string
           created_at?: string
           id?: string
           images?: Json | null
+          input_kind?: string
           model_tier?: string | null
           role?: string
           thread_id?: string

@@ -4,7 +4,7 @@ import { Link } from "@tanstack/react-router";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
-import { getThreadMessages } from "@/lib/threads.functions";
+import { getThreadMessages, getMessageAudioUrl } from "@/lib/threads.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -80,11 +80,16 @@ interface ToolStep {
   result_json: string;
 }
 interface Msg {
+  id?: string;
   role: "user" | "assistant";
   content: string;
   images?: string[];
   citations?: Citation[];
   steps?: ToolStep[];
+  input_kind?: "text" | "voice";
+  audio_path?: string | null;
+  audio_duration_ms?: number | null;
+  audio_blob_url?: string; // local playback for freshly sent audio
 }
 
 interface PartyRef {
@@ -215,6 +220,83 @@ const MODEL_LABELS: Record<ModelTier, string> = {
   max: "Máximo",
 };
 
+function formatDurationMs(ms: number | null | undefined): string {
+  if (!ms || ms <= 0) return "";
+  const total = Math.round(ms / 1000);
+  const m = Math.floor(total / 60);
+  const s = total % 60;
+  return `${m}:${String(s).padStart(2, "0")}`;
+}
+
+function VoiceMessagePlayback({
+  messageId,
+  audioBlobUrl,
+  hasAudio,
+  durationMs,
+  getAudioUrl,
+}: {
+  messageId?: string;
+  audioBlobUrl?: string;
+  hasAudio: boolean;
+  durationMs: number | null;
+  getAudioUrl: (opts: { data: { message_id: string } }) => Promise<{ url: string }>;
+}) {
+  const [url, setUrl] = useState<string | null>(audioBlobUrl ?? null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const dur = formatDurationMs(durationMs);
+
+  const load = async () => {
+    if (url || !messageId) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await getAudioUrl({ data: { message_id: messageId } });
+      setUrl(res.url);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Falha ao carregar áudio.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (!hasAudio) {
+    return (
+      <div className="mb-2 flex items-center gap-1.5 text-[11px] opacity-80">
+        <Mic className="h-3 w-3" />
+        <span>Ditado por voz{dur ? ` · ${dur}` : ""}</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mb-2 flex flex-col gap-1.5">
+      <div className="flex items-center gap-1.5 text-[11px] opacity-80">
+        <Mic className="h-3 w-3" />
+        <span>Ditado por voz{dur ? ` · ${dur}` : ""}</span>
+      </div>
+      {url ? (
+        <audio
+          controls
+          src={url}
+          className="h-8 w-full max-w-[280px]"
+          preload="none"
+        />
+      ) : (
+        <button
+          type="button"
+          onClick={load}
+          disabled={loading}
+          className="inline-flex w-fit items-center gap-1 rounded-md bg-background/20 px-2 py-1 text-[11px] hover:bg-background/30 disabled:opacity-60"
+        >
+          {loading ? "Carregando…" : error ?? "Ouvir áudio"}
+        </button>
+      )}
+    </div>
+  );
+}
+
+
 export function JurisMindChat({
   caseId,
   caseInfo,
@@ -240,6 +322,8 @@ export function JurisMindChat({
 }) {
   // askFn removido: agora usamos SSE em /api/chat/stream (streaming token-a-token)
   const getMessagesFn = useServerFn(getThreadMessages);
+  const getAudioUrlFn = useServerFn(getMessageAudioUrl);
+  const pendingAudioRef = useRef<{ blob: Blob; durationMs: number } | null>(null);
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
@@ -294,11 +378,18 @@ export function JurisMindChat({
         if (cancelled) return;
         setMessages(
           rows.map((r) => ({
+            id: r.id,
             role: r.role,
             content: r.content,
             images: r.images ?? undefined,
             citations: (r.citations as unknown as Citation[]) ?? undefined,
             steps: (r.tool_steps as unknown as ToolStep[]) ?? undefined,
+            input_kind: (r.input_kind ?? undefined) as
+              | "text"
+              | "voice"
+              | undefined,
+            audio_path: r.audio_path ?? undefined,
+            audio_duration_ms: r.audio_duration_ms ?? undefined,
           })),
         );
       } catch (e) {
@@ -393,6 +484,9 @@ export function JurisMindChat({
       };
       rec.onstop = async () => {
         cleanupAudioMonitor();
+        const durationMs = startedAtRef.current
+          ? Date.now() - startedAtRef.current
+          : 0;
         const blob = new Blob(audioChunksRef.current, { type: "audio/webm" });
         if (blob.size < 500) {
           const msg = "Nada capturado — segure o botão e fale próximo ao microfone.";
@@ -433,6 +527,8 @@ export function JurisMindChat({
             toast.error(msg);
             return;
           }
+          // Guarda o áudio para upload junto do envio da mensagem
+          pendingAudioRef.current = { blob, durationMs };
           setInput((prev) => (prev ? prev + " " + text : text));
           setMicError(null);
           setTimeout(() => inputRef.current?.focus(), 30);
@@ -612,10 +708,21 @@ export function JurisMindChat({
     if (!overridePrompt) setInput("");
     const sentImages = images;
     setImages([]);
+
+    // Áudio pendente (apenas se este envio vem de um ditado por voz)
+    const pendingAudio = overridePrompt ? null : pendingAudioRef.current;
+    pendingAudioRef.current = null;
+    const audioBlobUrl = pendingAudio
+      ? URL.createObjectURL(pendingAudio.blob)
+      : undefined;
+
     const userMsg: Msg = {
       role: "user",
       content: q || "(imagens enviadas)",
       images: sentImages,
+      input_kind: pendingAudio ? "voice" : "text",
+      audio_duration_ms: pendingAudio?.durationMs,
+      audio_blob_url: audioBlobUrl,
     };
     // Placeholder do assistant que vai sendo preenchido pelos tokens
     const assistantIdx = messages.length + 1;
@@ -658,6 +765,29 @@ export function JurisMindChat({
       const token = sess.session?.access_token;
       if (!token) throw new Error("Sessão expirada. Faça login novamente.");
 
+      // Upload do áudio (best-effort) para o bucket `chat-audio`
+      let uploadedAudioPath: string | undefined;
+      if (pendingAudio) {
+        try {
+          const uid = sess.session?.user.id;
+          if (uid) {
+            const now = new Date();
+            const path = `${uid}/${now.getFullYear()}-${String(
+              now.getMonth() + 1,
+            ).padStart(2, "0")}/${crypto.randomUUID()}.webm`;
+            const { error: upErr } = await supabase.storage
+              .from("chat-audio")
+              .upload(path, pendingAudio.blob, {
+                contentType: "audio/webm",
+                upsert: false,
+              });
+            if (!upErr) uploadedAudioPath = path;
+          }
+        } catch {
+          // se falhar o upload, seguimos sem áudio persistido
+        }
+      }
+
       const controller = new AbortController();
       abortRef.current = controller;
 
@@ -676,6 +806,9 @@ export function JurisMindChat({
           images: sentImages.length ? sentImages : undefined,
           model_tier: modelTier,
           thread_id: threadId ?? undefined,
+          input_kind: pendingAudio ? "voice" : "text",
+          audio_path: uploadedAudioPath,
+          audio_duration_ms: pendingAudio?.durationMs,
         }),
       });
       if (!res.ok || !res.body) {
@@ -1079,7 +1212,21 @@ export function JurisMindChat({
                         </ReactMarkdown>
                       </div>
                     ) : (
-                      m.content
+                      <>
+                        {m.input_kind === "voice" && (
+                          <VoiceMessagePlayback
+                            messageId={m.id}
+                            audioBlobUrl={m.audio_blob_url}
+                            hasAudio={
+                              Boolean(m.audio_blob_url) ||
+                              Boolean(m.audio_path && m.id)
+                            }
+                            durationMs={m.audio_duration_ms ?? null}
+                            getAudioUrl={getAudioUrlFn}
+                          />
+                        )}
+                        <div className="whitespace-pre-wrap">{m.content}</div>
+                      </>
                     )}
                     {m.images && m.images.length > 0 && (
                       <div className="mt-2 flex flex-wrap gap-2">

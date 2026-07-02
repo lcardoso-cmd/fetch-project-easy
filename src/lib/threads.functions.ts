@@ -29,6 +29,9 @@ export interface AiMessage {
   citations: AiCitation[] | null;
   model_tier: string | null;
   created_at: string;
+  input_kind: "text" | "voice" | null;
+  audio_path: string | null;
+  audio_duration_ms: number | null;
 }
 
 export const listThreads = createServerFn({ method: "GET" })
@@ -110,11 +113,34 @@ export const getThreadMessages = createServerFn({ method: "GET" })
     const { data: rows, error } = await context.supabase
       .from("ai_chat_messages")
       .select(
-        "id, thread_id, role, content, images, tool_steps, citations, model_tier, created_at",
+        "id, thread_id, role, content, images, tool_steps, citations, model_tier, created_at, input_kind, audio_path, audio_duration_ms",
       )
       .eq("thread_id", data.thread_id)
       .eq("user_id", context.userId)
       .order("created_at", { ascending: true });
     if (error) throw error;
     return (rows ?? []) as unknown as AiMessage[];
+  });
+
+export const getMessageAudioUrl = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((i: unknown) =>
+    z.object({ message_id: z.string().uuid() }).parse(i),
+  )
+  .handler(async ({ data, context }) => {
+    const { data: row, error } = await context.supabase
+      .from("ai_chat_messages")
+      .select("audio_path, user_id")
+      .eq("id", data.message_id)
+      .eq("user_id", context.userId)
+      .maybeSingle();
+    if (error) throw error;
+    if (!row?.audio_path) throw new Error("Áudio não encontrado.");
+    const { data: signed, error: sErr } = await context.supabase.storage
+      .from("chat-audio")
+      .createSignedUrl(row.audio_path, 60 * 30);
+    if (sErr || !signed?.signedUrl) {
+      throw new Error(sErr?.message ?? "Falha ao gerar link do áudio.");
+    }
+    return { url: signed.signedUrl };
   });
