@@ -215,7 +215,7 @@ export function CaseSummaryCard({
                 : "Indexe documentos para gerar um resumo automático."}
             </p>
             <Button onClick={generate} disabled={busy || !hasReadyDocs}>
-              <JurisMindMark size={16} className="mr-2" /> Gerar resumo com IA
+              <JurisMindMark size={16} variant="glyph-navy" className="mr-2" /> Gerar resumo com IA
             </Button>
           </div>
         )}
