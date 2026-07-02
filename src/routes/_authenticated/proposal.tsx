@@ -140,6 +140,18 @@ function ProposalPage() {
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const parsed = proposalSchema.safeParse(form);
+    if (!parsed.success) {
+      const fe: FieldErrors = {};
+      for (const issue of parsed.error.issues) {
+        const key = issue.path[0] as keyof FieldErrors;
+        if (key && !fe[key]) fe[key] = issue.message;
+      }
+      setErrors(fe);
+      toast.error("Preencha os campos obrigatórios antes de gerar a proposta.");
+      return;
+    }
+    setErrors({});
     setLoading(true);
     setOutput("");
     try {
