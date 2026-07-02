@@ -276,6 +276,18 @@ function ProposalPage() {
                     <p className="mt-2 text-xs text-muted-foreground">Cliente: {clientSummary}</p>
                   )}
                 </div>
+                <div>
+                  <Label>Nome do cliente <span className="text-destructive">*</span></Label>
+                  <Input
+                    value={form.client_name}
+                    onChange={(e) => setForm({ ...form, client_name: e.target.value })}
+                    aria-invalid={!!errors.client_name}
+                    className={errors.client_name ? "border-destructive" : ""}
+                  />
+                  {errors.client_name && (
+                    <p className="mt-1 text-xs text-destructive">{errors.client_name}</p>
+                  )}
+                </div>
               </div>
 
               <div className="space-y-3">
