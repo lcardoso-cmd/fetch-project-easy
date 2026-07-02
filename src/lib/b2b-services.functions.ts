@@ -142,14 +142,31 @@ export const createB2bRequest = createServerFn({ method: "POST" })
 
 export const listMyB2bRequests = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => {
-    const { data, error } = await context.supabase
+  .inputValidator((i: unknown) =>
+    z
+      .object({
+        service: z.string().optional(),
+        limit: z.number().int().min(1).max(50).optional(),
+        offset: z.number().int().min(0).optional(),
+      })
+      .parse(i ?? {}),
+  )
+  .handler(async ({ data, context }) => {
+    const limit = data.limit ?? 10;
+    const offset = data.offset ?? 0;
+    let q = context.supabase
       .from("b2b_service_requests")
-      .select("*")
+      .select("*", { count: "exact" })
       .eq("requester_user_id", context.userId)
-      .order("created_at", { ascending: false });
+      .order("created_at", { ascending: false })
+      .range(offset, offset + limit - 1);
+    if (data.service) q = q.eq("service_slug", data.service);
+    const { data: rows, error, count } = await q;
     if (error) throw new Error(error.message);
-    return (data ?? []) as B2bServiceRequest[];
+    return {
+      items: (rows ?? []) as B2bServiceRequest[],
+      total: count ?? 0,
+    };
   });
 
 export const listAllB2bRequests = createServerFn({ method: "GET" })
