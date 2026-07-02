@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,13 +8,57 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Handshake, Loader2, Copy, Download, FileText } from "lucide-react";
+import { Handshake, Loader2, Copy, Download, FileText, Check, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { generateProposal } from "@/lib/generators.functions";
 import { getCases } from "@/lib/cases.functions";
 import { useProfile } from "@/hooks/use-profile";
 import { RichTextEditor } from "@/components/chat/rich-text-editor";
 import { z } from "zod";
+
+const DRAFT_KEY = "jurismind:proposal-draft:v1";
+const DRAFT_DEBOUNCE_MS = 800;
+
+type Draft = { form: FormState; output: string; savedAt: number };
+
+function loadDraft(): Draft | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(DRAFT_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Draft;
+    if (!parsed?.form) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function saveDraft(d: Draft) {
+  try {
+    window.localStorage.setItem(DRAFT_KEY, JSON.stringify(d));
+  } catch {
+    // storage cheio / bloqueado — ignora silenciosamente
+  }
+}
+
+function clearDraft() {
+  try {
+    window.localStorage.removeItem(DRAFT_KEY);
+  } catch {
+    // ignora
+  }
+}
+
+function formatSavedAt(ts: number): string {
+  const diff = Math.max(0, Date.now() - ts);
+  if (diff < 5_000) return "agora mesmo";
+  if (diff < 60_000) return `há ${Math.round(diff / 1000)}s`;
+  if (diff < 3_600_000) return `há ${Math.round(diff / 60_000)} min`;
+  const d = new Date(ts);
+  return `às ${d.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })}`;
+}
+
 
 const proposalSchema = z.object({
   client_name: z.string().trim().min(2, "Informe o nome do cliente").max(200),
