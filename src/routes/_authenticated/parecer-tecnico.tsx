@@ -128,34 +128,37 @@ function ExpertOpinionPage() {
           <CardHeader>
             <CardTitle className="text-lg">Minhas solicitações de Parecer Técnico</CardTitle>
             <CardDescription>
-              Últimas solicitações enviadas à B2B para elaboração de parecer técnico.
+              Acompanhe status, anexos e histórico das solicitações enviadas à B2B.
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-2">
-            {parecerRequests.map((r) => (
-              <Link
-                key={r.id}
-                to="/contratar-b2b/$requestId"
-                params={{ requestId: r.id }}
-                className="flex items-center justify-between gap-3 rounded-md border p-3 hover:bg-accent transition-colors"
-              >
-                <div className="min-w-0 flex-1">
-                  <p className="font-medium truncate">{r.title}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {new Date(r.created_at).toLocaleDateString("pt-BR", {
-                      day: "2-digit",
-                      month: "short",
-                      year: "numeric",
-                    })}
-                  </p>
-                </div>
-                <Badge variant={statusVariant(r.status)}>
-                  {B2B_REQUEST_STATUS_LABEL[r.status]}
-                </Badge>
-                <ExternalLink className="h-4 w-4 text-muted-foreground shrink-0" />
-              </Link>
-            ))}
-            <div className="pt-2">
+          <CardContent>
+            <Accordion type="multiple" className="w-full">
+              {parecerRequests.map((r) => (
+                <AccordionItem key={r.id} value={r.id}>
+                  <AccordionTrigger className="hover:no-underline">
+                    <div className="flex items-center gap-3 w-full pr-2 min-w-0">
+                      <div className="min-w-0 flex-1 text-left">
+                        <p className="font-medium truncate">{r.title}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {new Date(r.created_at).toLocaleDateString("pt-BR", {
+                            day: "2-digit",
+                            month: "short",
+                            year: "numeric",
+                          })}
+                        </p>
+                      </div>
+                      <Badge variant={statusVariant(r.status)}>
+                        {B2B_REQUEST_STATUS_LABEL[r.status]}
+                      </Badge>
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent>
+                    <RequestPanel requestId={r.id} />
+                  </AccordionContent>
+                </AccordionItem>
+              ))}
+            </Accordion>
+            <div className="pt-3 flex gap-2">
               <Button asChild variant="ghost" size="sm">
                 <Link to="/contratar-b2b">Ver catálogo B2B</Link>
               </Button>
