@@ -549,6 +549,22 @@ function ProposalPage() {
               left: mmToPt(pdfMargins.left),
             },
           },
+          cover: pdfCoverEnabled
+            ? {
+                clientName: form.client_name,
+                clientDocument: form.client_document,
+                clientAddress: [form.client_address, form.client_city_state]
+                  .filter(Boolean)
+                  .join(" — "),
+                matter: form.matter,
+              }
+            : null,
+          watermark:
+            pdfWatermarkMode === "draft"
+              ? { text: "RASCUNHO", opacity: 0.12 }
+              : pdfWatermarkMode === "version"
+                ? { text: `VERSÃO ${pdfWatermarkVersion || "1"}`, opacity: 0.12 }
+                : null,
         }),
       });
       if (!res.ok) throw new Error(await res.text());
