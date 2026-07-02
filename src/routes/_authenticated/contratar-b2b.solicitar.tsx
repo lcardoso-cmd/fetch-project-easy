@@ -69,6 +69,22 @@ function HireB2bRequestForm() {
     [catalog, serviceSlug],
   );
 
+  const prefillNoticeShown = useRef(false);
+  useEffect(() => {
+    if (prefillNoticeShown.current) return;
+    if (!catalog.length) return;
+    const hasPrefill = Boolean(search.service && search.description);
+    if (!hasPrefill) return;
+    const svc = catalog.find((c) => c.slug === search.service);
+    prefillNoticeShown.current = true;
+    toast.success("Solicitação pré-preenchida", {
+      description: svc
+        ? `Serviço "${svc.name}" e contexto do parecer já foram preenchidos. Ajuste os detalhes antes de enviar.`
+        : "Serviço e contexto do parecer já foram preenchidos. Ajuste os detalhes antes de enviar.",
+    });
+  }, [catalog, search.service, search.description]);
+
+
   const handleFiles = (list: FileList | null) => {
     if (!list) return;
     const next = [...files];
