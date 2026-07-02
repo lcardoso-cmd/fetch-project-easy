@@ -36,6 +36,7 @@ import {
   ListTodo,
 } from "lucide-react";
 import { toast } from "sonner";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 import { getCase, updateCase } from "@/lib/cases.functions";
 import { listDocuments } from "@/lib/documents.functions";
