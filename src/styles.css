@@ -151,3 +151,9 @@
     color: var(--color-foreground);
   }
 }
+
+.proposal-preview h1 { font-size: 1.15rem; font-weight: 700; margin: 0 0 1rem; }
+.proposal-preview h2 { font-size: 0.95rem; font-weight: 700; margin: 1.25rem 0 0.5rem; text-transform: uppercase; letter-spacing: 0.02em; color: var(--color-foreground); border-bottom: 1px solid var(--color-border); padding-bottom: 0.25rem; }
+.proposal-preview h3 { font-size: 0.9rem; font-weight: 600; margin: 0.75rem 0 0.25rem; }
+.proposal-preview p { margin: 0.35rem 0; }
+.proposal-preview ul, .proposal-preview ol { margin: 0.5rem 0 0.5rem 1.25rem; }
