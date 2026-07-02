@@ -592,7 +592,7 @@ function NewCasePage() {
         <Card>
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
-              <JurisMindMark size={20} /> Importar documento (opcional)
+              <JurisMindMark size={20} variant="glyph-navy" /> Importar documento (opcional)
             </CardTitle>
             <CardDescription>
               Envie a petição, contrato ou processo. O JurisMind lê e preenche os campos abaixo.

@@ -748,7 +748,7 @@ export function JurisMindChat({
           <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4">
             {messages.length === 0 ? (
               <div className="flex h-full flex-col items-center justify-center gap-3 text-center text-muted-foreground">
-                <JurisMindMark size={56} />
+                <JurisMindMark size={56} variant="square-navy" />
                 <p className="font-medium text-foreground">
                   Pergunte sobre os documentos do caso
                 </p>

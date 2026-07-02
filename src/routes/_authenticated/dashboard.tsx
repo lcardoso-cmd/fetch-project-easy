@@ -118,7 +118,7 @@ function DashboardPage() {
         <Card className="lg:col-span-3">
           <CardHeader>
             <CardTitle className="font-heading flex items-center gap-2">
-              <JurisMindMark size={18} />
+              <JurisMindMark size={18} variant="glyph-navy" />
               Assistente JurisMind
             </CardTitle>
             <CardDescription>
