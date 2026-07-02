@@ -28,6 +28,8 @@ import { supabase } from "@/integrations/supabase/client";
 const searchSchema = z.object({
   service: z.string().optional(),
   case_id: z.string().uuid().optional(),
+  title: z.string().optional(),
+  description: z.string().optional(),
 });
 
 export const Route = createFileRoute("/_authenticated/contratar-b2b/solicitar")({
