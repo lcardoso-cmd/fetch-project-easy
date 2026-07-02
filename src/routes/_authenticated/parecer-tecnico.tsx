@@ -116,14 +116,9 @@ function ExpertOpinionPage() {
           <Button asChild>
             <Link
               to="/contratar-b2b/solicitar"
-              search={{
-                service: "parecer-tecnico",
-                title: "Parecer Técnico - contratação B2B",
-                description:
-                  "Necessito de parecer técnico elaborado pela B2B Consulting para instruir processo em que o escritório não dispõe de perito próprio.\n\n=== 1. Objetivo ===\n[Descreva em 1-2 frases a pergunta técnica central a ser respondida pelo parecer.]\n\n=== 2. Escopo ===\n- Área do parecer (econômica, contábil, financeira, de engenharia, contratual): \n- Natureza da demanda (cível, trabalhista, tributária, societária, regulatória): \n- Pontos que DEVEM ser analisados: \n- Pontos que estão FORA do escopo: \n\n=== 3. Prazo ===\n- Data-limite desejada para entrega: \n- Prazo judicial vinculado (se houver): \n- Urgência (normal / prioritária / crítica): \n\n=== 4. Contexto do caso ===\n- Partes envolvidas: \n- Fase processual: \n- Quesitos preliminares: \n- Documentos disponíveis (anexar abaixo): \n\n=== 5. Observações adicionais ===\n[Informações extras, restrições de sigilo, contatos preferenciais.]",
-
-              }}
+              search={PARECER_PREFILL}
             >
+
               Contratar Parecer Técnico com a B2B
               <ArrowRight className="ml-2 h-4 w-4" />
             </Link>
