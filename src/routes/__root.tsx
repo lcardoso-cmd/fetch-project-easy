@@ -87,6 +87,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { name: "twitter:site", content: "@JurisMind" },
+      { name: "twitter:title", content: "B2B | JurisMind AI" },
+      { name: "twitter:description", content: "B2B | JurisMind AI é uma plataforma jurídica para advogados: RAG de documentos jurídicos e gestão inteligente de prazos." },
+      { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/Sls90jSFrMa8ECulf4OjLMG7sRB3/social-images/social-1783001247994-LOGO_JURISMIND_16-9.webp" },
+      { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/Sls90jSFrMa8ECulf4OjLMG7sRB3/social-images/social-1783001247994-LOGO_JURISMIND_16-9.webp" },
     ],
     links: [
       {
