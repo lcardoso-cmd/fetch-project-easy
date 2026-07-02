@@ -10,14 +10,46 @@ import {
 } from "@/lib/notifications.functions";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { AtSign, CheckCheck, ClipboardList, FolderOpen, Inbox } from "lucide-react";
+import {
+  AtSign,
+  CheckCheck,
+  ClipboardList,
+  FolderOpen,
+  Inbox,
+  Paperclip,
+  Sparkles,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/notificacoes")({
   component: NotificationsPage,
 });
 
-type Filter = "all" | "unread" | "mentions" | "tasks" | "cases" | "direct";
+type Filter = "all" | "unread" | "mentions" | "tasks" | "b2b" | "cases" | "direct";
+
+function notifCaseId(n: NotificationItem): string | null {
+  if (n.kind === "mention" || n.kind === "task") return n.case_id ?? null;
+  return null;
+}
+
+function notifTitle(n: NotificationItem): string {
+  if (n.kind === "mention") return `${n.author_name} mencionou você`;
+  if (n.kind === "task") return n.title;
+  return n.summary;
+}
+
+function notifPreview(n: NotificationItem): string {
+  if (n.kind === "mention") return n.preview || "(sem conteúdo)";
+  if (n.kind === "task") return `Tarefa: ${n.status}`;
+  return n.detail;
+}
+
+function NotifIcon({ n, className }: { n: NotificationItem; className?: string }) {
+  if (n.kind === "mention") return <AtSign className={className} />;
+  if (n.kind === "task") return <ClipboardList className={className} />;
+  if (n.event_kind === "attachment") return <Paperclip className={className} />;
+  return <Sparkles className={className} />;
+}
 
 function NotificationsPage() {
   const qc = useQueryClient();
@@ -39,7 +71,8 @@ function NotificationsPage() {
       if (filter === "unread") return !n.read;
       if (filter === "mentions") return n.kind === "mention";
       if (filter === "tasks") return n.kind === "task";
-      if (filter === "cases") return !!n.case_id;
+      if (filter === "b2b") return n.kind === "b2b_event";
+      if (filter === "cases") return !!notifCaseId(n);
       if (filter === "direct") return n.kind === "mention" && !n.case_id;
       return true;
     });
@@ -66,6 +99,7 @@ function NotificationsPage() {
     { id: "unread", label: "Não lidas", count: items.filter((i) => !i.read).length },
     { id: "mentions", label: "Menções" },
     { id: "tasks", label: "Tarefas" },
+    { id: "b2b", label: "B2B" },
     { id: "cases", label: "Por caso" },
     { id: "direct", label: "Diretas" },
   ];
@@ -126,23 +160,17 @@ function NotificationsPage() {
                     )}
                   >
                     <div className="mt-0.5 text-muted-foreground">
-                      {n.kind === "mention" ? (
-                        <AtSign className="h-4 w-4" />
-                      ) : (
-                        <ClipboardList className="h-4 w-4" />
-                      )}
+                      <NotifIcon n={n} className="h-4 w-4" />
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
-                        <span className="truncate text-sm">
-                          {n.kind === "mention" ? n.author_name : n.title}
-                        </span>
+                        <span className="truncate text-sm">{notifTitle(n)}</span>
                         {!n.read && (
                           <span className="ml-auto h-2 w-2 shrink-0 rounded-full bg-primary" />
                         )}
                       </div>
                       <p className="truncate text-xs text-muted-foreground">
-                        {n.kind === "mention" ? n.preview : `Tarefa: ${n.status}`}
+                        {notifPreview(n)}
                       </p>
                       <p className="mt-0.5 text-[11px] text-muted-foreground">
                         {new Date(n.created_at).toLocaleString("pt-BR")}
@@ -163,16 +191,8 @@ function NotificationsPage() {
           ) : (
             <div className="space-y-4">
               <div className="flex items-center gap-2">
-                {selected.kind === "mention" ? (
-                  <AtSign className="h-5 w-5 text-primary" />
-                ) : (
-                  <ClipboardList className="h-5 w-5 text-primary" />
-                )}
-                <h2 className="text-lg font-semibold">
-                  {selected.kind === "mention"
-                    ? `Menção de ${selected.author_name}`
-                    : selected.title}
-                </h2>
+                <NotifIcon n={selected} className="h-5 w-5 text-primary" />
+                <h2 className="text-lg font-semibold">{notifTitle(selected)}</h2>
                 {!selected.read && <Badge>Não lida</Badge>}
               </div>
               <p className="text-xs text-muted-foreground">
@@ -183,7 +203,7 @@ function NotificationsPage() {
                 <div className="rounded-md border bg-muted/30 p-4 text-sm whitespace-pre-wrap">
                   {selected.preview || "(sem conteúdo)"}
                 </div>
-              ) : (
+              ) : selected.kind === "task" ? (
                 <div className="space-y-2 text-sm">
                   <div>
                     Status: <Badge variant="secondary">{selected.status}</Badge>
@@ -195,14 +215,20 @@ function NotificationsPage() {
                     </div>
                   )}
                 </div>
+              ) : (
+                <div className="space-y-2 text-sm">
+                  <div className="text-muted-foreground">Pedido:</div>
+                  <div className="font-medium">{selected.request_title}</div>
+                  <div className="text-muted-foreground">{selected.detail}</div>
+                </div>
               )}
 
               <div className="flex flex-wrap gap-2 pt-2">
-                {selected.case_id && (
+                {notifCaseId(selected) && (
                   <Button asChild variant="outline" size="sm">
                     <Link
                       to="/assistencias/$caseId"
-                      params={{ caseId: selected.case_id }}
+                      params={{ caseId: notifCaseId(selected)! }}
                     >
                       <FolderOpen className="mr-2 h-4 w-4" />
                       Abrir caso
@@ -217,6 +243,16 @@ function NotificationsPage() {
                 {selected.kind === "task" && (
                   <Button asChild variant="outline" size="sm">
                     <Link to="/tarefas">Ver tarefas</Link>
+                  </Button>
+                )}
+                {selected.kind === "b2b_event" && (
+                  <Button asChild variant="outline" size="sm">
+                    <Link
+                      to="/contratar-b2b/$requestId"
+                      params={{ requestId: selected.request_id }}
+                    >
+                      Abrir pedido B2B
+                    </Link>
                   </Button>
                 )}
                 {selected.kind === "mention" && !selected.read && (
