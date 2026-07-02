@@ -154,16 +154,49 @@ function HireB2bRequestForm() {
       });
       return;
     }
-    if (hasPrefill) {
+    // Feedback quando o usuário chegou pela URL/CTA mas algum campo veio vazio
+    // ou inválido — avisar em vez de silenciar.
+    const cameFromCta = Boolean(
+      search.service || search.title || search.description || search.case_id,
+    );
+    if (cameFromCta) {
+      const missing: string[] = [];
+      if (!search.service?.trim()) missing.push("serviço");
+      if (!search.title?.trim()) missing.push("título");
+      if (!search.description?.trim()) missing.push("descrição");
+
+      const unknownService = Boolean(
+        search.service && !catalog.find((c) => c.slug === search.service),
+      );
+
+      if (unknownService) {
+        noticeShown.current = true;
+        toast.warning("Serviço não reconhecido", {
+          description: `O serviço "${search.service}" não foi encontrado no catálogo B2B atual. Escolha um serviço válido abaixo antes de enviar.`,
+          duration: 8000,
+        });
+        return;
+      }
+
+      if (missing.length > 0) {
+        noticeShown.current = true;
+        toast.warning("Solicitação parcialmente pré-preenchida", {
+          description: `Faltou preencher: ${missing.join(", ")}. Complete os campos destacados antes de enviar.`,
+          duration: 8000,
+        });
+        return;
+      }
+
       const svc = catalog.find((c) => c.slug === search.service);
       noticeShown.current = true;
       toast.success("Solicitação pré-preenchida", {
         description: svc
-          ? `Serviço "${svc.title}" e contexto do parecer já foram preenchidos. Ajuste os detalhes antes de enviar.`
-          : "Serviço e contexto do parecer já foram preenchidos. Ajuste os detalhes antes de enviar.",
+          ? `Serviço "${svc.title}" e contexto já foram preenchidos. Ajuste os detalhes antes de enviar.`
+          : "Serviço e contexto já foram preenchidos. Ajuste os detalhes antes de enviar.",
       });
     }
-  }, [catalog, search.service, search.description, savedDraft]);
+  }, [catalog, search.service, search.title, search.description, search.case_id, savedDraft]);
+
 
 
 
@@ -269,7 +302,10 @@ function HireB2bRequestForm() {
           <div className="space-y-2">
             <Label>Tipo de serviço *</Label>
             <Select value={serviceSlug} onValueChange={setServiceSlug}>
-              <SelectTrigger>
+              <SelectTrigger
+                aria-invalid={!serviceSlug}
+                className={!serviceSlug ? "border-destructive focus-visible:ring-destructive" : ""}
+              >
                 <SelectValue placeholder="Selecione o serviço" />
               </SelectTrigger>
               <SelectContent>
@@ -280,6 +316,11 @@ function HireB2bRequestForm() {
                 ))}
               </SelectContent>
             </Select>
+            {!serviceSlug && (
+              <p className="text-xs text-destructive" role="alert">
+                Selecione um serviço para continuar.
+              </p>
+            )}
             {selectedService && (
               <p className="text-xs text-muted-foreground">
                 {selectedService.description}
@@ -293,8 +334,16 @@ function HireB2bRequestForm() {
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Ex.: Parecer contábil em ação de apuração de haveres"
+              aria-invalid={title.trim().length < 3}
+              className={title.trim().length < 3 ? "border-destructive focus-visible:ring-destructive" : ""}
             />
+            {title.trim().length < 3 && (
+              <p className="text-xs text-destructive" role="alert">
+                Informe um título com pelo menos 3 caracteres.
+              </p>
+            )}
           </div>
+
 
           <div className="space-y-2">
             <Label>Descrição da demanda *</Label>
