@@ -116,7 +116,12 @@ function buildNav(practice: PracticeType | null | undefined): NavItem[] {
     link("calendar", "/agenda", "Agenda", CalendarDays),
     link("my-files", "/documentos", "Meus Documentos", FileArchive),
     link("drafter", "/pecas", isLawyer ? "Peças Jurídicas" : labels.outputLabel, Scale),
-    link("expert-opinion", "/parecer-tecnico", "Parecer Técnico", Microscope),
+    // Evita duplicar "Parecer Técnico" para o assistente técnico, cujo
+    // drafter já usa esse mesmo rótulo. Perito e advogado seguem vendo o
+    // módulo dedicado.
+    ...(practice === "assistente_tecnico"
+      ? []
+      : [link("expert-opinion", "/parecer-tecnico", "Parecer Técnico", Microscope)]),
 
     // ─── NEGÓCIO ───
     { type: "separator" },
