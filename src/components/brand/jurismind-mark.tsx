@@ -174,9 +174,9 @@ export function JurisMindMark({
   className?: string;
   size?: number;
   /** Explicit variant. Prefer `context` unless you need a specific asset. */
-  variant?: JurisMindVariant;
+  variant?: JurisMindVariant | null;
   /** Semantic layout context; resolves to the correct variant automatically. */
-  context?: JurisMindContext;
+  context?: JurisMindContext | null;
   /** Force rounded corners. Square variants are rounded by default. */
   rounded?: boolean;
   /**
