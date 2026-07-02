@@ -38,6 +38,7 @@ import {
   type UploadItem,
 } from "./upload-progress-list";
 import { ImportFromLibraryDialog } from "./import-from-library-dialog";
+import { FilePreviewCard } from "./file-preview-card";
 
 const ACCEPTED_TYPES = [
   "application/pdf",
@@ -130,6 +131,9 @@ export function UploadDialog({
   const discardFn = useServerFn(discardUploadedObject);
   // Controllers por item — permitem abortar hash/upload em andamento.
   const abortersRef = useRef<Map<string, AbortController>>(new Map());
+  // Hashes pré-calculados na etapa de prévia — evita re-hash no upload.
+  const precomputedHashesRef = useRef<Map<string, string>>(new Map());
+  const fileKey = (f: File) => `${f.name}|${f.size}|${f.lastModified}`;
   // Flag para interromper o loop da fila sem depender do estado React.
   const cancelAllRef = useRef(false);
 
@@ -150,6 +154,7 @@ export function UploadDialog({
       // Aborta tudo que estiver em voo ao fechar o diálogo.
       abortersRef.current.forEach((c) => c.abort());
       abortersRef.current.clear();
+      precomputedHashesRef.current.clear();
       cancelAllRef.current = false;
       setFiles([]);
       setItems([]);
@@ -200,9 +205,10 @@ export function UploadDialog({
     const isAbort = (e: unknown) =>
       signal.aborted || (e instanceof DOMException && e.name === "AbortError");
     try {
-      // 1. Hash
+      // 1. Hash — reaproveita o cálculo feito na prévia se disponível.
       patchItem(itemId, { phase: "hashing", pct: 0 });
-      const contentHash = await hashFile(file);
+      const cached = precomputedHashesRef.current.get(fileKey(file));
+      const contentHash = cached ?? (await hashFile(file));
       if (signal.aborted) throw new DOMException("cancel", "AbortError");
 
       // 2. URL assinada
@@ -423,7 +429,7 @@ export function UploadDialog({
             </Button>
           </DialogTrigger>
           <DialogContent
-            className="sm:max-w-lg"
+            className="sm:max-w-2xl"
             onDragOver={(e) => {
               e.preventDefault();
               setDragOver(true);
@@ -473,26 +479,40 @@ export function UploadDialog({
 
             {files.length > 0 && (
               <div className="space-y-2">
-                <p className="text-sm font-medium">Arquivos selecionados:</p>
-                <ul className="max-h-40 space-y-1 overflow-auto rounded-md border p-2 text-sm">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-sm font-medium">
+                    Revisar antes de registrar
+                    <span className="ml-1 text-xs font-normal text-muted-foreground">
+                      ({files.length}{" "}
+                      {files.length === 1 ? "arquivo" : "arquivos"})
+                    </span>
+                  </p>
+                  <button
+                    type="button"
+                    className="text-xs text-muted-foreground hover:text-foreground"
+                    onClick={() => inputRef.current?.click()}
+                  >
+                    + adicionar
+                  </button>
+                </div>
+                <div className="max-h-[420px] space-y-2 overflow-auto pr-1">
                   {files.map((f) => (
-                    <li
-                      key={`${f.name}-${f.lastModified}`}
-                      className="flex items-center justify-between gap-2"
-                    >
-                      <span className="truncate">{f.name}</span>
-                      <button
-                        type="button"
-                        className="text-xs text-muted-foreground hover:text-foreground"
-                        onClick={() =>
-                          setFiles((prev) => prev.filter((x) => x !== f))
-                        }
-                      >
-                        remover
-                      </button>
-                    </li>
+                    <FilePreviewCard
+                      key={`${f.name}-${f.lastModified}-${f.size}`}
+                      file={f}
+                      onRemove={() =>
+                        setFiles((prev) => prev.filter((x) => x !== f))
+                      }
+                      onHashComputed={(h) =>
+                        precomputedHashesRef.current.set(fileKey(f), h)
+                      }
+                    />
                   ))}
-                </ul>
+                </div>
+                <p className="text-[11px] text-muted-foreground">
+                  Confira o conteúdo e os metadados extraídos. Nada é gravado
+                  no caso até você confirmar o envio.
+                </p>
               </div>
             )}
 
@@ -536,7 +556,7 @@ export function UploadDialog({
                   disabled={busy || files.length === 0}
                 >
                   {busy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Iniciar upload
+                  Confirmar e registrar
                 </Button>
               ) : (
                 <Button
