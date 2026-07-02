@@ -53,6 +53,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { JurisMindMark } from "@/components/brand/jurismind-mark";
+import {
+  blobToBase64,
+  concatFloat32,
+  downsampleTo,
+  encodeWavPcm16,
+  rmsOf,
+} from "@/lib/audio/wav-encoder";
 
 function capitalize(s: string) {
   if (!s) return s;
