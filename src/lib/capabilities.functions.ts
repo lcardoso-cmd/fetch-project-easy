@@ -23,6 +23,34 @@ export const CAPABILITY_LABELS: Record<Capability, string> = {
 };
 
 /**
+ * Explicação curta ("por quê") de cada permissão — usada em tooltips,
+ * legendas de menus ocultos e telas de gestão de equipe. Fonte única
+ * da verdade: qualquer motivo mostrado ao usuário sobre permissões
+ * deve vir daqui.
+ */
+export const CAPABILITY_DESCRIPTIONS: Record<Capability, string> = {
+  cases:
+    "Acesso aos casos, clientes e documentos vinculados do escritório.",
+  expert_opinion:
+    "Elaboração de pareceres técnicos — reservado a peritos.",
+  commercial:
+    "Criação e versionamento de propostas comerciais.",
+  marketing:
+    "Materiais de marketing e monitoramento de publicações.",
+  office_admin:
+    "Gestão do escritório: equipe, integrações, cobrança e configurações.",
+  platform_admin:
+    "Administração B2B da JurisMind — restrita à equipe interna.",
+};
+
+/**
+ * Frase padrão "Requer a permissão «X»" usada em todo o app.
+ */
+export function formatRequiresPhrase(cap: Capability): string {
+  return `Requer a permissão «${CAPABILITY_LABELS[cap]}».`;
+}
+
+/**
  * Retorna as capacidades do usuário autenticado.
  */
 export const getMyCapabilities = createServerFn({ method: "GET" })
