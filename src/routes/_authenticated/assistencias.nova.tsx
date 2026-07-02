@@ -287,7 +287,11 @@ function NewCasePage() {
   });
 
   const applyExtracted = (e: ExtractedCaseData) => {
+    // Título só é preenchido a partir do documento se o usuário ainda não
+    // customizou nada — caso contrário respeitamos a edição manual.
+    // A auto-geração final baseada nas partes é feita pelo useEffect abaixo.
     setTitle(e.title);
+    setTitleAuto(true);
     setClientName(e.client_name ?? "");
     setCaseNumber(e.case_number ?? "");
     setJurisdiction(e.jurisdiction ?? "");
@@ -300,6 +304,17 @@ function NewCasePage() {
       }),
     );
   };
+
+  // Auto-geração do título: quando o usuário identifica assistida/contrária
+  // (ou requerida/requerente, dependendo da matéria), montamos o caption
+  // "Parte A vs Parte B" — desde que o título ainda esteja em modo "auto".
+  useEffect(() => {
+    if (!titleAuto) return;
+    const generated = buildCaseTitle(matterKind, parties);
+    if (generated && generated !== title) {
+      setTitle(generated);
+    }
+  }, [titleAuto, matterKind, parties, title]);
 
   const handleFile = async (file: File) => {
     if (!user) return;
