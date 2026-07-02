@@ -55,8 +55,8 @@ function HireB2bRequestForm() {
   });
 
   const [serviceSlug, setServiceSlug] = useState(search.service ?? "");
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
+  const [title, setTitle] = useState(search.title ?? "");
+  const [description, setDescription] = useState(search.description ?? "");
   const [urgency, setUrgency] = useState<"normal" | "alta" | "critica">("normal");
   const [deadline, setDeadline] = useState("");
   const [email, setEmail] = useState(user?.email ?? "");
