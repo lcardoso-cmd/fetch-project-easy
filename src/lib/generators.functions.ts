@@ -32,6 +32,40 @@ export const generateProposal = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => ProposalSchema.parse(input))
   .handler(async ({ data }) => {
+    const counterpartyFilled = Boolean(
+      data.counterparty_name ||
+        data.counterparty_document ||
+        data.counterparty_address ||
+        data.counterparty_city_state ||
+        data.counterparty_lawyer,
+    );
+    const clientFilled = Boolean(
+      data.client_name || data.client_document || data.client_address || data.client_city_state,
+    );
+    const firmFilled = Boolean(
+      data.firm_name ||
+        data.firm_practice_areas ||
+        data.firm_address ||
+        data.firm_phone ||
+        data.firm_email ||
+        data.lawyer_name ||
+        data.lawyer_title,
+    );
+
+    const omitInstructions = [
+      !counterpartyFilled
+        ? '- OMITA POR COMPLETO qualquer seção, título, subtítulo ou parágrafo sobre a "Contraparte" / "Parte contrária" / "Réu" / "Requerido". Não escreva o cabeçalho "Contraparte" nem frases como "a ser identificada", "a definir" ou "[Nome da contraparte]". Simplesmente não mencione a contraparte.'
+        : "",
+      !clientFilled
+        ? '- OMITA POR COMPLETO qualquer seção "Dados do Cliente" / "Contratante" e não invente identificação. Refira-se genericamente como "o Cliente" quando estritamente necessário.'
+        : "",
+      !firmFilled
+        ? '- OMITA POR COMPLETO a seção "Dados do Escritório" e o bloco de assinatura com identificação do advogado.'
+        : "",
+    ]
+      .filter(Boolean)
+      .join("\n");
+
     const system = `Você é um advogado sênior brasileiro especialista em redigir propostas comerciais de serviços jurídicos. Use linguagem ${data.tone}, estrutura clara com as seções: Apresentação, Objeto, Escopo de Serviços, Honorários, Prazo, Condições Gerais, Aceite. Português do Brasil.
 
 FORMATO DE SAÍDA (OBRIGATÓRIO):
@@ -39,10 +73,12 @@ FORMATO DE SAÍDA (OBRIGATÓRIO):
 - NÃO use Markdown, NÃO use crases, NÃO use "#", NÃO use "**", NÃO use "---". Nada de blocos de código.
 - Comece por <h1 style="text-align:center">PROPOSTA DE PRESTAÇÃO DE SERVIÇOS JURÍDICOS</h1>.
 
-REGRAS DE PREENCHIMENTO:
-- Use SEMPRE os dados fornecidos — nunca deixe placeholders como "[Nome do Escritório]", "[Endereço]", "[definir percentual]".
-- Quando um dado NÃO for informado, OMITA a linha/parágrafo/seção correspondente por completo. Não escreva colchetes vazios, nem "a definir", nem "não informado".
-- Não invente CNPJ, endereços, telefones, valores, nomes ou datas.`;
+REGRAS DE PREENCHIMENTO (OBRIGATÓRIAS):
+- Use SEMPRE os dados fornecidos — nunca deixe placeholders como "[Nome do Escritório]", "[Endereço]", "[definir percentual]", "___", "xxx", "(a definir)", "(a preencher)", "N/A".
+- Quando um dado NÃO for informado, OMITA a linha/parágrafo/seção correspondente por completo. Não escreva colchetes vazios, nem "a definir", nem "não informado", nem reticências indicando lacuna.
+- Se após omitir só sobrar o cabeçalho de uma seção, OMITA também o cabeçalho.
+- Não invente CNPJ, endereços, telefones, valores, nomes ou datas.
+${omitInstructions ? `\nOMISSÕES ESPECÍFICAS DESTA PROPOSTA:\n${omitInstructions}` : ""}`;
     const line = (label: string, value: string) => (value ? `- ${label}: ${value}` : `- ${label}: (não informado — omitir do texto)`);
     const user = `Gere uma proposta comercial usando exatamente os dados abaixo:
 
@@ -96,8 +132,121 @@ Retorne apenas o HTML da proposta, sem comentários adicionais.`;
         .map((p) => `<p>${p.replace(/\n/g, "<br>")}</p>`)
         .join("");
     }
+    // Sanitização determinística: remove placeholders remanescentes e blocos vazios.
+    html = sanitizeProposalHtml(html, { counterpartyFilled, clientFilled, firmFilled });
     return { content: html };
   });
+
+/**
+ * Remove placeholders remanescentes (colchetes, "a definir", "xxx", "___") e
+ * blocos que ficaram vazios/somente com cabeçalho quando o usuário deixou
+ * campos vazios. Impede que o preview e o .docx renderizem "buracos".
+ */
+function sanitizeProposalHtml(
+  html: string,
+  flags: { counterpartyFilled: boolean; clientFilled: boolean; firmFilled: boolean },
+): string {
+  let out = html;
+
+  // 1) Remove placeholders inline dentro do texto.
+  //    - "[qualquer coisa]"  → nada
+  //    - "(a definir)", "(a combinar)", "(a preencher)", "(não informado)", "(pendente)"
+  //    - sequências "___" ou "xxx" (3+)
+  const inlinePlaceholders: RegExp[] = [
+    /\[[^\]\n<]{1,120}\]/g,
+    /\((?:a\s+(?:definir|combinar|preencher|especificar)|não\s+informad[oa]|pendente|n\/?a)\)/gi,
+    /\b_{3,}\b/g,
+    /\bx{3,}\b/gi,
+  ];
+  for (const re of inlinePlaceholders) out = out.replace(re, "");
+
+  // 2) Remove seções da contraparte (h1/h2/h3 + conteúdo até o próximo heading do MESMO nível ou superior)
+  //    quando o usuário não informou nada da contraparte.
+  if (!flags.counterpartyFilled) {
+    out = removeSectionByHeading(out, /contraparte|parte\s+contr[aá]ria|r[eé]u|requerid[oa]/i);
+  }
+  if (!flags.clientFilled) {
+    out = removeSectionByHeading(out, /dados\s+d[oa]\s+cliente|contratante/i);
+  }
+  if (!flags.firmFilled) {
+    out = removeSectionByHeading(out, /dados\s+d[oa]\s+escrit[oó]rio|do\s+escrit[oó]rio/i);
+  }
+
+  // 3) Colapsa espaços/pontuação órfã dentro de tags de texto.
+  out = out.replace(/<(p|li|h1|h2|h3)([^>]*)>\s*([:;,.\-–—]\s*)+/gi, "<$1$2>");
+  out = out.replace(/(\s*[:;,\-–—]\s*)+<\/(p|li|h1|h2|h3)>/gi, "</$2>");
+
+  // 4) Remove parágrafos/itens/headings que ficaram vazios após limpeza.
+  //    Roda em loop porque remover um heading pode deixar o seguinte também vazio.
+  const emptyBlock = /<(p|li|h1|h2|h3)\b[^>]*>\s*(?:<br\s*\/?>|&nbsp;|\s)*\s*<\/\1>/gi;
+  for (let i = 0; i < 3; i++) {
+    const before = out;
+    out = out.replace(emptyBlock, "");
+    if (out === before) break;
+  }
+
+  // 5) Remove listas <ul>/<ol> que ficaram sem <li>.
+  out = out.replace(/<(ul|ol)\b[^>]*>\s*<\/\1>/gi, "");
+
+  // 6) Remove heading seguido imediatamente de outro heading de mesmo nível ou superior
+  //    (indica que a seção ficou sem corpo).
+  const stripEmptyHeading = (level: 1 | 2 | 3) => {
+    const re = new RegExp(
+      `<h${level}\\b[^>]*>[\\s\\S]*?<\\/h${level}>\\s*(?=<h[1-${level}]\\b|$)`,
+      "gi",
+    );
+    for (let i = 0; i < 3; i++) {
+      const before = out;
+      out = out.replace(re, "");
+      if (out === before) break;
+    }
+  };
+  stripEmptyHeading(3);
+  stripEmptyHeading(2);
+
+  // 7) Colapsa múltiplos espaços em branco entre tags.
+  out = out.replace(/(\s*\n\s*){3,}/g, "\n\n");
+
+  return out.trim();
+}
+
+function removeSectionByHeading(html: string, headingPattern: RegExp): string {
+  // Encontra <h1|h2|h3>...heading...</hN> e remove tudo até o próximo heading de nível <= N (ou fim).
+  const headingRe = /<h([1-3])\b[^>]*>([\s\S]*?)<\/h\1>/gi;
+  const matches: { start: number; end: number; level: number; text: string }[] = [];
+  let m: RegExpExecArray | null;
+  while ((m = headingRe.exec(html)) !== null) {
+    matches.push({
+      start: m.index,
+      end: m.index + m[0].length,
+      level: Number(m[1]),
+      text: m[2].replace(/<[^>]+>/g, "").trim(),
+    });
+  }
+  // Remove do maior índice para o menor para não bagunçar offsets.
+  const toRemove: { from: number; to: number }[] = [];
+  for (let i = 0; i < matches.length; i++) {
+    const h = matches[i];
+    if (!headingPattern.test(h.text)) continue;
+    // acha próximo heading de nível <= h.level
+    let cutEnd = html.length;
+    for (let j = i + 1; j < matches.length; j++) {
+      if (matches[j].level <= h.level) {
+        cutEnd = matches[j].start;
+        break;
+      }
+    }
+    toRemove.push({ from: h.start, to: cutEnd });
+  }
+  // mescla intervalos e aplica de trás pra frente
+  toRemove.sort((a, b) => b.from - a.from);
+  let out = html;
+  for (const r of toRemove) {
+    out = out.slice(0, r.from) + out.slice(r.to);
+  }
+  return out;
+}
+
 
 const MarketingSchema = z.object({
   topic: z.string().min(1).max(500),
