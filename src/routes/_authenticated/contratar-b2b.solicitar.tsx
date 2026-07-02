@@ -54,13 +54,43 @@ function HireB2bRequestForm() {
     queryFn: () => catalogFn(),
   });
 
-  const [serviceSlug, setServiceSlug] = useState(search.service ?? "");
-  const [title, setTitle] = useState(search.title ?? "");
-  const [description, setDescription] = useState(search.description ?? "");
-  const [urgency, setUrgency] = useState<"normal" | "alta" | "critica">("normal");
-  const [deadline, setDeadline] = useState("");
-  const [email, setEmail] = useState(user?.email ?? "");
-  const [phone, setPhone] = useState("");
+  const draftKey = useMemo(
+    () => `b2b-request-draft:${search.case_id ?? "no-case"}`,
+    [search.case_id],
+  );
+
+  const savedDraft = useMemo(() => {
+    if (typeof window === "undefined") return null;
+    try {
+      const raw = window.sessionStorage.getItem(draftKey);
+      if (!raw) return null;
+      return JSON.parse(raw) as {
+        serviceSlug?: string;
+        title?: string;
+        description?: string;
+        urgency?: "normal" | "alta" | "critica";
+        deadline?: string;
+        email?: string;
+        phone?: string;
+      };
+    } catch {
+      return null;
+    }
+  }, [draftKey]);
+
+  const [serviceSlug, setServiceSlug] = useState(
+    savedDraft?.serviceSlug ?? search.service ?? "",
+  );
+  const [title, setTitle] = useState(savedDraft?.title ?? search.title ?? "");
+  const [description, setDescription] = useState(
+    savedDraft?.description ?? search.description ?? "",
+  );
+  const [urgency, setUrgency] = useState<"normal" | "alta" | "critica">(
+    savedDraft?.urgency ?? "normal",
+  );
+  const [deadline, setDeadline] = useState(savedDraft?.deadline ?? "");
+  const [email, setEmail] = useState(savedDraft?.email ?? user?.email ?? "");
+  const [phone, setPhone] = useState(savedDraft?.phone ?? "");
   const [files, setFiles] = useState<File[]>([]);
   const [submitting, setSubmitting] = useState(false);
 
@@ -69,20 +99,52 @@ function HireB2bRequestForm() {
     [catalog, serviceSlug],
   );
 
-  const prefillNoticeShown = useRef(false);
+  // Persist draft on any change (debounced via microtask via effect deps).
   useEffect(() => {
-    if (prefillNoticeShown.current) return;
+    if (typeof window === "undefined") return;
+    const hasAny =
+      serviceSlug || title || description || deadline || phone ||
+      urgency !== "normal";
+    try {
+      if (hasAny) {
+        window.sessionStorage.setItem(
+          draftKey,
+          JSON.stringify({
+            serviceSlug, title, description, urgency, deadline, email, phone,
+          }),
+        );
+      } else {
+        window.sessionStorage.removeItem(draftKey);
+      }
+    } catch {
+      /* storage full/blocked — ignore */
+    }
+  }, [draftKey, serviceSlug, title, description, urgency, deadline, email, phone]);
+
+  const noticeShown = useRef(false);
+  useEffect(() => {
+    if (noticeShown.current) return;
     if (!catalog.length) return;
+    // Restored draft takes precedence over prefill notice.
+    if (savedDraft && (savedDraft.description || savedDraft.title || savedDraft.serviceSlug)) {
+      noticeShown.current = true;
+      toast.info("Rascunho restaurado", {
+        description:
+          "Recuperamos os dados que você havia preenchido nesta solicitação. Arquivos anexados precisam ser selecionados novamente.",
+      });
+      return;
+    }
     const hasPrefill = Boolean(search.service && search.description);
     if (!hasPrefill) return;
     const svc = catalog.find((c) => c.slug === search.service);
-    prefillNoticeShown.current = true;
+    noticeShown.current = true;
     toast.success("Solicitação pré-preenchida", {
       description: svc
         ? `Serviço "${svc.title}" e contexto do parecer já foram preenchidos. Ajuste os detalhes antes de enviar.`
         : "Serviço e contexto do parecer já foram preenchidos. Ajuste os detalhes antes de enviar.",
     });
-  }, [catalog, search.service, search.description]);
+  }, [catalog, search.service, search.description, savedDraft]);
+
 
 
   const handleFiles = (list: FileList | null) => {
