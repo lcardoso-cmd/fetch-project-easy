@@ -55,6 +55,31 @@ function capitalize(str: string): string {
   return str.charAt(0).toUpperCase() + str.slice(1);
 }
 
+function CaseDataRow({
+  label,
+  value,
+  breakAll = false,
+}: {
+  label: string;
+  value: string;
+  breakAll?: boolean;
+}) {
+  return (
+    <div className="min-w-0 sm:contents">
+      <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground sm:self-start sm:text-sm sm:normal-case sm:tracking-normal sm:text-foreground sm:pr-2">
+        {label}
+      </dt>
+      <dd
+        className={`mt-0.5 min-w-0 text-foreground sm:mt-0 sm:self-start sm:text-muted-foreground ${
+          breakAll ? "break-all" : "break-words"
+        }`}
+      >
+        {value}
+      </dd>
+    </div>
+  );
+}
+
 export const Route = createFileRoute("/_authenticated/assistencias/$caseId")({
   component: CaseDetailPage,
 });
