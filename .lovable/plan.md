@@ -1,50 +1,63 @@
-# Pré-visualização Word no editor de proposta
+# Logo e escritório no cabeçalho de todo `.docx` exportado
 
-Hoje o card **Resultado** só mostra o `RichTextEditor`. A ideia é adicionar um **toggle** no topo do card com dois modos: **Editor** (como hoje) e **Prévia Word** — uma página no formato do `.docx` exportado, com os mesmos estilos do template, para você conferir o resultado antes de baixar.
+Hoje o template `src/lib/docx/template.ts` monta um header genérico só com "B2B | JurisMind AI" à esquerda e o título à direita. Vou (1) enriquecer o cadastro do usuário com a identidade do escritório/PF, (2) criar bucket público para logos, (3) permitir editar isso numa tela de configurações, e (4) puxar esses dados em cada export `.docx` (proposta, petição, resumo do caso) para desenhar o cabeçalho.
 
-## Escopo
+Time/convites por e-mail ou link já existem (`team_members`, `team_invitations` com token, `src/routes/invite.$token.tsx`, `src/routes/_authenticated/settings.tsx`) — só o "topo" dessa hierarquia (o dono da conta, PF ou PJ) ganha campos novos.
 
-- Mudança 100% presentacional em `src/routes/_authenticated/proposal.tsx` + 1 componente novo.
-- Nenhuma alteração no template `.docx`, na rota `/api/tools/petition`, no schema ou nos server functions.
-- Vale só para o card de resultado da proposta (que é onde há edição rica). Petição/resumo ficam de fora.
+## Backend
 
-## O que aparece na prévia
+Migração `alter table public.profiles`:
+- `entity_type text not null default 'pessoa_fisica'` — check `('pessoa_fisica','pessoa_juridica')`.
+- `firm_name text` (razão social ou nome fantasia; para PF, opcional — cai para `full_name`).
+- `tax_id text` (CPF quando PF, CNPJ quando PJ; formatação livre).
+- `firm_address text`, `firm_website text` (opcionais, também usados no rodapé).
+- `logo_path text` (chave dentro do bucket).
 
-Um "papel" no formato **US Letter (8,5" × 11")**, escala responsiva ao container, com:
+Bucket de storage `firm-logos` (público, criado via `supabase--storage_create_bucket`) + policies em `storage.objects`:
+- SELECT liberado (bucket público).
+- INSERT/UPDATE/DELETE apenas em objetos cujo primeiro segmento do path seja `auth.uid()::text` (padrão `{user_id}/logo.png`).
+- Limite prático 2 MB, tipos aceitos `image/png|jpeg|webp|svg+xml` (validado no cliente antes do upload).
 
-- Sombra e borda sutis simulando página.
-- Margens brancas de **1 polegada** (idêntico ao template).
-- **Cabeçalho**: "B2B | JurisMind AI" à esquerda, "Proposta comercial" à direita, linha inferior cinza claro — igual ao header do docx.
-- **Corpo** renderizando o HTML do editor, mas com CSS espelhando os estilos nomeados:
-  - Fonte Calibri (fallback: Carlito/Arial), 11pt, line-height 1.35, cor `#0F172A`.
-  - `h1` → 16pt bold com borda inferior fina (Heading1).
-  - `h2` → 13pt bold cor `#1E3A8A` (Heading2).
-  - `h3` → 11pt bold uppercase cor `#334155` (Heading3).
-  - `ul`/`ol`/`li`, `blockquote` e alinhamento inline com os mesmos deslocamentos.
-- **Título** no topo: "Proposta - {cliente}" no estilo Title (24pt bold).
-- **Rodapé**: "Documento gerado por B2B | JurisMind AI" à esquerda, "Página 1" à direita (rótulo estático — o número real vem do Word).
-- Aviso pequeno abaixo: "Prévia aproximada. A paginação real é gerada pelo Word."
+## Server functions (novo arquivo `src/lib/firm-profile.functions.ts`)
 
-Zoom automático: a página tem largura fixa 816px (8,5" × 96dpi) e é reduzida por `transform: scale(...)` conforme o container, sem quebrar o layout do formulário ao lado.
+- `getFirmProfile()` — devolve `{ entity_type, firm_name, tax_id, firm_address, firm_website, logo_url }` (assina URL pública do bucket).
+- `updateFirmProfile(data)` — Zod: nomes trim, `tax_id` opcional, valida enum.
+- `setFirmLogo({ path })` / `removeFirmLogo()` — grava/limpa `logo_path` e apaga objeto antigo do bucket via `supabaseAdmin` (import dinâmico no handler).
 
-## UI
+Todas com `.middleware([requireSupabaseAuth])`.
 
-Dentro do `CardHeader` do "Resultado":
+## UI — nova tela `Identidade do escritório`
 
-```
-[ Editor | Prévia Word ]     [ Copiar ] [ Baixar PDF ] [ Baixar .docx ]
-```
+Rota: `src/routes/_authenticated/settings.firm.tsx`, com link no menu de settings existente. Componentes shadcn (Card, Tabs "Pessoa física / Pessoa jurídica", Input, Button).
 
-Um `Tabs` do shadcn (ou `ToggleGroup`) controla o modo. Em **Editor**, o `RichTextEditor` atual. Em **Prévia Word**, o novo componente `WordPreview` recebendo `html={output}` e `title={"Proposta - " + form.client_name}`. Trocar de aba não altera o HTML.
+- Toggle PF/PJ (define label do documento e placeholder do `tax_id`).
+- Campos: nome do escritório / nome, CPF ou CNPJ, endereço, site.
+- Upload de logo: `<input type="file">` → sobe direto pelo `supabase` client browser para `firm-logos/{user_id}/logo.{ext}` (substitui) → chama `setFirmLogo`. Preview 96px, botão remover.
+- Toast de sucesso, autosave manual (botão "Salvar"), sem migração de dados.
 
-## Arquivos
+## Header do DOCX (mudança central)
 
-- **Novo:** `src/components/proposal/word-preview.tsx` — componente puramente visual (page, header, footer, área de conteúdo com classe `.word-doc`).
-- **Novo:** `src/styles/word-preview.css` (ou bloco `<style>` local) — CSS espelhando os tokens de `src/lib/docx/template.ts` (`TEMPLATE_COLORS`, tamanhos de heading, indent das listas).
-- **Editado:** `src/routes/_authenticated/proposal.tsx` — importar Tabs + `WordPreview`, envolver o bloco `output ? <RichTextEditor.../>` num `Tabs`.
+Em `src/lib/docx/template.ts`:
+- `createStyledDocument` passa a aceitar `branding?: { firmName?, logoBytes?, logoContentType? }`.
+- Se `logoBytes`, insere `ImageRun` (48px altura, largura proporcional; type derivado do content-type) à esquerda no `Header`, seguido do `firmName` em negrito 11pt e do subtítulo (`documentType`) 9pt cinza. Sem logo, cai no header atual.
+- Rodapé ganha `firmName · site · CPF/CNPJ` (o que existir) à esquerda; "Página X de Y" à direita permanece.
+- Novo helper `loadBrandingForUser(userId)` em `src/lib/docx/branding.server.ts`:
+  - Lê `profiles` (server publishable) + baixa o objeto do bucket com `supabaseAdmin` (`.download()`) → Buffer.
+  - Cache em memória por request para evitar redownload em exports múltiplos.
+- Cada export chama `loadBrandingForUser` no server function antes de montar o documento:
+  - `src/routes/api/tools/petition.ts` (proposta + petição).
+  - `src/lib/export.functions.ts` (`exportSummaryDocx`).
+- Como esses handlers já são autenticados, `userId` vem do middleware — nenhum input novo do cliente.
 
-## Fora de escopo (posso adicionar depois se quiser)
+Fallback: sem `firm_name` cai no branding padrão ("B2B | JurisMind AI") já em uso — nada quebra para usuários que ainda não configuraram.
 
-- Paginação real (quebras em 11" com cálculo de altura por página). Requer medição via ResizeObserver + iteração — mais frágil e caro.
-- Numeração dinâmica "Página X de Y".
-- Marca d'água "RASCUNHO" para versões não salvas.
+## Prévia Word
+
+`src/components/proposal/word-preview.tsx` passa a receber `branding` via prop opcional (buscado com `useQuery(getFirmProfile)`), renderizando o logo (via `<img src={logo_url}>`) e o nome do escritório no `.word-header`, para bater com o `.docx`.
+
+## Fora de escopo
+
+- Convite/time (já existe; sem mudanças).
+- Múltiplas marcas por conta.
+- Assinatura digital / marca d'água.
+- Preencher automaticamente `firm_address` nos textos gerados pela IA (só no header/footer por enquanto).
