@@ -330,7 +330,19 @@ function AuthPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <FieldLabel htmlFor="password" icon={Lock}>Senha</FieldLabel>
+                  <div className="flex items-center justify-between">
+                    <FieldLabel htmlFor="password" icon={Lock}>Senha</FieldLabel>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setForgotEmail(email);
+                        setForgotOpen(true);
+                      }}
+                      className="text-xs font-medium text-primary underline-offset-4 hover:underline"
+                    >
+                      Esqueci minha senha
+                    </button>
+                  </div>
                   <Input
                     id="password"
                     type="password"
