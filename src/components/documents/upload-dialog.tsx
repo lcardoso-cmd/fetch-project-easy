@@ -131,6 +131,9 @@ export function UploadDialog({
   const discardFn = useServerFn(discardUploadedObject);
   // Controllers por item — permitem abortar hash/upload em andamento.
   const abortersRef = useRef<Map<string, AbortController>>(new Map());
+  // Hashes pré-calculados na etapa de prévia — evita re-hash no upload.
+  const precomputedHashesRef = useRef<Map<string, string>>(new Map());
+  const fileKey = (f: File) => `${f.name}|${f.size}|${f.lastModified}`;
   // Flag para interromper o loop da fila sem depender do estado React.
   const cancelAllRef = useRef(false);
 
