@@ -1831,6 +1831,7 @@ export function JurisMindChat({
                 <ImagePlus className="h-4 w-4" />
               </Button>
               <Button
+                ref={micButtonRef}
                 type="button"
                 size="icon"
                 variant={recording ? "destructive" : "outline"}
