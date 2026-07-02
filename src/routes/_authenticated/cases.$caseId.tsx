@@ -160,11 +160,8 @@ function CaseDetailPage() {
           <h1 className="text-3xl font-bold tracking-tight text-foreground">
             {caseData.title}
           </h1>
-          {caseData.client_name && (
-            <p className="mt-1 text-muted-foreground">
-              Cliente: {caseData.client_name}
-            </p>
-          )}
+        </div>
+
         </div>
         <div className="flex shrink-0 items-center gap-2">
           <Button
