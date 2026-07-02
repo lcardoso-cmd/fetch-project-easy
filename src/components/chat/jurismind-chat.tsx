@@ -1700,6 +1700,13 @@ export function JurisMindChat({
                     <span className="flex-1">{micError}</span>
                     <button
                       type="button"
+                      onClick={() => setMicPickerOpen(true)}
+                      className="rounded px-1.5 py-0.5 text-xs font-medium hover:bg-destructive/10"
+                    >
+                      Trocar microfone
+                    </button>
+                    <button
+                      type="button"
                       onClick={() => void startRecording()}
                       className="rounded px-1.5 py-0.5 text-xs font-medium hover:bg-destructive/10"
                     >
