@@ -1,80 +1,122 @@
+
 ## Objetivo
 
-Hoje o DOCX já é centralizado em `src/lib/docx/template.ts` (usado por proposta, petição e resumo de caso). Mas o **PDF está fragmentado em 2 implementações inconsistentes** e o PPTX repete tokens manualmente. Vou unificar tudo em um único conjunto de templates de documento, para que qualquer export (proposta, petição do chat, resumo de caso, futuros artefatos) siga a mesma identidade visual — margens, fontes, cores, cabeçalho com logo e rodapé com paginação.
+Reorganizar o sidebar de forma profissional, refletindo os três níveis de visão do produto e mostrando cada ferramenta apenas para quem realmente a usa.
 
-## Estado atual (por que precisa)
+## Modelo de acesso (três visões)
 
-| Superfície | DOCX | PDF |
-|---|---|---|
-| Proposta (`proposal.tsx`) | `/api/tools/petition` → template compartilhado ✅ | `html2pdf.js` client-side, A4 mm, **sem branding/header/footer** ❌ |
-| Chat → artefato (`artifact-cards.tsx`) | `/api/tools/petition` ✅ | `/api/tools/pdf` — **PDF hand-rolled, Helvetica, 2 cm, sem branding, wrap ingênuo** ❌ |
-| Resumo do caso | `exportSummaryDocx` ✅ | (não tem PDF hoje) |
+```text
+┌─────────────────────────────────────────────────────────────┐
+│ 1. PLATAFORMA B2B (JurisMind)                               │
+│    Você vendendo. Vê todos os escritórios/clientes,         │
+│    assinaturas, métricas. Role: platform_admin              │
+├─────────────────────────────────────────────────────────────┤
+│ 2. ESCRITÓRIO / EMPRESA / PROFISSIONAL AUTÔNOMO             │
+│    Cliente que comprou. Admin do escritório: equipe,        │
+│    faturamento, assinatura, integrações.                    │
+│    Role: office_admin (ou owner solo)                       │
+├─────────────────────────────────────────────────────────────┤
+│ 3. USUÁRIO OPERACIONAL                                      │
+│    Advogado, perito, comercial, marketing. Só vê as         │
+│    ferramentas do seu perfil. Role: member + capabilities   │
+└─────────────────────────────────────────────────────────────┘
+```
 
-Resultado: o mesmo conteúdo baixado como DOCX sai com Calibri 11pt, capa institucional, header "Proposta comercial", rodapé com nome do escritório e paginação; baixado como PDF sai como texto Helvetica sem nada disso.
+Um profissional autônomo é `office_admin` **e** `member` com todas as capabilities — vê tudo, exceto a visão de Plataforma B2B.
 
-## Solução
+## Perfis profissionais e capabilities
 
-### 1. Tokens de documento compartilhados
+Cada membro do escritório recebe um conjunto de capabilities que controla a visibilidade das ferramentas. Um mesmo usuário pode ter mais de uma:
 
-Extrair de `src/lib/docx/template.ts` para `src/lib/documents/tokens.ts`:
-- Página US Letter, margens 1" (2,54 cm) — mesmas do DOCX
-- Fontes Calibri (body) / Calibri (heading), tamanhos H1/H2/H3/body/small
-- Paleta (`ink`, `accent`, `muted`, `border`, `headerBand`)
-- Espaçamentos entre parágrafos, listas, títulos
+| Capability            | Habilita                          |
+| --------------------- | --------------------------------- |
+| `cases`               | Painel, Assistências, Tarefas, Conversas, Agenda, Meus Documentos, Peças Jurídicas (todos têm por padrão) |
+| `expert_opinion`      | Parecer Técnico (peritos)         |
+| `commercial`          | Proposta Comercial                |
+| `marketing`           | Marketing, Publicações            |
+| `office_admin`        | Equipe, Faturamento, Integrações, Configurações do escritório |
+| `platform_admin`      | Painel B2B (clientes, assinaturas, métricas) |
 
-`template.ts` passa a importar desses tokens (não muda comportamento do DOCX).
+## Nova estrutura do sidebar
 
-### 2. Parser HTML/Markdown compartilhado
+```text
+PRINCIPAL                          (todos)
+  Painel
+  Assistências / Casos
+  Minhas Tarefas
+  Conversas
+  Agenda
+  Meus Documentos
+  Peças Jurídicas
+  Parecer Técnico                  (só expert_opinion) ← sobe para Principal
 
-Extrair `htmlToBlocks` / `markdownToBlocks` / `contentToBlocks` de `pdf.ts` para `src/lib/documents/blocks.ts`, retornando uma AST comum (`DocBlock[]`) com: heading 1-3, parágrafo, lista, alinhamento, negrito/itálico/sublinhado inline. O parser HTML do DOCX (`htmlToDocxChildren`) também passa a usar essa AST — assim proposta editada no rich-text sai idêntica em PDF e DOCX.
+PRODUÇÃO                           (aparece só se tiver alguma)
+  Proposta Comercial               (só commercial)
+  Publicações                      (só marketing)
+  Marketing                        (só marketing)
 
-### 3. Novo renderer PDF unificado (server, workerd-safe)
+ESCRITÓRIO                         (só office_admin)
+  Equipe & Permissões
+  Faturamento & Assinatura
+  Integrações
+  Configurações
 
-Criar `src/lib/documents/pdf-renderer.ts` que consome `DocBlock[]` + branding e produz um `Uint8Array` PDF com:
-- Mesma página/margens do DOCX (US Letter 1")
-- Header com logo do escritório + nome do escritório (à esquerda) e label do documento (à direita) — igual ao DOCX
-- Rodapé com nome do escritório + "Página X de Y"
-- Fontes Type1 padrão (Helvetica/Times) mapeadas para a família Calibri via metric-compatible fallback, mantendo os tamanhos dos tokens
-- Wrap por largura real (métrica AFM embutida), não por contagem de caracteres
-- Suporte a negrito/itálico inline, listas com bullet real, alinhamento por parágrafo
+PLATAFORMA B2B                     (só platform_admin — visão JurisMind)
+  Clientes
+  Assinaturas
+  Métricas
+```
 
-Continua sem dependências nativas (workerd-compat), sem `sharp`/`pdfkit-node`. Logo do escritório é lida do bucket `firm-logos` (já existe via `loadBrandingForUser`) e embutida como imagem JPEG/PNG no PDF.
+Seções inteiras somem quando o usuário não tem nenhum item — sem headers vazios.
 
-### 4. Substituir os call-sites
+## O que muda no backend
 
-- `/api/tools/pdf` passa a chamar `renderPdf({ title, blocks, branding, headerLabel })` — mesma assinatura da irmã DOCX.
-- `proposal.tsx` **remove `html2pdf.js`** e passa a baixar via `/api/tools/pdf` (mesmo backend do chat, mesmo visual do DOCX). Simplifica o bundle e garante paridade.
-- Adicionar `exportSummaryPdf` em `src/lib/export.functions.ts` reutilizando o mesmo renderer (para consistência futura no card de resumo).
+1. **Novo enum `app_capability`** com os valores da tabela acima.
+2. **Nova tabela `user_capabilities`** (`user_id`, `capability`), com RLS + GRANTs padrão; leitura via função `security definer` `has_capability(_user_id, _capability)`, análoga ao `has_role` já existente.
+3. **`app_role` ganha `platform_admin`** (mantém `admin`/`user` para compat). `admin` do escritório vira `office_admin` semanticamente via capability — o enum não precisa quebrar.
+4. **Server function `getMyCapabilities()`** (`requireSupabaseAuth`) retorna as capabilities do usuário logado + flags derivadas (`isPlatformAdmin`, `isOfficeAdmin`). Cache no `QueryClient` por sessão.
+5. **Tela de Equipe** ganha edição das capabilities por membro (checkboxes), visível só para `office_admin`.
+6. **Migration seed**: usuários com `app_role = 'admin'` recebem `office_admin` + todas as capabilities operacionais, para não perderem acesso.
 
-### 5. PPTX (menor escopo)
+## O que muda no frontend
 
-`exportSummaryPptx` passa a importar cores/fontes de `documents/tokens.ts` em vez de literais duplicados. Sem mudança visual significativa, mas evita drift futuro.
+1. **`dashboard-shell.tsx`**: converter `navItems` em função pura `buildNav(capabilities)` que retorna as seções filtradas. Remover seções sem itens. Renderizar labels de seção só quando houver conteúdo.
+2. **Hook `useCapabilities()`** que consome `getMyCapabilities()` via `useSuspenseQuery`. `DashboardShell` já é `_authenticated`, então é seguro chamar no loader.
+3. **Guardas de rota** em `/proposal`, `/marketing`, `/monitoring`, `/drafter` (quando parecer técnico), `/integrations`, `/settings`: se faltar capability, redirect para `/dashboard` com toast "Sem permissão".
+4. **Novas rotas de Plataforma B2B** (esqueleto, só para `platform_admin`): `/platform/customers`, `/platform/subscriptions`, `/platform/metrics`. Conteúdo real fica para depois — nesta entrega, páginas placeholder com layout consistente.
+5. **Rota `/office/team`**: já existe tela de equipe; adicionar coluna/editor de capabilities.
 
-## Arquivos
+## Detalhes técnicos
 
-Novos:
-- `src/lib/documents/tokens.ts` — cores, fontes, tamanhos, margens
-- `src/lib/documents/blocks.ts` — AST + parser HTML/Markdown
-- `src/lib/documents/pdf-renderer.ts` — renderer PDF unificado
-- (opcional) `src/lib/documents/README.md` — regra "qualquer novo export usa esses módulos"
+- **Enum novo (SQL)**:
+  ```sql
+  create type public.app_capability as enum
+    ('cases','expert_opinion','commercial','marketing','office_admin','platform_admin');
+  ```
+- **Tabela**:
+  ```sql
+  create table public.user_capabilities (
+    user_id uuid references auth.users(id) on delete cascade not null,
+    capability public.app_capability not null,
+    granted_at timestamptz not null default now(),
+    primary key (user_id, capability)
+  );
+  grant select on public.user_capabilities to authenticated;
+  grant all on public.user_capabilities to service_role;
+  alter table public.user_capabilities enable row level security;
+  create policy "self read" on public.user_capabilities
+    for select to authenticated using (user_id = auth.uid());
+  create policy "office admin manage" on public.user_capabilities
+    for all to authenticated
+    using (public.has_capability(auth.uid(),'office_admin'))
+    with check (public.has_capability(auth.uid(),'office_admin'));
+  ```
+- **`has_capability`**: security definer idêntico ao `has_role`.
+- **`buildNav`** recebe `{ capabilities: Set<Capability>, labels, isLawyer }` e devolve `NavItem[]` já filtrado. Testável isoladamente.
+- Zero mudança em rotas existentes além das guardas; nenhum item é removido, só condicionado.
 
-Alterados:
-- `src/lib/docx/template.ts` — importa tokens/blocks compartilhados
-- `src/routes/api/tools/pdf.ts` — vira wrapper fino do novo renderer
-- `src/routes/_authenticated/proposal.tsx` — remove `html2pdf.js`, usa `/api/tools/pdf`
-- `src/lib/export.functions.ts` — adiciona `exportSummaryPdf`; PPTX usa tokens compartilhados
-- `src/components/cases/case-summary-card.tsx` — botão "Baixar PDF" ligado a `exportSummaryPdf`
-- `package.json` — remover `html2pdf.js` se não houver mais uso
+## Fora do escopo desta entrega
 
-## Fora do escopo
-
-- Não altero conteúdo/prompts do chat nem lógica de RAG.
-- Não altero UI do editor da proposta.
-- Não mudo o tema visual do app; só padroniza documentos exportados.
-
-## Validação
-
-1. Build passa (`tsgo`), sem imports quebrados.
-2. Baixar a mesma proposta como DOCX e PDF → header/footer/margens/fontes idênticos.
-3. Chat: gerar um artefato, baixar PDF e DOCX pelo `artifact-cards` → mesmo visual da proposta.
-4. Card de resumo do caso: DOCX e PDF novos consistentes.
+- UI real das telas de Plataforma B2B (clientes/assinaturas/métricas) — só esqueleto e roteamento.
+- Cobrança/Stripe do escritório — só o item de menu apontando para uma página de "em breve" se ainda não existir.
+- Multi-tenant real (isolamento por escritório em todas as tabelas) — mantém o modelo atual; capabilities já resolvem a visibilidade pedida agora.

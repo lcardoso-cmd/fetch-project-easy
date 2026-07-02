@@ -33,6 +33,13 @@ import {
 } from "@/lib/practice-labels";
 import { useProfile } from "@/hooks/use-profile";
 import { isCurrentUserAdmin } from "@/lib/oauth-settings.functions";
+import {
+  listMemberCapabilities,
+  setMemberCapabilities,
+  CAPABILITY_LABELS,
+  type Capability,
+} from "@/lib/capabilities.functions";
+import { Checkbox } from "@/components/ui/checkbox";
 
 export const Route = createFileRoute("/_authenticated/settings")({
   component: SettingsPage,
@@ -253,58 +260,63 @@ function SettingsPage() {
                 );
                 const linked = Boolean(m.member_user_id);
                 return (
-                  <li key={m.id} className="flex items-center justify-between gap-3 p-3">
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium truncate">{m.name}</p>
-                      <p className="text-xs text-muted-foreground truncate">
-                        {[m.role, m.email].filter(Boolean).join(" · ") || "—"}
-                      </p>
-                      <p className="text-xs">
-                        {linked ? (
-                          <span className="text-emerald-600 dark:text-emerald-400">
-                            ✓ Conta vinculada · {m.access_role ?? "editor"}
-                          </span>
-                        ) : inv ? (
-                          <span className="text-amber-600 dark:text-amber-400">
-                            ⏳ Convite pendente
-                          </span>
-                        ) : (
-                          <span className="text-muted-foreground">Sem convite ativo</span>
+                  <li key={m.id} className="space-y-3 p-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium truncate">{m.name}</p>
+                        <p className="text-xs text-muted-foreground truncate">
+                          {[m.role, m.email].filter(Boolean).join(" · ") || "—"}
+                        </p>
+                        <p className="text-xs">
+                          {linked ? (
+                            <span className="text-emerald-600 dark:text-emerald-400">
+                              ✓ Conta vinculada · {m.access_role ?? "editor"}
+                            </span>
+                          ) : inv ? (
+                            <span className="text-amber-600 dark:text-amber-400">
+                              ⏳ Convite pendente
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground">Sem convite ativo</span>
+                          )}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {inv && (
+                          <>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-8"
+                              onClick={() => copyInviteLink(inv.token)}
+                            >
+                              Copiar link
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 text-destructive"
+                              onClick={() => revokeMut.mutate(inv.id)}
+                            >
+                              Revogar
+                            </Button>
+                          </>
                         )}
-                      </p>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                          onClick={() => {
+                            if (confirm(`Remover ${m.name}?`)) deleteMut.mutate(m.id);
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      {inv && (
-                        <>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-8"
-                            onClick={() => copyInviteLink(inv.token)}
-                          >
-                            Copiar link
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-8 text-destructive"
-                            onClick={() => revokeMut.mutate(inv.id)}
-                          >
-                            Revogar
-                          </Button>
-                        </>
-                      )}
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                        onClick={() => {
-                          if (confirm(`Remover ${m.name}?`)) deleteMut.mutate(m.id);
-                        }}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
+                    {linked && m.member_user_id && (
+                      <MemberCapabilities userId={m.member_user_id} />
+                    )}
                   </li>
                 );
               })}
@@ -400,6 +412,71 @@ function SettingsPage() {
           </CardContent>
         </Card>
       )}
+    </div>
+  );
+}
+
+const EDITABLE_CAPS: Capability[] = [
+  "cases",
+  "expert_opinion",
+  "commercial",
+  "marketing",
+  "office_admin",
+];
+
+function MemberCapabilities({ userId }: { userId: string }) {
+  const qc = useQueryClient();
+  const listFn = useServerFn(listMemberCapabilities);
+  const setFn = useServerFn(setMemberCapabilities);
+  const { data: caps = [], isLoading } = useQuery({
+    queryKey: ["member-caps", userId],
+    queryFn: () => listFn({ data: { user_id: userId } }),
+  });
+
+  const mut = useMutation({
+    mutationFn: (next: Capability[]) =>
+      setFn({ data: { user_id: userId, capabilities: next } }),
+    onSuccess: () => {
+      toast.success("Permissões atualizadas");
+      qc.invalidateQueries({ queryKey: ["member-caps", userId] });
+    },
+    onError: (e: Error) => toast.error(e.message || "Falha ao salvar"),
+  });
+
+  function toggle(cap: Capability, checked: boolean) {
+    const set = new Set(caps);
+    if (checked) set.add(cap);
+    else set.delete(cap);
+    mut.mutate(Array.from(set));
+  }
+
+  if (isLoading) {
+    return <p className="text-xs text-muted-foreground pl-1">Carregando permissões…</p>;
+  }
+
+  return (
+    <div className="rounded-md border bg-muted/30 p-3">
+      <p className="mb-2 text-xs font-medium text-muted-foreground">
+        Permissões (o que aparece no menu)
+      </p>
+      <div className="grid gap-2 sm:grid-cols-2">
+        {EDITABLE_CAPS.map((cap) => {
+          const checked = caps.includes(cap);
+          return (
+            <label
+              key={cap}
+              className="flex items-center gap-2 text-xs cursor-pointer select-none"
+            >
+              <Checkbox
+                checked={checked}
+                disabled={mut.isPending}
+                onCheckedChange={(v) => toggle(cap, Boolean(v))}
+              />
+              <span>{CAPABILITY_LABELS[cap]}</span>
+            </label>
+          );
+        })}
+      </div>
     </div>
   );
 }

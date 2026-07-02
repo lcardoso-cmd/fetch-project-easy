@@ -23,11 +23,13 @@ import { Route as AuthenticatedMonitoringRouteImport } from './routes/_authentic
 import { Route as AuthenticatedMarketingRouteImport } from './routes/_authenticated/marketing'
 import { Route as AuthenticatedIntegrationsRouteImport } from './routes/_authenticated/integrations'
 import { Route as AuthenticatedInboxRouteImport } from './routes/_authenticated/inbox'
+import { Route as AuthenticatedExpertOpinionRouteImport } from './routes/_authenticated/expert-opinion'
 import { Route as AuthenticatedDrafterRouteImport } from './routes/_authenticated/drafter'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedChatRouteImport } from './routes/_authenticated/chat'
 import { Route as AuthenticatedCasesRouteImport } from './routes/_authenticated/cases'
 import { Route as AuthenticatedCalendarRouteImport } from './routes/_authenticated/calendar'
+import { Route as AuthenticatedPlatformIndexRouteImport } from './routes/_authenticated/platform.index'
 import { Route as AuthenticatedCasesIndexRouteImport } from './routes/_authenticated/cases.index'
 import { Route as ApiToolsTranscribeRouteImport } from './routes/api/tools/transcribe'
 import { Route as ApiToolsTableRouteImport } from './routes/api/tools/table'
@@ -114,6 +116,12 @@ const AuthenticatedInboxRoute = AuthenticatedInboxRouteImport.update({
   path: '/inbox',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedExpertOpinionRoute =
+  AuthenticatedExpertOpinionRouteImport.update({
+    id: '/expert-opinion',
+    path: '/expert-opinion',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedDrafterRoute = AuthenticatedDrafterRouteImport.update({
   id: '/drafter',
   path: '/drafter',
@@ -139,6 +147,12 @@ const AuthenticatedCalendarRoute = AuthenticatedCalendarRouteImport.update({
   path: '/calendar',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedPlatformIndexRoute =
+  AuthenticatedPlatformIndexRouteImport.update({
+    id: '/platform/',
+    path: '/platform/',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedCasesIndexRoute = AuthenticatedCasesIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -223,6 +237,7 @@ export interface FileRoutesByFullPath {
   '/chat': typeof AuthenticatedChatRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/drafter': typeof AuthenticatedDrafterRoute
+  '/expert-opinion': typeof AuthenticatedExpertOpinionRoute
   '/inbox': typeof AuthenticatedInboxRoute
   '/integrations': typeof AuthenticatedIntegrationsRoute
   '/marketing': typeof AuthenticatedMarketingRoute
@@ -245,6 +260,7 @@ export interface FileRoutesByFullPath {
   '/api/tools/table': typeof ApiToolsTableRoute
   '/api/tools/transcribe': typeof ApiToolsTranscribeRoute
   '/cases/': typeof AuthenticatedCasesIndexRoute
+  '/platform/': typeof AuthenticatedPlatformIndexRoute
   '/cases/$caseId/chat': typeof AuthenticatedCasesCaseIdChatRoute
   '/api/public/google/callback': typeof ApiPublicGoogleCallbackRoute
   '/api/public/outlook/callback': typeof ApiPublicOutlookCallbackRoute
@@ -256,6 +272,7 @@ export interface FileRoutesByTo {
   '/chat': typeof AuthenticatedChatRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/drafter': typeof AuthenticatedDrafterRoute
+  '/expert-opinion': typeof AuthenticatedExpertOpinionRoute
   '/inbox': typeof AuthenticatedInboxRoute
   '/integrations': typeof AuthenticatedIntegrationsRoute
   '/marketing': typeof AuthenticatedMarketingRoute
@@ -278,6 +295,7 @@ export interface FileRoutesByTo {
   '/api/tools/table': typeof ApiToolsTableRoute
   '/api/tools/transcribe': typeof ApiToolsTranscribeRoute
   '/cases': typeof AuthenticatedCasesIndexRoute
+  '/platform': typeof AuthenticatedPlatformIndexRoute
   '/cases/$caseId/chat': typeof AuthenticatedCasesCaseIdChatRoute
   '/api/public/google/callback': typeof ApiPublicGoogleCallbackRoute
   '/api/public/outlook/callback': typeof ApiPublicOutlookCallbackRoute
@@ -292,6 +310,7 @@ export interface FileRoutesById {
   '/_authenticated/chat': typeof AuthenticatedChatRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/drafter': typeof AuthenticatedDrafterRoute
+  '/_authenticated/expert-opinion': typeof AuthenticatedExpertOpinionRoute
   '/_authenticated/inbox': typeof AuthenticatedInboxRoute
   '/_authenticated/integrations': typeof AuthenticatedIntegrationsRoute
   '/_authenticated/marketing': typeof AuthenticatedMarketingRoute
@@ -314,6 +333,7 @@ export interface FileRoutesById {
   '/api/tools/table': typeof ApiToolsTableRoute
   '/api/tools/transcribe': typeof ApiToolsTranscribeRoute
   '/_authenticated/cases/': typeof AuthenticatedCasesIndexRoute
+  '/_authenticated/platform/': typeof AuthenticatedPlatformIndexRoute
   '/_authenticated/cases/$caseId/chat': typeof AuthenticatedCasesCaseIdChatRoute
   '/api/public/google/callback': typeof ApiPublicGoogleCallbackRoute
   '/api/public/outlook/callback': typeof ApiPublicOutlookCallbackRoute
@@ -328,6 +348,7 @@ export interface FileRouteTypes {
     | '/chat'
     | '/dashboard'
     | '/drafter'
+    | '/expert-opinion'
     | '/inbox'
     | '/integrations'
     | '/marketing'
@@ -350,6 +371,7 @@ export interface FileRouteTypes {
     | '/api/tools/table'
     | '/api/tools/transcribe'
     | '/cases/'
+    | '/platform/'
     | '/cases/$caseId/chat'
     | '/api/public/google/callback'
     | '/api/public/outlook/callback'
@@ -361,6 +383,7 @@ export interface FileRouteTypes {
     | '/chat'
     | '/dashboard'
     | '/drafter'
+    | '/expert-opinion'
     | '/inbox'
     | '/integrations'
     | '/marketing'
@@ -383,6 +406,7 @@ export interface FileRouteTypes {
     | '/api/tools/table'
     | '/api/tools/transcribe'
     | '/cases'
+    | '/platform'
     | '/cases/$caseId/chat'
     | '/api/public/google/callback'
     | '/api/public/outlook/callback'
@@ -396,6 +420,7 @@ export interface FileRouteTypes {
     | '/_authenticated/chat'
     | '/_authenticated/dashboard'
     | '/_authenticated/drafter'
+    | '/_authenticated/expert-opinion'
     | '/_authenticated/inbox'
     | '/_authenticated/integrations'
     | '/_authenticated/marketing'
@@ -418,6 +443,7 @@ export interface FileRouteTypes {
     | '/api/tools/table'
     | '/api/tools/transcribe'
     | '/_authenticated/cases/'
+    | '/_authenticated/platform/'
     | '/_authenticated/cases/$caseId/chat'
     | '/api/public/google/callback'
     | '/api/public/outlook/callback'
@@ -537,6 +563,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedInboxRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/expert-opinion': {
+      id: '/_authenticated/expert-opinion'
+      path: '/expert-opinion'
+      fullPath: '/expert-opinion'
+      preLoaderRoute: typeof AuthenticatedExpertOpinionRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/drafter': {
       id: '/_authenticated/drafter'
       path: '/drafter'
@@ -570,6 +603,13 @@ declare module '@tanstack/react-router' {
       path: '/calendar'
       fullPath: '/calendar'
       preLoaderRoute: typeof AuthenticatedCalendarRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/platform/': {
+      id: '/_authenticated/platform/'
+      path: '/platform'
+      fullPath: '/platform/'
+      preLoaderRoute: typeof AuthenticatedPlatformIndexRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/cases/': {
@@ -725,6 +765,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedChatRoute: typeof AuthenticatedChatRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedDrafterRoute: typeof AuthenticatedDrafterRoute
+  AuthenticatedExpertOpinionRoute: typeof AuthenticatedExpertOpinionRoute
   AuthenticatedInboxRoute: typeof AuthenticatedInboxRoute
   AuthenticatedIntegrationsRoute: typeof AuthenticatedIntegrationsRoute
   AuthenticatedMarketingRoute: typeof AuthenticatedMarketingRoute
@@ -735,6 +776,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedOnboardingRoute: typeof AuthenticatedOnboardingRoute
   AuthenticatedProposalRoute: typeof AuthenticatedProposalRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRouteWithChildren
+  AuthenticatedPlatformIndexRoute: typeof AuthenticatedPlatformIndexRoute
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
@@ -743,6 +785,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedChatRoute: AuthenticatedChatRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedDrafterRoute: AuthenticatedDrafterRoute,
+  AuthenticatedExpertOpinionRoute: AuthenticatedExpertOpinionRoute,
   AuthenticatedInboxRoute: AuthenticatedInboxRoute,
   AuthenticatedIntegrationsRoute: AuthenticatedIntegrationsRoute,
   AuthenticatedMarketingRoute: AuthenticatedMarketingRoute,
@@ -753,6 +796,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedOnboardingRoute: AuthenticatedOnboardingRoute,
   AuthenticatedProposalRoute: AuthenticatedProposalRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRouteWithChildren,
+  AuthenticatedPlatformIndexRoute: AuthenticatedPlatformIndexRoute,
 }
 
 const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(

@@ -4,8 +4,10 @@ import { Button } from "@/components/ui/button";
 import { JurisMindMark } from "@/components/brand/jurismind-mark";
 import { useAuth } from "@/hooks/use-auth";
 import { useProfile } from "@/hooks/use-profile";
+import { useCapabilities } from "@/hooks/use-capabilities";
 import { labelsForPractice } from "@/lib/practice-labels";
 import type { PracticeType } from "@/lib/profile.functions";
+import type { Capability } from "@/lib/capabilities.functions";
 import {
   Home,
   FolderKanban,
@@ -22,20 +24,35 @@ import {
   MessageSquare,
   PanelLeftClose,
   PanelLeftOpen,
+  Microscope,
+  Globe2,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { NotificationBell } from "@/components/layout/notification-bell";
 
+type NavLink = {
+  type: "link";
+  to: string;
+  label: string;
+  icon: LucideIcon;
+  match?: "exact" | "startsWith";
+  requires?: Capability;
+};
 type NavItem =
   | { type: "label"; label: string }
   | { type: "separator" }
-  | { type: "link"; to: string; label: string; icon: LucideIcon; match?: "exact" | "startsWith" };
+  | NavLink;
 
-function buildNav(practice: PracticeType | null | undefined): NavItem[] {
+function buildNav(
+  practice: PracticeType | null | undefined,
+  has: (c: Capability) => boolean,
+): NavItem[] {
   const labels = labelsForPractice(practice);
   const isLawyer = !practice || practice === "advogado";
-  return [
+
+  const raw: NavItem[] = [
+    // ─── PRINCIPAL: trabalho documental do dia-a-dia ───
     { type: "label", label: "Principal" },
     { type: "link", to: "/dashboard", label: "Painel", icon: Home, match: "exact" },
     {
@@ -44,27 +61,109 @@ function buildNav(practice: PracticeType | null | undefined): NavItem[] {
       label: isLawyer ? "Casos" : labels.entityPlural,
       icon: FolderKanban,
       match: "startsWith",
+      requires: "cases",
     },
     { type: "link", to: "/my-tasks", label: "Minhas Tarefas", icon: ClipboardCheck },
     { type: "link", to: "/inbox", label: "Conversas", icon: MessageSquare, match: "startsWith" },
     { type: "link", to: "/calendar", label: "Agenda", icon: CalendarDays },
     { type: "link", to: "/my-files", label: "Meus Documentos", icon: FileArchive },
-    { type: "separator" },
-    { type: "label", label: "Gestão" },
-    { type: "link", to: "/monitoring", label: "Publicações", icon: FileSearch },
     {
       type: "link",
       to: "/drafter",
       label: isLawyer ? "Peças Jurídicas" : labels.outputLabel,
       icon: Scale,
     },
-    { type: "link", to: "/proposal", label: "Proposta Comercial", icon: Handshake },
-    { type: "link", to: "/marketing", label: "Marketing", icon: Megaphone },
+    // Parecer técnico entra no Principal, mas só para peritos.
+    {
+      type: "link",
+      to: "/expert-opinion",
+      label: "Parecer Técnico",
+      icon: Microscope,
+      requires: "expert_opinion",
+    },
+
+    // ─── NEGÓCIO: comercial + marketing ───
     { type: "separator" },
-    { type: "label", label: "Sistema" },
-    { type: "link", to: "/integrations", label: "Integrações", icon: Puzzle },
-    { type: "link", to: "/settings", label: "Configurações", icon: Settings2 },
+    { type: "label", label: "Negócio" },
+    {
+      type: "link",
+      to: "/proposal",
+      label: "Proposta Comercial",
+      icon: Handshake,
+      requires: "commercial",
+    },
+    {
+      type: "link",
+      to: "/monitoring",
+      label: "Publicações",
+      icon: FileSearch,
+      requires: "marketing",
+    },
+    { type: "link", to: "/marketing", label: "Marketing", icon: Megaphone, requires: "marketing" },
+
+    // ─── GESTÃO DO ESCRITÓRIO ───
+    { type: "separator" },
+    { type: "label", label: "Escritório" },
+    {
+      type: "link",
+      to: "/integrations",
+      label: "Integrações",
+      icon: Puzzle,
+      requires: "office_admin",
+    },
+    {
+      type: "link",
+      to: "/settings",
+      label: "Configurações",
+      icon: Settings2,
+      requires: "office_admin",
+    },
+
+    // ─── VISÃO B2B JurisMind (plataforma) ───
+    { type: "separator" },
+    { type: "label", label: "Plataforma JurisMind" },
+    {
+      type: "link",
+      to: "/platform",
+      label: "Visão B2B",
+      icon: Globe2,
+      match: "startsWith",
+      requires: "platform_admin",
+    },
   ];
+
+  // Filtra links por capacidade.
+  const filtered: NavItem[] = raw.filter((item) => {
+    if (item.type !== "link") return true;
+    if (!item.requires) return true;
+    return has(item.requires);
+  });
+
+  // Remove seções (label) sem links e separators órfãos.
+  const cleaned: NavItem[] = [];
+  for (let i = 0; i < filtered.length; i++) {
+    const item = filtered[i];
+    if (item.type === "label") {
+      let hasLink = false;
+      for (let j = i + 1; j < filtered.length; j++) {
+        const next = filtered[j];
+        if (next.type === "label" || next.type === "separator") break;
+        if (next.type === "link") {
+          hasLink = true;
+          break;
+        }
+      }
+      if (!hasLink) continue;
+    }
+    if (item.type === "separator") {
+      const last = cleaned[cleaned.length - 1];
+      if (!last || last.type === "separator" || last.type === "label") continue;
+    }
+    cleaned.push(item);
+  }
+  while (cleaned.length && cleaned[cleaned.length - 1].type === "separator") cleaned.pop();
+
+  return cleaned;
 }
 
 
@@ -72,7 +171,8 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   const { pathname } = useLocation();
   const { user, signOut } = useAuth();
   const { data: profile } = useProfile();
-  const NAV = buildNav((profile?.practice_type as PracticeType | undefined) ?? null);
+  const { has } = useCapabilities();
+  const NAV = buildNav((profile?.practice_type as PracticeType | undefined) ?? null, has);
   const [collapsed, setCollapsed] = useState(false);
 
   useEffect(() => {
