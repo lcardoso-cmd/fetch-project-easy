@@ -7,7 +7,7 @@ const optionalUuid = z.string().uuid().nullable().optional();
 export interface ProposalDraft {
   id: string;
   case_id: string | null;
-  form: Record<string, unknown>;
+  form: Record<string, string>;
   output: string;
   updated_at: string;
 }
@@ -19,7 +19,7 @@ export interface ProposalVersion {
   description: string | null;
   origin: "manual" | "auto-generate" | "auto-restore";
   pinned: boolean;
-  form: Record<string, unknown>;
+  form: Record<string, string>;
   output: string;
   created_at: string;
 }
@@ -49,7 +49,7 @@ export const upsertProposalDraft = createServerFn({ method: "POST" })
     z
       .object({
         case_id: optionalUuid,
-        form: z.record(z.string(), z.unknown()),
+        form: z.record(z.string(), z.string()),
         output: z.string().max(500_000),
       })
       .parse(i),
@@ -140,7 +140,7 @@ export const createProposalVersion = createServerFn({ method: "POST" })
         description: z.string().max(2000).nullable().optional(),
         origin: z.enum(["manual", "auto-generate", "auto-restore"]),
         pinned: z.boolean().optional(),
-        form: z.record(z.string(), z.unknown()),
+        form: z.record(z.string(), z.string()),
         output: z.string().max(500_000),
       })
       .parse(i),
