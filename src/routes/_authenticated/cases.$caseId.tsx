@@ -162,7 +162,6 @@ function CaseDetailPage() {
           </h1>
         </div>
 
-        </div>
         <div className="flex shrink-0 items-center gap-2">
           <Button
             variant="outline"
