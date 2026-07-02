@@ -1,7 +1,9 @@
+import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { ShieldAlert, ArrowLeft, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CAPABILITY_LABELS, type Capability } from "@/lib/capabilities.functions";
+import { RequestAccessDialog } from "@/components/request-access-dialog";
 
 type Props = {
   requires?: Capability | null;
