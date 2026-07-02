@@ -238,7 +238,7 @@ export function JurisMindChat({
   threadId?: string | null;
   onThreadCreated?: (id: string) => void;
 }) {
-  const askFn = useServerFn(askWithRag);
+  // askFn removido: agora usamos SSE em /api/chat/stream (streaming token-a-token)
   const getMessagesFn = useServerFn(getThreadMessages);
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
