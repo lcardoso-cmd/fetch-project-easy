@@ -79,7 +79,7 @@ function AuthPage() {
           <JurisMindMark size={48} variant="square-navy" rounded className="mb-4" />
           <h1 className="text-3xl font-bold text-foreground">B2B | JurisMind AI</h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            Inteligência jurídica aplicada à advocacia
+            Inteligência para advogados, peritos e assistentes técnicos
           </p>
         </div>
 
