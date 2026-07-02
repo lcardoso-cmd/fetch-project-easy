@@ -145,6 +145,12 @@ function ProposalPage() {
 
   const [loading, setLoading] = useState(false);
   const [output, setOutput] = useState("");
+  // PDF export settings — persistidos entre geração/download
+  const [pdfFormat, setPdfFormat] = useState<"A4" | "Letter">("A4");
+  const [pdfOrientation, setPdfOrientation] = useState<"portrait" | "landscape">("portrait");
+  // Margens em milímetros na UI (convertidas para pt no envio)
+  const [pdfMargins, setPdfMargins] = useState({ top: 25, right: 25, bottom: 25, left: 25 });
+  const [pdfSettingsOpen, setPdfSettingsOpen] = useState(false);
   const [form, setForm] = useState<FormState>(EMPTY);
   const [errors, setErrors] = useState<FieldErrors>({});
   const [savedAt, setSavedAt] = useState<number | null>(null);
