@@ -202,8 +202,12 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
       <div className="flex flex-1 flex-col min-w-0">
         {/* Mobile header */}
         <header className="flex h-16 items-center justify-between border-b bg-card px-4 lg:hidden">
-          <Link to="/dashboard" className="flex items-center gap-2">
-            <JurisMindMark size={32} context="sidebar" />
+          <Link
+            to="/dashboard"
+            aria-label="Ir para o Dashboard"
+            className="group flex items-center gap-2 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+          >
+            <JurisMindMark size={32} context="sidebar" interactive />
             <span className="font-heading text-lg font-bold">B2B | JurisMind AI</span>
           </Link>
           <div className="flex items-center gap-1">
