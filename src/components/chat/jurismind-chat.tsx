@@ -426,8 +426,12 @@ export function JurisMindChat({
           selected_doc_ids: selected.length ? selected : undefined,
           images: sentImages.length ? sentImages : undefined,
           model_tier: modelTier,
+          thread_id: threadId ?? undefined,
         },
       });
+      if (res.thread_id && res.thread_id !== threadId) {
+        onThreadCreated?.(res.thread_id);
+      }
       setMessages([
         ...next,
         {
