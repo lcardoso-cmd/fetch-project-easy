@@ -110,9 +110,13 @@ export type JurisMindContext =
   | "inline-light"
   | "inline-dark";
 
+// Regra global de contraste do quadrado da marca:
+//   • Fundo CLARO  → quadrado ESCURO (square-navy)
+//   • Fundo ESCURO → quadrado BRANCO (square-white)
+// Mantenha esse mapeamento — não use variantes que quebrem o contraste.
 const CONTEXT_TO_VARIANT: Record<JurisMindContext, JurisMindVariant> = {
-  sidebar: "sidebar",
-  header: "square-navy",
+  sidebar: "square-white",   // sidebar tem bg escuro (navy)
+  header: "square-navy",     // header/topbar tem bg claro (card)
   landing: "square-navy",
   auth: "square-navy",
   chat: "square-navy",
