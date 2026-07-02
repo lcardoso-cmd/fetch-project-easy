@@ -100,7 +100,7 @@ function SettingsPage() {
         },
       }),
     onSuccess: (res) => {
-      const link = `${window.location.origin}/invite/${res.invitation.token}`;
+      const link = `${window.location.origin}/convite/${res.invitation.token}`;
       if (res.alreadyRegistered) {
         toast.success(`${name} já tem conta — acesso liberado imediatamente.`);
       } else {
@@ -134,7 +134,7 @@ function SettingsPage() {
   });
 
   function copyInviteLink(token: string) {
-    const link = `${window.location.origin}/invite/${token}`;
+    const link = `${window.location.origin}/convite/${token}`;
     navigator.clipboard?.writeText(link).then(() => toast.success("Link copiado"));
   }
 

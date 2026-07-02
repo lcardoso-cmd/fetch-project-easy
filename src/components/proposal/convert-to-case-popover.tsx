@@ -69,7 +69,7 @@ export function ConvertToCasePopover({
         action: {
           label: "Abrir caso",
           onClick: () => {
-            window.location.href = `/cases/${res.case_id}`;
+            window.location.href = `/assistencias/${res.case_id}`;
           },
         },
       });
