@@ -52,12 +52,21 @@ export type B2bServiceRequest = {
   updated_at: string;
 };
 
+export type B2bEventPayload = {
+  from?: string;
+  to?: string;
+  text?: string;
+  file_name?: string;
+  visibility?: string;
+  service_slug?: string;
+};
+
 export type B2bServiceRequestEvent = {
   id: string;
   request_id: string;
   author_user_id: string | null;
   kind: "status_change" | "note_public" | "note_internal" | "attachment" | "created";
-  payload: Record<string, unknown>;
+  payload: B2bEventPayload;
   created_at: string;
 };
 
