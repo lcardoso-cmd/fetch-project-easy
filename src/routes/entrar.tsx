@@ -240,6 +240,16 @@ function AuthPage() {
                   Criar conta com Google
                 </Button>
               </form>
+              <p className="mt-4 text-center text-sm text-muted-foreground">
+                Já tem uma conta?{" "}
+                <button
+                  type="button"
+                  onClick={() => { setMode("login"); setError(null); }}
+                  className="font-medium text-primary underline-offset-4 hover:underline"
+                >
+                  Entrar
+                </button>
+              </p>
             </TabsContent>
           </Tabs>
         </div>
