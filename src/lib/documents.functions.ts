@@ -172,7 +172,14 @@ export const createUploadSignedUrl = createServerFn({ method: "POST" })
 export const discardUploadedObject = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((i: unknown) =>
-    z.object({ storage_path: z.string().min(1) }).parse(i),
+    z
+      .object({
+        storage_path: z.string().min(1),
+        case_id: z.string().uuid().optional(),
+        filename: z.string().max(300).optional(),
+        reason: z.string().max(500).optional(),
+      })
+      .parse(i),
   )
   .handler(async ({ data, context }) => {
     if (!data.storage_path.startsWith(`${context.userId}/`)) {
@@ -182,6 +189,15 @@ export const discardUploadedObject = createServerFn({ method: "POST" })
       .from("documents")
       .remove([data.storage_path])
       .catch(() => {});
+    if (data.case_id) {
+      await logAudit(context.supabase, context.userId, {
+        case_id: data.case_id,
+        action: "discarded",
+        filename: data.filename ?? null,
+        reason: data.reason ?? "Envio cancelado pelo usuário",
+        metadata: { storage_path: data.storage_path },
+      });
+    }
     return { ok: true as const };
   });
 
