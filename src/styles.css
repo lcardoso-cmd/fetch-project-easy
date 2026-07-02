@@ -157,3 +157,96 @@
 .proposal-preview h3 { font-size: 0.9rem; font-weight: 600; margin: 0.75rem 0 0.25rem; }
 .proposal-preview p { margin: 0.35rem 0; }
 .proposal-preview ul, .proposal-preview ol { margin: 0.5rem 0 0.5rem 1.25rem; }
+
+/* -----------------------------------------------------------------------
+ * WordPreview — espelha visualmente src/lib/docx/template.ts
+ * Página US Letter (816x1056px @96dpi), margens de 1", cabeçalho/rodapé.
+ * ----------------------------------------------------------------------- */
+.word-page {
+  position: relative;
+  background: #ffffff;
+  color: #0F172A;
+  font-family: "Calibri", "Carlito", "Segoe UI", Arial, sans-serif;
+  font-size: 14.67px; /* 11pt */
+  line-height: 1.35;
+  box-shadow: 0 12px 32px -18px rgba(15, 23, 42, 0.35), 0 1px 2px rgba(15, 23, 42, 0.06);
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  overflow: hidden;
+}
+.word-page__header,
+.word-page__footer {
+  position: absolute;
+  left: 96px;   /* 1in */
+  right: 96px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px; /* ~9pt */
+  color: #64748B;
+}
+.word-page__header {
+  top: 48px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid #CCCCCC;
+}
+.word-page__brand {
+  color: #0F172A;
+  font-weight: 700;
+}
+.word-page__footer {
+  bottom: 48px;
+  padding-top: 6px;
+  border-top: 1px solid #CCCCCC;
+}
+.word-page__body {
+  position: absolute;
+  top: 96px;   /* 1in margem superior */
+  left: 96px;
+  right: 96px;
+  bottom: 96px;
+  overflow: hidden;
+}
+.word-title {
+  font-size: 32px; /* 24pt */
+  font-weight: 700;
+  color: #0F172A;
+  margin: 12px 0 8px;
+  letter-spacing: -0.01em;
+}
+.word-doc h1 {
+  font-size: 21.33px; /* 16pt */
+  font-weight: 700;
+  color: #0F172A;
+  border-bottom: 1px solid #0F172A;
+  padding-bottom: 4px;
+  margin: 22px 0 10px;
+}
+.word-doc h2 {
+  font-size: 17.33px; /* 13pt */
+  font-weight: 700;
+  color: #1E3A8A;
+  margin: 18px 0 8px;
+}
+.word-doc h3 {
+  font-size: 14.67px; /* 11pt */
+  font-weight: 700;
+  color: #334155;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  margin: 14px 0 6px;
+}
+.word-doc p { margin: 0 0 8px; }
+.word-doc ul, .word-doc ol { margin: 6px 0 10px 24px; }
+.word-doc ul { list-style: disc; }
+.word-doc ol { list-style: decimal; }
+.word-doc li { margin: 2px 0; }
+.word-doc blockquote {
+  margin: 10px 0;
+  padding: 4px 0 4px 12px;
+  border-left: 3px solid #0F172A;
+  color: #475569;
+  font-style: italic;
+}
+.word-doc strong { font-weight: 700; }
+.word-doc em { font-style: italic; }
+.word-doc a { color: #1E3A8A; text-decoration: underline; }
