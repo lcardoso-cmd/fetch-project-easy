@@ -41,8 +41,13 @@ import { Route as AuthenticatedSettingsFirmRouteImport } from './routes/_authent
 import { Route as AuthenticatedCasesNewRouteImport } from './routes/_authenticated/cases.new'
 import { Route as AuthenticatedCasesBulkRouteImport } from './routes/_authenticated/cases.bulk'
 import { Route as AuthenticatedCasesCaseIdRouteImport } from './routes/_authenticated/cases.$caseId'
+import { Route as AuthenticatedPlatformUsersIndexRouteImport } from './routes/_authenticated/platform.users.index'
+import { Route as AuthenticatedPlatformCustomersIndexRouteImport } from './routes/_authenticated/platform.customers.index'
+import { Route as AuthenticatedPlatformCredentialsIndexRouteImport } from './routes/_authenticated/platform.credentials.index'
+import { Route as AuthenticatedPlatformAuditIndexRouteImport } from './routes/_authenticated/platform.audit.index'
 import { Route as ApiPublicOutlookCallbackRouteImport } from './routes/api/public/outlook/callback'
 import { Route as ApiPublicGoogleCallbackRouteImport } from './routes/api/public/google/callback'
+import { Route as AuthenticatedPlatformCustomersIdRouteImport } from './routes/_authenticated/platform.customers.$id'
 import { Route as AuthenticatedCasesCaseIdChatRouteImport } from './routes/_authenticated/cases.$caseId.chat'
 
 const AuthRoute = AuthRouteImport.update({
@@ -211,6 +216,30 @@ const AuthenticatedCasesCaseIdRoute =
     path: '/$caseId',
     getParentRoute: () => AuthenticatedCasesRoute,
   } as any)
+const AuthenticatedPlatformUsersIndexRoute =
+  AuthenticatedPlatformUsersIndexRouteImport.update({
+    id: '/platform/users/',
+    path: '/platform/users/',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedPlatformCustomersIndexRoute =
+  AuthenticatedPlatformCustomersIndexRouteImport.update({
+    id: '/platform/customers/',
+    path: '/platform/customers/',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedPlatformCredentialsIndexRoute =
+  AuthenticatedPlatformCredentialsIndexRouteImport.update({
+    id: '/platform/credentials/',
+    path: '/platform/credentials/',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedPlatformAuditIndexRoute =
+  AuthenticatedPlatformAuditIndexRouteImport.update({
+    id: '/platform/audit/',
+    path: '/platform/audit/',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const ApiPublicOutlookCallbackRoute =
   ApiPublicOutlookCallbackRouteImport.update({
     id: '/api/public/outlook/callback',
@@ -222,6 +251,12 @@ const ApiPublicGoogleCallbackRoute = ApiPublicGoogleCallbackRouteImport.update({
   path: '/api/public/google/callback',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedPlatformCustomersIdRoute =
+  AuthenticatedPlatformCustomersIdRouteImport.update({
+    id: '/platform/customers/$id',
+    path: '/platform/customers/$id',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedCasesCaseIdChatRoute =
   AuthenticatedCasesCaseIdChatRouteImport.update({
     id: '/chat',
@@ -262,8 +297,13 @@ export interface FileRoutesByFullPath {
   '/cases/': typeof AuthenticatedCasesIndexRoute
   '/platform/': typeof AuthenticatedPlatformIndexRoute
   '/cases/$caseId/chat': typeof AuthenticatedCasesCaseIdChatRoute
+  '/platform/customers/$id': typeof AuthenticatedPlatformCustomersIdRoute
   '/api/public/google/callback': typeof ApiPublicGoogleCallbackRoute
   '/api/public/outlook/callback': typeof ApiPublicOutlookCallbackRoute
+  '/platform/audit/': typeof AuthenticatedPlatformAuditIndexRoute
+  '/platform/credentials/': typeof AuthenticatedPlatformCredentialsIndexRoute
+  '/platform/customers/': typeof AuthenticatedPlatformCustomersIndexRoute
+  '/platform/users/': typeof AuthenticatedPlatformUsersIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -297,8 +337,13 @@ export interface FileRoutesByTo {
   '/cases': typeof AuthenticatedCasesIndexRoute
   '/platform': typeof AuthenticatedPlatformIndexRoute
   '/cases/$caseId/chat': typeof AuthenticatedCasesCaseIdChatRoute
+  '/platform/customers/$id': typeof AuthenticatedPlatformCustomersIdRoute
   '/api/public/google/callback': typeof ApiPublicGoogleCallbackRoute
   '/api/public/outlook/callback': typeof ApiPublicOutlookCallbackRoute
+  '/platform/audit': typeof AuthenticatedPlatformAuditIndexRoute
+  '/platform/credentials': typeof AuthenticatedPlatformCredentialsIndexRoute
+  '/platform/customers': typeof AuthenticatedPlatformCustomersIndexRoute
+  '/platform/users': typeof AuthenticatedPlatformUsersIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -335,8 +380,13 @@ export interface FileRoutesById {
   '/_authenticated/cases/': typeof AuthenticatedCasesIndexRoute
   '/_authenticated/platform/': typeof AuthenticatedPlatformIndexRoute
   '/_authenticated/cases/$caseId/chat': typeof AuthenticatedCasesCaseIdChatRoute
+  '/_authenticated/platform/customers/$id': typeof AuthenticatedPlatformCustomersIdRoute
   '/api/public/google/callback': typeof ApiPublicGoogleCallbackRoute
   '/api/public/outlook/callback': typeof ApiPublicOutlookCallbackRoute
+  '/_authenticated/platform/audit/': typeof AuthenticatedPlatformAuditIndexRoute
+  '/_authenticated/platform/credentials/': typeof AuthenticatedPlatformCredentialsIndexRoute
+  '/_authenticated/platform/customers/': typeof AuthenticatedPlatformCustomersIndexRoute
+  '/_authenticated/platform/users/': typeof AuthenticatedPlatformUsersIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -373,8 +423,13 @@ export interface FileRouteTypes {
     | '/cases/'
     | '/platform/'
     | '/cases/$caseId/chat'
+    | '/platform/customers/$id'
     | '/api/public/google/callback'
     | '/api/public/outlook/callback'
+    | '/platform/audit/'
+    | '/platform/credentials/'
+    | '/platform/customers/'
+    | '/platform/users/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -408,8 +463,13 @@ export interface FileRouteTypes {
     | '/cases'
     | '/platform'
     | '/cases/$caseId/chat'
+    | '/platform/customers/$id'
     | '/api/public/google/callback'
     | '/api/public/outlook/callback'
+    | '/platform/audit'
+    | '/platform/credentials'
+    | '/platform/customers'
+    | '/platform/users'
   id:
     | '__root__'
     | '/'
@@ -445,8 +505,13 @@ export interface FileRouteTypes {
     | '/_authenticated/cases/'
     | '/_authenticated/platform/'
     | '/_authenticated/cases/$caseId/chat'
+    | '/_authenticated/platform/customers/$id'
     | '/api/public/google/callback'
     | '/api/public/outlook/callback'
+    | '/_authenticated/platform/audit/'
+    | '/_authenticated/platform/credentials/'
+    | '/_authenticated/platform/customers/'
+    | '/_authenticated/platform/users/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -689,6 +754,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedCasesCaseIdRouteImport
       parentRoute: typeof AuthenticatedCasesRoute
     }
+    '/_authenticated/platform/users/': {
+      id: '/_authenticated/platform/users/'
+      path: '/platform/users'
+      fullPath: '/platform/users/'
+      preLoaderRoute: typeof AuthenticatedPlatformUsersIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/platform/customers/': {
+      id: '/_authenticated/platform/customers/'
+      path: '/platform/customers'
+      fullPath: '/platform/customers/'
+      preLoaderRoute: typeof AuthenticatedPlatformCustomersIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/platform/credentials/': {
+      id: '/_authenticated/platform/credentials/'
+      path: '/platform/credentials'
+      fullPath: '/platform/credentials/'
+      preLoaderRoute: typeof AuthenticatedPlatformCredentialsIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/platform/audit/': {
+      id: '/_authenticated/platform/audit/'
+      path: '/platform/audit'
+      fullPath: '/platform/audit/'
+      preLoaderRoute: typeof AuthenticatedPlatformAuditIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/api/public/outlook/callback': {
       id: '/api/public/outlook/callback'
       path: '/api/public/outlook/callback'
@@ -702,6 +795,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/api/public/google/callback'
       preLoaderRoute: typeof ApiPublicGoogleCallbackRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/platform/customers/$id': {
+      id: '/_authenticated/platform/customers/$id'
+      path: '/platform/customers/$id'
+      fullPath: '/platform/customers/$id'
+      preLoaderRoute: typeof AuthenticatedPlatformCustomersIdRouteImport
+      parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/cases/$caseId/chat': {
       id: '/_authenticated/cases/$caseId/chat'
@@ -777,6 +877,11 @@ interface AuthenticatedRouteChildren {
   AuthenticatedProposalRoute: typeof AuthenticatedProposalRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRouteWithChildren
   AuthenticatedPlatformIndexRoute: typeof AuthenticatedPlatformIndexRoute
+  AuthenticatedPlatformCustomersIdRoute: typeof AuthenticatedPlatformCustomersIdRoute
+  AuthenticatedPlatformAuditIndexRoute: typeof AuthenticatedPlatformAuditIndexRoute
+  AuthenticatedPlatformCredentialsIndexRoute: typeof AuthenticatedPlatformCredentialsIndexRoute
+  AuthenticatedPlatformCustomersIndexRoute: typeof AuthenticatedPlatformCustomersIndexRoute
+  AuthenticatedPlatformUsersIndexRoute: typeof AuthenticatedPlatformUsersIndexRoute
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
@@ -797,6 +902,13 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedProposalRoute: AuthenticatedProposalRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRouteWithChildren,
   AuthenticatedPlatformIndexRoute: AuthenticatedPlatformIndexRoute,
+  AuthenticatedPlatformCustomersIdRoute: AuthenticatedPlatformCustomersIdRoute,
+  AuthenticatedPlatformAuditIndexRoute: AuthenticatedPlatformAuditIndexRoute,
+  AuthenticatedPlatformCredentialsIndexRoute:
+    AuthenticatedPlatformCredentialsIndexRoute,
+  AuthenticatedPlatformCustomersIndexRoute:
+    AuthenticatedPlatformCustomersIndexRoute,
+  AuthenticatedPlatformUsersIndexRoute: AuthenticatedPlatformUsersIndexRoute,
 }
 
 const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
