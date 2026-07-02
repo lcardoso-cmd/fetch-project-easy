@@ -155,6 +155,7 @@ function ProposalPage() {
   const [errors, setErrors] = useState<FieldErrors>({});
   const [savedAt, setSavedAt] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
+  const [pending, setPending] = useState(false);
   const [syncError, setSyncError] = useState<string | null>(null);
   const [hydrated, setHydrated] = useState(false);
   const [, forceTick] = useState(0);
