@@ -1076,6 +1076,27 @@ export type Database = {
         }
         Relationships: []
       }
+      user_capabilities: {
+        Row: {
+          capability: Database["public"]["Enums"]["app_capability"]
+          granted_at: string
+          granted_by: string | null
+          user_id: string
+        }
+        Insert: {
+          capability: Database["public"]["Enums"]["app_capability"]
+          granted_at?: string
+          granted_by?: string | null
+          user_id: string
+        }
+        Update: {
+          capability?: Database["public"]["Enums"]["app_capability"]
+          granted_at?: string
+          granted_by?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -1102,6 +1123,13 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      has_capability: {
+        Args: {
+          _capability: Database["public"]["Enums"]["app_capability"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -1174,6 +1202,13 @@ export type Database = {
       }
     }
     Enums: {
+      app_capability:
+        | "cases"
+        | "expert_opinion"
+        | "commercial"
+        | "marketing"
+        | "office_admin"
+        | "platform_admin"
       app_role: "admin" | "user"
     }
     CompositeTypes: {
@@ -1302,6 +1337,14 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      app_capability: [
+        "cases",
+        "expert_opinion",
+        "commercial",
+        "marketing",
+        "office_admin",
+        "platform_admin",
+      ],
       app_role: ["admin", "user"],
     },
   },
