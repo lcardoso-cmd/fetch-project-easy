@@ -491,7 +491,7 @@ export const listDocumentAuditEvents = createServerFn({ method: "POST" })
       reason: (r.reason as string | null) ?? null,
       filename: (r.filename as string | null) ?? null,
       content_hash: (r.content_hash as string | null) ?? null,
-      metadata: (r.metadata as Record<string, unknown>) ?? {},
+      metadata: (r.metadata ?? {}) as Record<string, string | number | boolean | null>,
       created_at: r.created_at as string,
       user_id: r.user_id as string,
       document_id: (r.document_id as string | null) ?? null,
