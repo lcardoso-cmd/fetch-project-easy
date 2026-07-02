@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SemPermissaoRouteImport } from './routes/sem-permissao'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as EntrarRouteImport } from './routes/entrar'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
@@ -92,6 +93,11 @@ import { Route as AuthenticatedAssistenciasCaseIdChatRouteImport } from './route
 const SemPermissaoRoute = SemPermissaoRouteImport.update({
   id: '/sem-permissao',
   path: '/sem-permissao',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
   getParentRoute: () => rootRouteImport,
 } as any)
 const EntrarRoute = EntrarRouteImport.update({
@@ -528,6 +534,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/entrar': typeof EntrarRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/sem-permissao': typeof SemPermissaoRoute
   '/agenda': typeof AuthenticatedAgendaRoute
   '/assistencias': typeof AuthenticatedAssistenciasRouteWithChildren
@@ -608,6 +615,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/entrar': typeof EntrarRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/sem-permissao': typeof SemPermissaoRoute
   '/agenda': typeof AuthenticatedAgendaRoute
   '/assistente': typeof AuthenticatedAssistenteRoute
@@ -688,6 +696,7 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/auth': typeof AuthRoute
   '/entrar': typeof EntrarRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/sem-permissao': typeof SemPermissaoRoute
   '/_authenticated/agenda': typeof AuthenticatedAgendaRoute
   '/_authenticated/assistencias': typeof AuthenticatedAssistenciasRouteWithChildren
@@ -770,6 +779,7 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/entrar'
+    | '/reset-password'
     | '/sem-permissao'
     | '/agenda'
     | '/assistencias'
@@ -850,6 +860,7 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/entrar'
+    | '/reset-password'
     | '/sem-permissao'
     | '/agenda'
     | '/assistente'
@@ -929,6 +940,7 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/auth'
     | '/entrar'
+    | '/reset-password'
     | '/sem-permissao'
     | '/_authenticated/agenda'
     | '/_authenticated/assistencias'
@@ -1011,6 +1023,7 @@ export interface RootRouteChildren {
   AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
   AuthRoute: typeof AuthRoute
   EntrarRoute: typeof EntrarRoute
+  ResetPasswordRoute: typeof ResetPasswordRoute
   SemPermissaoRoute: typeof SemPermissaoRoute
   ConviteTokenRoute: typeof ConviteTokenRoute
   InviteTokenRoute: typeof InviteTokenRoute
@@ -1032,6 +1045,13 @@ declare module '@tanstack/react-router' {
       path: '/sem-permissao'
       fullPath: '/sem-permissao'
       preLoaderRoute: typeof SemPermissaoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/entrar': {
@@ -1806,6 +1826,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRoute: AuthenticatedRouteWithChildren,
   AuthRoute: AuthRoute,
   EntrarRoute: EntrarRoute,
+  ResetPasswordRoute: ResetPasswordRoute,
   SemPermissaoRoute: SemPermissaoRoute,
   ConviteTokenRoute: ConviteTokenRoute,
   InviteTokenRoute: InviteTokenRoute,

@@ -10,7 +10,15 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable";
 import { useNavigate } from "@tanstack/react-router";
-import { ArrowLeft, Mail, Lock, User, LogIn, UserPlus, MailCheck } from "lucide-react";
+import { ArrowLeft, Mail, Lock, User, LogIn, UserPlus, MailCheck, KeyRound } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
