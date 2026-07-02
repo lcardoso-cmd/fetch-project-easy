@@ -14,6 +14,18 @@ import { generateProposal } from "@/lib/generators.functions";
 import { getCases } from "@/lib/cases.functions";
 import { useProfile } from "@/hooks/use-profile";
 import { RichTextEditor } from "@/components/chat/rich-text-editor";
+import { z } from "zod";
+
+const proposalSchema = z.object({
+  client_name: z.string().trim().min(2, "Informe o nome do cliente").max(200),
+  matter: z.string().trim().min(10, "Descreva a matéria/caso (mín. 10 caracteres)").max(2000),
+  scope: z.string().trim().min(10, "Descreva o escopo (mín. 10 caracteres)").max(2000),
+  fees: z.string().trim().min(1, "Informe os honorários").max(200),
+  firm_name: z.string().trim().min(2, "Informe o nome do escritório").max(200),
+  lawyer_name: z.string().trim().min(2, "Informe o advogado responsável").max(200),
+});
+
+type FieldErrors = Partial<Record<keyof z.infer<typeof proposalSchema>, string>>;
 
 export const Route = createFileRoute("/_authenticated/proposal")({
   component: ProposalPage,
