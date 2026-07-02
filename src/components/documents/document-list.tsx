@@ -34,6 +34,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { UploadDialog } from "./upload-dialog";
+import { DocumentAuditDialog } from "./document-audit-dialog";
 
 export interface DocItem {
   id: string;
@@ -213,10 +214,13 @@ export function DocumentList({
             </div>
           )}
         </div>
-        <UploadDialog
-          caseId={caseId}
-          existingDocuments={documents.map((d) => ({ id: d.id, filename: d.filename }))}
-        />
+        <div className="flex items-center gap-2">
+          <DocumentAuditDialog caseId={caseId} />
+          <UploadDialog
+            caseId={caseId}
+            existingDocuments={documents.map((d) => ({ id: d.id, filename: d.filename }))}
+          />
+        </div>
       </CardHeader>
       <CardContent>
         {documents.length === 0 ? (

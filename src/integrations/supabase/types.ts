@@ -556,6 +556,53 @@ export type Database = {
         }
         Relationships: []
       }
+      document_audit_events: {
+        Row: {
+          action: string
+          case_id: string
+          content_hash: string | null
+          created_at: string
+          document_id: string | null
+          filename: string | null
+          id: string
+          metadata: Json
+          reason: string | null
+          user_id: string
+        }
+        Insert: {
+          action: string
+          case_id: string
+          content_hash?: string | null
+          created_at?: string
+          document_id?: string | null
+          filename?: string | null
+          id?: string
+          metadata?: Json
+          reason?: string | null
+          user_id: string
+        }
+        Update: {
+          action?: string
+          case_id?: string
+          content_hash?: string | null
+          created_at?: string
+          document_id?: string | null
+          filename?: string | null
+          id?: string
+          metadata?: Json
+          reason?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_audit_events_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       document_chunks: {
         Row: {
           case_id: string

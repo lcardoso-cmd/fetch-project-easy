@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 const UploadSchema = z.object({
   case_id: z.string().uuid(),
@@ -10,7 +11,48 @@ const UploadSchema = z.object({
   storage_path: z.string().min(1),
   extracted_text: z.string().optional(),
   content_hash: z.string().max(128).optional(),
+  replaces_document_id: z.string().uuid().optional(),
+  reason: z.string().max(500).optional(),
 });
+
+type AuditAction =
+  | "uploaded"
+  | "imported"
+  | "replaced"
+  | "duplicate_ignored"
+  | "discarded"
+  | "deleted";
+
+async function logAudit(
+  supabase: SupabaseClient,
+  userId: string,
+  entry: {
+    case_id: string;
+    action: AuditAction;
+    document_id?: string | null;
+    filename?: string | null;
+    content_hash?: string | null;
+    reason?: string | null;
+    metadata?: Record<string, unknown>;
+  },
+) {
+  await supabase
+    .from("document_audit_events")
+    .insert({
+      case_id: entry.case_id,
+      user_id: userId,
+      action: entry.action,
+      document_id: entry.document_id ?? null,
+      filename: entry.filename ?? null,
+      content_hash: entry.content_hash ?? null,
+      reason: entry.reason ?? null,
+      metadata: entry.metadata ?? {},
+    })
+    // Auditoria não deve falhar a operação principal se algo der errado.
+    .then((r) => {
+      if (r.error) console.warn("[audit] falha ao registrar", r.error.message);
+    });
+}
 
 export const listDocuments = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
@@ -130,7 +172,14 @@ export const createUploadSignedUrl = createServerFn({ method: "POST" })
 export const discardUploadedObject = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((i: unknown) =>
-    z.object({ storage_path: z.string().min(1) }).parse(i),
+    z
+      .object({
+        storage_path: z.string().min(1),
+        case_id: z.string().uuid().optional(),
+        filename: z.string().max(300).optional(),
+        reason: z.string().max(500).optional(),
+      })
+      .parse(i),
   )
   .handler(async ({ data, context }) => {
     if (!data.storage_path.startsWith(`${context.userId}/`)) {
@@ -140,6 +189,15 @@ export const discardUploadedObject = createServerFn({ method: "POST" })
       .from("documents")
       .remove([data.storage_path])
       .catch(() => {});
+    if (data.case_id) {
+      await logAudit(context.supabase, context.userId, {
+        case_id: data.case_id,
+        action: "discarded",
+        filename: data.filename ?? null,
+        reason: data.reason ?? "Envio cancelado pelo usuário",
+        metadata: { storage_path: data.storage_path },
+      });
+    }
     return { ok: true as const };
   });
 
@@ -169,6 +227,15 @@ export const registerDocument = createServerFn({ method: "POST" })
           .from("documents")
           .remove([data.storage_path])
           .catch(() => {});
+        await logAudit(context.supabase, context.userId, {
+          case_id: data.case_id,
+          action: "duplicate_ignored",
+          document_id: byHash.id as string,
+          filename: data.filename,
+          content_hash: data.content_hash,
+          reason: "Hash idêntico ao arquivo já existente",
+          metadata: { existing_filename: byHash.filename },
+        });
         return {
           duplicate: true as const,
           reason: "content_hash" as const,
@@ -190,6 +257,15 @@ export const registerDocument = createServerFn({ method: "POST" })
         .from("documents")
         .remove([data.storage_path])
         .catch(() => {});
+      await logAudit(context.supabase, context.userId, {
+        case_id: data.case_id,
+        action: "duplicate_ignored",
+        document_id: byName.id as string,
+        filename: data.filename,
+        content_hash: data.content_hash,
+        reason: "Já existe um arquivo com esse nome",
+        metadata: { existing_filename: byName.filename },
+      });
       return {
         duplicate: true as const,
         reason: "filename" as const,
@@ -214,6 +290,23 @@ export const registerDocument = createServerFn({ method: "POST" })
       .select()
       .single();
     if (error) throw error;
+    await logAudit(context.supabase, context.userId, {
+      case_id: data.case_id,
+      action: data.replaces_document_id ? "replaced" : "uploaded",
+      document_id: (row as { id: string }).id,
+      filename: data.filename,
+      content_hash: data.content_hash,
+      reason:
+        data.reason ??
+        (data.replaces_document_id
+          ? "Substituição de arquivo existente"
+          : null),
+      metadata: {
+        file_size: data.file_size,
+        file_type: data.file_type,
+        replaces_document_id: data.replaces_document_id ?? null,
+      },
+    });
     return { duplicate: false as const, document: row };
   });
 
@@ -253,6 +346,15 @@ export const attachExistingDocument = createServerFn({ method: "POST" })
         .eq("content_hash", src.content_hash)
         .maybeSingle();
       if (byHash) {
+        await logAudit(context.supabase, context.userId, {
+          case_id: data.case_id,
+          action: "duplicate_ignored",
+          document_id: byHash.id as string,
+          filename: src.filename as string,
+          content_hash: src.content_hash,
+          reason: "Importação ignorada — hash idêntico",
+          metadata: { existing_filename: byHash.filename },
+        });
         return {
           duplicate: true as const,
           reason: "content_hash" as const,
@@ -270,6 +372,14 @@ export const attachExistingDocument = createServerFn({ method: "POST" })
       .eq("filename", src.filename as string)
       .maybeSingle();
     if (byName) {
+      await logAudit(context.supabase, context.userId, {
+        case_id: data.case_id,
+        action: "duplicate_ignored",
+        document_id: byName.id as string,
+        filename: src.filename as string,
+        reason: "Importação ignorada — nome já existente",
+        metadata: { existing_filename: byName.filename },
+      });
       return {
         duplicate: true as const,
         reason: "filename" as const,
@@ -294,17 +404,33 @@ export const attachExistingDocument = createServerFn({ method: "POST" })
       .select()
       .single();
     if (error) throw error;
+    await logAudit(context.supabase, context.userId, {
+      case_id: data.case_id,
+      action: "imported",
+      document_id: (row as { id: string }).id,
+      filename: src.filename as string,
+      content_hash: src.content_hash as string | null,
+      reason: "Importado de outro caso",
+      metadata: { source_document_id: data.source_document_id },
+    });
     return { duplicate: false as const, document: row };
   });
 
 export const deleteDocument = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((i: unknown) => z.object({ id: z.string().uuid() }).parse(i))
+  .inputValidator((i: unknown) =>
+    z
+      .object({
+        id: z.string().uuid(),
+        reason: z.string().max(500).optional(),
+      })
+      .parse(i),
+  )
   .handler(async ({ data, context }) => {
     // Buscar para apagar do storage — mas só se nenhum outro documento reusar o mesmo path
     const { data: doc } = await context.supabase
       .from("documents")
-      .select("storage_path")
+      .select("storage_path, case_id, filename, content_hash")
       .eq("id", data.id)
       .eq("user_id", context.userId)
       .single();
@@ -326,5 +452,51 @@ export const deleteDocument = createServerFn({ method: "POST" })
       .eq("id", data.id)
       .eq("user_id", context.userId);
     if (error) throw error;
+    if (doc?.case_id) {
+      await logAudit(context.supabase, context.userId, {
+        case_id: doc.case_id as string,
+        action: "deleted",
+        document_id: data.id,
+        filename: (doc.filename as string) ?? null,
+        content_hash: (doc.content_hash as string) ?? null,
+        reason: data.reason ?? null,
+      });
+    }
     return { ok: true };
+  });
+
+/**
+ * Retorna os eventos de auditoria (importações, substituições, cancelamentos,
+ * exclusões) de documentos vinculados ao caso, do mais recente para o mais
+ * antigo, com o nome do usuário responsável quando disponível.
+ */
+export const listDocumentAuditEvents = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((i: unknown) =>
+    z.object({ case_id: z.string().uuid(), limit: z.number().int().min(1).max(200).optional() }).parse(i),
+  )
+  .handler(async ({ data, context }) => {
+    const { data: rows, error } = await context.supabase
+      .from("document_audit_events")
+      .select(
+        "id, action, reason, filename, content_hash, metadata, created_at, user_id, document_id, profiles:user_id(full_name)",
+      )
+      .eq("case_id", data.case_id)
+      .order("created_at", { ascending: false })
+      .limit(data.limit ?? 100);
+    if (error) throw error;
+    return (rows ?? []).map((r) => ({
+      id: r.id as string,
+      action: r.action as AuditAction,
+      reason: (r.reason as string | null) ?? null,
+      filename: (r.filename as string | null) ?? null,
+      content_hash: (r.content_hash as string | null) ?? null,
+      metadata: (r.metadata ?? {}) as Record<string, string | number | boolean | null>,
+      created_at: r.created_at as string,
+      user_id: r.user_id as string,
+      document_id: (r.document_id as string | null) ?? null,
+      user_name:
+        (r.profiles as { full_name?: string | null } | null)?.full_name ??
+        null,
+    }));
   });
