@@ -60,6 +60,7 @@ import { Route as ApiToolsPdfRouteImport } from './routes/api/tools/pdf'
 import { Route as AuthenticatedSettingsOauthRouteImport } from './routes/_authenticated/settings.oauth'
 import { Route as AuthenticatedSettingsFirmRouteImport } from './routes/_authenticated/settings.firm'
 import { Route as AuthenticatedContratarB2bSolicitarRouteImport } from './routes/_authenticated/contratar-b2b.solicitar'
+import { Route as AuthenticatedContratarB2bRequestIdRouteImport } from './routes/_authenticated/contratar-b2b.$requestId'
 import { Route as AuthenticatedConfiguracoesOauthRouteImport } from './routes/_authenticated/configuracoes.oauth'
 import { Route as AuthenticatedConfiguracoesEscritorioRouteImport } from './routes/_authenticated/configuracoes.escritorio'
 import { Route as AuthenticatedCasesNewRouteImport } from './routes/_authenticated/cases.new'
@@ -353,6 +354,12 @@ const AuthenticatedContratarB2bSolicitarRoute =
     path: '/contratar-b2b/solicitar',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedContratarB2bRequestIdRoute =
+  AuthenticatedContratarB2bRequestIdRouteImport.update({
+    id: '/contratar-b2b/$requestId',
+    path: '/contratar-b2b/$requestId',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedConfiguracoesOauthRoute =
   AuthenticatedConfiguracoesOauthRouteImport.update({
     id: '/oauth',
@@ -529,6 +536,7 @@ export interface FileRoutesByFullPath {
   '/cases/new': typeof AuthenticatedCasesNewRoute
   '/configuracoes/escritorio': typeof AuthenticatedConfiguracoesEscritorioRoute
   '/configuracoes/oauth': typeof AuthenticatedConfiguracoesOauthRoute
+  '/contratar-b2b/$requestId': typeof AuthenticatedContratarB2bRequestIdRoute
   '/contratar-b2b/solicitar': typeof AuthenticatedContratarB2bSolicitarRoute
   '/settings/firm': typeof AuthenticatedSettingsFirmRoute
   '/settings/oauth': typeof AuthenticatedSettingsOauthRoute
@@ -601,6 +609,7 @@ export interface FileRoutesByTo {
   '/cases/new': typeof AuthenticatedCasesNewRoute
   '/configuracoes/escritorio': typeof AuthenticatedConfiguracoesEscritorioRoute
   '/configuracoes/oauth': typeof AuthenticatedConfiguracoesOauthRoute
+  '/contratar-b2b/$requestId': typeof AuthenticatedContratarB2bRequestIdRoute
   '/contratar-b2b/solicitar': typeof AuthenticatedContratarB2bSolicitarRoute
   '/settings/firm': typeof AuthenticatedSettingsFirmRoute
   '/settings/oauth': typeof AuthenticatedSettingsOauthRoute
@@ -677,6 +686,7 @@ export interface FileRoutesById {
   '/_authenticated/cases/new': typeof AuthenticatedCasesNewRoute
   '/_authenticated/configuracoes/escritorio': typeof AuthenticatedConfiguracoesEscritorioRoute
   '/_authenticated/configuracoes/oauth': typeof AuthenticatedConfiguracoesOauthRoute
+  '/_authenticated/contratar-b2b/$requestId': typeof AuthenticatedContratarB2bRequestIdRoute
   '/_authenticated/contratar-b2b/solicitar': typeof AuthenticatedContratarB2bSolicitarRoute
   '/_authenticated/settings/firm': typeof AuthenticatedSettingsFirmRoute
   '/_authenticated/settings/oauth': typeof AuthenticatedSettingsOauthRoute
@@ -753,6 +763,7 @@ export interface FileRouteTypes {
     | '/cases/new'
     | '/configuracoes/escritorio'
     | '/configuracoes/oauth'
+    | '/contratar-b2b/$requestId'
     | '/contratar-b2b/solicitar'
     | '/settings/firm'
     | '/settings/oauth'
@@ -825,6 +836,7 @@ export interface FileRouteTypes {
     | '/cases/new'
     | '/configuracoes/escritorio'
     | '/configuracoes/oauth'
+    | '/contratar-b2b/$requestId'
     | '/contratar-b2b/solicitar'
     | '/settings/firm'
     | '/settings/oauth'
@@ -900,6 +912,7 @@ export interface FileRouteTypes {
     | '/_authenticated/cases/new'
     | '/_authenticated/configuracoes/escritorio'
     | '/_authenticated/configuracoes/oauth'
+    | '/_authenticated/contratar-b2b/$requestId'
     | '/_authenticated/contratar-b2b/solicitar'
     | '/_authenticated/settings/firm'
     | '/_authenticated/settings/oauth'
@@ -1305,6 +1318,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedContratarB2bSolicitarRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/contratar-b2b/$requestId': {
+      id: '/_authenticated/contratar-b2b/$requestId'
+      path: '/contratar-b2b/$requestId'
+      fullPath: '/contratar-b2b/$requestId'
+      preLoaderRoute: typeof AuthenticatedContratarB2bRequestIdRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/configuracoes/oauth': {
       id: '/_authenticated/configuracoes/oauth'
       path: '/oauth'
@@ -1593,6 +1613,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedPublicacoesRoute: typeof AuthenticatedPublicacoesRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRouteWithChildren
   AuthenticatedTarefasRoute: typeof AuthenticatedTarefasRoute
+  AuthenticatedContratarB2bRequestIdRoute: typeof AuthenticatedContratarB2bRequestIdRoute
   AuthenticatedContratarB2bSolicitarRoute: typeof AuthenticatedContratarB2bSolicitarRoute
   AuthenticatedContratarB2bIndexRoute: typeof AuthenticatedContratarB2bIndexRoute
   AuthenticatedPlataformaIndexRoute: typeof AuthenticatedPlataformaIndexRoute
@@ -1641,6 +1662,8 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedPublicacoesRoute: AuthenticatedPublicacoesRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRouteWithChildren,
   AuthenticatedTarefasRoute: AuthenticatedTarefasRoute,
+  AuthenticatedContratarB2bRequestIdRoute:
+    AuthenticatedContratarB2bRequestIdRoute,
   AuthenticatedContratarB2bSolicitarRoute:
     AuthenticatedContratarB2bSolicitarRoute,
   AuthenticatedContratarB2bIndexRoute: AuthenticatedContratarB2bIndexRoute,
