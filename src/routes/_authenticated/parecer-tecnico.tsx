@@ -77,13 +77,14 @@ const PARECER_PREFILL = {
 
 function ExpertOpinionPage() {
   const listMy = useServerFn(listMyB2bRequests);
-  const { data: requests = [] } = useQuery({
+  const { data: requests, isPending } = useQuery({
     queryKey: ["b2b-my-requests"],
     queryFn: () => listMy(),
   });
-  const parecerRequests = requests
+  const parecerRequests = (requests ?? [])
     .filter((r) => r.service_slug === "parecer-tecnico")
     .slice(0, 5);
+
 
   return (
     <div className="space-y-6 max-w-4xl">
