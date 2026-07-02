@@ -65,12 +65,12 @@ function CaseDataRow({
   breakAll?: boolean;
 }) {
   return (
-    <div className="min-w-0 sm:contents">
-      <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground sm:self-start sm:text-sm sm:normal-case sm:tracking-normal sm:text-foreground sm:pr-2">
+    <div className="grid min-w-0 grid-cols-1 gap-y-0.5 sm:contents">
+      <dt className="min-w-0 break-words text-xs font-medium uppercase tracking-wide text-muted-foreground sm:self-start sm:text-sm sm:normal-case sm:tracking-normal sm:text-foreground sm:pr-2">
         {label}
       </dt>
       <dd
-        className={`mt-0.5 min-w-0 text-foreground sm:mt-0 sm:self-start sm:text-muted-foreground ${
+        className={`min-w-0 text-foreground sm:self-start sm:text-muted-foreground ${
           breakAll ? "break-all" : "break-words"
         }`}
       >
