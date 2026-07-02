@@ -177,7 +177,7 @@ export const updateProposalVersion = createServerFn({ method: "POST" })
       .parse(i),
   )
   .handler(async ({ data, context }) => {
-    const patch: Record<string, unknown> = {};
+    const patch: { label?: string; description?: string | null; pinned?: boolean } = {};
     if (data.label !== undefined) patch.label = data.label;
     if (data.description !== undefined) patch.description = data.description;
     if (data.pinned !== undefined) patch.pinned = data.pinned;
