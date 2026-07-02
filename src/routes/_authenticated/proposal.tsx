@@ -359,7 +359,15 @@ function ProposalPage() {
             {output ? (
               <RichTextEditor html={output} onChange={setOutput} minHeight={520} />
             ) : (
-              <p className="text-sm text-muted-foreground">A proposta gerada aparecerá aqui, pronta para edição.</p>
+              <div className="space-y-2">
+                <p className="text-xs text-muted-foreground">
+                  Prévia em tempo real dos campos preenchidos. Clique em <strong>Gerar proposta</strong> para produzir a versão final com JurisMind.
+                </p>
+                <div
+                  className="proposal-preview rounded-md border bg-background p-6 text-sm leading-relaxed max-h-[560px] overflow-auto"
+                  dangerouslySetInnerHTML={{ __html: previewHtml }}
+                />
+              </div>
             )}
           </CardContent>
         </Card>
@@ -367,3 +375,66 @@ function ProposalPage() {
     </div>
   );
 }
+
+function esc(s: string) {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+function buildPreviewHtml(f: FormState): string {
+  const p = (label: string, value: string) =>
+    value ? `<p><strong>${esc(label)}:</strong> ${esc(value)}</p>` : "";
+  const section = (title: string, inner: string) =>
+    inner.trim() ? `<h2>${esc(title)}</h2>${inner}` : "";
+
+  const cliente = [
+    f.client_name ? `<p><strong>${esc(f.client_name)}</strong></p>` : "",
+    p("CPF/CNPJ", f.client_document),
+    p("Endereço", f.client_address),
+    p("Cidade/Estado", f.client_city_state),
+  ].join("");
+
+  const contraparte = [
+    f.counterparty_name ? `<p><strong>${esc(f.counterparty_name)}</strong></p>` : "",
+    p("CPF/CNPJ", f.counterparty_document),
+    p("Endereço", f.counterparty_address),
+    p("Cidade/Estado", f.counterparty_city_state),
+    p("Advogado", f.counterparty_lawyer),
+  ].join("");
+
+  const objeto = [
+    f.matter ? `<p>${esc(f.matter)}</p>` : "",
+    f.scope ? `<h3>Escopo</h3><p>${esc(f.scope)}</p>` : "",
+  ].join("");
+
+  const honorarios = [
+    p("Honorários", f.fees),
+    p("Honorários de êxito", f.success_fee),
+    p("Prazo estimado", f.deadline),
+  ].join("");
+
+  const escritorio = [
+    f.firm_name ? `<p><strong>${esc(f.firm_name)}</strong></p>` : "",
+    p("Áreas de atuação", f.firm_practice_areas),
+    p("Endereço", f.firm_address),
+    p("Telefone", f.firm_phone),
+    p("E-mail", f.firm_email),
+    f.lawyer_name ? `<p>${esc(f.lawyer_name)}${f.lawyer_title ? " — " + esc(f.lawyer_title) : ""}</p>` : "",
+  ].join("");
+
+  const body =
+    section("Contratante", cliente) +
+    section("Contraparte", contraparte) +
+    section("Objeto", objeto) +
+    section("Honorários e prazo", honorarios) +
+    section("Escritório / Advogado responsável", escritorio);
+
+  const empty = !body.trim();
+  return `
+    <h1 style="text-align:center">PROPOSTA DE PRESTAÇÃO DE SERVIÇOS JURÍDICOS</h1>
+    ${empty ? '<p style="color:var(--muted-foreground);text-align:center"><em>Preencha os campos ao lado para ver a prévia.</em></p>' : body}
+  `;
+}
+
