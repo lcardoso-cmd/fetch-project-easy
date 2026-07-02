@@ -358,6 +358,26 @@ function SettingsPage() {
         </CardContent>
       </Card>
 
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg flex items-center gap-2">
+            <Building2 className="h-5 w-5" /> Identidade do escritório
+          </CardTitle>
+          <CardDescription>
+            Logo, razão social, CNPJ/CPF e endereço usados no cabeçalho dos documentos exportados.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Link
+            to="/settings/firm"
+            className="flex items-center justify-between rounded-lg border p-3 hover:bg-accent/50"
+          >
+            <span className="text-sm">Abrir identidade do escritório</span>
+            <ChevronRight className="h-4 w-4 text-muted-foreground" />
+          </Link>
+        </CardContent>
+      </Card>
+
       {isAdmin && (
         <Card>
           <CardHeader>
