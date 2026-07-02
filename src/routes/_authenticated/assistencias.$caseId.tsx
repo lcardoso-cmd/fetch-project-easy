@@ -242,28 +242,16 @@ function CaseDetailPage() {
           <CardContent>
             <dl className="grid grid-cols-1 gap-x-4 gap-y-3 text-sm sm:grid-cols-[minmax(9rem,max-content)_minmax(0,1fr)] sm:gap-y-2">
               {caseData.client_name && (
-                <div className="min-w-0 sm:contents">
-                  <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground sm:text-sm sm:normal-case sm:tracking-normal sm:text-foreground sm:pr-2">Cliente</dt>
-                  <dd className="mt-0.5 min-w-0 break-words text-foreground sm:mt-0 sm:text-muted-foreground">{caseData.client_name}</dd>
-                </div>
+                <CaseDataRow label="Cliente" value={caseData.client_name} />
               )}
               {caseData.case_number && (
-                <div className="min-w-0 sm:contents">
-                  <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground sm:text-sm sm:normal-case sm:tracking-normal sm:text-foreground sm:pr-2">Número do processo</dt>
-                  <dd className="mt-0.5 min-w-0 break-all text-foreground sm:mt-0 sm:text-muted-foreground">{caseData.case_number}</dd>
-                </div>
+                <CaseDataRow label="Número do processo" value={caseData.case_number} breakAll />
               )}
               {caseData.jurisdiction && (
-                <div className="min-w-0 sm:contents">
-                  <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground sm:text-sm sm:normal-case sm:tracking-normal sm:text-foreground sm:pr-2">Vara / Tribunal</dt>
-                  <dd className="mt-0.5 min-w-0 break-words text-foreground sm:mt-0 sm:text-muted-foreground">{caseData.jurisdiction}</dd>
-                </div>
+                <CaseDataRow label="Vara / Tribunal" value={caseData.jurisdiction} />
               )}
               {caseData.case_type && (
-                <div className="min-w-0 sm:contents">
-                  <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground sm:text-sm sm:normal-case sm:tracking-normal sm:text-foreground sm:pr-2">Área</dt>
-                  <dd className="mt-0.5 min-w-0 break-words text-foreground sm:mt-0 sm:text-muted-foreground">{caseData.case_type}</dd>
-                </div>
+                <CaseDataRow label="Área" value={caseData.case_type} />
               )}
             </dl>
           </CardContent>
