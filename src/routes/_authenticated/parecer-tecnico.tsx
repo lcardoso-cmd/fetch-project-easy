@@ -1,6 +1,7 @@
 import { createFileRoute, redirect, Link } from "@tanstack/react-router";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Microscope } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Microscope, Briefcase, ArrowRight } from "lucide-react";
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
@@ -42,6 +43,31 @@ function ExpertOpinionPage() {
         </p>
       </div>
 
+      <Card className="border-primary/40 bg-primary/5">
+        <CardHeader>
+          <CardTitle className="text-lg flex items-center gap-2">
+            <Briefcase className="h-5 w-5 text-primary" />
+            Não tem perito no escritório?
+          </CardTitle>
+          <CardDescription>
+            Contrate a B2B Consulting para elaborar o parecer técnico do seu caso —
+            assistência econômica, contábil, financeira ou de engenharia, com o mesmo
+            padrão de qualidade e formatação usado no JurisMind.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button asChild>
+            <Link
+              to="/contratar-b2b/solicitar"
+              search={{ service: "parecer-tecnico" }}
+            >
+              Contratar Parecer Técnico com a B2B
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Link>
+          </Button>
+        </CardContent>
+      </Card>
+
       <Card>
         <CardHeader>
           <CardTitle className="text-lg">Em construção</CardTitle>
@@ -61,6 +87,7 @@ function ExpertOpinionPage() {
           </p>
         </CardContent>
       </Card>
+
     </div>
   );
 }
