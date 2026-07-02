@@ -29,7 +29,6 @@ function splitSections(text: string): { heading: string; body: string }[] {
       if (current) current.body += "\n";
       continue;
     }
-    // TÍTULO: ou TÍTULO EM MAIÚSCULAS (com dois pontos opcionais)
     const m = line.match(/^([A-ZÁÉÍÓÚÂÊÔÃÕÇ0-9 ,\-]{3,}?):\s*(.*)$/);
     if (m && m[1] === m[1].toUpperCase()) {
       if (current) sections.push(current);
@@ -48,59 +47,26 @@ export const exportSummaryDocx = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((i: unknown) => Input.parse(i))
   .handler(async ({ data }) => {
-    const {
-      Document,
-      Packer,
-      Paragraph,
-      TextRun,
-      HeadingLevel,
-      AlignmentType,
-    } = await import("docx");
+    const { Packer } = await import("docx");
+    const { createStyledDocument, plainTextToDocxChildren } = await import(
+      "@/lib/docx/template"
+    );
 
-    const sections = splitSections(data.content);
-    const children: InstanceType<typeof Paragraph>[] = [
-      new Paragraph({
-        heading: HeadingLevel.TITLE,
-        alignment: AlignmentType.LEFT,
-        children: [new TextRun({ text: data.title, bold: true, size: 36 })],
-      }),
-      new Paragraph({ children: [new TextRun("")] }),
-    ];
-
-    for (const sec of sections) {
-      if (sec.heading) {
-        children.push(
-          new Paragraph({
-            heading: HeadingLevel.HEADING_2,
-            children: [new TextRun({ text: sec.heading, bold: true, size: 26 })],
-          }),
-        );
-      }
-      const paras = sec.body.split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean);
-      for (const p of paras) {
-        children.push(
-          new Paragraph({
-            spacing: { after: 160 },
-            children: [new TextRun({ text: p, size: 24 })],
-          }),
-        );
-      }
-    }
-
-    const doc = new Document({
-      styles: { default: { document: { run: { font: "Calibri", size: 24 } } } },
-      sections: [
-        {
-          properties: { page: { margin: { top: 1440, right: 1440, bottom: 1440, left: 1440 } } },
-          children,
-        },
-      ],
+    const doc = createStyledDocument({
+      title: data.title,
+      children: plainTextToDocxChildren(data.content),
+      meta: {
+        header: "Resumo do caso",
+        creator: "B2B | JurisMind AI",
+        description: data.title,
+      },
     });
 
     const buf = await Packer.toBuffer(doc);
     const base64 = Buffer.from(buf).toString("base64");
     return { base64, fileName: `${sanitizeFilename(data.title)}.docx` };
   });
+
 
 export const exportSummaryPptx = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
