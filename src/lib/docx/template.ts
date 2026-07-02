@@ -846,14 +846,17 @@ export function htmlToDocxChildren(html: string): Paragraph[] {
   } else if (lastIndex < normalized.length) {
     const tail = normalized.slice(lastIndex);
     const stripped = tail.replace(/<[^>]+>/g, "").trim();
-    if (stripped)
+    if (stripped) {
+      flushPendingBreak();
       out.push(
         new Paragraph({
           alignment: AlignmentType.JUSTIFIED,
           children: inlineToTextRuns(tail),
         }),
       );
+    }
   }
+
 
   if (out.length === 0) out.push(new Paragraph({ children: [new TextRun("")] }));
   return out;
