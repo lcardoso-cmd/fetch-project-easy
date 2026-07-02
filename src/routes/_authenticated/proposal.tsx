@@ -181,6 +181,36 @@ function ProposalPage() {
     }
   };
 
+  const downloadPdf = async () => {
+    try {
+      const filenameBase = `proposta-${(form.client_name || "cliente").replace(/\s+/g, "-").toLowerCase()}`;
+      const container = document.createElement("div");
+      container.className = "proposal-preview";
+      container.style.cssText =
+        "padding:24mm 20mm;width:210mm;box-sizing:border-box;background:#fff;color:#0f172a;font-family:Inter,system-ui,sans-serif;font-size:11pt;line-height:1.55;";
+      container.innerHTML = output;
+      document.body.appendChild(container);
+      try {
+        const html2pdf = (await import("html2pdf.js")).default;
+        await html2pdf()
+          .set({
+            margin: 0,
+            filename: `${filenameBase}.pdf`,
+            image: { type: "jpeg", quality: 0.98 },
+            html2canvas: { scale: 2, useCORS: true, backgroundColor: "#ffffff" },
+            jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+            pagebreak: { mode: ["css", "legacy"] },
+          })
+          .from(container)
+          .save();
+      } finally {
+        container.remove();
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Falha ao gerar PDF");
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div>
