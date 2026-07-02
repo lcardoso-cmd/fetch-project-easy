@@ -127,16 +127,36 @@ export function isJurisMindContext(value: unknown): value is JurisMindContext {
 // Regra global de contraste do quadrado da marca:
 //   • Fundo CLARO  → quadrado ESCURO (square-navy)
 //   • Fundo ESCURO → quadrado BRANCO (square-white)
+// Contextos "theme-aware" abaixo trocam automaticamente conforme `.dark`.
 // Mantenha esse mapeamento — não use variantes que quebrem o contraste.
 const CONTEXT_TO_VARIANT: Record<JurisMindContext, JurisMindVariant> = {
-  sidebar: "square-white",   // sidebar tem bg escuro (navy)
-  header: "square-navy",     // header/topbar tem bg claro (card)
+  sidebar: "square-white",   // sidebar tem bg escuro (navy) fixo
+  header: "square-navy",     // header/topbar tem bg claro (card) no tema light
   landing: "square-navy",
   auth: "square-navy",
   chat: "square-navy",
   "chip-dark": "square-white",
   "inline-light": "glyph-navy",
   "inline-dark": "glyph-white",
+};
+
+/**
+ * Contextos cujo quadrado deve inverter (navy ↔ white) conforme o tema.
+ * O par light/dark é renderizado com `dark:` para funcionar em SSR sem flash.
+ * Sidebar e chip-dark ficam de fora porque seus fundos são fixos por design.
+ */
+const THEME_AWARE_CONTEXTS: Record<
+  JurisMindContext,
+  { light: JurisMindVariant; dark: JurisMindVariant } | null
+> = {
+  sidebar: null,
+  header: { light: "square-navy", dark: "square-white" },
+  landing: { light: "square-navy", dark: "square-white" },
+  auth: { light: "square-navy", dark: "square-white" },
+  chat: { light: "square-navy", dark: "square-white" },
+  "chip-dark": null,
+  "inline-light": { light: "glyph-navy", dark: "glyph-white" },
+  "inline-dark": { light: "glyph-navy", dark: "glyph-white" },
 };
 
 /**
@@ -186,12 +206,58 @@ export function JurisMindMark({
    */
   interactive?: boolean;
 }) {
-  const resolved: JurisMindVariant = isJurisMindVariant(variant)
-    ? variant
-    : variantForContext(context);
-  const isSquare =
-    resolved === "sidebar" || resolved === "square-navy" || resolved === "square-white";
-  const shouldRound = rounded ?? isSquare;
+  // Se `variant` foi passado explicitamente, respeita — é o override documentado.
+  const explicitVariant = isJurisMindVariant(variant) ? variant : null;
+  const safeContext: JurisMindContext = isJurisMindContext(context)
+    ? context
+    : DEFAULT_JURISMIND_CONTEXT;
+  const themePair = explicitVariant ? null : THEME_AWARE_CONTEXTS[safeContext];
+
+  const baseClass = (v: JurisMindVariant) => {
+    const isSquare =
+      v === "sidebar" || v === "square-navy" || v === "square-white";
+    const shouldRound = rounded ?? isSquare;
+    return cn(
+      "block shrink-0 select-none align-middle",
+      isSquare ? "object-cover" : "object-contain",
+      shouldRound && JURISMIND_ROUND_CLASS,
+      interactive &&
+        "transition-transform duration-150 ease-out will-change-transform hover:scale-[1.04] active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+      className,
+    );
+  };
+
+  // Contexto theme-aware: renderiza os dois assets e alterna via `.dark`.
+  if (themePair) {
+    return (
+      <>
+        <img
+          src={SOURCES[themePair.light]}
+          alt="JurisMind AI"
+          width={size}
+          height={size}
+          loading="lazy"
+          draggable={false}
+          className={cn(baseClass(themePair.light), "dark:hidden")}
+          style={{ width: size, height: size }}
+        />
+        <img
+          src={SOURCES[themePair.dark]}
+          alt=""
+          aria-hidden="true"
+          width={size}
+          height={size}
+          loading="lazy"
+          draggable={false}
+          className={cn(baseClass(themePair.dark), "hidden dark:block")}
+          style={{ width: size, height: size }}
+        />
+      </>
+    );
+  }
+
+  const resolved: JurisMindVariant =
+    explicitVariant ?? variantForContext(safeContext);
   return (
     <img
       src={SOURCES[resolved]}
@@ -200,15 +266,9 @@ export function JurisMindMark({
       height={size}
       loading="lazy"
       draggable={false}
-      className={cn(
-        "block shrink-0 select-none align-middle",
-        isSquare ? "object-cover" : "object-contain",
-        shouldRound && JURISMIND_ROUND_CLASS,
-        interactive &&
-          "transition-transform duration-150 ease-out will-change-transform hover:scale-[1.04] active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
-        className,
-      )}
+      className={baseClass(resolved)}
       style={{ width: size, height: size }}
     />
   );
 }
+
