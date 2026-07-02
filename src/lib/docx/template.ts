@@ -63,6 +63,19 @@ const CONTENT_WIDTH = PAGE.width - PAGE.margin * 2; // 9360
 // Meta / options
 // ---------------------------------------------------------------------------
 
+export interface DocBranding {
+  firmName: string;
+  taxId?: string;
+  address?: string;
+  website?: string;
+  logo?: {
+    bytes: Uint8Array;
+    type: "png" | "jpg" | "gif" | "bmp";
+    heightPx: number;
+    widthPx: number;
+  };
+}
+
 export interface DocMeta {
   /** Texto curto no canto direito do cabeçalho (ex.: "Petição", "Proposta"). */
   header?: string;
@@ -74,6 +87,8 @@ export interface DocMeta {
   bare?: boolean;
   /** Orientação. Default portrait. */
   orientation?: "portrait" | "landscape";
+  /** Branding do escritório (logo + nome). Se omitido, usa fallback do produto. */
+  branding?: DocBranding | null;
 }
 
 export interface CreateStyledDocumentInput {
