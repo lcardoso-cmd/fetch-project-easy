@@ -257,6 +257,15 @@ export const registerDocument = createServerFn({ method: "POST" })
         .from("documents")
         .remove([data.storage_path])
         .catch(() => {});
+      await logAudit(context.supabase, context.userId, {
+        case_id: data.case_id,
+        action: "duplicate_ignored",
+        document_id: byName.id as string,
+        filename: data.filename,
+        content_hash: data.content_hash,
+        reason: "Já existe um arquivo com esse nome",
+        metadata: { existing_filename: byName.filename },
+      });
       return {
         duplicate: true as const,
         reason: "filename" as const,
@@ -281,6 +290,23 @@ export const registerDocument = createServerFn({ method: "POST" })
       .select()
       .single();
     if (error) throw error;
+    await logAudit(context.supabase, context.userId, {
+      case_id: data.case_id,
+      action: data.replaces_document_id ? "replaced" : "uploaded",
+      document_id: (row as { id: string }).id,
+      filename: data.filename,
+      content_hash: data.content_hash,
+      reason:
+        data.reason ??
+        (data.replaces_document_id
+          ? "Substituição de arquivo existente"
+          : null),
+      metadata: {
+        file_size: data.file_size,
+        file_type: data.file_type,
+        replaces_document_id: data.replaces_document_id ?? null,
+      },
+    });
     return { duplicate: false as const, document: row };
   });
 
