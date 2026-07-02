@@ -1,58 +1,55 @@
 ## Objetivo
 
-Melhorar o fluxo de documentos em **Novo caso** e **Caso existente** com:
-1. Barra de progresso visual (upload + indexação) com status por arquivo.
-2. Remover a listagem/upload direto de "Meus Documentos" dentro do novo caso — substituir por um botão **"Importar de Meus Documentos"** que puxa arquivos já existentes.
-3. Impedir duplicatas (mesmo arquivo/nome no mesmo caso).
+Trocar a transcrição single-shot atual (só após parar) por transcrição segmentada em tempo real, com o texto aparecendo dentro do próprio input do chat enquanto o usuário fala.
 
----
+## Estratégia
 
-## 1. Barra de progresso e status por arquivo
+Rodar dois pipelines de captura em paralelo enquanto o botão do microfone está ativo:
 
-Hoje o upload mostra só um `Loader2` + toasts, sem visibilidade real de "subindo → registrando → indexando → pronto".
+1. **MediaRecorder** (já existente) — preserva o blob `.webm` completo para persistência/replay do áudio (não muda).
+2. **Web Audio API + ScriptProcessor/AudioWorklet** — buffer PCM contínuo. A cada ~3s, o buffer acumulado é fatiado em uma janela auto-contida, codificado como WAV 16 kHz mono e enviado para um novo endpoint SSE de transcrição.
 
-Criar um componente único `UploadProgressList` usado em `UploadDialog` (caso existente) e no card "Importar documento" de `assistencias.nova.tsx`, exibindo, por arquivo:
+Cada segmento retorna deltas via SSE do Lovable AI Gateway (`openai/gpt-4o-mini-transcribe`, `stream: "true"`). O texto de cada segmento fechado é **appendado** ao input; o segmento ainda em processamento aparece como "partial" com opacidade reduzida (mesma caixa, sem bolha extra).
 
-- Nome + tamanho
-- Barra de % (0–100) — usando `XMLHttpRequest.upload.onprogress` para o upload real ao Storage (Supabase JS não expõe progresso via `fetch`; trocar por URL assinada + XHR `PUT`)
-- Etapa atual: `Enviando…` → `Registrando…` → `Extraindo texto…` → `Indexando (n trechos)…` → `Pronto ✓` / `Falhou ✗ [Tentar novamente]`
-- Ícone de status (spinner/check/alerta) + cor semântica
+Ao parar a gravação: cancela segmentos em voo, mantém o texto já commitado, e sobe o blob `.webm` no envio da mensagem (fluxo atual de `pendingAudioRef` intacto). Não há re-transcrição final — evita custo duplicado.
 
-Estados armazenados em `useState<UploadItem[]>`; cada arquivo com `{ id, file, pct, phase, error }`.
+## Arquivos afetados
 
-## 2. Substituir listagem direta por "Importar de Meus Documentos"
+### Novo: `src/routes/api/tools/transcribe-stream.ts`
+- POST recebe `{ audio_base64, format: "wav" }`.
+- Chama `POST https://ai.gateway.lovable.dev/v1/audio/transcriptions` como `multipart/form-data` com `model=openai/gpt-4o-mini-transcribe` e `stream=true`.
+- Faz *passthrough* do `response.body` SSE (mesmo padrão do skill `ai-speech-to-text`), preservando `Content-Type: text/event-stream`.
+- Erros (402/429/500) retornam JSON com status apropriado.
 
-**Em `assistencias.nova.tsx`** (novo caso):
-- Manter o dropzone atual para **subir um documento novo** (usado para extração automática de campos).
-- Adicionar botão secundário **"Importar de Meus Documentos"** que abre um dialog listando `listAllDocuments()` (documentos do usuário em outros casos, ou órfãos), com busca por nome e filtro por caso de origem.
-- Ao selecionar um documento existente, ele é anexado ao novo caso via nova server fn `attachExistingDocument({ document_id, case_id })` — reaproveita o `storage_path` (sem re-upload), cria nova linha em `documents` referenciando o mesmo arquivo, e reusa/re-indexa os chunks.
+### Editar: `src/components/chat/jurismind-chat.tsx`
+- Novo helper `src/lib/audio/wav-encoder.ts` (mono 16 kHz, header PCM 16-bit).
+- Em `startRecording`:
+  - Além do `MediaRecorder`, criar `AudioContext` + `ScriptProcessorNode` (já existe o `analyser`; adicionar um `processor` paralelo que empilha `Float32Array` em `pcmChunksRef`).
+  - Timer a cada 3000 ms: se há PCM novo desde o último flush, fatia a janela, codifica WAV, `fetch("/api/tools/transcribe-stream")`, itera o SSE (`event: transcript.text.delta` → atualiza `livePartial`; `transcript.text.done` → move `livePartial` para `committedSegments`), controlado por `AbortController` armazenado em ref.
+  - Novos estados: `liveTranscript` (string com o commit corrente + partial), `baseInput` (snapshot do input antes de gravar).
+  - Reflete no textarea via `setInput(baseInput + " " + committed + partial)` respeitando espaços.
+- Em `stopRecording`:
+  - Aborta segmento em voo, para o processor, faz *flush* final de qualquer PCM residual (>0.3s) em uma última chamada SSE bloqueante curta (~2s timeout) para não perder as últimas palavras.
+  - Mantém `input` como está; remove o marcador de partial (`livePartial = ""`).
+  - Continua salvando `pendingAudioRef` com o blob do MediaRecorder para upload posterior.
+- Remove o passo `onstop` de transcrição completa via `/api/tools/transcribe` (deixa o endpoint antigo intacto para fallback/uso externo, mas não é mais chamado do chat).
+- Indicador visual: enquanto `livePartial` não vazio, exibir o trecho parcial no textarea com um `<span>` cinza-itálico não é possível dentro de `<textarea>` puro; solução: manter o parcial no próprio textarea (já foi o pedido), e adicionar um badge discreto "transcrevendo..." ao lado de "REC" quando `segmentInFlight`.
+- Fallback: se o navegador não expõe `AudioContext`/`ScriptProcessorNode`, cai no comportamento atual (single-shot ao parar) sem quebrar UX.
 
-**Em `assistencias.$caseId.tsx`** (caso existente):
-- Manter o `DocumentList` do caso (essa lista é dos documentos DESTE caso — permanece).
-- No `UploadDialog`, adicionar aba/botão **"Importar de Meus Documentos"** com o mesmo picker.
+### Editar: `src/routes/api/tools/transcribe.ts`
+- Sem mudança funcional. Fica como fallback e para uso por outras rotas.
 
-## 3. Prevenção de duplicatas
+## Considerações técnicas
 
-Regras aplicadas server-side em `registerDocument` e `attachExistingDocument`:
-
-- Duplicata = mesmo `case_id` + mesmo `filename` **ou** mesmo `case_id` + mesmo `file_size` + mesmo hash SHA-256 dos primeiros 64 KB (calculado no cliente antes do upload, enviado como coluna nova `content_hash`).
-- Adicionar coluna `content_hash text` em `public.documents` + índice único parcial `(case_id, content_hash) WHERE content_hash IS NOT NULL`.
-- Se duplicata detectada: retornar erro tipado `{ code: 'DUPLICATE', existing_id }`. Cliente mostra o diálogo atual "Substituir?" (já existe) — mantém.
-
-## Detalhes técnicos
-
-- **Migration**: `ALTER TABLE public.documents ADD COLUMN content_hash text;` + índice único parcial.
-- **Server functions novas** (em `src/lib/documents.functions.ts`):
-  - `attachExistingDocument({ source_document_id, case_id })` — copia metadados, aponta para o mesmo `storage_path`, verifica duplicata.
-  - `listImportableDocuments({ exclude_case_id })` — lista `Meus Documentos` já processados, agrupados por caso, para o picker.
-- **Cliente**:
-  - Novo `src/components/documents/upload-progress-list.tsx` (visual).
-  - Novo `src/components/documents/import-from-library-dialog.tsx` (picker).
-  - Refatorar `UploadDialog` e o card de importação em `assistencias.nova.tsx` para consumirem o novo componente de progresso.
-  - Substituir `supabase.storage.upload()` por upload via URL assinada + XHR para poder reportar `%` real.
+- **Custo**: cada segmento consome créditos do Lovable AI, proporcional à duração real. Janela de 3s equilibra latência vs. custo. Se o segmento estiver em silêncio (RMS < 0.02 durante toda a janela), pula o envio.
+- **Idempotência de segmentos**: cada WAV é auto-contido (header PCM 16-bit + amostras), o gateway aceita normalmente. Nada de fragmentos de container webm.
+- **Race condition**: um `Map<segmentId, AbortController>` garante que o `stopRecording` cancela tudo em voo.
+- **Downsample**: `AudioContext.sampleRate` geralmente é 44.1/48 kHz; downsample linear para 16 kHz reduz upload sem perder qualidade da voz.
+- **Sem persistência de partial**: o texto final que vai para o backend é o mesmo que o usuário vê no input no momento de enviar — não muda contrato de `persistChatTurn`.
+- **Auto-stop 60s** e monitoramento de silêncio permanecem inalterados.
 
 ## Fora do escopo
 
-- Alterar o layout do `DocumentList` do caso (continua igual).
-- Mudar o pipeline de indexação/RAG.
-- Reprocessar documentos antigos para calcular `content_hash` retroativo (apenas novos uploads).
+- Não trocar por ElevenLabs Realtime (foi descartado na pergunta).
+- Não mudar UX do envio, upload de áudio, ou storage.
+- Não mexer em outras telas que usam gravação (se houver, permanecem no fluxo antigo).
