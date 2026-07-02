@@ -116,8 +116,12 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
             collapsed && "justify-center px-2"
           )}
         >
-          <Link to="/dashboard" className="flex items-center gap-3 overflow-hidden">
-            <JurisMindMark size={36} context="sidebar" />
+          <Link
+            to="/dashboard"
+            aria-label="Ir para o Dashboard"
+            className="group flex items-center gap-3 overflow-hidden rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-sidebar"
+          >
+            <JurisMindMark size={32} context="sidebar" interactive />
             {!collapsed && (
               <h2 className="font-heading text-base font-semibold leading-tight truncate">
                 B2B | JurisMind AI
