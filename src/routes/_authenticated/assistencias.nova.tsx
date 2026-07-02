@@ -294,14 +294,38 @@ function NewCasePage() {
 
   const handleFile = async (file: File) => {
     if (!user) return;
+    if (file.size > 20 * 1024 * 1024) {
+      toast.error("Arquivo excede 20 MB");
+      return;
+    }
     setExtracting(true);
+    setUploadPhase("uploading");
+    setUploadPct(0);
     try {
-      const safeName = file.name.replace(/[^\w.\-]+/g, "_");
-      const path = `${user.id}/_intake/${Date.now()}-${safeName}`;
-      const { error: upErr } = await supabase.storage
-        .from("documents")
-        .upload(path, file, { upsert: false, contentType: file.type });
-      if (upErr) throw upErr;
+      // 1. Signed URL para upload direto (com progresso real)
+      const { signedUrl, path } = await signUploadFn({
+        data: { filename: file.name },
+      });
+
+      // 2. PUT via XHR para exibir % em tempo real
+      await new Promise<void>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open("PUT", signedUrl);
+        xhr.setRequestHeader(
+          "Content-Type",
+          file.type || "application/octet-stream",
+        );
+        xhr.upload.onprogress = (e) => {
+          if (e.lengthComputable) setUploadPct((e.loaded / e.total) * 100);
+        };
+        xhr.onload = () =>
+          xhr.status >= 200 && xhr.status < 300
+            ? resolve()
+            : reject(new Error(`Upload falhou (HTTP ${xhr.status})`));
+        xhr.onerror = () => reject(new Error("Erro de rede durante upload"));
+        xhr.send(file);
+      });
+      setUploadPct(100);
 
       const meta: UploadedDoc = {
         storage_path: path,
@@ -311,6 +335,8 @@ function NewCasePage() {
       };
       setUploaded(meta);
 
+      // 3. Extração
+      setUploadPhase("extracting");
       const res = await extractFn({ data: { ...meta, matter_kind: matterKind } });
       applyExtracted(res.extracted);
       const missingRaw = res.missing ?? [];
@@ -330,9 +356,11 @@ function NewCasePage() {
           description: w.message,
         }),
       );
+      setUploadPhase("done");
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       toast.error(`Falha: ${msg}`);
+      setUploadPhase("idle");
     } finally {
       setExtracting(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
