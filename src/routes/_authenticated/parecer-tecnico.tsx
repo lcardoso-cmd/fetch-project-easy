@@ -38,11 +38,27 @@ export const Route = createFileRoute("/_authenticated/parecer-tecnico")({
 });
 
 function ExpertOpinionPage() {
+  const listMy = useServerFn(listMyB2bRequests);
+  const { data: requests = [] } = useQuery({
+    queryKey: ["b2b-my-requests"],
+    queryFn: () => listMy(),
+  });
+  const parecerRequests = requests
+    .filter((r) => r.service_slug === "parecer-tecnico")
+    .slice(0, 5);
+
   return (
     <div className="space-y-6 max-w-4xl">
       <div>
         <h1 className="text-3xl font-bold font-heading tracking-tight flex items-center gap-2">
           <Microscope className="h-7 w-7 text-primary" /> Parecer Técnico
+        </h1>
+        <p className="mt-1 text-muted-foreground">
+          Área dedicada a peritos para elaborar e exportar pareceres técnicos com o padrão de
+          formatação do escritório.
+        </p>
+      </div>
+
         </h1>
         <p className="mt-1 text-muted-foreground">
           Área dedicada a peritos para elaborar e exportar pareceres técnicos com o padrão de
