@@ -59,12 +59,19 @@ function SettingsPage() {
   const revokeInvFn = useServerFn(revokeInvitation);
   const updateProfileFn = useServerFn(updateMyProfile);
   const isAdminFn = useServerFn(isCurrentUserAdmin);
+  const myCapsFn = useServerFn(getMyCapabilities);
   const { data: profile } = useProfile();
   const { data: adminInfo } = useQuery({
     queryKey: ["is-admin"],
     queryFn: () => isAdminFn(),
   });
   const isAdmin = adminInfo?.isAdmin ?? false;
+  const { data: myCaps = [] } = useQuery({
+    queryKey: ["my-caps"],
+    queryFn: () => myCapsFn(),
+  });
+  const isPlatformStaff = myCaps.includes("platform_admin") || myCaps.includes("super_admin");
+
 
   const { data: team = [], isLoading } = useQuery({
     queryKey: ["team-members"],
