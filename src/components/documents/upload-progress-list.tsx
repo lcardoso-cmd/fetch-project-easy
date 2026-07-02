@@ -80,6 +80,9 @@ export function UploadProgressList({
       {items.map((it) => {
         const isDone = it.phase === "done" || it.phase === "duplicate";
         const isError = it.phase === "error";
+        const isCancelled = it.phase === "cancelled";
+        const isFinal = isDone || isError || isCancelled;
+        const canCancel = !isFinal && it.phase !== "registering" && it.phase !== "indexing";
         const displayPct = isDone ? 100 : it.pct;
         return (
           <li
@@ -88,6 +91,7 @@ export function UploadProgressList({
               "rounded-lg border bg-card p-3",
               isError && "border-destructive/50 bg-destructive/5",
               it.phase === "duplicate" && "border-amber-500/40 bg-amber-50/40",
+              isCancelled && "border-muted-foreground/30 bg-muted/30 opacity-80",
             )}
           >
             <div className="flex items-start gap-2">
