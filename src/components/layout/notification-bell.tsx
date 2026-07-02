@@ -156,8 +156,12 @@ export function NotificationBell() {
                 <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
                   {n.kind === "mention" ? (
                     <MessageSquare className="h-3.5 w-3.5" />
-                  ) : (
+                  ) : n.kind === "task" ? (
                     <ClipboardCheck className="h-3.5 w-3.5" />
+                  ) : n.event_kind === "attachment" ? (
+                    <Paperclip className="h-3.5 w-3.5" />
+                  ) : (
+                    <Sparkles className="h-3.5 w-3.5" />
                   )}
                 </span>
                 <div className="min-w-0 flex-1">
@@ -170,12 +174,19 @@ export function NotificationBell() {
                         {n.preview || "(mensagem sem texto)"}
                       </div>
                     </>
-                  ) : (
+                  ) : n.kind === "task" ? (
                     <>
                       <div className="truncate text-xs font-medium">
                         Nova tarefa atribuída
                       </div>
                       <div className="line-clamp-2 text-xs text-muted-foreground">{n.title}</div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="truncate text-xs font-medium">{n.summary}</div>
+                      <div className="line-clamp-2 text-xs text-muted-foreground">
+                        {n.detail}
+                      </div>
                     </>
                   )}
                   <div className="mt-0.5 text-[10px] text-muted-foreground">
