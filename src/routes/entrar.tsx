@@ -14,9 +14,23 @@ import { ArrowLeft, Mail, Lock, User, LogIn, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
+const OAUTH_REDIRECT_KEY = "jm:auth:redirect";
+
+function safeInternalPath(p: unknown): string | null {
+  if (typeof p !== "string") return null;
+  // Only allow same-origin internal paths (no protocol, no protocol-relative).
+  if (!p.startsWith("/") || p.startsWith("//")) return null;
+  if (p.startsWith("/entrar") || p.startsWith("/auth")) return null;
+  return p;
+}
+
 export const Route = createFileRoute("/entrar")({
+  validateSearch: (search: Record<string, unknown>) => ({
+    redirect: safeInternalPath(search.redirect) ?? undefined,
+  }),
   component: AuthPage,
 });
+
 
 /**
  * Rótulo padronizado com IconBox pequeno + fundo primário. Mantém o mesmo
