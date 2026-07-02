@@ -276,6 +276,13 @@ function ProposalPage() {
     };
   }, [form, output, hydrated, activeCaseId, upsertDraftFn]);
 
+  // Confirmação ao sair quando há alterações não salvas (autosave pendente).
+  const hasUnsavedChanges =
+    hydrated &&
+    (saving ||
+      JSON.stringify({ form, output }) !== lastSerializedRef.current);
+  useUnsavedChangesGuard({ when: hasUnsavedChanges });
+
   // Atualiza o rótulo "salvo há Xs" a cada 20s.
   useEffect(() => {
     const id = setInterval(() => forceTick((n) => n + 1), 20_000);
