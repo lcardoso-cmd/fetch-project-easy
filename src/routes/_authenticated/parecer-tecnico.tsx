@@ -1,9 +1,16 @@
 import { createFileRoute, redirect, Link } from "@tanstack/react-router";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Microscope, Briefcase, ArrowRight } from "lucide-react";
-import { createServerFn } from "@tanstack/react-start";
+import { Badge } from "@/components/ui/badge";
+import { Microscope, Briefcase, ArrowRight, ExternalLink } from "lucide-react";
+import { createServerFn, useServerFn } from "@tanstack/react-start";
+import { useQuery } from "@tanstack/react-query";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import {
+  listMyB2bRequests,
+  B2B_REQUEST_STATUS_LABEL,
+  type B2bRequestStatus,
+} from "@/lib/b2b-services.functions";
 
 const assertExpert = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
