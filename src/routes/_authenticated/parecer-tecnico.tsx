@@ -37,6 +37,17 @@ export const Route = createFileRoute("/_authenticated/parecer-tecnico")({
   component: ExpertOpinionPage,
 });
 
+function statusVariant(
+  s: B2bRequestStatus,
+): "default" | "secondary" | "outline" | "destructive" {
+  if (s === "aceita") return "default";
+  if (s === "recusada" || s === "cancelada") return "destructive";
+  if (s === "proposta_enviada") return "default";
+  return "secondary";
+}
+
+
+
 function ExpertOpinionPage() {
   const listMy = useServerFn(listMyB2bRequests);
   const { data: requests = [] } = useQuery({
