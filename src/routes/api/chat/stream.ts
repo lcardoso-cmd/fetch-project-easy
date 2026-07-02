@@ -179,6 +179,9 @@ export const Route = createFileRoute("/api/chat/stream")({
                   content: finalContent,
                   toolSteps,
                   citations: run.citations,
+                  inputKind: body.input_kind,
+                  audioPath: body.audio_path ?? null,
+                  audioDurationMs: body.audio_duration_ms ?? null,
                 });
               }
 
