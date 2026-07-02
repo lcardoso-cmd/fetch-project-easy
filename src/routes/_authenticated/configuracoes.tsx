@@ -424,9 +424,33 @@ function SettingsPage() {
           </CardContent>
         </Card>
       )}
+
+      {isPlatformStaff && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <ShieldCheck className="h-5 w-5" /> Capacidades por visão
+            </CardTitle>
+            <CardDescription>
+              Resumo do acesso de JurisMind B2B, admin de escritório e perito, com aplicação de
+              presets em massa.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Link
+              to="/configuracoes/capacidades"
+              className="flex items-center justify-between rounded-lg border p-3 hover:bg-accent/50"
+            >
+              <span className="text-sm">Abrir painel de capacidades</span>
+              <ChevronRight className="h-4 w-4 text-muted-foreground" />
+            </Link>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
+
 
 const EDITABLE_CAPS: Capability[] = [
   "cases",
