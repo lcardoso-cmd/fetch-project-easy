@@ -4,6 +4,9 @@ import { useEffect } from "react";
 import { Loader2 } from "lucide-react";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { useProfile } from "@/hooks/use-profile";
+import { useCapabilities } from "@/hooks/use-capabilities";
+import { requiredCapabilityForPath } from "@/lib/route-capabilities";
+import { AccessDenied } from "@/components/access-denied";
 
 export const Route = createFileRoute("/_authenticated")({
   component: AuthenticatedLayout,
