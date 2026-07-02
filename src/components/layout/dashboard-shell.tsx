@@ -414,23 +414,26 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
 
         {/* Main column */}
         <div className={cn("flex flex-1 flex-col min-w-0", activePreset && "mt-6")}>
-          <header className="flex h-16 items-center justify-between border-b bg-card px-4 lg:hidden">
+          <header className="flex h-16 items-center justify-between gap-3 border-b bg-card px-4 lg:hidden">
             <Link
               to="/painel"
               aria-label="Ir para o Dashboard"
-              className="group flex items-center gap-2 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              className="group flex min-w-0 flex-1 items-center gap-2 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             >
-              <JurisMindMark size={32} context="header" interactive />
+              <JurisMindMark size={28} context="header" interactive />
 
-              <span className="font-heading text-lg font-bold">B2B | JurisMind AI</span>
+              <span className="font-heading text-base font-bold whitespace-nowrap truncate sm:text-lg">
+                B2B | JurisMind AI
+              </span>
             </Link>
-            <div className="flex items-center gap-1">
+            <div className="flex shrink-0 items-center gap-1">
               <NotificationBell />
               <Button variant="ghost" size="icon" onClick={signOut}>
                 <LogOut className="h-4 w-4" />
               </Button>
             </div>
           </header>
+
 
           <nav className="flex gap-1 overflow-x-auto border-b bg-card px-2 py-2 lg:hidden">
             {NAV.filter((i) => i.type === "link").map((item) => {
