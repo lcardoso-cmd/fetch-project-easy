@@ -35,6 +35,7 @@ import {
   RefreshCw,
   
 } from "lucide-react";
+import { JurisMindMark } from "@/components/brand/jurismind-mark";
 import { summarizeCase } from "@/lib/chat.functions";
 import { exportSummaryDocx, exportSummaryPptx } from "@/lib/export.functions";
 import { stripMarkdown } from "@/lib/strip-markdown";
