@@ -240,30 +240,30 @@ function CaseDetailPage() {
             <CardTitle className="text-lg">Dados do caso</CardTitle>
           </CardHeader>
           <CardContent>
-            <dl className="grid grid-cols-1 gap-x-4 gap-y-2 text-sm sm:grid-cols-[max-content_1fr]">
+            <dl className="grid grid-cols-1 gap-x-4 gap-y-3 text-sm sm:grid-cols-[minmax(9rem,max-content)_minmax(0,1fr)] sm:gap-y-2">
               {caseData.client_name && (
-                <>
-                  <dt className="font-medium text-foreground sm:pr-2">Cliente</dt>
-                  <dd className="text-muted-foreground break-words min-w-0">{caseData.client_name}</dd>
-                </>
+                <div className="min-w-0 sm:contents">
+                  <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground sm:text-sm sm:normal-case sm:tracking-normal sm:text-foreground sm:pr-2">Cliente</dt>
+                  <dd className="mt-0.5 min-w-0 break-words text-foreground sm:mt-0 sm:text-muted-foreground">{caseData.client_name}</dd>
+                </div>
               )}
               {caseData.case_number && (
-                <>
-                  <dt className="font-medium text-foreground sm:pr-2">Número do processo</dt>
-                  <dd className="text-muted-foreground break-all min-w-0">{caseData.case_number}</dd>
-                </>
+                <div className="min-w-0 sm:contents">
+                  <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground sm:text-sm sm:normal-case sm:tracking-normal sm:text-foreground sm:pr-2">Número do processo</dt>
+                  <dd className="mt-0.5 min-w-0 break-all text-foreground sm:mt-0 sm:text-muted-foreground">{caseData.case_number}</dd>
+                </div>
               )}
               {caseData.jurisdiction && (
-                <>
-                  <dt className="font-medium text-foreground sm:pr-2">Vara / Tribunal</dt>
-                  <dd className="text-muted-foreground break-words min-w-0">{caseData.jurisdiction}</dd>
-                </>
+                <div className="min-w-0 sm:contents">
+                  <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground sm:text-sm sm:normal-case sm:tracking-normal sm:text-foreground sm:pr-2">Vara / Tribunal</dt>
+                  <dd className="mt-0.5 min-w-0 break-words text-foreground sm:mt-0 sm:text-muted-foreground">{caseData.jurisdiction}</dd>
+                </div>
               )}
               {caseData.case_type && (
-                <>
-                  <dt className="font-medium text-foreground sm:pr-2">Área</dt>
-                  <dd className="text-muted-foreground break-words min-w-0">{caseData.case_type}</dd>
-                </>
+                <div className="min-w-0 sm:contents">
+                  <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground sm:text-sm sm:normal-case sm:tracking-normal sm:text-foreground sm:pr-2">Área</dt>
+                  <dd className="mt-0.5 min-w-0 break-words text-foreground sm:mt-0 sm:text-muted-foreground">{caseData.case_type}</dd>
+                </div>
               )}
             </dl>
           </CardContent>
