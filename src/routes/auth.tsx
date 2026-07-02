@@ -74,7 +74,16 @@ function AuthPage() {
   };
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-background px-4">
+    <div className="relative flex min-h-screen flex-col items-center justify-center bg-background px-4">
+      <div className="absolute left-4 top-4">
+        <Button variant="ghost" size="sm" asChild>
+          <Link to="/">
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Voltar à página inicial
+          </Link>
+        </Button>
+      </div>
+
       <div className="w-full max-w-md space-y-6">
         <div className="text-center">
           <JurisMindMark size={48} variant="square-navy" rounded className="mb-4" />
