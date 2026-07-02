@@ -631,10 +631,21 @@ export function JurisMindChat({
     if (!overridePrompt) setInput("");
     const sentImages = images;
     setImages([]);
+
+    // Áudio pendente (apenas se este envio vem de um ditado por voz)
+    const pendingAudio = overridePrompt ? null : pendingAudioRef.current;
+    pendingAudioRef.current = null;
+    const audioBlobUrl = pendingAudio
+      ? URL.createObjectURL(pendingAudio.blob)
+      : undefined;
+
     const userMsg: Msg = {
       role: "user",
       content: q || "(imagens enviadas)",
       images: sentImages,
+      input_kind: pendingAudio ? "voice" : "text",
+      audio_duration_ms: pendingAudio?.durationMs,
+      audio_blob_url: audioBlobUrl,
     };
     // Placeholder do assistant que vai sendo preenchido pelos tokens
     const assistantIdx = messages.length + 1;
@@ -677,6 +688,29 @@ export function JurisMindChat({
       const token = sess.session?.access_token;
       if (!token) throw new Error("Sessão expirada. Faça login novamente.");
 
+      // Upload do áudio (best-effort) para o bucket `chat-audio`
+      let uploadedAudioPath: string | undefined;
+      if (pendingAudio) {
+        try {
+          const uid = sess.session?.user.id;
+          if (uid) {
+            const now = new Date();
+            const path = `${uid}/${now.getFullYear()}-${String(
+              now.getMonth() + 1,
+            ).padStart(2, "0")}/${crypto.randomUUID()}.webm`;
+            const { error: upErr } = await supabase.storage
+              .from("chat-audio")
+              .upload(path, pendingAudio.blob, {
+                contentType: "audio/webm",
+                upsert: false,
+              });
+            if (!upErr) uploadedAudioPath = path;
+          }
+        } catch {
+          // se falhar o upload, seguimos sem áudio persistido
+        }
+      }
+
       const controller = new AbortController();
       abortRef.current = controller;
 
@@ -695,6 +729,9 @@ export function JurisMindChat({
           images: sentImages.length ? sentImages : undefined,
           model_tier: modelTier,
           thread_id: threadId ?? undefined,
+          input_kind: pendingAudio ? "voice" : "text",
+          audio_path: uploadedAudioPath,
+          audio_duration_ms: pendingAudio?.durationMs,
         }),
       });
       if (!res.ok || !res.body) {
