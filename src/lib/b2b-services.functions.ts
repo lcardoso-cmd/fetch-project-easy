@@ -9,6 +9,7 @@ export const B2B_REQUEST_STATUSES = [
   "aceita",
   "recusada",
   "cancelada",
+  "concluido",
 ] as const;
 export type B2bRequestStatus = (typeof B2B_REQUEST_STATUSES)[number];
 
@@ -19,6 +20,7 @@ export const B2B_REQUEST_STATUS_LABEL: Record<B2bRequestStatus, string> = {
   aceita: "Aceita",
   recusada: "Recusada",
   cancelada: "Cancelada",
+  concluido: "Concluído",
 };
 
 export const B2B_URGENCY_LABEL = {
