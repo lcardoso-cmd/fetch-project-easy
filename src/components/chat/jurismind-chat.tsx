@@ -884,6 +884,9 @@ export function JurisMindChat({
   const startRecording = async () => {
     if (recording || transcribing) return;
     setMicError(null);
+    consecutiveSegmentFailuresRef.current = 0;
+    setRetryInfo(null);
+
     if (!navigator.mediaDevices?.getUserMedia) {
       const msg = "Seu navegador não suporta gravação de áudio.";
       setMicError(msg);
