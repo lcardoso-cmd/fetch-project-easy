@@ -54,7 +54,7 @@ function LandingPage() {
       <header className="border-b">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4">
           <div className="flex items-center gap-2">
-            <JurisMindMark size={32} variant="square-navy" />
+            <JurisMindMark size={32} variant="square-navy" rounded />
             <span className="font-heading text-xl font-extrabold tracking-tight text-foreground">
               B2B | JurisMind AI
             </span>
@@ -143,7 +143,7 @@ function LandingPage() {
             const Icon = p.icon;
             return (
               <div key={p.title} className="flex items-start gap-3 rounded-xl border bg-card p-4">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-primary text-primary-foreground">
                   <Icon className="h-5 w-5" />
                 </div>
                 <div>
@@ -175,7 +175,7 @@ function LandingPage() {
                 key={f.title}
                 className="rounded-2xl border bg-card p-6 shadow-sm transition-shadow hover:shadow-md"
               >
-                <div className="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+                <div className="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-primary text-primary-foreground">
                   <Icon className="h-5 w-5" />
                 </div>
                 <h3 className="font-heading text-xl font-bold text-foreground">{f.title}</h3>
