@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireCapability } from "@/lib/capability-middleware";
 
 const optionalUuid = z.string().uuid().nullable().optional();
 
@@ -27,7 +27,7 @@ export interface ProposalVersion {
 // ------------- Rascunhos -------------
 
 export const getProposalDraft = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireCapability("commercial")])
   .inputValidator((i: unknown) =>
     z.object({ case_id: optionalUuid }).parse(i ?? {}),
   )
@@ -44,7 +44,7 @@ export const getProposalDraft = createServerFn({ method: "GET" })
   });
 
 export const upsertProposalDraft = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireCapability("commercial")])
   .inputValidator((i: unknown) =>
     z
       .object({
@@ -93,7 +93,7 @@ export const upsertProposalDraft = createServerFn({ method: "POST" })
   });
 
 export const deleteProposalDraft = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireCapability("commercial")])
   .inputValidator((i: unknown) =>
     z.object({ case_id: optionalUuid }).parse(i ?? {}),
   )
@@ -112,7 +112,7 @@ export const deleteProposalDraft = createServerFn({ method: "POST" })
 // ------------- Versões -------------
 
 export const listProposalVersions = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireCapability("commercial")])
   .inputValidator((i: unknown) =>
     z.object({ case_id: optionalUuid }).parse(i ?? {}),
   )
@@ -131,7 +131,7 @@ export const listProposalVersions = createServerFn({ method: "GET" })
   });
 
 export const createProposalVersion = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireCapability("commercial")])
   .inputValidator((i: unknown) =>
     z
       .object({
@@ -165,7 +165,7 @@ export const createProposalVersion = createServerFn({ method: "POST" })
   });
 
 export const updateProposalVersion = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireCapability("commercial")])
   .inputValidator((i: unknown) =>
     z
       .object({
@@ -192,7 +192,7 @@ export const updateProposalVersion = createServerFn({ method: "POST" })
   });
 
 export const deleteProposalVersion = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireCapability("commercial")])
   .inputValidator((i: unknown) => z.object({ id: z.string().uuid() }).parse(i))
   .handler(async ({ data, context }) => {
     const { error } = await context.supabase
@@ -209,7 +209,7 @@ export const deleteProposalVersion = createServerFn({ method: "POST" })
  * informado (ou "sem caso" quando null).
  */
 export const deleteAllProposalVersions = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireCapability("commercial")])
   .inputValidator((i: unknown) =>
     z.object({ case_id: optionalUuid }).parse(i ?? {}),
   )
