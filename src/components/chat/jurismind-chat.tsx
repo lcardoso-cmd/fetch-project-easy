@@ -250,6 +250,18 @@ export function JurisMindChat({
   const [transcribing, setTranscribing] = useState(false);
   const recorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
+  const streamRef = useRef<MediaStream | null>(null);
+  const audioCtxRef = useRef<AudioContext | null>(null);
+  const analyserRef = useRef<AnalyserNode | null>(null);
+  const rafRef = useRef<number | null>(null);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const autoStopRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const startedAtRef = useRef<number>(0);
+  const silenceSinceRef = useRef<number | null>(null);
+  const [recordingMs, setRecordingMs] = useState(0);
+  const [audioLevel, setAudioLevel] = useState(0);
+  const [micSilent, setMicSilent] = useState(false);
+  const [micError, setMicError] = useState<string | null>(null);
   const [modelTier, setModelTier] = useState<ModelTier>(() => {
     if (typeof window === "undefined") return "fast";
     return (localStorage.getItem("jurismind:model") as ModelTier) || "fast";
@@ -300,15 +312,77 @@ export function JurisMindChat({
     };
   }, [threadId, getMessagesFn]);
 
-  // Gravação de voz -> transcrição via /api/tools/transcribe
+  // ---------- Gravação de voz -> transcrição ----------
+  const MAX_RECORDING_MS = 60_000;
+
+  const cleanupAudioMonitor = () => {
+    if (rafRef.current != null) {
+      cancelAnimationFrame(rafRef.current);
+      rafRef.current = null;
+    }
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+    if (autoStopRef.current) {
+      clearTimeout(autoStopRef.current);
+      autoStopRef.current = null;
+    }
+    try {
+      analyserRef.current?.disconnect();
+    } catch {}
+    analyserRef.current = null;
+    if (audioCtxRef.current && audioCtxRef.current.state !== "closed") {
+      audioCtxRef.current.close().catch(() => {});
+    }
+    audioCtxRef.current = null;
+    streamRef.current?.getTracks().forEach((t) => t.stop());
+    streamRef.current = null;
+    silenceSinceRef.current = null;
+    setAudioLevel(0);
+    setMicSilent(false);
+  };
+
+  const humanizeMicError = (e: unknown): string => {
+    const err = e as { name?: string; message?: string } | undefined;
+    const name = err?.name ?? "";
+    if (name === "NotAllowedError" || name === "PermissionDeniedError")
+      return "Permissão de microfone negada. Habilite nas configurações do navegador.";
+    if (name === "NotFoundError" || name === "DevicesNotFoundError")
+      return "Nenhum microfone encontrado neste dispositivo.";
+    if (name === "NotReadableError" || name === "TrackStartError")
+      return "Microfone ocupado por outro aplicativo.";
+    if (name === "OverconstrainedError")
+      return "Configuração do microfone não suportada.";
+    if (name === "SecurityError")
+      return "Gravação bloqueada pelo navegador (contexto não seguro).";
+    return err?.message || "Não foi possível acessar o microfone.";
+  };
+
+  const humanizeTranscribeError = (
+    status: number,
+    apiMsg?: string,
+  ): string => {
+    if (status === 401 || status === 403)
+      return "Sessão expirada. Faça login novamente.";
+    if (status === 413) return "Áudio muito grande. Grave um trecho mais curto.";
+    if (status === 429) return "Muitas requisições. Aguarde alguns segundos.";
+    if (status >= 500) return "Falha no serviço de transcrição. Tente novamente.";
+    return apiMsg || "Não foi possível transcrever o áudio.";
+  };
+
   const startRecording = async () => {
     if (recording || transcribing) return;
+    setMicError(null);
     if (!navigator.mediaDevices?.getUserMedia) {
-      toast.error("Seu navegador não suporta gravação de áudio.");
+      const msg = "Seu navegador não suporta gravação de áudio.";
+      setMicError(msg);
+      toast.error(msg);
       return;
     }
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      streamRef.current = stream;
       const mime = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
         ? "audio/webm;codecs=opus"
         : "audio/webm";
@@ -318,13 +392,17 @@ export function JurisMindChat({
         if (e.data.size > 0) audioChunksRef.current.push(e.data);
       };
       rec.onstop = async () => {
-        stream.getTracks().forEach((t) => t.stop());
+        cleanupAudioMonitor();
         const blob = new Blob(audioChunksRef.current, { type: "audio/webm" });
         if (blob.size < 500) {
-          toast.error("Áudio muito curto.");
+          const msg = "Nada capturado — segure o botão e fale próximo ao microfone.";
+          setMicError(msg);
+          toast.error(msg);
           return;
         }
         setTranscribing(true);
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 30_000);
         try {
           const b64 = await new Promise<string>((resolve, reject) => {
             const r = new FileReader();
@@ -339,36 +417,130 @@ export function JurisMindChat({
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ audio_base64: b64, format: "webm" }),
+            signal: controller.signal,
           });
-          const json = (await res.json()) as { text?: string; error?: string };
-          if (!res.ok || json.error) throw new Error(json.error ?? "falha");
+          let json: { text?: string; error?: string } = {};
+          try {
+            json = (await res.json()) as { text?: string; error?: string };
+          } catch {}
+          if (!res.ok || json.error) {
+            throw new Error(humanizeTranscribeError(res.status, json.error));
+          }
           const text = (json.text ?? "").trim();
           if (!text) {
-            toast.error("Não consegui transcrever o áudio.");
+            const msg = "Não consegui transcrever — tente falar mais claramente.";
+            setMicError(msg);
+            toast.error(msg);
             return;
           }
           setInput((prev) => (prev ? prev + " " + text : text));
+          setMicError(null);
           setTimeout(() => inputRef.current?.focus(), 30);
         } catch (e) {
-          toast.error(e instanceof Error ? e.message : "Erro ao transcrever");
+          const isAbort = (e as { name?: string })?.name === "AbortError";
+          const msg = isAbort
+            ? "A transcrição demorou demais. Tente novamente."
+            : e instanceof Error
+              ? e.message
+              : "Erro ao transcrever.";
+          setMicError(msg);
+          toast.error(msg);
         } finally {
+          clearTimeout(timeout);
           setTranscribing(false);
         }
       };
       recorderRef.current = rec;
       rec.start();
+
+      // Audio level monitor
+      try {
+        const AC =
+          window.AudioContext ||
+          (window as unknown as { webkitAudioContext?: typeof AudioContext })
+            .webkitAudioContext;
+        if (AC) {
+          const ctx = new AC();
+          audioCtxRef.current = ctx;
+          const source = ctx.createMediaStreamSource(stream);
+          const analyser = ctx.createAnalyser();
+          analyser.fftSize = 256;
+          source.connect(analyser);
+          analyserRef.current = analyser;
+          const buf = new Uint8Array(analyser.frequencyBinCount);
+          const tick = () => {
+            if (!analyserRef.current) return;
+            analyserRef.current.getByteTimeDomainData(buf);
+            let sum = 0;
+            for (let i = 0; i < buf.length; i++) {
+              const v = (buf[i] - 128) / 128;
+              sum += v * v;
+            }
+            const rms = Math.sqrt(sum / buf.length);
+            const level = Math.min(1, rms * 2.5);
+            setAudioLevel(level);
+            const now = performance.now();
+            if (level < 0.02) {
+              if (silenceSinceRef.current == null) silenceSinceRef.current = now;
+              if (now - silenceSinceRef.current > 2000) setMicSilent(true);
+            } else {
+              silenceSinceRef.current = null;
+              setMicSilent(false);
+            }
+            rafRef.current = requestAnimationFrame(tick);
+          };
+          rafRef.current = requestAnimationFrame(tick);
+        }
+      } catch {
+        // audio meter is optional
+      }
+
+      startedAtRef.current = Date.now();
+      setRecordingMs(0);
+      timerRef.current = setInterval(() => {
+        setRecordingMs(Date.now() - startedAtRef.current);
+      }, 250);
+      autoStopRef.current = setTimeout(() => {
+        if (recorderRef.current && recorderRef.current.state === "recording") {
+          toast.message("Gravação encerrada aos 60s.");
+          stopRecording();
+        }
+      }, MAX_RECORDING_MS);
+
       setRecording(true);
     } catch (e) {
-      toast.error(
-        e instanceof Error ? e.message : "Não foi possível acessar o microfone",
-      );
+      cleanupAudioMonitor();
+      const msg = humanizeMicError(e);
+      setMicError(msg);
+      toast.error(msg);
     }
   };
+
   const stopRecording = () => {
     if (!recording) return;
-    recorderRef.current?.stop();
+    try {
+      recorderRef.current?.stop();
+    } catch {}
     setRecording(false);
   };
+
+  useEffect(() => {
+    return () => {
+      try {
+        if (recorderRef.current && recorderRef.current.state !== "inactive") {
+          recorderRef.current.stop();
+        }
+      } catch {}
+      cleanupAudioMonitor();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const formatRecordingTime = (ms: number) => {
+    const s = Math.floor(ms / 1000);
+    return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+  };
+
 
 
   const readFilesAsImages = async (files: File[]) => {
@@ -939,6 +1111,62 @@ export function JurisMindChat({
                 ))}
               </div>
             )}
+            {(recording || transcribing || micError) && (
+              <div
+                aria-live="polite"
+                className="mb-2 flex flex-wrap items-center gap-2 text-xs"
+              >
+                {recording && (
+                  <div className="flex items-center gap-2 rounded-full border border-destructive/40 bg-destructive/10 px-2.5 py-1 text-destructive">
+                    <span className="relative flex h-2 w-2">
+                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-destructive opacity-75" />
+                      <span className="relative inline-flex h-2 w-2 rounded-full bg-destructive" />
+                    </span>
+                    <span className="font-medium tabular-nums">
+                      REC {formatRecordingTime(recordingMs)}
+                    </span>
+                    <div className="h-1.5 w-16 overflow-hidden rounded-full bg-destructive/20">
+                      <div
+                        className="h-full bg-destructive transition-[width] duration-100"
+                        style={{ width: `${Math.round(audioLevel * 100)}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
+                {recording && micSilent && (
+                  <span className="text-muted-foreground">
+                    Microfone parece silencioso — verifique o dispositivo.
+                  </span>
+                )}
+                {transcribing && (
+                  <div className="flex items-center gap-2 rounded-full border bg-muted px-2.5 py-1 text-muted-foreground">
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                    <span>Transcrevendo…</span>
+                  </div>
+                )}
+                {!recording && !transcribing && micError && (
+                  <div className="flex flex-1 items-center gap-2 rounded-md border border-destructive/40 bg-destructive/5 px-2.5 py-1.5 text-destructive">
+                    <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+                    <span className="flex-1">{micError}</span>
+                    <button
+                      type="button"
+                      onClick={() => void startRecording()}
+                      className="rounded px-1.5 py-0.5 text-xs font-medium hover:bg-destructive/10"
+                    >
+                      Tentar novamente
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setMicError(null)}
+                      aria-label="Fechar"
+                      className="rounded p-0.5 hover:bg-destructive/10"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
             <div className="flex items-end gap-2">
               <input
                 ref={fileRef}
@@ -968,8 +1196,25 @@ export function JurisMindChat({
                 variant={recording ? "destructive" : "outline"}
                 onClick={() => (recording ? stopRecording() : void startRecording())}
                 disabled={busy || transcribing}
-                title={recording ? "Parar gravação" : "Ditar mensagem"}
-                className="h-10 w-10 shrink-0"
+                aria-pressed={recording}
+                aria-label={
+                  transcribing
+                    ? "Transcrevendo áudio"
+                    : recording
+                      ? `Parar gravação (${formatRecordingTime(recordingMs)})`
+                      : "Iniciar gravação de voz"
+                }
+                title={
+                  transcribing
+                    ? "Transcrevendo…"
+                    : recording
+                      ? `Parar gravação (${formatRecordingTime(recordingMs)})`
+                      : "Ditar mensagem"
+                }
+                className={cn(
+                  "h-10 w-10 shrink-0",
+                  recording && "animate-pulse",
+                )}
               >
                 {transcribing ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
