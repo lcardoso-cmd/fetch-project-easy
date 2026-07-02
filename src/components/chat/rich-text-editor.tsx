@@ -43,7 +43,7 @@ function sanitizePastedHtml(raw: string): string {
   return s;
 }
 
-export function RichTextEditor({ html, onChange, minHeight = 360 }: Props) {
+export function RichTextEditor({ html, onChange, minHeight = 360, contentClassName }: Props) {
   const ref = useRef<HTMLDivElement>(null);
   const lastEmittedRef = useRef<string>(html);
 
