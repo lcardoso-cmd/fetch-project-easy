@@ -348,8 +348,15 @@ function ProposalPage() {
                 <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Honorários e prazo</p>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <Label>Honorários</Label>
-                    <Input placeholder="Ex.: R$ 1.200/hora" value={form.fees} onChange={(e) => setForm({ ...form, fees: e.target.value })} />
+                    <Label>Honorários <span className="text-destructive">*</span></Label>
+                    <Input
+                      placeholder="Ex.: R$ 1.200/hora"
+                      value={form.fees}
+                      onChange={(e) => setForm({ ...form, fees: e.target.value })}
+                      aria-invalid={!!errors.fees}
+                      className={errors.fees ? "border-destructive" : ""}
+                    />
+                    {errors.fees && <p className="mt-1 text-xs text-destructive">{errors.fees}</p>}
                   </div>
                   <div>
                     <Label>Honorários de êxito</Label>
