@@ -403,8 +403,14 @@ function ProposalPage() {
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <Label>Advogado responsável</Label>
-                    <Input value={form.lawyer_name} onChange={(e) => setForm({ ...form, lawyer_name: e.target.value })} />
+                    <Label>Advogado responsável <span className="text-destructive">*</span></Label>
+                    <Input
+                      value={form.lawyer_name}
+                      onChange={(e) => setForm({ ...form, lawyer_name: e.target.value })}
+                      aria-invalid={!!errors.lawyer_name}
+                      className={errors.lawyer_name ? "border-destructive" : ""}
+                    />
+                    {errors.lawyer_name && <p className="mt-1 text-xs text-destructive">{errors.lawyer_name}</p>}
                   </div>
                   <div>
                     <Label>Cargo / Título</Label>
