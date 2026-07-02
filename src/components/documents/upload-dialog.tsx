@@ -479,26 +479,40 @@ export function UploadDialog({
 
             {files.length > 0 && (
               <div className="space-y-2">
-                <p className="text-sm font-medium">Arquivos selecionados:</p>
-                <ul className="max-h-40 space-y-1 overflow-auto rounded-md border p-2 text-sm">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-sm font-medium">
+                    Revisar antes de registrar
+                    <span className="ml-1 text-xs font-normal text-muted-foreground">
+                      ({files.length}{" "}
+                      {files.length === 1 ? "arquivo" : "arquivos"})
+                    </span>
+                  </p>
+                  <button
+                    type="button"
+                    className="text-xs text-muted-foreground hover:text-foreground"
+                    onClick={() => inputRef.current?.click()}
+                  >
+                    + adicionar
+                  </button>
+                </div>
+                <div className="max-h-[420px] space-y-2 overflow-auto pr-1">
                   {files.map((f) => (
-                    <li
-                      key={`${f.name}-${f.lastModified}`}
-                      className="flex items-center justify-between gap-2"
-                    >
-                      <span className="truncate">{f.name}</span>
-                      <button
-                        type="button"
-                        className="text-xs text-muted-foreground hover:text-foreground"
-                        onClick={() =>
-                          setFiles((prev) => prev.filter((x) => x !== f))
-                        }
-                      >
-                        remover
-                      </button>
-                    </li>
+                    <FilePreviewCard
+                      key={`${f.name}-${f.lastModified}-${f.size}`}
+                      file={f}
+                      onRemove={() =>
+                        setFiles((prev) => prev.filter((x) => x !== f))
+                      }
+                      onHashComputed={(h) =>
+                        precomputedHashesRef.current.set(fileKey(f), h)
+                      }
+                    />
                   ))}
-                </ul>
+                </div>
+                <p className="text-[11px] text-muted-foreground">
+                  Confira o conteúdo e os metadados extraídos. Nada é gravado
+                  no caso até você confirmar o envio.
+                </p>
               </div>
             )}
 
