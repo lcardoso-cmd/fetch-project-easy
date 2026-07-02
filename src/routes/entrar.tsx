@@ -233,6 +233,51 @@ function AuthPage() {
             </p>
           </div>
 
+          {pendingEmail && (
+            <div
+              role="status"
+              aria-live="polite"
+              className="flex flex-col gap-3 rounded-2xl border border-amber-300/60 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-500/30 dark:bg-amber-950/40 dark:text-amber-100 sm:flex-row sm:items-center sm:justify-between"
+            >
+              <div className="flex items-start gap-2">
+                <IconBox icon={MailCheck} size="xs" bgColor="bg-amber-500/15" iconColor="text-amber-700 dark:text-amber-300" />
+                <div className="min-w-0">
+                  <p className="font-medium">Confirme seu email</p>
+                  <p className="text-xs opacity-80">
+                    Enviamos um link para <span className="font-medium">{pendingEmail}</span>. Não recebeu?
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="gap-2"
+                  onClick={handleResendConfirmation}
+                  disabled={isResending || resendCooldown > 0}
+                >
+                  {isResending
+                    ? "Reenviando..."
+                    : resendCooldown > 0
+                      ? `Aguarde ${resendCooldown}s`
+                      : "Reenviar confirmação"}
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setPendingEmail(null)}
+                  aria-label="Dispensar aviso"
+                >
+                  ✕
+                </Button>
+              </div>
+            </div>
+          )}
+
+
+
           <Tabs value={mode} onValueChange={(v) => { setMode(v as "login" | "signup"); setError(null); }} className="w-full">
             <TabsList className="grid w-full grid-cols-2 rounded-2xl">
               <TabsTrigger value="login" className="rounded-xl">Entrar</TabsTrigger>
