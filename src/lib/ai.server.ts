@@ -84,6 +84,110 @@ export async function chatComplete(
   return { content: msg?.content ?? "", tool_calls: msg?.tool_calls };
 }
 
+/**
+ * Streaming chat completion (SSE). Chama onDelta a cada pedaço de texto.
+ * Retorna o conteúdo completo agregado + tool_calls acumulados (se houver).
+ */
+export async function chatCompleteStream(
+  messages: ChatMessage[],
+  opts: {
+    model?: string;
+    temperature?: number;
+    tools?: ToolDef[];
+    onDelta?: (delta: string) => void;
+    signal?: AbortSignal;
+  } = {},
+): Promise<{ content: string; tool_calls?: ToolCall[] }> {
+  const body: Record<string, unknown> = {
+    model: opts.model ?? "google/gemini-2.5-flash",
+    messages,
+    temperature: opts.temperature ?? 0.3,
+    stream: true,
+  };
+  if (opts.tools && opts.tools.length > 0) body.tools = opts.tools;
+
+  const res = await fetch(`${AI_BASE}/chat/completions`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey()}`,
+      "Content-Type": "application/json",
+      Accept: "text/event-stream",
+    },
+    body: JSON.stringify(body),
+    signal: opts.signal,
+  });
+  if (!res.ok || !res.body) {
+    const txt = await res.text().catch(() => "");
+    throw new Error(`Chat stream falhou (${res.status}): ${txt}`);
+  }
+
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  let content = "";
+  const toolCallsByIndex = new Map<
+    number,
+    { id?: string; name?: string; arguments: string }
+  >();
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    let sep: number;
+    while ((sep = buffer.indexOf("\n")) !== -1) {
+      const rawLine = buffer.slice(0, sep).replace(/\r$/, "");
+      buffer = buffer.slice(sep + 1);
+      if (!rawLine.startsWith("data:")) continue;
+      const payload = rawLine.slice(5).trim();
+      if (!payload || payload === "[DONE]") continue;
+      let chunk: {
+        choices?: Array<{
+          delta?: {
+            content?: string | null;
+            tool_calls?: Array<{
+              index: number;
+              id?: string;
+              function?: { name?: string; arguments?: string };
+            }>;
+          };
+        }>;
+      };
+      try {
+        chunk = JSON.parse(payload);
+      } catch {
+        continue;
+      }
+      const delta = chunk.choices?.[0]?.delta;
+      if (!delta) continue;
+      if (typeof delta.content === "string" && delta.content.length > 0) {
+        content += delta.content;
+        opts.onDelta?.(delta.content);
+      }
+      if (delta.tool_calls) {
+        for (const tc of delta.tool_calls) {
+          const cur = toolCallsByIndex.get(tc.index) ?? { arguments: "" };
+          if (tc.id) cur.id = tc.id;
+          if (tc.function?.name) cur.name = tc.function.name;
+          if (tc.function?.arguments) cur.arguments += tc.function.arguments;
+          toolCallsByIndex.set(tc.index, cur);
+        }
+      }
+    }
+  }
+
+  const tool_calls: ToolCall[] = [];
+  for (const [, v] of Array.from(toolCallsByIndex.entries()).sort((a, b) => a[0] - b[0])) {
+    if (!v.name) continue;
+    tool_calls.push({
+      id: v.id ?? `call_${tool_calls.length}`,
+      type: "function",
+      function: { name: v.name, arguments: v.arguments || "{}" },
+    });
+  }
+  return { content, tool_calls: tool_calls.length ? tool_calls : undefined };
+}
+
 /** Loop multi-step de tool calling. Para quando o modelo retorna texto sem tool_calls. */
 export async function chatWithTools(
   messages: ChatMessage[],
