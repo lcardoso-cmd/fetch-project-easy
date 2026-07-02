@@ -74,6 +74,7 @@ import { Route as AuthenticatedPlatformCustomersIndexRouteImport } from './route
 import { Route as AuthenticatedPlatformCredentialsIndexRouteImport } from './routes/_authenticated/platform.credentials.index'
 import { Route as AuthenticatedPlatformAuditIndexRouteImport } from './routes/_authenticated/platform.audit.index'
 import { Route as AuthenticatedPlataformaUsuariosIndexRouteImport } from './routes/_authenticated/plataforma.usuarios.index'
+import { Route as AuthenticatedPlataformaSolicitacoesIndexRouteImport } from './routes/_authenticated/plataforma.solicitacoes.index'
 import { Route as AuthenticatedPlataformaCredenciaisIndexRouteImport } from './routes/_authenticated/plataforma.credenciais.index'
 import { Route as AuthenticatedPlataformaClientesIndexRouteImport } from './routes/_authenticated/plataforma.clientes.index'
 import { Route as AuthenticatedPlataformaAuditoriaIndexRouteImport } from './routes/_authenticated/plataforma.auditoria.index'
@@ -436,6 +437,12 @@ const AuthenticatedPlataformaUsuariosIndexRoute =
     path: '/plataforma/usuarios/',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedPlataformaSolicitacoesIndexRoute =
+  AuthenticatedPlataformaSolicitacoesIndexRouteImport.update({
+    id: '/plataforma/solicitacoes/',
+    path: '/plataforma/solicitacoes/',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedPlataformaCredenciaisIndexRoute =
   AuthenticatedPlataformaCredenciaisIndexRouteImport.update({
     id: '/plataforma/credenciais/',
@@ -559,6 +566,7 @@ export interface FileRoutesByFullPath {
   '/plataforma/auditoria/': typeof AuthenticatedPlataformaAuditoriaIndexRoute
   '/plataforma/clientes/': typeof AuthenticatedPlataformaClientesIndexRoute
   '/plataforma/credenciais/': typeof AuthenticatedPlataformaCredenciaisIndexRoute
+  '/plataforma/solicitacoes/': typeof AuthenticatedPlataformaSolicitacoesIndexRoute
   '/plataforma/usuarios/': typeof AuthenticatedPlataformaUsuariosIndexRoute
   '/platform/audit/': typeof AuthenticatedPlatformAuditIndexRoute
   '/platform/credentials/': typeof AuthenticatedPlatformCredentialsIndexRoute
@@ -632,6 +640,7 @@ export interface FileRoutesByTo {
   '/plataforma/auditoria': typeof AuthenticatedPlataformaAuditoriaIndexRoute
   '/plataforma/clientes': typeof AuthenticatedPlataformaClientesIndexRoute
   '/plataforma/credenciais': typeof AuthenticatedPlataformaCredenciaisIndexRoute
+  '/plataforma/solicitacoes': typeof AuthenticatedPlataformaSolicitacoesIndexRoute
   '/plataforma/usuarios': typeof AuthenticatedPlataformaUsuariosIndexRoute
   '/platform/audit': typeof AuthenticatedPlatformAuditIndexRoute
   '/platform/credentials': typeof AuthenticatedPlatformCredentialsIndexRoute
@@ -709,6 +718,7 @@ export interface FileRoutesById {
   '/_authenticated/plataforma/auditoria/': typeof AuthenticatedPlataformaAuditoriaIndexRoute
   '/_authenticated/plataforma/clientes/': typeof AuthenticatedPlataformaClientesIndexRoute
   '/_authenticated/plataforma/credenciais/': typeof AuthenticatedPlataformaCredenciaisIndexRoute
+  '/_authenticated/plataforma/solicitacoes/': typeof AuthenticatedPlataformaSolicitacoesIndexRoute
   '/_authenticated/plataforma/usuarios/': typeof AuthenticatedPlataformaUsuariosIndexRoute
   '/_authenticated/platform/audit/': typeof AuthenticatedPlatformAuditIndexRoute
   '/_authenticated/platform/credentials/': typeof AuthenticatedPlatformCredentialsIndexRoute
@@ -786,6 +796,7 @@ export interface FileRouteTypes {
     | '/plataforma/auditoria/'
     | '/plataforma/clientes/'
     | '/plataforma/credenciais/'
+    | '/plataforma/solicitacoes/'
     | '/plataforma/usuarios/'
     | '/platform/audit/'
     | '/platform/credentials/'
@@ -859,6 +870,7 @@ export interface FileRouteTypes {
     | '/plataforma/auditoria'
     | '/plataforma/clientes'
     | '/plataforma/credenciais'
+    | '/plataforma/solicitacoes'
     | '/plataforma/usuarios'
     | '/platform/audit'
     | '/platform/credentials'
@@ -935,6 +947,7 @@ export interface FileRouteTypes {
     | '/_authenticated/plataforma/auditoria/'
     | '/_authenticated/plataforma/clientes/'
     | '/_authenticated/plataforma/credenciais/'
+    | '/_authenticated/plataforma/solicitacoes/'
     | '/_authenticated/plataforma/usuarios/'
     | '/_authenticated/platform/audit/'
     | '/_authenticated/platform/credentials/'
@@ -1416,6 +1429,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedPlataformaUsuariosIndexRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/plataforma/solicitacoes/': {
+      id: '/_authenticated/plataforma/solicitacoes/'
+      path: '/plataforma/solicitacoes'
+      fullPath: '/plataforma/solicitacoes/'
+      preLoaderRoute: typeof AuthenticatedPlataformaSolicitacoesIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/plataforma/credenciais/': {
       id: '/_authenticated/plataforma/credenciais/'
       path: '/plataforma/credenciais'
@@ -1623,6 +1643,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedPlataformaAuditoriaIndexRoute: typeof AuthenticatedPlataformaAuditoriaIndexRoute
   AuthenticatedPlataformaClientesIndexRoute: typeof AuthenticatedPlataformaClientesIndexRoute
   AuthenticatedPlataformaCredenciaisIndexRoute: typeof AuthenticatedPlataformaCredenciaisIndexRoute
+  AuthenticatedPlataformaSolicitacoesIndexRoute: typeof AuthenticatedPlataformaSolicitacoesIndexRoute
   AuthenticatedPlataformaUsuariosIndexRoute: typeof AuthenticatedPlataformaUsuariosIndexRoute
   AuthenticatedPlatformAuditIndexRoute: typeof AuthenticatedPlatformAuditIndexRoute
   AuthenticatedPlatformCredentialsIndexRoute: typeof AuthenticatedPlatformCredentialsIndexRoute
@@ -1678,6 +1699,8 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
     AuthenticatedPlataformaClientesIndexRoute,
   AuthenticatedPlataformaCredenciaisIndexRoute:
     AuthenticatedPlataformaCredenciaisIndexRoute,
+  AuthenticatedPlataformaSolicitacoesIndexRoute:
+    AuthenticatedPlataformaSolicitacoesIndexRoute,
   AuthenticatedPlataformaUsuariosIndexRoute:
     AuthenticatedPlataformaUsuariosIndexRoute,
   AuthenticatedPlatformAuditIndexRoute: AuthenticatedPlatformAuditIndexRoute,
