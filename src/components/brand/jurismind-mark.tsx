@@ -30,24 +30,60 @@ const SOURCES: Record<JurisMindVariant, string> = {
   "glyph-white": glyphWhite.url,
 };
 
+/**
+ * Semantic contexts where the mark is rendered. Prefer passing `context`
+ * instead of hand-picking a `variant`, so the layout stays consistent if
+ * the design token for a context changes.
+ */
+export type JurisMindContext =
+  | "sidebar"
+  | "header"
+  | "landing"
+  | "auth"
+  | "chat"
+  | "chip-dark"
+  | "inline-light"
+  | "inline-dark";
+
+const CONTEXT_TO_VARIANT: Record<JurisMindContext, JurisMindVariant> = {
+  sidebar: "sidebar",
+  header: "square-navy",
+  landing: "square-navy",
+  auth: "square-navy",
+  chat: "square-navy",
+  "chip-dark": "square-white",
+  "inline-light": "glyph-navy",
+  "inline-dark": "glyph-white",
+};
+
+export function variantForContext(context: JurisMindContext): JurisMindVariant {
+  return CONTEXT_TO_VARIANT[context];
+}
+
 export function JurisMindMark({
   className,
   size = 20,
-  variant = "sidebar",
+  variant,
+  context,
   rounded,
 }: {
   className?: string;
   size?: number;
+  /** Explicit variant. Prefer `context` unless you need a specific asset. */
   variant?: JurisMindVariant;
+  /** Semantic layout context; resolves to the correct variant automatically. */
+  context?: JurisMindContext;
   /** Force rounded corners. Square variants are rounded by default. */
   rounded?: boolean;
 }) {
+  const resolved: JurisMindVariant =
+    variant ?? (context ? CONTEXT_TO_VARIANT[context] : "sidebar");
   const isSquare =
-    variant === "sidebar" || variant === "square-navy" || variant === "square-white";
+    resolved === "sidebar" || resolved === "square-navy" || resolved === "square-white";
   const shouldRound = rounded ?? isSquare;
   return (
     <img
-      src={SOURCES[variant]}
+      src={SOURCES[resolved]}
       alt="JurisMind AI"
       width={size}
       height={size}
