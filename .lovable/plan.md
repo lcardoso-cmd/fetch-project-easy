@@ -1,80 +1,61 @@
+# Template DOCX profissional e consistente
 
-## Objetivo
+Hoje temos três geradores de `.docx` (proposta, petição, resumo) e cada um redefine fontes, títulos e margens à mão. O resultado varia — títulos com tamanhos diferentes, sem estilos nomeados, sem cabeçalho/rodapé, tabelas sem borda padronizada. A ideia é centralizar tudo em **um único template** e fazer os três exports consumirem-no.
 
-Permitir gerar propostas para clientes que **ainda não têm caso cadastrado**:
-1. Subir documentos direto na tela de Proposta (sem exigir caso vinculado).
-2. Extrair dados dos documentos para pré-preencher o formulário.
-3. Depois, com um clique, **converter a proposta em caso**, migrando os anexos e criando o caso vinculado.
+## O que será criado
 
-## Fluxo de uso
+**`src/lib/docx/template.ts`** — módulo único (server-safe) exportando:
 
-```text
-Proposta (sem caso)
-   ├─ Arrastar/soltar PDFs/imagens/DOCX
-   ├─ Extração automática → sugere cliente, matéria, contraparte
-   ├─ Editar formulário + gerar proposta (funciona igual hoje)
-   └─ Botão "Converter em caso"
-         ├─ Cria case novo com dados da proposta
-         ├─ Move/anexa documentos ao case (attachDocumentToCase)
-         ├─ Vincula a proposta ao case criado (form.case_id + draft)
-         └─ Toast com link "Abrir caso"
-```
+- `createStyledDocument({ title, subtitle?, children, meta? })` — devolve um `Document` do `docx` já configurado com estilos, cabeçalho, rodapé e margens.
+- `htmlToDocxChildren(html)` — converte HTML do editor (h1/h2/h3, p, ul/ol, li, strong/em/u, alinhamento inline) em `Paragraph[]` respeitando os estilos nomeados do template. Substitui os parsers duplicados de `petition.ts` e `export.functions.ts`.
+- `plainTextToDocxChildren(text)` — mantém o comportamento atual do "resumo" (seções TÍTULO:) usando os mesmos estilos.
+- Helpers de tabela (`styledTable(rows)`) com bordas cinza `#CCCCCC`, cabeçalho com fundo `#0F172A`/texto branco, padding e `WidthType.DXA`.
+- `TEMPLATE_COLORS`, `TEMPLATE_FONTS` para reuso.
 
-## Mudanças
+### Especificação do template
 
-### 1. Backend — anexos de proposta sem caso
+- **Página**: US Letter (12240 × 15840 DXA), margens 1" (1440 DXA).
+- **Fonte padrão**: Calibri 11pt (size 22) — universal e legível.
+- **Estilos nomeados** (sobrescrevendo built-ins para funcionar no Word/Google Docs):
+  - `Title` — Calibri 24pt bold, cor `#0F172A`, espaçamento 240 antes / 120 depois, alinhado à esquerda.
+  - `Subtitle` — Calibri 13pt, cor `#475569`, itálico opcional.
+  - `Heading1` — Calibri 16pt bold, cor `#0F172A`, `outlineLevel: 0`, borda inferior fina `#0F172A`, espaço 320/160.
+  - `Heading2` — Calibri 13pt bold, cor `#1E3A8A`, `outlineLevel: 1`, 240/120.
+  - `Heading3` — Calibri 11pt bold uppercase, cor `#334155`, `outlineLevel: 2`.
+  - `Normal` — Calibri 11pt, line spacing 1.35, espaço depois 120.
+  - `Quote` — itálico, indent esquerdo 360, cor `#475569`, borda esquerda 4pt `#0F172A`.
+- **Listas**: numbering config com `bullets` (LevelFormat.BULLET, "•", indent 720/hanging 360) e `numbers` (DECIMAL) — nunca `•` manual.
+- **Cabeçalho** (opcional via `meta.header`): logo textual "B2B | JurisMind AI" à esquerda, `meta.header` à direita usando tab stop RIGHT/MAX.
+- **Rodapé**: "Documento gerado por B2B | JurisMind AI" à esquerda, "Página X de Y" à direita (`PageNumber.CURRENT` / `TOTAL_PAGES`), fonte 9pt cor `#64748B`, borda superior fina.
+- **Meta do arquivo**: `creator`, `title`, `description` preenchidos a partir de `meta`.
 
-Nova tabela `proposal_attachments` (RLS por `user_id`, escopo por `case_id` nullable ou draft “sem caso”):
+## Migração dos exports existentes
 
-- `id uuid pk`, `user_id uuid`, `case_id uuid null`, `filename`, `file_type`, `file_size`, `storage_path`, `extracted_text text null`, `extraction_status ('pending'|'done'|'error')`, `extracted_fields jsonb null`, `created_at`.
-- Storage: bucket `documents` já existente, prefixo `proposals/{user_id}/{uuid}-{filename}`.
-- Grants + policies (user vê/edita só o próprio).
+1. **`src/routes/api/tools/petition.ts`** — trocar montagem manual por:
+   ```ts
+   const doc = createStyledDocument({
+     title: titulo,
+     children: html ? htmlToDocxChildren(html) : plainTextToDocxChildren(conteudo),
+     meta: { header: "Petição", creator: "B2B | JurisMind AI" },
+   });
+   ```
+   Mantém a rota, o content-type e o filename atuais.
 
-Novas server functions em `src/lib/proposal-attachments.functions.ts`:
+2. **`src/lib/export.functions.ts`** → `exportSummaryDocx` passa a usar `plainTextToDocxChildren` + `createStyledDocument` com `meta.header: "Resumo do caso"`. Comportamento de seções TÍTULO: preservado, agora com estilos nomeados.
 
-- `listProposalAttachments({ case_id | null })` — lista anexos do rascunho corrente.
-- `registerProposalAttachment({ ... })` — insere linha após upload no storage.
-- `extractProposalAttachment({ id })` — baixa do storage, roda `extractTextFromBlob` + LLM (mesmo extrator do `extractCaseDataFromDocument`) e devolve `{ text, extracted }` (cliente, matéria, contraparte, jurisdição).
-- `deleteProposalAttachment({ id })` — remove do storage + linha.
-- `convertProposalToCase({ case: {...}, attachment_ids: [...] })`:
-  1. Cria o `case` (reusa `createCase` server-side).
-  2. Para cada anexo, chama `attachDocumentToCase` reaproveitando `storage_path`.
-  3. Atualiza `proposal_drafts` do usuário para apontar ao novo `case_id`.
-  4. Retorna `{ case_id }`.
+3. **`src/routes/_authenticated/proposal.tsx`** — o botão "Baixar .docx" continua chamando `/api/tools/petition` (nenhuma mudança no cliente); passa `titulo: "Proposta - <cliente>"` para virar cabeçalho.
 
-### 2. Frontend — Proposta
+## O que **não** muda
 
-Em `src/routes/_authenticated/proposal.tsx`:
-
-- Novo card **"Documentos do cliente"** (só aparece quando `case_id === __none__`; se já há caso vinculado, mostra os documentos do caso em modo leitura).
-- Componente `ProposalAttachmentsPanel`:
-  - Upload zone (reusa `supabase.storage.from('documents').upload` como em `cases.new.tsx`).
-  - Lista com nome, tamanho, status de extração, ações (visualizar, remover, "usar sugestões").
-  - Botão **"Extrair dados"** por arquivo (ou automático ao subir) → popula `form` com merge respeitando o que o usuário já digitou.
-- Botão **"Converter em caso"** na barra superior (ao lado de "Salvar versão"):
-  - Habilita quando o form tem `client_name` e `matter` mínimos.
-  - Abre popover: título do caso (default = `Proposta — {cliente}`), tipo, jurisdição.
-  - Ao confirmar chama `convertProposalToCase`, seta `form.case_id` no retorno, invalida queries de casos, mostra toast com `<Link to="/cases/$caseId">Abrir caso</Link>`.
-
-### 3. Validação e limites
-
-- Tipos permitidos: PDF, DOCX, TXT, imagens (jpg/png). Máx 20 MB/arquivo, 10 arquivos por proposta.
-- Extração best-effort: nunca sobrescreve campo já preenchido pelo usuário; apenas sugere.
+- Nenhuma mudança de UI, rotas, RLS ou schema.
+- `html2pdf` (exportação PDF do proposal) continua igual — está fora do escopo do template `.docx`.
+- Assinaturas dos server functions/rotas inalteradas — só o conteúdo do arquivo final fica mais bonito e consistente.
 
 ## Detalhes técnicos
 
-- Extração reusa `extractTextFromBlob` (usado por `attachDocumentToCase`) + prompt do `extractCaseDataFromDocument` adaptado para retornar `{ client_name, client_document, counterparty_name, matter, jurisdiction, scope_summary }`.
-- `convertProposalToCase` roda dentro de uma única server fn (não transacional no PostgREST, mas cria case primeiro e só depois anexa; se algum anexo falhar, retorna a lista de falhas para o UI mostrar).
-- Migration nova para `proposal_attachments` (tabela + índices em `(user_id, case_id)`, `(user_id, created_at)` + trigger `update_updated_at_column`).
-- Anexos de rascunho “sem caso” não são apagados automaticamente ao converter — passam a apontar ao `case_id` do caso novo via update.
+- Módulo fica em `src/lib/docx/` (client-safe path) e é importado dinamicamente dentro dos handlers para não pesar bundle SSR.
+- Usa apenas APIs que rodam no Cloudflare Worker (nada de `fs`/`sharp`). `docx` já é compatível.
+- Segue as regras do skill de DOCX: `WidthType.DXA` em tabelas, `ShadingType.CLEAR`, `LevelFormat.BULLET`, `PageBreak` dentro de `Paragraph`, IDs de estilo exatos (`Heading1`, etc.), `outlineLevel` para TOC futura.
+- Sem dependência nova (`docx` já instalado).
 
-## Arquivos afetados
-
-- **Migration**: nova tabela `proposal_attachments` + policies + grants.
-- **Novos**: `src/lib/proposal-attachments.functions.ts`, `src/components/proposal/proposal-attachments-panel.tsx`, `src/components/proposal/convert-to-case-popover.tsx`.
-- **Editados**: `src/routes/_authenticated/proposal.tsx` (integra painel + botão converter), `src/lib/cases.functions.ts` (expor helper reutilizável de extração se necessário).
-
-## Fora de escopo (para depois)
-
-- Indexar anexos de proposta no RAG antes da conversão em caso.
-- Suportar múltiplos rascunhos “sem caso” simultâneos por usuário (hoje é 1 draft por `(user, case_id null)`).
+Se quiser, depois desse template posso adicionar: logo em imagem no cabeçalho, marca d'água "RASCUNHO" para versões não finalizadas, e uma variação "carta" com bloco de destinatário — mas fora do escopo desta entrega.
