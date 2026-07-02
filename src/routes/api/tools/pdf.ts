@@ -63,7 +63,7 @@ export const Route = createFileRoute("/api/tools/pdf")({
             branding = await loadBrandingForUser(userId);
           }
 
-          const pdfBytes = renderPdf({
+          const pdfBytes = await renderPdf({
             title: String(titulo),
             blocks,
             branding,
