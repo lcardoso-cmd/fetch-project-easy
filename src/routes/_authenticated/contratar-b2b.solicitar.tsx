@@ -79,7 +79,7 @@ function HireB2bRequestForm() {
     prefillNoticeShown.current = true;
     toast.success("Solicitação pré-preenchida", {
       description: svc
-        ? `Serviço "${svc.name}" e contexto do parecer já foram preenchidos. Ajuste os detalhes antes de enviar.`
+        ? `Serviço "${svc.title}" e contexto do parecer já foram preenchidos. Ajuste os detalhes antes de enviar.`
         : "Serviço e contexto do parecer já foram preenchidos. Ajuste os detalhes antes de enviar.",
     });
   }, [catalog, search.service, search.description]);
