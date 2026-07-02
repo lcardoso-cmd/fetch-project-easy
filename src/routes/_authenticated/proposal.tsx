@@ -14,6 +14,18 @@ import { generateProposal } from "@/lib/generators.functions";
 import { getCases } from "@/lib/cases.functions";
 import { useProfile } from "@/hooks/use-profile";
 import { RichTextEditor } from "@/components/chat/rich-text-editor";
+import { z } from "zod";
+
+const proposalSchema = z.object({
+  client_name: z.string().trim().min(2, "Informe o nome do cliente").max(200),
+  matter: z.string().trim().min(10, "Descreva a matéria/caso (mín. 10 caracteres)").max(2000),
+  scope: z.string().trim().min(10, "Descreva o escopo (mín. 10 caracteres)").max(2000),
+  fees: z.string().trim().min(1, "Informe os honorários").max(200),
+  firm_name: z.string().trim().min(2, "Informe o nome do escritório").max(200),
+  lawyer_name: z.string().trim().min(2, "Informe o advogado responsável").max(200),
+});
+
+type FieldErrors = Partial<Record<keyof z.infer<typeof proposalSchema>, string>>;
 
 export const Route = createFileRoute("/_authenticated/proposal")({
   component: ProposalPage,
@@ -86,6 +98,7 @@ function ProposalPage() {
   const [loading, setLoading] = useState(false);
   const [output, setOutput] = useState("");
   const [form, setForm] = useState<FormState>(EMPTY);
+  const [errors, setErrors] = useState<FieldErrors>({});
 
   // Autofill escritório/advogado a partir do profile — só quando ainda vazio.
   useEffect(() => {
@@ -127,6 +140,18 @@ function ProposalPage() {
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const parsed = proposalSchema.safeParse(form);
+    if (!parsed.success) {
+      const fe: FieldErrors = {};
+      for (const issue of parsed.error.issues) {
+        const key = issue.path[0] as keyof FieldErrors;
+        if (key && !fe[key]) fe[key] = issue.message;
+      }
+      setErrors(fe);
+      toast.error("Preencha os campos obrigatórios antes de gerar a proposta.");
+      return;
+    }
+    setErrors({});
     setLoading(true);
     setOutput("");
     try {
@@ -215,7 +240,7 @@ function ProposalPage() {
       <div>
         <h1 className="text-3xl font-bold font-heading tracking-tight">Proposta Comercial</h1>
         <p className="mt-1 text-muted-foreground">
-          Escolha um caso existente para preencher os dados do cliente automaticamente. Todos os campos são opcionais.
+          Escolha um caso existente para preencher os dados do cliente automaticamente. Campos marcados com <span className="text-destructive">*</span> são obrigatórios.
         </p>
       </div>
 
@@ -225,7 +250,7 @@ function ProposalPage() {
             <CardTitle className="font-heading flex items-center gap-2">
               <Handshake className="h-5 w-5" /> Dados da proposta
             </CardTitle>
-            <CardDescription>Nenhum campo é obrigatório.</CardDescription>
+            <CardDescription>Campos com <span className="text-destructive">*</span> são obrigatórios.</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={submit} className="space-y-5">
@@ -249,6 +274,18 @@ function ProposalPage() {
                   </Select>
                   {clientSummary && (
                     <p className="mt-2 text-xs text-muted-foreground">Cliente: {clientSummary}</p>
+                  )}
+                </div>
+                <div>
+                  <Label>Nome do cliente <span className="text-destructive">*</span></Label>
+                  <Input
+                    value={form.client_name}
+                    onChange={(e) => setForm({ ...form, client_name: e.target.value })}
+                    aria-invalid={!!errors.client_name}
+                    className={errors.client_name ? "border-destructive" : ""}
+                  />
+                  {errors.client_name && (
+                    <p className="mt-1 text-xs text-destructive">{errors.client_name}</p>
                   )}
                 </div>
               </div>
@@ -284,12 +321,26 @@ function ProposalPage() {
               <div className="space-y-3">
                 <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Objeto</p>
                 <div>
-                  <Label>Matéria / Caso</Label>
-                  <Textarea rows={3} value={form.matter} onChange={(e) => setForm({ ...form, matter: e.target.value })} />
+                  <Label>Matéria / Caso <span className="text-destructive">*</span></Label>
+                  <Textarea
+                    rows={3}
+                    value={form.matter}
+                    onChange={(e) => setForm({ ...form, matter: e.target.value })}
+                    aria-invalid={!!errors.matter}
+                    className={errors.matter ? "border-destructive" : ""}
+                  />
+                  {errors.matter && <p className="mt-1 text-xs text-destructive">{errors.matter}</p>}
                 </div>
                 <div>
-                  <Label>Escopo</Label>
-                  <Textarea rows={2} value={form.scope} onChange={(e) => setForm({ ...form, scope: e.target.value })} />
+                  <Label>Escopo <span className="text-destructive">*</span></Label>
+                  <Textarea
+                    rows={2}
+                    value={form.scope}
+                    onChange={(e) => setForm({ ...form, scope: e.target.value })}
+                    aria-invalid={!!errors.scope}
+                    className={errors.scope ? "border-destructive" : ""}
+                  />
+                  {errors.scope && <p className="mt-1 text-xs text-destructive">{errors.scope}</p>}
                 </div>
               </div>
 
@@ -297,8 +348,15 @@ function ProposalPage() {
                 <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Honorários e prazo</p>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <Label>Honorários</Label>
-                    <Input placeholder="Ex.: R$ 1.200/hora" value={form.fees} onChange={(e) => setForm({ ...form, fees: e.target.value })} />
+                    <Label>Honorários <span className="text-destructive">*</span></Label>
+                    <Input
+                      placeholder="Ex.: R$ 1.200/hora"
+                      value={form.fees}
+                      onChange={(e) => setForm({ ...form, fees: e.target.value })}
+                      aria-invalid={!!errors.fees}
+                      className={errors.fees ? "border-destructive" : ""}
+                    />
+                    {errors.fees && <p className="mt-1 text-xs text-destructive">{errors.fees}</p>}
                   </div>
                   <div>
                     <Label>Honorários de êxito</Label>
@@ -315,8 +373,14 @@ function ProposalPage() {
                 <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Escritório / Advogado</p>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <Label>Nome do escritório</Label>
-                    <Input value={form.firm_name} onChange={(e) => setForm({ ...form, firm_name: e.target.value })} />
+                    <Label>Nome do escritório <span className="text-destructive">*</span></Label>
+                    <Input
+                      value={form.firm_name}
+                      onChange={(e) => setForm({ ...form, firm_name: e.target.value })}
+                      aria-invalid={!!errors.firm_name}
+                      className={errors.firm_name ? "border-destructive" : ""}
+                    />
+                    {errors.firm_name && <p className="mt-1 text-xs text-destructive">{errors.firm_name}</p>}
                   </div>
                   <div>
                     <Label>Áreas de atuação</Label>
@@ -339,8 +403,14 @@ function ProposalPage() {
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <Label>Advogado responsável</Label>
-                    <Input value={form.lawyer_name} onChange={(e) => setForm({ ...form, lawyer_name: e.target.value })} />
+                    <Label>Advogado responsável <span className="text-destructive">*</span></Label>
+                    <Input
+                      value={form.lawyer_name}
+                      onChange={(e) => setForm({ ...form, lawyer_name: e.target.value })}
+                      aria-invalid={!!errors.lawyer_name}
+                      className={errors.lawyer_name ? "border-destructive" : ""}
+                    />
+                    {errors.lawyer_name && <p className="mt-1 text-xs text-destructive">{errors.lawyer_name}</p>}
                   </div>
                   <div>
                     <Label>Cargo / Título</Label>
