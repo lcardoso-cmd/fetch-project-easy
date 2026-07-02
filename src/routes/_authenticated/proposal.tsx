@@ -378,6 +378,9 @@ function ProposalPage() {
                 <Button size="sm" variant="outline" onClick={copy}>
                   <Copy className="h-4 w-4 mr-1" /> Copiar
                 </Button>
+                <Button size="sm" variant="outline" onClick={downloadPdf}>
+                  <FileText className="h-4 w-4 mr-1" /> Baixar PDF
+                </Button>
                 <Button size="sm" onClick={download}>
                   <Download className="h-4 w-4 mr-1" /> Baixar .docx
                 </Button>
