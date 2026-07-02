@@ -317,3 +317,198 @@ export const listPlatformAudit = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return rows ?? [];
   });
+
+// ─── Capability presets (bulk apply + overview) ──────────────────
+
+/**
+ * Presets = "visões" do produto. Cada visão mapeia para um conjunto de
+ * capabilities coerente. `b2b` requer super_admin para aplicar.
+ */
+export const CAPABILITY_PRESETS = {
+  b2b: {
+    label: "JurisMind B2B (staff)",
+    description: "Equipe interna da plataforma: acesso ao painel B2B.",
+    capabilities: ["platform_admin"] as Capability[],
+    requiresSuperAdmin: true,
+  },
+  office_admin: {
+    label: "Admin de escritório",
+    description: "Sócio/gestor: casos, comercial, marketing e gestão do escritório.",
+    capabilities: ["cases", "commercial", "marketing", "office_admin"] as Capability[],
+    requiresSuperAdmin: false,
+  },
+  perito: {
+    label: "Perito",
+    description: "Perito técnico: casos e elaboração de pareceres.",
+    capabilities: ["cases", "expert_opinion"] as Capability[],
+    requiresSuperAdmin: false,
+  },
+} as const;
+
+export type PresetKey = keyof typeof CAPABILITY_PRESETS;
+
+export const getCapabilitiesOverview = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const admin = await assertPlatformStaff(context.userId);
+    const [{ data: capsData, error: capsErr }, { count: totalUsers, error: usersErr }] =
+      await Promise.all([
+        admin.from("user_capabilities").select("user_id, capability"),
+        admin.from("profiles").select("id", { count: "exact", head: true }),
+      ]);
+    if (capsErr) throw new Error(capsErr.message);
+    if (usersErr) throw new Error(usersErr.message);
+
+    const rows = (capsData ?? []) as Array<{ user_id: string; capability: Capability }>;
+    const byUser = new Map<string, Set<Capability>>();
+    const perCap: Record<string, number> = {};
+    for (const r of rows) {
+      perCap[r.capability] = (perCap[r.capability] ?? 0) + 1;
+      let set = byUser.get(r.user_id);
+      if (!set) {
+        set = new Set();
+        byUser.set(r.user_id, set);
+      }
+      set.add(r.capability);
+    }
+
+    const presets = (Object.keys(CAPABILITY_PRESETS) as PresetKey[]).map((key) => {
+      const preset = CAPABILITY_PRESETS[key];
+      let matching = 0;
+      let partial = 0;
+      for (const set of byUser.values()) {
+        const hits = preset.capabilities.filter((c) => set.has(c)).length;
+        if (hits === preset.capabilities.length) matching += 1;
+        else if (hits > 0) partial += 1;
+      }
+      return {
+        key,
+        label: preset.label,
+        description: preset.description,
+        capabilities: preset.capabilities,
+        requiresSuperAdmin: preset.requiresSuperAdmin,
+        matchingUsers: matching,
+        partialUsers: partial,
+      };
+    });
+
+    return {
+      totalUsers: totalUsers ?? 0,
+      usersWithAnyCapability: byUser.size,
+      perCapability: perCap as Record<Capability, number>,
+      presets,
+    };
+  });
+
+export const applyCapabilityPreset = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator(
+    z.object({
+      preset: z.enum(["b2b", "office_admin", "perito"]),
+      user_ids: z.array(z.string().uuid()).min(1).max(200),
+      mode: z.enum(["add", "replace"]).default("add"),
+    }),
+  )
+  .handler(async ({ context, data }) => {
+    const admin = await assertPlatformStaff(context.userId);
+    const preset = CAPABILITY_PRESETS[data.preset];
+    if (preset.requiresSuperAdmin) await assertSuperAdmin(context.userId);
+
+    // Nunca mexer em super_admin nem tocar em platform_admin fora do preset b2b.
+    const SAFE_MANAGED: Capability[] = [
+      "cases",
+      "expert_opinion",
+      "commercial",
+      "marketing",
+      "office_admin",
+    ];
+    const managed = data.preset === "b2b" ? [...SAFE_MANAGED, "platform_admin"] : SAFE_MANAGED;
+    const targetCaps = preset.capabilities.filter((c) => c !== "super_admin");
+
+    let grantedCount = 0;
+    let revokedCount = 0;
+
+    for (const uid of data.user_ids) {
+      // snapshot atual (apenas caps gerenciadas por este preset)
+      const cur = await admin
+        .from("user_capabilities")
+        .select("capability")
+        .eq("user_id", uid)
+        .in("capability", managed);
+      if (cur.error) throw new Error(cur.error.message);
+      const currentSet = new Set<Capability>(
+        ((cur.data ?? []) as Array<{ capability: Capability }>).map((r) => r.capability),
+      );
+      const targetSet = new Set<Capability>(targetCaps);
+
+      const toGrant =
+        data.mode === "replace"
+          ? [...targetSet].filter((c) => !currentSet.has(c))
+          : [...targetSet].filter((c) => !currentSet.has(c));
+      const toRevoke =
+        data.mode === "replace"
+          ? [...currentSet].filter((c) => !targetSet.has(c))
+          : [];
+
+      if (toGrant.length > 0) {
+        const ins = await admin.from("user_capabilities").upsert(
+          toGrant.map((capability) => ({
+            user_id: uid,
+            capability,
+            granted_by: context.userId,
+          })),
+          { onConflict: "user_id,capability" },
+        );
+        if (ins.error) throw new Error(ins.error.message);
+        grantedCount += toGrant.length;
+      }
+      if (toRevoke.length > 0) {
+        // Segurança extra: não permita o admin se auto-remover platform/super
+        const safeRevoke = toRevoke.filter(
+          (c) =>
+            !(
+              uid === context.userId && (c === "platform_admin" || c === "super_admin")
+            ),
+        );
+        if (safeRevoke.length > 0) {
+          const del = await admin
+            .from("user_capabilities")
+            .delete()
+            .eq("user_id", uid)
+            .in("capability", safeRevoke);
+          if (del.error) throw new Error(del.error.message);
+          revokedCount += safeRevoke.length;
+        }
+      }
+
+      const auditRows = [
+        ...toGrant.map((capability) => ({
+          actor_user_id: context.userId,
+          action: "capability.grant" as const,
+          target_user_id: uid,
+          metadata: { capability, scope: "preset", preset: data.preset },
+        })),
+        ...toRevoke.map((capability) => ({
+          actor_user_id: context.userId,
+          action: "capability.revoke" as const,
+          target_user_id: uid,
+          metadata: { capability, scope: "preset", preset: data.preset },
+        })),
+      ];
+      if (auditRows.length > 0) {
+        const auditRes = await admin.from("platform_audit_log").insert(auditRows);
+        if (auditRes.error) {
+          console.error("[preset] falha ao registrar auditoria", auditRes.error.message);
+        }
+      }
+    }
+
+    return {
+      ok: true,
+      preset: data.preset,
+      users: data.user_ids.length,
+      granted: grantedCount,
+      revoked: revokedCount,
+    };
+  });
+
