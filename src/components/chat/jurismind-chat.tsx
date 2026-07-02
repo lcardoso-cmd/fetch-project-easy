@@ -1708,10 +1708,22 @@ export function JurisMindChat({
                 ))}
               </div>
             )}
+            {/* Screen-reader live regions — silent visually, announce state changes. */}
+            <div
+              role="status"
+              aria-live="polite"
+              aria-atomic="true"
+              className="sr-only"
+            >
+              {srStatus}
+            </div>
+            <div role="alert" aria-live="assertive" className="sr-only">
+              {micError ?? ""}
+            </div>
             {(recording || transcribing || micError) && (
               <div
-                aria-live="polite"
                 className="mb-2 flex flex-wrap items-center gap-2 text-xs"
+                aria-hidden={micError ? undefined : true}
               >
                 {recording && (
                   <div className="flex items-center gap-2 rounded-full border border-destructive/40 bg-destructive/10 px-2.5 py-1 text-destructive">
@@ -1746,19 +1758,39 @@ export function JurisMindChat({
                   </div>
                 )}
                 {!recording && !transcribing && micError && (
-                  <div className="flex flex-1 items-center gap-2 rounded-md border border-destructive/40 bg-destructive/5 px-2.5 py-1.5 text-destructive">
-                    <AlertCircle className="h-3.5 w-3.5 shrink-0" />
-                    <span className="flex-1">{micError}</span>
+                  <div
+                    ref={micErrorRef}
+                    role="alert"
+                    tabIndex={-1}
+                    aria-labelledby="mic-error-msg"
+                    onKeyDown={(e) => {
+                      if (e.key === "Escape") {
+                        e.preventDefault();
+                        setMicError(null);
+                      }
+                    }}
+                    className="flex flex-1 items-center gap-2 rounded-md border border-destructive/40 bg-destructive/5 px-2.5 py-1.5 text-destructive outline-none focus-visible:ring-2 focus-visible:ring-destructive/50"
+                  >
+                    <AlertCircle className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                    <span id="mic-error-msg" className="flex-1">
+                      {micError}
+                    </span>
                     <button
                       type="button"
-                      onClick={() => setMicPickerOpen(true)}
+                      onClick={() => {
+                        setMicError(null);
+                        setMicPickerOpen(true);
+                      }}
                       className="rounded px-1.5 py-0.5 text-xs font-medium hover:bg-destructive/10"
                     >
                       Trocar microfone
                     </button>
                     <button
                       type="button"
-                      onClick={() => void startRecording()}
+                      onClick={() => {
+                        setMicError(null);
+                        void startRecording();
+                      }}
                       className="rounded px-1.5 py-0.5 text-xs font-medium hover:bg-destructive/10"
                     >
                       Tentar novamente
@@ -1766,10 +1798,10 @@ export function JurisMindChat({
                     <button
                       type="button"
                       onClick={() => setMicError(null)}
-                      aria-label="Fechar"
+                      aria-label="Fechar aviso do microfone"
                       className="rounded p-0.5 hover:bg-destructive/10"
                     >
-                      <X className="h-3 w-3" />
+                      <X className="h-3 w-3" aria-hidden="true" />
                     </button>
                   </div>
                 )}
