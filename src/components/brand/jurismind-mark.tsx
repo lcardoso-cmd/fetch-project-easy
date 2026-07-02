@@ -139,8 +139,22 @@ const CONTEXT_TO_VARIANT: Record<JurisMindContext, JurisMindVariant> = {
   "inline-dark": "glyph-white",
 };
 
-export function variantForContext(context: JurisMindContext): JurisMindVariant {
-  return CONTEXT_TO_VARIANT[context];
+/**
+ * Fallback context used when a caller passes `null`, `undefined` or an
+ * unknown value. `sidebar` is the safest default because its asset renders
+ * legibly on both light and dark surfaces.
+ */
+export const DEFAULT_JURISMIND_CONTEXT: JurisMindContext = "sidebar";
+
+export function variantForContext(
+  context: JurisMindContext | null | undefined,
+): JurisMindVariant {
+  const safe = isJurisMindContext(context) ? context : DEFAULT_JURISMIND_CONTEXT;
+  return CONTEXT_TO_VARIANT[safe];
+}
+
+function isJurisMindVariant(value: unknown): value is JurisMindVariant {
+  return typeof value === "string" && value in SOURCES;
 }
 
 /**
