@@ -147,6 +147,10 @@ export function UploadDialog({
 
   useEffect(() => {
     if (!open) {
+      // Aborta tudo que estiver em voo ao fechar o diálogo.
+      abortersRef.current.forEach((c) => c.abort());
+      abortersRef.current.clear();
+      cancelAllRef.current = false;
       setFiles([]);
       setItems([]);
       setDragOver(false);
