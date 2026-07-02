@@ -135,6 +135,14 @@ function NewCasePage() {
 
   // form state
   const [title, setTitle] = useState("");
+  // Rastreia se o título foi editado manualmente. Enquanto for "auto",
+  // regeneramos automaticamente a partir das partes (assistida vs contrária,
+  // requerida vs requerente, etc). Ao digitar, o usuário assume controle.
+  const [titleAuto, setTitleAuto] = useState(true);
+  const onTitleChange = (v: string) => {
+    setTitle(v);
+    setTitleAuto(false);
+  };
   const [clientName, setClientName] = useState("");
   const [caseNumber, setCaseNumber] = useState("");
   const [jurisdiction, setJurisdiction] = useState("");
