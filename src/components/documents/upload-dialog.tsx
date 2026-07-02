@@ -498,11 +498,26 @@ export function UploadDialog({
 
             {items.length > 0 && (
               <div className="space-y-2">
-                <p className="text-sm font-medium">Progresso:</p>
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-sm font-medium">Progresso:</p>
+                  {hasInFlight && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={cancelAll}
+                      className="h-7 text-xs text-muted-foreground hover:text-destructive"
+                    >
+                      <StopCircle className="mr-1 h-3.5 w-3.5" />
+                      Cancelar todos
+                    </Button>
+                  )}
+                </div>
                 <UploadProgressList
                   items={items}
                   onRemove={removeItem}
                   onRetry={retryItem}
+                  onCancel={cancelItem}
                 />
               </div>
             )}
