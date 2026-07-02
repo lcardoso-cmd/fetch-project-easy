@@ -208,7 +208,11 @@ function HireB2bRequestForm() {
       }
 
       toast.success("Solicitação enviada à B2B");
+      try {
+        window.sessionStorage.removeItem(draftKey);
+      } catch { /* ignore */ }
       navigate({ to: "/contratar-b2b/$requestId", params: { requestId: created.id } });
+
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Falha ao enviar solicitação");
     } finally {
