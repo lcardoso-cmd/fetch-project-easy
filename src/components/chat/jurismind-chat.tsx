@@ -388,7 +388,11 @@ export function JurisMindChat({
   const fileRef = useRef<HTMLInputElement>(null);
   const endRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
-
+  const micButtonRef = useRef<HTMLButtonElement>(null);
+  const micErrorRef = useRef<HTMLDivElement>(null);
+  const [srStatus, setSrStatus] = useState<string>("");
+  const prevMicErrorRef = useRef<string | null>(null);
+  const prevTranscribingRef = useRef<boolean>(false);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -399,6 +403,48 @@ export function JurisMindChat({
   useEffect(() => {
     inputRef.current?.focus();
   }, []);
+
+  // Compose a screen-reader status string from recording/transcription state.
+  useEffect(() => {
+    let msg = "";
+    if (recording) {
+      if (micSilent) {
+        msg = "Gravando. Microfone silencioso, verifique o dispositivo.";
+      } else if (segmentInFlight) {
+        msg = "Gravando. Transcrevendo em tempo real.";
+      } else {
+        msg = "Gravando.";
+      }
+    } else if (transcribing) {
+      msg = "Transcrevendo áudio, aguarde.";
+    } else if (prevTranscribingRef.current) {
+      msg = "Transcrição concluída.";
+      const t = setTimeout(() => setSrStatus(""), 2000);
+      prevTranscribingRef.current = false;
+      setSrStatus(msg);
+      return () => clearTimeout(t);
+    }
+    prevTranscribingRef.current = transcribing;
+    setSrStatus(msg);
+  }, [recording, transcribing, micSilent, segmentInFlight]);
+
+  // Move focus to the mic error banner when it appears; return focus to the
+  // mic button when it is dismissed.
+  useEffect(() => {
+    const prev = prevMicErrorRef.current;
+    if (micError && !prev) {
+      // Defer to next tick so the element exists in the DOM.
+      const id = window.setTimeout(() => {
+        micErrorRef.current?.focus({ preventScroll: false });
+      }, 0);
+      prevMicErrorRef.current = micError;
+      return () => window.clearTimeout(id);
+    }
+    if (!micError && prev) {
+      micButtonRef.current?.focus({ preventScroll: true });
+    }
+    prevMicErrorRef.current = micError;
+  }, [micError]);
 
   // ---------- Enumeração de microfones ----------
   const refreshMics = async () => {
