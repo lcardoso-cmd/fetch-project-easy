@@ -118,8 +118,8 @@ function buildStyles() {
         basedOn: "Normal",
         next: "Normal",
         quickFormat: true,
-        run: { font: TEMPLATE_FONTS.heading, size: 48, bold: true, color: TEMPLATE_COLORS.ink },
-        paragraph: { spacing: { before: 240, after: 120 }, alignment: AlignmentType.LEFT },
+        run: { font: TEMPLATE_FONTS.heading, size: 56, bold: true, color: TEMPLATE_COLORS.ink },
+        paragraph: { spacing: { before: 480, after: 160 }, alignment: AlignmentType.LEFT },
       },
       {
         id: "Subtitle",
@@ -128,7 +128,7 @@ function buildStyles() {
         next: "Normal",
         quickFormat: true,
         run: { font: TEMPLATE_FONTS.body, size: 26, italics: true, color: TEMPLATE_COLORS.quote },
-        paragraph: { spacing: { after: 240 } },
+        paragraph: { spacing: { after: 360 } },
       },
       {
         id: "Heading1",
