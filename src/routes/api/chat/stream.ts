@@ -164,7 +164,7 @@ export const Route = createFileRoute("/api/chat/stream")({
               }));
 
               let persistedThreadId: string | null = null;
-              if (body.thread_id) {
+              if (body.thread_id && !abortSignal.aborted) {
                 persistedThreadId = body.thread_id;
                 await persistChatTurn({
                   supabase: auth.supabase,
@@ -179,17 +179,26 @@ export const Route = createFileRoute("/api/chat/stream")({
                 });
               }
 
-              send("done", {
-                answer: finalContent,
-                citations: run.citations,
-                steps: toolSteps,
-                thread_id: persistedThreadId,
-              });
+              if (!abortSignal.aborted) {
+                send("done", {
+                  answer: finalContent,
+                  citations: run.citations,
+                  steps: toolSteps,
+                  thread_id: persistedThreadId,
+                });
+              } else {
+                send("aborted", { partial: finalContent });
+              }
             } catch (e) {
-              const msg = e instanceof Error ? e.message : String(e);
-              send("error", { message: msg });
+              // Aborts do fetch propagam como AbortError — silenciar
+              if (!abortSignal.aborted) {
+                const msg = e instanceof Error ? e.message : String(e);
+                send("error", { message: msg });
+              }
             } finally {
+              abortSignal.removeEventListener("abort", onAbort);
               clearInterval(ping);
+              closed = true;
               try {
                 controller.close();
               } catch {
