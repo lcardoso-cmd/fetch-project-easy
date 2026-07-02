@@ -262,9 +262,11 @@ function ProposalPage() {
     if (!hydrated) return;
     const serialized = JSON.stringify({ form, output });
     if (serialized === lastSerializedRef.current) return;
-    setSaving(true);
+    setPending(true);
     if (saveTimer.current) clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(async () => {
+      setPending(false);
+      setSaving(true);
       try {
         await upsertDraftFn({
           data: { case_id: activeCaseId, form: form as unknown as Record<string, unknown>, output },
