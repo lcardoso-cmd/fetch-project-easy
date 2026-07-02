@@ -5,6 +5,7 @@ import { useAuth } from "@/hooks/use-auth";
 import {
   createUploadSignedUrl,
   deleteDocument,
+  discardUploadedObject,
   registerDocument,
 } from "@/lib/documents.functions";
 import { indexDocument } from "@/lib/rag.functions";
