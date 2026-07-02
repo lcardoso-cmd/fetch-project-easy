@@ -118,19 +118,12 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
           )}
         >
           <Link to="/dashboard" className="flex items-center gap-3 overflow-hidden">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
-              <BrainCircuit className="h-5 w-5" />
-            </div>
-              {!collapsed && (
-                <div className="flex flex-col min-w-0">
-                  <h2 className="font-heading text-base font-semibold leading-tight truncate">
-                    B2B | JurisMind AI
-                  </h2>
-                  <span className="text-[11px] uppercase tracking-wider text-sidebar-foreground/60">
-                    Cliente
-                  </span>
-                </div>
-              )}
+            <JurisMindMark size={36} variant="square-navy" className="rounded-lg" />
+            {!collapsed && (
+              <h2 className="font-heading text-base font-semibold leading-tight truncate">
+                B2B | JurisMind AI
+              </h2>
+            )}
           </Link>
         </div>
 
