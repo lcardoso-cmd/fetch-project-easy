@@ -145,6 +145,11 @@ function AuthPage() {
 
   const handleGoogle = async () => {
     setError(null);
+    // Persiste destino para após o retorno do OAuth (roundtrip perde ?redirect=).
+    const target = safeInternalPath(search.redirect);
+    if (target && typeof window !== "undefined") {
+      sessionStorage.setItem(OAUTH_REDIRECT_KEY, target);
+    }
     const result = await lovable.auth.signInWithOAuth("google", {
       redirect_uri: window.location.origin,
     });
@@ -152,6 +157,7 @@ function AuthPage() {
       setError(result.error instanceof Error ? result.error.message : "Erro ao entrar com Google");
     }
   };
+
 
   const cardClass = cn(
     "space-y-4 rounded-2xl border bg-card p-6 shadow-sm",
