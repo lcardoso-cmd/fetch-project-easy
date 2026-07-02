@@ -230,33 +230,143 @@ function buildNumbering() {
 // Header / footer
 // ---------------------------------------------------------------------------
 
-function buildHeader(label?: string) {
-  return new Header({
-    children: [
-      new Paragraph({
-        tabStops: [{ type: TabStopType.RIGHT, position: TabStopPosition.MAX }],
-        border: {
-          bottom: { style: BorderStyle.SINGLE, size: 4, color: TEMPLATE_COLORS.border, space: 4 },
-        },
+function buildHeader(label?: string, branding?: DocBranding | null) {
+  const firmName = branding?.firmName?.trim() || "B2B | JurisMind AI";
+  const hasLogo = !!branding?.logo;
+
+  // Sem logo: uma linha simples (nome à esquerda, label à direita).
+  if (!hasLogo) {
+    return new Header({
+      children: [
+        new Paragraph({
+          tabStops: [{ type: TabStopType.RIGHT, position: TabStopPosition.MAX }],
+          border: {
+            bottom: {
+              style: BorderStyle.SINGLE,
+              size: 4,
+              color: TEMPLATE_COLORS.border,
+              space: 4,
+            },
+          },
+          children: [
+            new TextRun({
+              text: firmName,
+              bold: true,
+              size: 18,
+              color: TEMPLATE_COLORS.ink,
+            }),
+            new TextRun({
+              text: label ? `\t${label}` : "",
+              size: 18,
+              color: TEMPLATE_COLORS.muted,
+            }),
+          ],
+        }),
+      ],
+    });
+  }
+
+  // Com logo: tabela 2 colunas invisível para alinhar imagem à esquerda e nome/label à direita.
+  const logo = branding!.logo!;
+  const px = (n: number) => Math.round((n * 9525) / 9.525 / 1); // dummy — usamos px direto no ImageRun
+  void px; // silêncio
+  const logoWidthDxa = Math.round((logo.widthPx / 96) * 1440); // 96 DPI
+  const rightWidthDxa = CONTENT_WIDTH - logoWidthDxa;
+
+  const noBorder = { style: BorderStyle.NONE, size: 0, color: "FFFFFF" } as const;
+  const cellBorders = { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder };
+
+  const imageType = logo.type;
+
+  const headerTable = new Table({
+    width: { size: CONTENT_WIDTH, type: WidthType.DXA },
+    columnWidths: [logoWidthDxa, rightWidthDxa],
+    borders: {
+      top: noBorder,
+      bottom: {
+        style: BorderStyle.SINGLE,
+        size: 4,
+        color: TEMPLATE_COLORS.border,
+      },
+      left: noBorder,
+      right: noBorder,
+      insideHorizontal: noBorder,
+      insideVertical: noBorder,
+    },
+    rows: [
+      new TableRow({
         children: [
-          new TextRun({
-            text: "B2B | JurisMind AI",
-            bold: true,
-            size: 18,
-            color: TEMPLATE_COLORS.ink,
+          new TableCell({
+            borders: cellBorders,
+            verticalAlign: VerticalAlign.CENTER,
+            width: { size: logoWidthDxa, type: WidthType.DXA },
+            margins: { top: 0, bottom: 60, left: 0, right: 120 },
+            children: [
+              new Paragraph({
+                spacing: { after: 0 },
+                children: [
+                  new ImageRun({
+                    type: imageType,
+                    data: logo.bytes,
+                    transformation: { width: logo.widthPx, height: logo.heightPx },
+                    altText: {
+                      title: firmName,
+                      description: `Logo do escritório ${firmName}`,
+                      name: "firm-logo",
+                    },
+                  }),
+                ],
+              }),
+            ],
           }),
-          new TextRun({
-            text: label ? `\t${label}` : "",
-            size: 18,
-            color: TEMPLATE_COLORS.muted,
+          new TableCell({
+            borders: cellBorders,
+            verticalAlign: VerticalAlign.CENTER,
+            width: { size: rightWidthDxa, type: WidthType.DXA },
+            margins: { top: 0, bottom: 60, left: 120, right: 0 },
+            children: [
+              new Paragraph({
+                alignment: AlignmentType.RIGHT,
+                spacing: { after: 0 },
+                children: [
+                  new TextRun({
+                    text: firmName,
+                    bold: true,
+                    size: 20,
+                    color: TEMPLATE_COLORS.ink,
+                  }),
+                ],
+              }),
+              new Paragraph({
+                alignment: AlignmentType.RIGHT,
+                spacing: { after: 0 },
+                children: [
+                  new TextRun({
+                    text: label ?? "",
+                    size: 16,
+                    color: TEMPLATE_COLORS.muted,
+                  }),
+                ],
+              }),
+            ],
           }),
         ],
       }),
     ],
   });
+
+  return new Header({ children: [headerTable, new Paragraph({ spacing: { after: 60 }, children: [] })] });
 }
 
-function buildFooter() {
+function buildFooter(branding?: DocBranding | null) {
+  const firmName = branding?.firmName?.trim();
+  const leftParts = [
+    firmName || "Documento gerado por B2B | JurisMind AI",
+    branding?.taxId,
+    branding?.website,
+  ].filter(Boolean) as string[];
+  const leftText = leftParts.join(" · ");
+
   return new Footer({
     children: [
       new Paragraph({
@@ -266,7 +376,7 @@ function buildFooter() {
         },
         children: [
           new TextRun({
-            text: "Documento gerado por B2B | JurisMind AI",
+            text: leftText,
             size: 16,
             color: TEMPLATE_COLORS.muted,
           }),
