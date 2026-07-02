@@ -1,11 +1,11 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireCapability } from "@/lib/capability-middleware";
 
 const SourceEnum = z.enum(["juizo", "autor", "reu", "assistido", "outro"]);
 
 export const listQuesitos = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireCapability("expert_opinion")])
   .inputValidator((i: unknown) => z.object({ case_id: z.string().uuid() }).parse(i))
   .handler(async ({ data, context }) => {
     const { data: rows, error } = await context.supabase
@@ -21,7 +21,7 @@ export const listQuesitos = createServerFn({ method: "GET" })
   });
 
 export const createQuesito = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireCapability("expert_opinion")])
   .inputValidator((i: unknown) =>
     z
       .object({
@@ -51,7 +51,7 @@ export const createQuesito = createServerFn({ method: "POST" })
   });
 
 export const updateQuesito = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireCapability("expert_opinion")])
   .inputValidator((i: unknown) =>
     z
       .object({
@@ -77,7 +77,7 @@ export const updateQuesito = createServerFn({ method: "POST" })
   });
 
 export const deleteQuesito = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireCapability("expert_opinion")])
   .inputValidator((i: unknown) => z.object({ id: z.string().uuid() }).parse(i))
   .handler(async ({ data, context }) => {
     const { error } = await context.supabase

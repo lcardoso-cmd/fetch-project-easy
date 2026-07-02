@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireCapability } from "@/lib/capability-middleware";
 import { extractTextFromBlob } from "./cases.functions";
 
 export type ProposalAttachment = {
@@ -34,7 +34,7 @@ export type ExtractedProposalFields = {
 const CaseIdFilter = z.object({ case_id: z.string().uuid().nullable() });
 
 export const listProposalAttachments = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireCapability("commercial")])
   .inputValidator((i: unknown) => CaseIdFilter.parse(i))
   .handler(async ({ data, context }) => {
     let q = context.supabase
@@ -57,7 +57,7 @@ const RegisterSchema = z.object({
 });
 
 export const registerProposalAttachment = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireCapability("commercial")])
   .inputValidator((i: unknown) => RegisterSchema.parse(i))
   .handler(async ({ data, context }) => {
     const { data: row, error } = await context.supabase
@@ -78,7 +78,7 @@ export const registerProposalAttachment = createServerFn({ method: "POST" })
   });
 
 export const deleteProposalAttachment = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireCapability("commercial")])
   .inputValidator((i: unknown) => z.object({ id: z.string().uuid() }).parse(i))
   .handler(async ({ data, context }) => {
     const { data: row } = await context.supabase
@@ -107,7 +107,7 @@ function cleanStr(v: unknown, max = 200): string | null {
 }
 
 export const extractProposalAttachment = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireCapability("commercial")])
   .inputValidator((i: unknown) => z.object({ id: z.string().uuid() }).parse(i))
   .handler(async ({ data, context }) => {
     const { data: att, error: selErr } = await context.supabase
@@ -225,7 +225,7 @@ const ConvertSchema = z.object({
  * de proposta ao novo caso.
  */
 export const convertProposalToCase = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireCapability("commercial")])
   .inputValidator((i: unknown) => ConvertSchema.parse(i))
   .handler(async ({ data, context }) => {
     // 1. Cria o caso
