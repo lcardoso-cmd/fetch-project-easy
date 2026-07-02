@@ -46,8 +46,6 @@ const proposalSchema = z.object({
   matter: z.string().trim().min(10, "Descreva a matéria/caso (mín. 10 caracteres)").max(2000),
   scope: z.string().trim().min(10, "Descreva o escopo (mín. 10 caracteres)").max(2000),
   fees: z.string().trim().min(1, "Informe os honorários").max(200),
-  firm_name: z.string().trim().min(2, "Informe o nome do escritório").max(200),
-  lawyer_name: z.string().trim().min(2, "Informe o advogado responsável").max(200),
 });
 
 type FieldErrors = Partial<Record<keyof z.infer<typeof proposalSchema>, string>>;
@@ -218,16 +216,20 @@ function ProposalPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeCaseId]);
 
-  // Autofill escritório/advogado a partir do profile — só quando ainda vazio.
+  // Autofill escritório/advogado a partir do profile do usuário — dados já cadastrados.
   useEffect(() => {
     if (!profile) return;
     setForm((f) => ({
       ...f,
+      firm_name: f.firm_name || profile.full_name || "",
+      firm_practice_areas:
+        f.firm_practice_areas || profile.specialty || profile.practice_type || "",
+      firm_phone: f.firm_phone || profile.phone || "",
+      firm_email: f.firm_email || user?.email || "",
       lawyer_name: f.lawyer_name || profile.full_name || "",
       lawyer_title: f.lawyer_title || (profile.oab_number ? `OAB ${profile.oab_number}` : ""),
-      firm_phone: f.firm_phone || profile.phone || "",
     }));
-  }, [profile]);
+  }, [profile, user?.email]);
 
   // Autosave com debounce -> backend.
   useEffect(() => {
@@ -722,55 +724,11 @@ function ProposalPage() {
                 </div>
               </div>
 
-              <div className="space-y-3">
-                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Escritório / Advogado</p>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <Label>Nome do escritório <span className="text-destructive">*</span></Label>
-                    <Input
-                      value={form.firm_name}
-                      onChange={(e) => setForm({ ...form, firm_name: e.target.value })}
-                      aria-invalid={!!errors.firm_name}
-                      className={errors.firm_name ? "border-destructive" : ""}
-                    />
-                    {errors.firm_name && <p className="mt-1 text-xs text-destructive">{errors.firm_name}</p>}
-                  </div>
-                  <div>
-                    <Label>Áreas de atuação</Label>
-                    <Input placeholder="Ex.: Trabalhista, Cível" value={form.firm_practice_areas} onChange={(e) => setForm({ ...form, firm_practice_areas: e.target.value })} />
-                  </div>
-                </div>
-                <div>
-                  <Label>Endereço do escritório</Label>
-                  <Input value={form.firm_address} onChange={(e) => setForm({ ...form, firm_address: e.target.value })} />
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <Label>Telefone</Label>
-                    <Input value={form.firm_phone} onChange={(e) => setForm({ ...form, firm_phone: e.target.value })} />
-                  </div>
-                  <div>
-                    <Label>E-mail</Label>
-                    <Input value={form.firm_email} onChange={(e) => setForm({ ...form, firm_email: e.target.value })} />
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <Label>Advogado responsável <span className="text-destructive">*</span></Label>
-                    <Input
-                      value={form.lawyer_name}
-                      onChange={(e) => setForm({ ...form, lawyer_name: e.target.value })}
-                      aria-invalid={!!errors.lawyer_name}
-                      className={errors.lawyer_name ? "border-destructive" : ""}
-                    />
-                    {errors.lawyer_name && <p className="mt-1 text-xs text-destructive">{errors.lawyer_name}</p>}
-                  </div>
-                  <div>
-                    <Label>Cargo / Título</Label>
-                    <Input placeholder="Ex.: OAB/SP 000.000" value={form.lawyer_title} onChange={(e) => setForm({ ...form, lawyer_title: e.target.value })} />
-                  </div>
-                </div>
-              </div>
+              <p className="text-xs text-muted-foreground">
+                Os dados do escritório e advogado responsável são preenchidos automaticamente
+                a partir do seu perfil.
+              </p>
+
 
               <div>
                 <Label>Tom</Label>
