@@ -1,7 +1,24 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { IconBox } from "@/components/ui/icon-box";
-import { ListTodo, Scale, FileText, ArrowRight, Microscope, MessageSquare } from "lucide-react";
+import {
+  ArrowRight,
+  Scale,
+  Microscope,
+  FileText,
+  MessageSquare,
+  Handshake,
+  CalendarDays,
+  Megaphone,
+  FileSearch,
+  Sparkles,
+  Mic,
+  Puzzle,
+  Users,
+  ShieldCheck,
+  Workflow,
+  FileCheck2,
+} from "lucide-react";
 import { JurisMindMark } from "@/components/brand/jurismind-mark";
 import { useAuth } from "@/hooks/use-auth";
 
@@ -13,37 +30,90 @@ export const Route = createFileRoute("/")({
       {
         name: "description",
         content:
-          "B2B | JurisMind AI: plataforma de IA jurídica para advogados, peritos judiciais e assistentes técnicos. RAG de documentos, prazos, petições, laudos e pareceres técnicos.",
+          "Plataforma de IA jurídica: chat com documentos, peças, laudos, pareceres, propostas comerciais, agenda integrada (Google/Outlook), marketing e monitoramento de publicações.",
       },
     ],
   }),
 });
 
-const features = [
+type Pillar = {
+  icon: typeof Sparkles;
+  title: string;
+  description: string;
+  span?: string;
+};
+
+const PILLARS: Pillar[] = [
   {
-    icon: MessageSquare,
-    title: "Chat com seus documentos",
+    icon: Sparkles,
+    title: "Assistente JurisMind por caso",
     description:
-      "Pergunte sobre processos, laudos, quesitos ou contratos. O JurisMind AI busca trechos relevantes e responde citando as fontes.",
+      "RAG híbrido dedicado ao processo: pergunte sobre laudos, quesitos, contratos e receba respostas citando os trechos e páginas dos documentos.",
+    span: "md:col-span-2",
   },
   {
     icon: FileText,
-    title: "Peças e laudos em minutos",
+    title: "Peças, laudos e pareceres",
     description:
-      "Petições, contestações, quesitos, laudos periciais, pareceres técnicos e manifestações a partir dos documentos do caso.",
+      "Petições, contestações, quesitos, laudos periciais e pareceres técnicos — padronizados em DOCX/PDF com a marca do escritório.",
   },
   {
-    icon: ListTodo,
-    title: "Casos, perícias e assistências",
+    icon: Handshake,
+    title: "Proposta comercial em minutos",
     description:
-      "Organize processos do escritório, perícias nomeadas pelo juízo e assistências técnicas em um único painel adaptável ao seu perfil.",
+      "Gere propostas a partir dos documentos do cliente, versione com diff, exporte em Word e converta em caso com um clique.",
   },
   {
-    icon: Microscope,
-    title: "Feito para o jurídico técnico",
+    icon: CalendarDays,
+    title: "Agenda integrada",
     description:
-      "Advogados, peritos judiciais (contadores, engenheiros, médicos) e assistentes técnicos das partes — com vocabulário e modelos próprios para cada perfil.",
+      "Sincronize Google Agenda e Outlook. Prazos, audiências e compromissos em uma única visão.",
   },
+  {
+    icon: Megaphone,
+    title: "Marketing jurídico",
+    description:
+      "Uma trilha dedicada ao escritório para trabalhar captação, comunicação e presença de marca.",
+  },
+  {
+    icon: FileSearch,
+    title: "Publicações monitoradas",
+    description:
+      "Acompanhe intimações e movimentações para nunca mais perder um prazo importante.",
+    span: "md:col-span-2",
+  },
+];
+
+const STEPS = [
+  {
+    icon: Handshake,
+    title: "Capte",
+    text: "Proposta comercial inteligente com auto-preenchimento dos dados do cliente a partir de documentos.",
+  },
+  {
+    icon: MessageSquare,
+    title: "Trabalhe",
+    text: "Chat com os documentos do caso, geração de peças, laudos e pareceres com citação das fontes.",
+  },
+  {
+    icon: FileCheck2,
+    title: "Entregue",
+    text: "Exportação padronizada em DOCX/PDF com logo, cabeçalho e margens do seu escritório.",
+  },
+  {
+    icon: Workflow,
+    title: "Acompanhe",
+    text: "Agenda sincronizada, publicações monitoradas e notificações centralizadas no painel.",
+  },
+];
+
+const INTEGRATIONS = [
+  { icon: CalendarDays, label: "Google Agenda" },
+  { icon: CalendarDays, label: "Microsoft Outlook" },
+  { icon: FileText, label: "Exportação DOCX / PDF" },
+  { icon: Mic, label: "Transcrição por voz" },
+  { icon: Users, label: "Equipe com convites" },
+  { icon: ShieldCheck, label: "Capacidades granulares" },
 ];
 
 function LandingPage() {
@@ -87,7 +157,8 @@ function LandingPage() {
 
       {/* Hero */}
       <section className="relative overflow-hidden bg-primary text-primary-foreground">
-        <div className="absolute inset-0 opacity-20"
+        <div
+          className="absolute inset-0 opacity-20"
           style={{
             backgroundImage:
               "radial-gradient(circle at 20% 30%, oklch(0.86 0.16 195) 0, transparent 40%), radial-gradient(circle at 80% 70%, oklch(0.65 0.16 220) 0, transparent 40%)",
@@ -119,7 +190,7 @@ function LandingPage() {
               asChild
               className="border-primary-foreground/30 bg-transparent text-primary-foreground hover:bg-primary-foreground/10"
             >
-              <a href="#features">Conhecer recursos</a>
+              <a href="#plataforma">Conhecer a plataforma</a>
             </Button>
           </div>
         </div>
@@ -159,31 +230,98 @@ function LandingPage() {
         </div>
       </section>
 
-      {/* Features */}
-      <section id="features" className="mx-auto max-w-6xl px-4 py-20">
+      {/* Plataforma completa — Bento */}
+      <section id="plataforma" className="mx-auto max-w-6xl px-4 py-20">
         <div className="mx-auto max-w-2xl text-center">
           <h2 className="font-heading text-3xl font-bold tracking-tight text-foreground md:text-4xl">
-            Tudo que o jurídico técnico precisa em um só lugar
+            Uma plataforma completa para o escritório jurídico
           </h2>
           <p className="mt-3 text-muted-foreground">
-            Reduza horas de leitura, encontre informação em segundos e foque no que importa:
-            a tese, o laudo, o parecer.
+            Do primeiro contato com o cliente até a entrega do laudo: tudo integrado, sem trocar de
+            ferramenta.
           </p>
         </div>
-        <div className="mt-12 grid gap-6 md:grid-cols-2">
-          {features.map((f) => {
-            const Icon = f.icon;
+        <div className="mt-12 grid gap-4 sm:grid-cols-2 md:grid-cols-3">
+          {PILLARS.map((p) => {
+            const Icon = p.icon;
             return (
               <div
-                key={f.title}
-                className="rounded-2xl border bg-card p-6 shadow-sm transition-shadow hover:shadow-md"
+                key={p.title}
+                className={`rounded-2xl border bg-card p-6 shadow-sm transition-shadow hover:shadow-md ${
+                  p.span ?? ""
+                }`}
               >
                 <IconBox icon={Icon} size="md" className="mb-4" />
-                <h3 className="font-heading text-xl font-bold text-foreground">{f.title}</h3>
-                <p className="mt-2 text-sm text-muted-foreground">{f.description}</p>
+                <h3 className="font-heading text-lg font-bold text-foreground">{p.title}</h3>
+                <p className="mt-2 text-sm text-muted-foreground">{p.description}</p>
               </div>
             );
           })}
+        </div>
+      </section>
+
+      {/* Fluxo ponta a ponta */}
+      <section className="border-t bg-muted/30">
+        <div className="mx-auto max-w-6xl px-4 py-20">
+          <div className="mx-auto max-w-2xl text-center">
+            <h2 className="font-heading text-3xl font-bold tracking-tight text-foreground md:text-4xl">
+              Fluxo de trabalho ponta a ponta
+            </h2>
+            <p className="mt-3 text-muted-foreground">
+              Um único sistema acompanha o caso desde a proposta até o acompanhamento processual.
+            </p>
+          </div>
+
+          <ol className="mt-12 grid gap-6 md:grid-cols-4">
+            {STEPS.map((s, i) => {
+              const Icon = s.icon;
+              return (
+                <li
+                  key={s.title}
+                  className="relative rounded-2xl border bg-card p-6 shadow-sm"
+                >
+                  <div className="mb-4 flex items-center gap-3">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary font-heading text-sm font-bold text-primary-foreground">
+                      {i + 1}
+                    </div>
+                    <IconBox icon={Icon} size="sm" />
+                  </div>
+                  <h3 className="font-heading text-lg font-bold text-foreground">{s.title}</h3>
+                  <p className="mt-2 text-sm text-muted-foreground">{s.text}</p>
+                </li>
+              );
+            })}
+          </ol>
+        </div>
+      </section>
+
+      {/* Integrações */}
+      <section className="border-t">
+        <div className="mx-auto max-w-6xl px-4 py-16">
+          <div className="mx-auto max-w-2xl text-center">
+            <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-accent/15 px-3 py-1 text-xs font-semibold text-accent">
+              <Puzzle className="h-3.5 w-3.5" />
+              Integra com o seu dia a dia
+            </div>
+            <h2 className="font-heading text-2xl font-bold tracking-tight text-foreground md:text-3xl">
+              Se conecta às ferramentas que você já usa
+            </h2>
+          </div>
+
+          <div className="mx-auto mt-10 grid max-w-4xl grid-cols-2 gap-3 sm:grid-cols-3">
+            {INTEGRATIONS.map((i) => {
+              const Icon = i.icon;
+              return (
+                <div
+                  key={i.label}
+                  className="flex items-center gap-3 rounded-xl border bg-card px-4 py-3"
+                >
+                  <Icon className="h-5 w-5 text-primary" />
+                  <span className="text-sm font-medium text-foreground">{i.label}</span>
+                </div>
+              );
+            })}
+          </div>
         </div>
       </section>
 
