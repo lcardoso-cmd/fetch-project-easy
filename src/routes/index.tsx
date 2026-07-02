@@ -178,7 +178,7 @@ function LandingPage() {
                 key={f.title}
                 className="rounded-2xl border bg-card p-6 shadow-sm transition-shadow hover:shadow-md"
               >
-                <IconBox icon={Icon} size={40} iconSize={20} className="mb-4" />
+                <IconBox icon={Icon} size="md" className="mb-4" />
                 <h3 className="font-heading text-xl font-bold text-foreground">{f.title}</h3>
                 <p className="mt-2 text-sm text-muted-foreground">{f.description}</p>
               </div>
