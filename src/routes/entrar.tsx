@@ -183,6 +183,16 @@ function AuthPage() {
                   Entrar com Google
                 </Button>
               </form>
+              <p className="mt-4 text-center text-sm text-muted-foreground">
+                Ainda não tem uma conta?{" "}
+                <button
+                  type="button"
+                  onClick={() => { setMode("signup"); setError(null); }}
+                  className="font-medium text-primary underline-offset-4 hover:underline"
+                >
+                  Criar conta
+                </button>
+              </p>
             </TabsContent>
 
             <TabsContent value="signup">
