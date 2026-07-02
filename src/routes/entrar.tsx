@@ -56,6 +56,7 @@ function FieldLabel({
 function AuthPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const search = Route.useSearch();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
@@ -63,10 +64,28 @@ function AuthPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [mode, setMode] = useState<"login" | "signup">("login");
 
+  // Resolve destino pós-login: query ?redirect=, senão sessionStorage (OAuth), senão /painel.
+  const resolveRedirect = (): string => {
+    const fromQuery = safeInternalPath(search.redirect);
+    if (fromQuery) return fromQuery;
+    if (typeof window !== "undefined") {
+      const stashed = safeInternalPath(sessionStorage.getItem(OAUTH_REDIRECT_KEY));
+      if (stashed) return stashed;
+    }
+    return "/painel";
+  };
+
+  const goPostLogin = () => {
+    const target = resolveRedirect();
+    if (typeof window !== "undefined") sessionStorage.removeItem(OAUTH_REDIRECT_KEY);
+    navigate({ to: target, replace: true });
+  };
+
   if (user) {
-    navigate({ to: "/painel", replace: true });
+    goPostLogin();
     return null;
   }
+
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
