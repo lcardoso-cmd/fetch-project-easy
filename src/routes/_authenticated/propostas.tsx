@@ -22,6 +22,7 @@ import { ConvertToCasePopover } from "@/components/proposal/convert-to-case-popo
 import { WordPreview } from "@/components/proposal/word-preview";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useAuth } from "@/hooks/use-auth";
+import { useUnsavedChangesGuard } from "@/hooks/use-unsaved-changes-guard";
 import { listProposalAttachments, type ExtractedProposalFields } from "@/lib/proposal-attachments.functions";
 import {
   getProposalDraft,
@@ -274,6 +275,13 @@ function ProposalPage() {
       if (saveTimer.current) clearTimeout(saveTimer.current);
     };
   }, [form, output, hydrated, activeCaseId, upsertDraftFn]);
+
+  // Confirmação ao sair quando há alterações não salvas (autosave pendente).
+  const hasUnsavedChanges =
+    hydrated &&
+    (saving ||
+      JSON.stringify({ form, output }) !== lastSerializedRef.current);
+  useUnsavedChangesGuard({ when: hasUnsavedChanges });
 
   // Atualiza o rótulo "salvo há Xs" a cada 20s.
   useEffect(() => {
