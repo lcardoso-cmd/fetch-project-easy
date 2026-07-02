@@ -92,28 +92,34 @@ export function useCapabilities() {
   const real = useMemo(() => query.data ?? [], [query.data]);
   const isSuperAdmin = real.includes("super_admin");
 
-  const [simulation, setSimulationState] = useState<string | null>(() => {
-    if (typeof window === "undefined") return null;
-    return window.sessionStorage.getItem(SIM_KEY);
-  });
+  const [simulation, setSimulationState] = useState<string | null>(readSim);
+
+  // Mantém todas as instâncias do hook sincronizadas: qualquer chamada a
+  // setSimulation dispara um evento global e as outras montagens do hook
+  // (sidebar, banner, gate de rota…) re-leem o valor.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const sync = () => setSimulationState(readSim());
+    window.addEventListener(SIM_EVENT, sync);
+    window.addEventListener("storage", sync);
+    return () => {
+      window.removeEventListener(SIM_EVENT, sync);
+      window.removeEventListener("storage", sync);
+    };
+  }, []);
 
   useEffect(() => {
     // Simulação só se aplica ao super admin.
     if (!isSuperAdmin && simulation) {
-      window.sessionStorage.removeItem(SIM_KEY);
+      writeSim(null);
       setSimulationState(null);
     }
   }, [isSuperAdmin, simulation]);
 
   const setSimulation = useCallback((id: string | null) => {
-    if (typeof window === "undefined") return;
-    if (!id || id === "super_admin") {
-      window.sessionStorage.removeItem(SIM_KEY);
-      setSimulationState(null);
-    } else {
-      window.sessionStorage.setItem(SIM_KEY, id);
-      setSimulationState(id);
-    }
+    const next = !id || id === "super_admin" ? null : id;
+    writeSim(next);
+    setSimulationState(next);
   }, []);
 
   const activePreset = useMemo(
