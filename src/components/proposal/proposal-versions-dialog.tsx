@@ -120,6 +120,7 @@ export function ProposalVersionsDialog({
   const [dateFrom, setDateFrom] = useState<Date | undefined>();
   const [dateTo, setDateTo] = useState<Date | undefined>();
   const [origin, setOrigin] = useState<string>("all");
+  const [client, setClient] = useState<string>("all");
   const [pinnedOnly, setPinnedOnly] = useState(false);
   const [sortBy, setSortBy] = useState<"newest" | "oldest" | "label">("newest");
 
@@ -128,6 +129,7 @@ export function ProposalVersionsDialog({
     setDateFrom(undefined);
     setDateTo(undefined);
     setOrigin("all");
+    setClient("all");
     setPinnedOnly(false);
     setSortBy("newest");
   };
