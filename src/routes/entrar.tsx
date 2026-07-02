@@ -14,9 +14,23 @@ import { ArrowLeft, Mail, Lock, User, LogIn, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
+const OAUTH_REDIRECT_KEY = "jm:auth:redirect";
+
+function safeInternalPath(p: unknown): string | null {
+  if (typeof p !== "string") return null;
+  // Only allow same-origin internal paths (no protocol, no protocol-relative).
+  if (!p.startsWith("/") || p.startsWith("//")) return null;
+  if (p.startsWith("/entrar") || p.startsWith("/auth")) return null;
+  return p;
+}
+
 export const Route = createFileRoute("/entrar")({
+  validateSearch: (search: Record<string, unknown>) => ({
+    redirect: safeInternalPath(search.redirect) ?? undefined,
+  }),
   component: AuthPage,
 });
+
 
 /**
  * Rótulo padronizado com IconBox pequeno + fundo primário. Mantém o mesmo
@@ -42,6 +56,7 @@ function FieldLabel({
 function AuthPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const search = Route.useSearch();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
@@ -49,10 +64,28 @@ function AuthPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [mode, setMode] = useState<"login" | "signup">("login");
 
+  // Resolve destino pós-login: query ?redirect=, senão sessionStorage (OAuth), senão /painel.
+  const resolveRedirect = (): string => {
+    const fromQuery = safeInternalPath(search.redirect);
+    if (fromQuery) return fromQuery;
+    if (typeof window !== "undefined") {
+      const stashed = safeInternalPath(sessionStorage.getItem(OAUTH_REDIRECT_KEY));
+      if (stashed) return stashed;
+    }
+    return "/painel";
+  };
+
+  const goPostLogin = () => {
+    const target = resolveRedirect();
+    if (typeof window !== "undefined") sessionStorage.removeItem(OAUTH_REDIRECT_KEY);
+    navigate({ to: target, replace: true });
+  };
+
   if (user) {
-    navigate({ to: "/painel", replace: true });
+    goPostLogin();
     return null;
   }
+
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -64,7 +97,8 @@ function AuthPage() {
       toast.success("Login realizado", {
         description: "Bem-vindo(a) de volta ao B2B | JurisMind AI.",
       });
-      navigate({ to: "/painel", replace: true });
+      goPostLogin();
+
     } catch (err) {
       const message = err instanceof Error ? err.message : "Erro ao entrar";
       setError(message);
@@ -91,10 +125,11 @@ function AuthPage() {
       // Se a confirmação de email estiver ativa, não haverá sessão ainda.
       if (data.session) {
         toast.success("Conta criada", {
-          description: "Redirecionando para o painel...",
+          description: "Redirecionando...",
         });
-        navigate({ to: "/painel", replace: true });
+        goPostLogin();
       } else {
+
         toast.success("Confirme seu email", {
           description: "Enviamos um link de confirmação para " + email + ".",
         });
@@ -110,6 +145,11 @@ function AuthPage() {
 
   const handleGoogle = async () => {
     setError(null);
+    // Persiste destino para após o retorno do OAuth (roundtrip perde ?redirect=).
+    const target = safeInternalPath(search.redirect);
+    if (target && typeof window !== "undefined") {
+      sessionStorage.setItem(OAUTH_REDIRECT_KEY, target);
+    }
     const result = await lovable.auth.signInWithOAuth("google", {
       redirect_uri: window.location.origin,
     });
@@ -117,6 +157,7 @@ function AuthPage() {
       setError(result.error instanceof Error ? result.error.message : "Erro ao entrar com Google");
     }
   };
+
 
   const cardClass = cn(
     "space-y-4 rounded-2xl border bg-card p-6 shadow-sm",

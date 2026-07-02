@@ -19,9 +19,16 @@ function AuthenticatedLayout() {
 
   useEffect(() => {
     if (!isLoading && !user) {
-      navigate({ to: "/entrar", replace: true });
+      const loc = window.location;
+      const from = `${loc.pathname}${loc.search}${loc.hash}`;
+      navigate({
+        to: "/entrar",
+        replace: true,
+        search: from && from !== "/" ? { redirect: from } : undefined,
+      });
     }
   }, [isLoading, user, navigate]);
+
 
   if (isLoading || !user) {
     return (
