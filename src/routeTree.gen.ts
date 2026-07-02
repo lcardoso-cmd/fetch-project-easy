@@ -9,28 +9,47 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as EntrarRouteImport } from './routes/entrar'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as InviteTokenRouteImport } from './routes/invite.$token'
+import { Route as ConviteTokenRouteImport } from './routes/convite.$token'
+import { Route as AuthenticatedTarefasRouteImport } from './routes/_authenticated/tarefas'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
+import { Route as AuthenticatedPublicacoesRouteImport } from './routes/_authenticated/publicacoes'
+import { Route as AuthenticatedPropostasRouteImport } from './routes/_authenticated/propostas'
 import { Route as AuthenticatedProposalRouteImport } from './routes/_authenticated/proposal'
+import { Route as AuthenticatedPecasRouteImport } from './routes/_authenticated/pecas'
+import { Route as AuthenticatedParecerTecnicoRouteImport } from './routes/_authenticated/parecer-tecnico'
+import { Route as AuthenticatedPainelRouteImport } from './routes/_authenticated/painel'
 import { Route as AuthenticatedOnboardingRouteImport } from './routes/_authenticated/onboarding'
 import { Route as AuthenticatedNotificationsRouteImport } from './routes/_authenticated/notifications'
+import { Route as AuthenticatedNotificacoesRouteImport } from './routes/_authenticated/notificacoes'
 import { Route as AuthenticatedMyTasksRouteImport } from './routes/_authenticated/my-tasks'
 import { Route as AuthenticatedMyFilesRouteImport } from './routes/_authenticated/my-files'
 import { Route as AuthenticatedMonitoringRouteImport } from './routes/_authenticated/monitoring'
 import { Route as AuthenticatedMarketingRouteImport } from './routes/_authenticated/marketing'
 import { Route as AuthenticatedIntegrationsRouteImport } from './routes/_authenticated/integrations'
+import { Route as AuthenticatedIntegracoesRouteImport } from './routes/_authenticated/integracoes'
 import { Route as AuthenticatedInboxRouteImport } from './routes/_authenticated/inbox'
 import { Route as AuthenticatedExpertOpinionRouteImport } from './routes/_authenticated/expert-opinion'
 import { Route as AuthenticatedDrafterRouteImport } from './routes/_authenticated/drafter'
+import { Route as AuthenticatedDocumentosRouteImport } from './routes/_authenticated/documentos'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
+import { Route as AuthenticatedConversasRouteImport } from './routes/_authenticated/conversas'
+import { Route as AuthenticatedConfiguracoesRouteImport } from './routes/_authenticated/configuracoes'
 import { Route as AuthenticatedChatRouteImport } from './routes/_authenticated/chat'
 import { Route as AuthenticatedCasesRouteImport } from './routes/_authenticated/cases'
 import { Route as AuthenticatedCalendarRouteImport } from './routes/_authenticated/calendar'
+import { Route as AuthenticatedBoasVindasRouteImport } from './routes/_authenticated/boas-vindas'
+import { Route as AuthenticatedAssistenteRouteImport } from './routes/_authenticated/assistente'
+import { Route as AuthenticatedAssistenciasRouteImport } from './routes/_authenticated/assistencias'
+import { Route as AuthenticatedAgendaRouteImport } from './routes/_authenticated/agenda'
 import { Route as AuthenticatedPlatformIndexRouteImport } from './routes/_authenticated/platform.index'
+import { Route as AuthenticatedPlataformaIndexRouteImport } from './routes/_authenticated/plataforma.index'
 import { Route as AuthenticatedCasesIndexRouteImport } from './routes/_authenticated/cases.index'
+import { Route as AuthenticatedAssistenciasIndexRouteImport } from './routes/_authenticated/assistencias.index'
 import { Route as ApiToolsTranscribeRouteImport } from './routes/api/tools/transcribe'
 import { Route as ApiToolsTableRouteImport } from './routes/api/tools/table'
 import { Route as ApiToolsPresentationRouteImport } from './routes/api/tools/presentation'
@@ -38,18 +57,34 @@ import { Route as ApiToolsPetitionRouteImport } from './routes/api/tools/petitio
 import { Route as ApiToolsPdfRouteImport } from './routes/api/tools/pdf'
 import { Route as AuthenticatedSettingsOauthRouteImport } from './routes/_authenticated/settings.oauth'
 import { Route as AuthenticatedSettingsFirmRouteImport } from './routes/_authenticated/settings.firm'
+import { Route as AuthenticatedConfiguracoesOauthRouteImport } from './routes/_authenticated/configuracoes.oauth'
+import { Route as AuthenticatedConfiguracoesEscritorioRouteImport } from './routes/_authenticated/configuracoes.escritorio'
 import { Route as AuthenticatedCasesNewRouteImport } from './routes/_authenticated/cases.new'
 import { Route as AuthenticatedCasesBulkRouteImport } from './routes/_authenticated/cases.bulk'
 import { Route as AuthenticatedCasesCaseIdRouteImport } from './routes/_authenticated/cases.$caseId'
+import { Route as AuthenticatedAssistenciasNovaRouteImport } from './routes/_authenticated/assistencias.nova'
+import { Route as AuthenticatedAssistenciasLoteRouteImport } from './routes/_authenticated/assistencias.lote'
+import { Route as AuthenticatedAssistenciasCaseIdRouteImport } from './routes/_authenticated/assistencias.$caseId'
 import { Route as AuthenticatedPlatformUsersIndexRouteImport } from './routes/_authenticated/platform.users.index'
 import { Route as AuthenticatedPlatformCustomersIndexRouteImport } from './routes/_authenticated/platform.customers.index'
 import { Route as AuthenticatedPlatformCredentialsIndexRouteImport } from './routes/_authenticated/platform.credentials.index'
 import { Route as AuthenticatedPlatformAuditIndexRouteImport } from './routes/_authenticated/platform.audit.index'
+import { Route as AuthenticatedPlataformaUsuariosIndexRouteImport } from './routes/_authenticated/plataforma.usuarios.index'
+import { Route as AuthenticatedPlataformaCredenciaisIndexRouteImport } from './routes/_authenticated/plataforma.credenciais.index'
+import { Route as AuthenticatedPlataformaClientesIndexRouteImport } from './routes/_authenticated/plataforma.clientes.index'
+import { Route as AuthenticatedPlataformaAuditoriaIndexRouteImport } from './routes/_authenticated/plataforma.auditoria.index'
 import { Route as ApiPublicOutlookCallbackRouteImport } from './routes/api/public/outlook/callback'
 import { Route as ApiPublicGoogleCallbackRouteImport } from './routes/api/public/google/callback'
 import { Route as AuthenticatedPlatformCustomersIdRouteImport } from './routes/_authenticated/platform.customers.$id'
+import { Route as AuthenticatedPlataformaClientesIdRouteImport } from './routes/_authenticated/plataforma.clientes.$id'
 import { Route as AuthenticatedCasesCaseIdChatRouteImport } from './routes/_authenticated/cases.$caseId.chat'
+import { Route as AuthenticatedAssistenciasCaseIdChatRouteImport } from './routes/_authenticated/assistencias.$caseId.chat'
 
+const EntrarRoute = EntrarRouteImport.update({
+  id: '/entrar',
+  path: '/entrar',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
   path: '/auth',
@@ -69,14 +104,51 @@ const InviteTokenRoute = InviteTokenRouteImport.update({
   path: '/invite/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ConviteTokenRoute = ConviteTokenRouteImport.update({
+  id: '/convite/$token',
+  path: '/convite/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedTarefasRoute = AuthenticatedTarefasRouteImport.update({
+  id: '/tarefas',
+  path: '/tarefas',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 const AuthenticatedSettingsRoute = AuthenticatedSettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedPublicacoesRoute =
+  AuthenticatedPublicacoesRouteImport.update({
+    id: '/publicacoes',
+    path: '/publicacoes',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedPropostasRoute = AuthenticatedPropostasRouteImport.update({
+  id: '/propostas',
+  path: '/propostas',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 const AuthenticatedProposalRoute = AuthenticatedProposalRouteImport.update({
   id: '/proposal',
   path: '/proposal',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedPecasRoute = AuthenticatedPecasRouteImport.update({
+  id: '/pecas',
+  path: '/pecas',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedParecerTecnicoRoute =
+  AuthenticatedParecerTecnicoRouteImport.update({
+    id: '/parecer-tecnico',
+    path: '/parecer-tecnico',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedPainelRoute = AuthenticatedPainelRouteImport.update({
+  id: '/painel',
+  path: '/painel',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
 const AuthenticatedOnboardingRoute = AuthenticatedOnboardingRouteImport.update({
@@ -88,6 +160,12 @@ const AuthenticatedNotificationsRoute =
   AuthenticatedNotificationsRouteImport.update({
     id: '/notifications',
     path: '/notifications',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedNotificacoesRoute =
+  AuthenticatedNotificacoesRouteImport.update({
+    id: '/notificacoes',
+    path: '/notificacoes',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
 const AuthenticatedMyTasksRoute = AuthenticatedMyTasksRouteImport.update({
@@ -116,6 +194,12 @@ const AuthenticatedIntegrationsRoute =
     path: '/integrations',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedIntegracoesRoute =
+  AuthenticatedIntegracoesRouteImport.update({
+    id: '/integracoes',
+    path: '/integracoes',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedInboxRoute = AuthenticatedInboxRouteImport.update({
   id: '/inbox',
   path: '/inbox',
@@ -132,11 +216,27 @@ const AuthenticatedDrafterRoute = AuthenticatedDrafterRouteImport.update({
   path: '/drafter',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedDocumentosRoute = AuthenticatedDocumentosRouteImport.update({
+  id: '/documentos',
+  path: '/documentos',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedConversasRoute = AuthenticatedConversasRouteImport.update({
+  id: '/conversas',
+  path: '/conversas',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedConfiguracoesRoute =
+  AuthenticatedConfiguracoesRouteImport.update({
+    id: '/configuracoes',
+    path: '/configuracoes',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedChatRoute = AuthenticatedChatRouteImport.update({
   id: '/chat',
   path: '/chat',
@@ -152,10 +252,37 @@ const AuthenticatedCalendarRoute = AuthenticatedCalendarRouteImport.update({
   path: '/calendar',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedBoasVindasRoute = AuthenticatedBoasVindasRouteImport.update({
+  id: '/boas-vindas',
+  path: '/boas-vindas',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedAssistenteRoute = AuthenticatedAssistenteRouteImport.update({
+  id: '/assistente',
+  path: '/assistente',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedAssistenciasRoute =
+  AuthenticatedAssistenciasRouteImport.update({
+    id: '/assistencias',
+    path: '/assistencias',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedAgendaRoute = AuthenticatedAgendaRouteImport.update({
+  id: '/agenda',
+  path: '/agenda',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 const AuthenticatedPlatformIndexRoute =
   AuthenticatedPlatformIndexRouteImport.update({
     id: '/platform/',
     path: '/platform/',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedPlataformaIndexRoute =
+  AuthenticatedPlataformaIndexRouteImport.update({
+    id: '/plataforma/',
+    path: '/plataforma/',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
 const AuthenticatedCasesIndexRoute = AuthenticatedCasesIndexRouteImport.update({
@@ -163,6 +290,12 @@ const AuthenticatedCasesIndexRoute = AuthenticatedCasesIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AuthenticatedCasesRoute,
 } as any)
+const AuthenticatedAssistenciasIndexRoute =
+  AuthenticatedAssistenciasIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthenticatedAssistenciasRoute,
+  } as any)
 const ApiToolsTranscribeRoute = ApiToolsTranscribeRouteImport.update({
   id: '/api/tools/transcribe',
   path: '/api/tools/transcribe',
@@ -200,6 +333,18 @@ const AuthenticatedSettingsFirmRoute =
     path: '/firm',
     getParentRoute: () => AuthenticatedSettingsRoute,
   } as any)
+const AuthenticatedConfiguracoesOauthRoute =
+  AuthenticatedConfiguracoesOauthRouteImport.update({
+    id: '/oauth',
+    path: '/oauth',
+    getParentRoute: () => AuthenticatedConfiguracoesRoute,
+  } as any)
+const AuthenticatedConfiguracoesEscritorioRoute =
+  AuthenticatedConfiguracoesEscritorioRouteImport.update({
+    id: '/escritorio',
+    path: '/escritorio',
+    getParentRoute: () => AuthenticatedConfiguracoesRoute,
+  } as any)
 const AuthenticatedCasesNewRoute = AuthenticatedCasesNewRouteImport.update({
   id: '/new',
   path: '/new',
@@ -215,6 +360,24 @@ const AuthenticatedCasesCaseIdRoute =
     id: '/$caseId',
     path: '/$caseId',
     getParentRoute: () => AuthenticatedCasesRoute,
+  } as any)
+const AuthenticatedAssistenciasNovaRoute =
+  AuthenticatedAssistenciasNovaRouteImport.update({
+    id: '/nova',
+    path: '/nova',
+    getParentRoute: () => AuthenticatedAssistenciasRoute,
+  } as any)
+const AuthenticatedAssistenciasLoteRoute =
+  AuthenticatedAssistenciasLoteRouteImport.update({
+    id: '/lote',
+    path: '/lote',
+    getParentRoute: () => AuthenticatedAssistenciasRoute,
+  } as any)
+const AuthenticatedAssistenciasCaseIdRoute =
+  AuthenticatedAssistenciasCaseIdRouteImport.update({
+    id: '/$caseId',
+    path: '/$caseId',
+    getParentRoute: () => AuthenticatedAssistenciasRoute,
   } as any)
 const AuthenticatedPlatformUsersIndexRoute =
   AuthenticatedPlatformUsersIndexRouteImport.update({
@@ -240,6 +403,30 @@ const AuthenticatedPlatformAuditIndexRoute =
     path: '/platform/audit/',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedPlataformaUsuariosIndexRoute =
+  AuthenticatedPlataformaUsuariosIndexRouteImport.update({
+    id: '/plataforma/usuarios/',
+    path: '/plataforma/usuarios/',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedPlataformaCredenciaisIndexRoute =
+  AuthenticatedPlataformaCredenciaisIndexRouteImport.update({
+    id: '/plataforma/credenciais/',
+    path: '/plataforma/credenciais/',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedPlataformaClientesIndexRoute =
+  AuthenticatedPlataformaClientesIndexRouteImport.update({
+    id: '/plataforma/clientes/',
+    path: '/plataforma/clientes/',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedPlataformaAuditoriaIndexRoute =
+  AuthenticatedPlataformaAuditoriaIndexRouteImport.update({
+    id: '/plataforma/auditoria/',
+    path: '/plataforma/auditoria/',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const ApiPublicOutlookCallbackRoute =
   ApiPublicOutlookCallbackRouteImport.update({
     id: '/api/public/outlook/callback',
@@ -257,36 +444,70 @@ const AuthenticatedPlatformCustomersIdRoute =
     path: '/platform/customers/$id',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedPlataformaClientesIdRoute =
+  AuthenticatedPlataformaClientesIdRouteImport.update({
+    id: '/plataforma/clientes/$id',
+    path: '/plataforma/clientes/$id',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedCasesCaseIdChatRoute =
   AuthenticatedCasesCaseIdChatRouteImport.update({
     id: '/chat',
     path: '/chat',
     getParentRoute: () => AuthenticatedCasesCaseIdRoute,
   } as any)
+const AuthenticatedAssistenciasCaseIdChatRoute =
+  AuthenticatedAssistenciasCaseIdChatRouteImport.update({
+    id: '/chat',
+    path: '/chat',
+    getParentRoute: () => AuthenticatedAssistenciasCaseIdRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/entrar': typeof EntrarRoute
+  '/agenda': typeof AuthenticatedAgendaRoute
+  '/assistencias': typeof AuthenticatedAssistenciasRouteWithChildren
+  '/assistente': typeof AuthenticatedAssistenteRoute
+  '/boas-vindas': typeof AuthenticatedBoasVindasRoute
   '/calendar': typeof AuthenticatedCalendarRoute
   '/cases': typeof AuthenticatedCasesRouteWithChildren
   '/chat': typeof AuthenticatedChatRoute
+  '/configuracoes': typeof AuthenticatedConfiguracoesRouteWithChildren
+  '/conversas': typeof AuthenticatedConversasRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/documentos': typeof AuthenticatedDocumentosRoute
   '/drafter': typeof AuthenticatedDrafterRoute
   '/expert-opinion': typeof AuthenticatedExpertOpinionRoute
   '/inbox': typeof AuthenticatedInboxRoute
+  '/integracoes': typeof AuthenticatedIntegracoesRoute
   '/integrations': typeof AuthenticatedIntegrationsRoute
   '/marketing': typeof AuthenticatedMarketingRoute
   '/monitoring': typeof AuthenticatedMonitoringRoute
   '/my-files': typeof AuthenticatedMyFilesRoute
   '/my-tasks': typeof AuthenticatedMyTasksRoute
+  '/notificacoes': typeof AuthenticatedNotificacoesRoute
   '/notifications': typeof AuthenticatedNotificationsRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
+  '/painel': typeof AuthenticatedPainelRoute
+  '/parecer-tecnico': typeof AuthenticatedParecerTecnicoRoute
+  '/pecas': typeof AuthenticatedPecasRoute
   '/proposal': typeof AuthenticatedProposalRoute
+  '/propostas': typeof AuthenticatedPropostasRoute
+  '/publicacoes': typeof AuthenticatedPublicacoesRoute
   '/settings': typeof AuthenticatedSettingsRouteWithChildren
+  '/tarefas': typeof AuthenticatedTarefasRoute
+  '/convite/$token': typeof ConviteTokenRoute
   '/invite/$token': typeof InviteTokenRoute
+  '/assistencias/$caseId': typeof AuthenticatedAssistenciasCaseIdRouteWithChildren
+  '/assistencias/lote': typeof AuthenticatedAssistenciasLoteRoute
+  '/assistencias/nova': typeof AuthenticatedAssistenciasNovaRoute
   '/cases/$caseId': typeof AuthenticatedCasesCaseIdRouteWithChildren
   '/cases/bulk': typeof AuthenticatedCasesBulkRoute
   '/cases/new': typeof AuthenticatedCasesNewRoute
+  '/configuracoes/escritorio': typeof AuthenticatedConfiguracoesEscritorioRoute
+  '/configuracoes/oauth': typeof AuthenticatedConfiguracoesOauthRoute
   '/settings/firm': typeof AuthenticatedSettingsFirmRoute
   '/settings/oauth': typeof AuthenticatedSettingsOauthRoute
   '/api/tools/pdf': typeof ApiToolsPdfRoute
@@ -294,12 +515,20 @@ export interface FileRoutesByFullPath {
   '/api/tools/presentation': typeof ApiToolsPresentationRoute
   '/api/tools/table': typeof ApiToolsTableRoute
   '/api/tools/transcribe': typeof ApiToolsTranscribeRoute
+  '/assistencias/': typeof AuthenticatedAssistenciasIndexRoute
   '/cases/': typeof AuthenticatedCasesIndexRoute
+  '/plataforma/': typeof AuthenticatedPlataformaIndexRoute
   '/platform/': typeof AuthenticatedPlatformIndexRoute
+  '/assistencias/$caseId/chat': typeof AuthenticatedAssistenciasCaseIdChatRoute
   '/cases/$caseId/chat': typeof AuthenticatedCasesCaseIdChatRoute
+  '/plataforma/clientes/$id': typeof AuthenticatedPlataformaClientesIdRoute
   '/platform/customers/$id': typeof AuthenticatedPlatformCustomersIdRoute
   '/api/public/google/callback': typeof ApiPublicGoogleCallbackRoute
   '/api/public/outlook/callback': typeof ApiPublicOutlookCallbackRoute
+  '/plataforma/auditoria/': typeof AuthenticatedPlataformaAuditoriaIndexRoute
+  '/plataforma/clientes/': typeof AuthenticatedPlataformaClientesIndexRoute
+  '/plataforma/credenciais/': typeof AuthenticatedPlataformaCredenciaisIndexRoute
+  '/plataforma/usuarios/': typeof AuthenticatedPlataformaUsuariosIndexRoute
   '/platform/audit/': typeof AuthenticatedPlatformAuditIndexRoute
   '/platform/credentials/': typeof AuthenticatedPlatformCredentialsIndexRoute
   '/platform/customers/': typeof AuthenticatedPlatformCustomersIndexRoute
@@ -308,25 +537,46 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/entrar': typeof EntrarRoute
+  '/agenda': typeof AuthenticatedAgendaRoute
+  '/assistente': typeof AuthenticatedAssistenteRoute
+  '/boas-vindas': typeof AuthenticatedBoasVindasRoute
   '/calendar': typeof AuthenticatedCalendarRoute
   '/chat': typeof AuthenticatedChatRoute
+  '/configuracoes': typeof AuthenticatedConfiguracoesRouteWithChildren
+  '/conversas': typeof AuthenticatedConversasRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/documentos': typeof AuthenticatedDocumentosRoute
   '/drafter': typeof AuthenticatedDrafterRoute
   '/expert-opinion': typeof AuthenticatedExpertOpinionRoute
   '/inbox': typeof AuthenticatedInboxRoute
+  '/integracoes': typeof AuthenticatedIntegracoesRoute
   '/integrations': typeof AuthenticatedIntegrationsRoute
   '/marketing': typeof AuthenticatedMarketingRoute
   '/monitoring': typeof AuthenticatedMonitoringRoute
   '/my-files': typeof AuthenticatedMyFilesRoute
   '/my-tasks': typeof AuthenticatedMyTasksRoute
+  '/notificacoes': typeof AuthenticatedNotificacoesRoute
   '/notifications': typeof AuthenticatedNotificationsRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
+  '/painel': typeof AuthenticatedPainelRoute
+  '/parecer-tecnico': typeof AuthenticatedParecerTecnicoRoute
+  '/pecas': typeof AuthenticatedPecasRoute
   '/proposal': typeof AuthenticatedProposalRoute
+  '/propostas': typeof AuthenticatedPropostasRoute
+  '/publicacoes': typeof AuthenticatedPublicacoesRoute
   '/settings': typeof AuthenticatedSettingsRouteWithChildren
+  '/tarefas': typeof AuthenticatedTarefasRoute
+  '/convite/$token': typeof ConviteTokenRoute
   '/invite/$token': typeof InviteTokenRoute
+  '/assistencias/$caseId': typeof AuthenticatedAssistenciasCaseIdRouteWithChildren
+  '/assistencias/lote': typeof AuthenticatedAssistenciasLoteRoute
+  '/assistencias/nova': typeof AuthenticatedAssistenciasNovaRoute
   '/cases/$caseId': typeof AuthenticatedCasesCaseIdRouteWithChildren
   '/cases/bulk': typeof AuthenticatedCasesBulkRoute
   '/cases/new': typeof AuthenticatedCasesNewRoute
+  '/configuracoes/escritorio': typeof AuthenticatedConfiguracoesEscritorioRoute
+  '/configuracoes/oauth': typeof AuthenticatedConfiguracoesOauthRoute
   '/settings/firm': typeof AuthenticatedSettingsFirmRoute
   '/settings/oauth': typeof AuthenticatedSettingsOauthRoute
   '/api/tools/pdf': typeof ApiToolsPdfRoute
@@ -334,12 +584,20 @@ export interface FileRoutesByTo {
   '/api/tools/presentation': typeof ApiToolsPresentationRoute
   '/api/tools/table': typeof ApiToolsTableRoute
   '/api/tools/transcribe': typeof ApiToolsTranscribeRoute
+  '/assistencias': typeof AuthenticatedAssistenciasIndexRoute
   '/cases': typeof AuthenticatedCasesIndexRoute
+  '/plataforma': typeof AuthenticatedPlataformaIndexRoute
   '/platform': typeof AuthenticatedPlatformIndexRoute
+  '/assistencias/$caseId/chat': typeof AuthenticatedAssistenciasCaseIdChatRoute
   '/cases/$caseId/chat': typeof AuthenticatedCasesCaseIdChatRoute
+  '/plataforma/clientes/$id': typeof AuthenticatedPlataformaClientesIdRoute
   '/platform/customers/$id': typeof AuthenticatedPlatformCustomersIdRoute
   '/api/public/google/callback': typeof ApiPublicGoogleCallbackRoute
   '/api/public/outlook/callback': typeof ApiPublicOutlookCallbackRoute
+  '/plataforma/auditoria': typeof AuthenticatedPlataformaAuditoriaIndexRoute
+  '/plataforma/clientes': typeof AuthenticatedPlataformaClientesIndexRoute
+  '/plataforma/credenciais': typeof AuthenticatedPlataformaCredenciaisIndexRoute
+  '/plataforma/usuarios': typeof AuthenticatedPlataformaUsuariosIndexRoute
   '/platform/audit': typeof AuthenticatedPlatformAuditIndexRoute
   '/platform/credentials': typeof AuthenticatedPlatformCredentialsIndexRoute
   '/platform/customers': typeof AuthenticatedPlatformCustomersIndexRoute
@@ -350,26 +608,48 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/auth': typeof AuthRoute
+  '/entrar': typeof EntrarRoute
+  '/_authenticated/agenda': typeof AuthenticatedAgendaRoute
+  '/_authenticated/assistencias': typeof AuthenticatedAssistenciasRouteWithChildren
+  '/_authenticated/assistente': typeof AuthenticatedAssistenteRoute
+  '/_authenticated/boas-vindas': typeof AuthenticatedBoasVindasRoute
   '/_authenticated/calendar': typeof AuthenticatedCalendarRoute
   '/_authenticated/cases': typeof AuthenticatedCasesRouteWithChildren
   '/_authenticated/chat': typeof AuthenticatedChatRoute
+  '/_authenticated/configuracoes': typeof AuthenticatedConfiguracoesRouteWithChildren
+  '/_authenticated/conversas': typeof AuthenticatedConversasRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/_authenticated/documentos': typeof AuthenticatedDocumentosRoute
   '/_authenticated/drafter': typeof AuthenticatedDrafterRoute
   '/_authenticated/expert-opinion': typeof AuthenticatedExpertOpinionRoute
   '/_authenticated/inbox': typeof AuthenticatedInboxRoute
+  '/_authenticated/integracoes': typeof AuthenticatedIntegracoesRoute
   '/_authenticated/integrations': typeof AuthenticatedIntegrationsRoute
   '/_authenticated/marketing': typeof AuthenticatedMarketingRoute
   '/_authenticated/monitoring': typeof AuthenticatedMonitoringRoute
   '/_authenticated/my-files': typeof AuthenticatedMyFilesRoute
   '/_authenticated/my-tasks': typeof AuthenticatedMyTasksRoute
+  '/_authenticated/notificacoes': typeof AuthenticatedNotificacoesRoute
   '/_authenticated/notifications': typeof AuthenticatedNotificationsRoute
   '/_authenticated/onboarding': typeof AuthenticatedOnboardingRoute
+  '/_authenticated/painel': typeof AuthenticatedPainelRoute
+  '/_authenticated/parecer-tecnico': typeof AuthenticatedParecerTecnicoRoute
+  '/_authenticated/pecas': typeof AuthenticatedPecasRoute
   '/_authenticated/proposal': typeof AuthenticatedProposalRoute
+  '/_authenticated/propostas': typeof AuthenticatedPropostasRoute
+  '/_authenticated/publicacoes': typeof AuthenticatedPublicacoesRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRouteWithChildren
+  '/_authenticated/tarefas': typeof AuthenticatedTarefasRoute
+  '/convite/$token': typeof ConviteTokenRoute
   '/invite/$token': typeof InviteTokenRoute
+  '/_authenticated/assistencias/$caseId': typeof AuthenticatedAssistenciasCaseIdRouteWithChildren
+  '/_authenticated/assistencias/lote': typeof AuthenticatedAssistenciasLoteRoute
+  '/_authenticated/assistencias/nova': typeof AuthenticatedAssistenciasNovaRoute
   '/_authenticated/cases/$caseId': typeof AuthenticatedCasesCaseIdRouteWithChildren
   '/_authenticated/cases/bulk': typeof AuthenticatedCasesBulkRoute
   '/_authenticated/cases/new': typeof AuthenticatedCasesNewRoute
+  '/_authenticated/configuracoes/escritorio': typeof AuthenticatedConfiguracoesEscritorioRoute
+  '/_authenticated/configuracoes/oauth': typeof AuthenticatedConfiguracoesOauthRoute
   '/_authenticated/settings/firm': typeof AuthenticatedSettingsFirmRoute
   '/_authenticated/settings/oauth': typeof AuthenticatedSettingsOauthRoute
   '/api/tools/pdf': typeof ApiToolsPdfRoute
@@ -377,12 +657,20 @@ export interface FileRoutesById {
   '/api/tools/presentation': typeof ApiToolsPresentationRoute
   '/api/tools/table': typeof ApiToolsTableRoute
   '/api/tools/transcribe': typeof ApiToolsTranscribeRoute
+  '/_authenticated/assistencias/': typeof AuthenticatedAssistenciasIndexRoute
   '/_authenticated/cases/': typeof AuthenticatedCasesIndexRoute
+  '/_authenticated/plataforma/': typeof AuthenticatedPlataformaIndexRoute
   '/_authenticated/platform/': typeof AuthenticatedPlatformIndexRoute
+  '/_authenticated/assistencias/$caseId/chat': typeof AuthenticatedAssistenciasCaseIdChatRoute
   '/_authenticated/cases/$caseId/chat': typeof AuthenticatedCasesCaseIdChatRoute
+  '/_authenticated/plataforma/clientes/$id': typeof AuthenticatedPlataformaClientesIdRoute
   '/_authenticated/platform/customers/$id': typeof AuthenticatedPlatformCustomersIdRoute
   '/api/public/google/callback': typeof ApiPublicGoogleCallbackRoute
   '/api/public/outlook/callback': typeof ApiPublicOutlookCallbackRoute
+  '/_authenticated/plataforma/auditoria/': typeof AuthenticatedPlataformaAuditoriaIndexRoute
+  '/_authenticated/plataforma/clientes/': typeof AuthenticatedPlataformaClientesIndexRoute
+  '/_authenticated/plataforma/credenciais/': typeof AuthenticatedPlataformaCredenciaisIndexRoute
+  '/_authenticated/plataforma/usuarios/': typeof AuthenticatedPlataformaUsuariosIndexRoute
   '/_authenticated/platform/audit/': typeof AuthenticatedPlatformAuditIndexRoute
   '/_authenticated/platform/credentials/': typeof AuthenticatedPlatformCredentialsIndexRoute
   '/_authenticated/platform/customers/': typeof AuthenticatedPlatformCustomersIndexRoute
@@ -393,26 +681,48 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/auth'
+    | '/entrar'
+    | '/agenda'
+    | '/assistencias'
+    | '/assistente'
+    | '/boas-vindas'
     | '/calendar'
     | '/cases'
     | '/chat'
+    | '/configuracoes'
+    | '/conversas'
     | '/dashboard'
+    | '/documentos'
     | '/drafter'
     | '/expert-opinion'
     | '/inbox'
+    | '/integracoes'
     | '/integrations'
     | '/marketing'
     | '/monitoring'
     | '/my-files'
     | '/my-tasks'
+    | '/notificacoes'
     | '/notifications'
     | '/onboarding'
+    | '/painel'
+    | '/parecer-tecnico'
+    | '/pecas'
     | '/proposal'
+    | '/propostas'
+    | '/publicacoes'
     | '/settings'
+    | '/tarefas'
+    | '/convite/$token'
     | '/invite/$token'
+    | '/assistencias/$caseId'
+    | '/assistencias/lote'
+    | '/assistencias/nova'
     | '/cases/$caseId'
     | '/cases/bulk'
     | '/cases/new'
+    | '/configuracoes/escritorio'
+    | '/configuracoes/oauth'
     | '/settings/firm'
     | '/settings/oauth'
     | '/api/tools/pdf'
@@ -420,12 +730,20 @@ export interface FileRouteTypes {
     | '/api/tools/presentation'
     | '/api/tools/table'
     | '/api/tools/transcribe'
+    | '/assistencias/'
     | '/cases/'
+    | '/plataforma/'
     | '/platform/'
+    | '/assistencias/$caseId/chat'
     | '/cases/$caseId/chat'
+    | '/plataforma/clientes/$id'
     | '/platform/customers/$id'
     | '/api/public/google/callback'
     | '/api/public/outlook/callback'
+    | '/plataforma/auditoria/'
+    | '/plataforma/clientes/'
+    | '/plataforma/credenciais/'
+    | '/plataforma/usuarios/'
     | '/platform/audit/'
     | '/platform/credentials/'
     | '/platform/customers/'
@@ -434,25 +752,46 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/auth'
+    | '/entrar'
+    | '/agenda'
+    | '/assistente'
+    | '/boas-vindas'
     | '/calendar'
     | '/chat'
+    | '/configuracoes'
+    | '/conversas'
     | '/dashboard'
+    | '/documentos'
     | '/drafter'
     | '/expert-opinion'
     | '/inbox'
+    | '/integracoes'
     | '/integrations'
     | '/marketing'
     | '/monitoring'
     | '/my-files'
     | '/my-tasks'
+    | '/notificacoes'
     | '/notifications'
     | '/onboarding'
+    | '/painel'
+    | '/parecer-tecnico'
+    | '/pecas'
     | '/proposal'
+    | '/propostas'
+    | '/publicacoes'
     | '/settings'
+    | '/tarefas'
+    | '/convite/$token'
     | '/invite/$token'
+    | '/assistencias/$caseId'
+    | '/assistencias/lote'
+    | '/assistencias/nova'
     | '/cases/$caseId'
     | '/cases/bulk'
     | '/cases/new'
+    | '/configuracoes/escritorio'
+    | '/configuracoes/oauth'
     | '/settings/firm'
     | '/settings/oauth'
     | '/api/tools/pdf'
@@ -460,12 +799,20 @@ export interface FileRouteTypes {
     | '/api/tools/presentation'
     | '/api/tools/table'
     | '/api/tools/transcribe'
+    | '/assistencias'
     | '/cases'
+    | '/plataforma'
     | '/platform'
+    | '/assistencias/$caseId/chat'
     | '/cases/$caseId/chat'
+    | '/plataforma/clientes/$id'
     | '/platform/customers/$id'
     | '/api/public/google/callback'
     | '/api/public/outlook/callback'
+    | '/plataforma/auditoria'
+    | '/plataforma/clientes'
+    | '/plataforma/credenciais'
+    | '/plataforma/usuarios'
     | '/platform/audit'
     | '/platform/credentials'
     | '/platform/customers'
@@ -475,26 +822,48 @@ export interface FileRouteTypes {
     | '/'
     | '/_authenticated'
     | '/auth'
+    | '/entrar'
+    | '/_authenticated/agenda'
+    | '/_authenticated/assistencias'
+    | '/_authenticated/assistente'
+    | '/_authenticated/boas-vindas'
     | '/_authenticated/calendar'
     | '/_authenticated/cases'
     | '/_authenticated/chat'
+    | '/_authenticated/configuracoes'
+    | '/_authenticated/conversas'
     | '/_authenticated/dashboard'
+    | '/_authenticated/documentos'
     | '/_authenticated/drafter'
     | '/_authenticated/expert-opinion'
     | '/_authenticated/inbox'
+    | '/_authenticated/integracoes'
     | '/_authenticated/integrations'
     | '/_authenticated/marketing'
     | '/_authenticated/monitoring'
     | '/_authenticated/my-files'
     | '/_authenticated/my-tasks'
+    | '/_authenticated/notificacoes'
     | '/_authenticated/notifications'
     | '/_authenticated/onboarding'
+    | '/_authenticated/painel'
+    | '/_authenticated/parecer-tecnico'
+    | '/_authenticated/pecas'
     | '/_authenticated/proposal'
+    | '/_authenticated/propostas'
+    | '/_authenticated/publicacoes'
     | '/_authenticated/settings'
+    | '/_authenticated/tarefas'
+    | '/convite/$token'
     | '/invite/$token'
+    | '/_authenticated/assistencias/$caseId'
+    | '/_authenticated/assistencias/lote'
+    | '/_authenticated/assistencias/nova'
     | '/_authenticated/cases/$caseId'
     | '/_authenticated/cases/bulk'
     | '/_authenticated/cases/new'
+    | '/_authenticated/configuracoes/escritorio'
+    | '/_authenticated/configuracoes/oauth'
     | '/_authenticated/settings/firm'
     | '/_authenticated/settings/oauth'
     | '/api/tools/pdf'
@@ -502,12 +871,20 @@ export interface FileRouteTypes {
     | '/api/tools/presentation'
     | '/api/tools/table'
     | '/api/tools/transcribe'
+    | '/_authenticated/assistencias/'
     | '/_authenticated/cases/'
+    | '/_authenticated/plataforma/'
     | '/_authenticated/platform/'
+    | '/_authenticated/assistencias/$caseId/chat'
     | '/_authenticated/cases/$caseId/chat'
+    | '/_authenticated/plataforma/clientes/$id'
     | '/_authenticated/platform/customers/$id'
     | '/api/public/google/callback'
     | '/api/public/outlook/callback'
+    | '/_authenticated/plataforma/auditoria/'
+    | '/_authenticated/plataforma/clientes/'
+    | '/_authenticated/plataforma/credenciais/'
+    | '/_authenticated/plataforma/usuarios/'
     | '/_authenticated/platform/audit/'
     | '/_authenticated/platform/credentials/'
     | '/_authenticated/platform/customers/'
@@ -518,6 +895,8 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
   AuthRoute: typeof AuthRoute
+  EntrarRoute: typeof EntrarRoute
+  ConviteTokenRoute: typeof ConviteTokenRoute
   InviteTokenRoute: typeof InviteTokenRoute
   ApiToolsPdfRoute: typeof ApiToolsPdfRoute
   ApiToolsPetitionRoute: typeof ApiToolsPetitionRoute
@@ -530,6 +909,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/entrar': {
+      id: '/entrar'
+      path: '/entrar'
+      fullPath: '/entrar'
+      preLoaderRoute: typeof EntrarRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/auth': {
       id: '/auth'
       path: '/auth'
@@ -558,6 +944,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof InviteTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/convite/$token': {
+      id: '/convite/$token'
+      path: '/convite/$token'
+      fullPath: '/convite/$token'
+      preLoaderRoute: typeof ConviteTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/tarefas': {
+      id: '/_authenticated/tarefas'
+      path: '/tarefas'
+      fullPath: '/tarefas'
+      preLoaderRoute: typeof AuthenticatedTarefasRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/settings': {
       id: '/_authenticated/settings'
       path: '/settings'
@@ -565,11 +965,46 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSettingsRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/publicacoes': {
+      id: '/_authenticated/publicacoes'
+      path: '/publicacoes'
+      fullPath: '/publicacoes'
+      preLoaderRoute: typeof AuthenticatedPublicacoesRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/propostas': {
+      id: '/_authenticated/propostas'
+      path: '/propostas'
+      fullPath: '/propostas'
+      preLoaderRoute: typeof AuthenticatedPropostasRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/proposal': {
       id: '/_authenticated/proposal'
       path: '/proposal'
       fullPath: '/proposal'
       preLoaderRoute: typeof AuthenticatedProposalRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/pecas': {
+      id: '/_authenticated/pecas'
+      path: '/pecas'
+      fullPath: '/pecas'
+      preLoaderRoute: typeof AuthenticatedPecasRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/parecer-tecnico': {
+      id: '/_authenticated/parecer-tecnico'
+      path: '/parecer-tecnico'
+      fullPath: '/parecer-tecnico'
+      preLoaderRoute: typeof AuthenticatedParecerTecnicoRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/painel': {
+      id: '/_authenticated/painel'
+      path: '/painel'
+      fullPath: '/painel'
+      preLoaderRoute: typeof AuthenticatedPainelRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/onboarding': {
@@ -584,6 +1019,13 @@ declare module '@tanstack/react-router' {
       path: '/notifications'
       fullPath: '/notifications'
       preLoaderRoute: typeof AuthenticatedNotificationsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/notificacoes': {
+      id: '/_authenticated/notificacoes'
+      path: '/notificacoes'
+      fullPath: '/notificacoes'
+      preLoaderRoute: typeof AuthenticatedNotificacoesRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/my-tasks': {
@@ -621,6 +1063,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedIntegrationsRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/integracoes': {
+      id: '/_authenticated/integracoes'
+      path: '/integracoes'
+      fullPath: '/integracoes'
+      preLoaderRoute: typeof AuthenticatedIntegracoesRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/inbox': {
       id: '/_authenticated/inbox'
       path: '/inbox'
@@ -642,11 +1091,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDrafterRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/documentos': {
+      id: '/_authenticated/documentos'
+      path: '/documentos'
+      fullPath: '/documentos'
+      preLoaderRoute: typeof AuthenticatedDocumentosRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/dashboard': {
       id: '/_authenticated/dashboard'
       path: '/dashboard'
       fullPath: '/dashboard'
       preLoaderRoute: typeof AuthenticatedDashboardRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/conversas': {
+      id: '/_authenticated/conversas'
+      path: '/conversas'
+      fullPath: '/conversas'
+      preLoaderRoute: typeof AuthenticatedConversasRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/configuracoes': {
+      id: '/_authenticated/configuracoes'
+      path: '/configuracoes'
+      fullPath: '/configuracoes'
+      preLoaderRoute: typeof AuthenticatedConfiguracoesRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/chat': {
@@ -670,11 +1140,46 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedCalendarRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/boas-vindas': {
+      id: '/_authenticated/boas-vindas'
+      path: '/boas-vindas'
+      fullPath: '/boas-vindas'
+      preLoaderRoute: typeof AuthenticatedBoasVindasRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/assistente': {
+      id: '/_authenticated/assistente'
+      path: '/assistente'
+      fullPath: '/assistente'
+      preLoaderRoute: typeof AuthenticatedAssistenteRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/assistencias': {
+      id: '/_authenticated/assistencias'
+      path: '/assistencias'
+      fullPath: '/assistencias'
+      preLoaderRoute: typeof AuthenticatedAssistenciasRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/agenda': {
+      id: '/_authenticated/agenda'
+      path: '/agenda'
+      fullPath: '/agenda'
+      preLoaderRoute: typeof AuthenticatedAgendaRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/platform/': {
       id: '/_authenticated/platform/'
       path: '/platform'
       fullPath: '/platform/'
       preLoaderRoute: typeof AuthenticatedPlatformIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/plataforma/': {
+      id: '/_authenticated/plataforma/'
+      path: '/plataforma'
+      fullPath: '/plataforma/'
+      preLoaderRoute: typeof AuthenticatedPlataformaIndexRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/cases/': {
@@ -683,6 +1188,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/cases/'
       preLoaderRoute: typeof AuthenticatedCasesIndexRouteImport
       parentRoute: typeof AuthenticatedCasesRoute
+    }
+    '/_authenticated/assistencias/': {
+      id: '/_authenticated/assistencias/'
+      path: '/'
+      fullPath: '/assistencias/'
+      preLoaderRoute: typeof AuthenticatedAssistenciasIndexRouteImport
+      parentRoute: typeof AuthenticatedAssistenciasRoute
     }
     '/api/tools/transcribe': {
       id: '/api/tools/transcribe'
@@ -733,6 +1245,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSettingsFirmRouteImport
       parentRoute: typeof AuthenticatedSettingsRoute
     }
+    '/_authenticated/configuracoes/oauth': {
+      id: '/_authenticated/configuracoes/oauth'
+      path: '/oauth'
+      fullPath: '/configuracoes/oauth'
+      preLoaderRoute: typeof AuthenticatedConfiguracoesOauthRouteImport
+      parentRoute: typeof AuthenticatedConfiguracoesRoute
+    }
+    '/_authenticated/configuracoes/escritorio': {
+      id: '/_authenticated/configuracoes/escritorio'
+      path: '/escritorio'
+      fullPath: '/configuracoes/escritorio'
+      preLoaderRoute: typeof AuthenticatedConfiguracoesEscritorioRouteImport
+      parentRoute: typeof AuthenticatedConfiguracoesRoute
+    }
     '/_authenticated/cases/new': {
       id: '/_authenticated/cases/new'
       path: '/new'
@@ -753,6 +1279,27 @@ declare module '@tanstack/react-router' {
       fullPath: '/cases/$caseId'
       preLoaderRoute: typeof AuthenticatedCasesCaseIdRouteImport
       parentRoute: typeof AuthenticatedCasesRoute
+    }
+    '/_authenticated/assistencias/nova': {
+      id: '/_authenticated/assistencias/nova'
+      path: '/nova'
+      fullPath: '/assistencias/nova'
+      preLoaderRoute: typeof AuthenticatedAssistenciasNovaRouteImport
+      parentRoute: typeof AuthenticatedAssistenciasRoute
+    }
+    '/_authenticated/assistencias/lote': {
+      id: '/_authenticated/assistencias/lote'
+      path: '/lote'
+      fullPath: '/assistencias/lote'
+      preLoaderRoute: typeof AuthenticatedAssistenciasLoteRouteImport
+      parentRoute: typeof AuthenticatedAssistenciasRoute
+    }
+    '/_authenticated/assistencias/$caseId': {
+      id: '/_authenticated/assistencias/$caseId'
+      path: '/$caseId'
+      fullPath: '/assistencias/$caseId'
+      preLoaderRoute: typeof AuthenticatedAssistenciasCaseIdRouteImport
+      parentRoute: typeof AuthenticatedAssistenciasRoute
     }
     '/_authenticated/platform/users/': {
       id: '/_authenticated/platform/users/'
@@ -782,6 +1329,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedPlatformAuditIndexRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/plataforma/usuarios/': {
+      id: '/_authenticated/plataforma/usuarios/'
+      path: '/plataforma/usuarios'
+      fullPath: '/plataforma/usuarios/'
+      preLoaderRoute: typeof AuthenticatedPlataformaUsuariosIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/plataforma/credenciais/': {
+      id: '/_authenticated/plataforma/credenciais/'
+      path: '/plataforma/credenciais'
+      fullPath: '/plataforma/credenciais/'
+      preLoaderRoute: typeof AuthenticatedPlataformaCredenciaisIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/plataforma/clientes/': {
+      id: '/_authenticated/plataforma/clientes/'
+      path: '/plataforma/clientes'
+      fullPath: '/plataforma/clientes/'
+      preLoaderRoute: typeof AuthenticatedPlataformaClientesIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/plataforma/auditoria/': {
+      id: '/_authenticated/plataforma/auditoria/'
+      path: '/plataforma/auditoria'
+      fullPath: '/plataforma/auditoria/'
+      preLoaderRoute: typeof AuthenticatedPlataformaAuditoriaIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/api/public/outlook/callback': {
       id: '/api/public/outlook/callback'
       path: '/api/public/outlook/callback'
@@ -803,6 +1378,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedPlatformCustomersIdRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/plataforma/clientes/$id': {
+      id: '/_authenticated/plataforma/clientes/$id'
+      path: '/plataforma/clientes/$id'
+      fullPath: '/plataforma/clientes/$id'
+      preLoaderRoute: typeof AuthenticatedPlataformaClientesIdRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/cases/$caseId/chat': {
       id: '/_authenticated/cases/$caseId/chat'
       path: '/chat'
@@ -810,8 +1392,51 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedCasesCaseIdChatRouteImport
       parentRoute: typeof AuthenticatedCasesCaseIdRoute
     }
+    '/_authenticated/assistencias/$caseId/chat': {
+      id: '/_authenticated/assistencias/$caseId/chat'
+      path: '/chat'
+      fullPath: '/assistencias/$caseId/chat'
+      preLoaderRoute: typeof AuthenticatedAssistenciasCaseIdChatRouteImport
+      parentRoute: typeof AuthenticatedAssistenciasCaseIdRoute
+    }
   }
 }
+
+interface AuthenticatedAssistenciasCaseIdRouteChildren {
+  AuthenticatedAssistenciasCaseIdChatRoute: typeof AuthenticatedAssistenciasCaseIdChatRoute
+}
+
+const AuthenticatedAssistenciasCaseIdRouteChildren: AuthenticatedAssistenciasCaseIdRouteChildren =
+  {
+    AuthenticatedAssistenciasCaseIdChatRoute:
+      AuthenticatedAssistenciasCaseIdChatRoute,
+  }
+
+const AuthenticatedAssistenciasCaseIdRouteWithChildren =
+  AuthenticatedAssistenciasCaseIdRoute._addFileChildren(
+    AuthenticatedAssistenciasCaseIdRouteChildren,
+  )
+
+interface AuthenticatedAssistenciasRouteChildren {
+  AuthenticatedAssistenciasCaseIdRoute: typeof AuthenticatedAssistenciasCaseIdRouteWithChildren
+  AuthenticatedAssistenciasLoteRoute: typeof AuthenticatedAssistenciasLoteRoute
+  AuthenticatedAssistenciasNovaRoute: typeof AuthenticatedAssistenciasNovaRoute
+  AuthenticatedAssistenciasIndexRoute: typeof AuthenticatedAssistenciasIndexRoute
+}
+
+const AuthenticatedAssistenciasRouteChildren: AuthenticatedAssistenciasRouteChildren =
+  {
+    AuthenticatedAssistenciasCaseIdRoute:
+      AuthenticatedAssistenciasCaseIdRouteWithChildren,
+    AuthenticatedAssistenciasLoteRoute: AuthenticatedAssistenciasLoteRoute,
+    AuthenticatedAssistenciasNovaRoute: AuthenticatedAssistenciasNovaRoute,
+    AuthenticatedAssistenciasIndexRoute: AuthenticatedAssistenciasIndexRoute,
+  }
+
+const AuthenticatedAssistenciasRouteWithChildren =
+  AuthenticatedAssistenciasRoute._addFileChildren(
+    AuthenticatedAssistenciasRouteChildren,
+  )
 
 interface AuthenticatedCasesCaseIdRouteChildren {
   AuthenticatedCasesCaseIdChatRoute: typeof AuthenticatedCasesCaseIdChatRoute
@@ -844,6 +1469,23 @@ const AuthenticatedCasesRouteChildren: AuthenticatedCasesRouteChildren = {
 const AuthenticatedCasesRouteWithChildren =
   AuthenticatedCasesRoute._addFileChildren(AuthenticatedCasesRouteChildren)
 
+interface AuthenticatedConfiguracoesRouteChildren {
+  AuthenticatedConfiguracoesEscritorioRoute: typeof AuthenticatedConfiguracoesEscritorioRoute
+  AuthenticatedConfiguracoesOauthRoute: typeof AuthenticatedConfiguracoesOauthRoute
+}
+
+const AuthenticatedConfiguracoesRouteChildren: AuthenticatedConfiguracoesRouteChildren =
+  {
+    AuthenticatedConfiguracoesEscritorioRoute:
+      AuthenticatedConfiguracoesEscritorioRoute,
+    AuthenticatedConfiguracoesOauthRoute: AuthenticatedConfiguracoesOauthRoute,
+  }
+
+const AuthenticatedConfiguracoesRouteWithChildren =
+  AuthenticatedConfiguracoesRoute._addFileChildren(
+    AuthenticatedConfiguracoesRouteChildren,
+  )
+
 interface AuthenticatedSettingsRouteChildren {
   AuthenticatedSettingsFirmRoute: typeof AuthenticatedSettingsFirmRoute
   AuthenticatedSettingsOauthRoute: typeof AuthenticatedSettingsOauthRoute
@@ -860,24 +1502,45 @@ const AuthenticatedSettingsRouteWithChildren =
   )
 
 interface AuthenticatedRouteChildren {
+  AuthenticatedAgendaRoute: typeof AuthenticatedAgendaRoute
+  AuthenticatedAssistenciasRoute: typeof AuthenticatedAssistenciasRouteWithChildren
+  AuthenticatedAssistenteRoute: typeof AuthenticatedAssistenteRoute
+  AuthenticatedBoasVindasRoute: typeof AuthenticatedBoasVindasRoute
   AuthenticatedCalendarRoute: typeof AuthenticatedCalendarRoute
   AuthenticatedCasesRoute: typeof AuthenticatedCasesRouteWithChildren
   AuthenticatedChatRoute: typeof AuthenticatedChatRoute
+  AuthenticatedConfiguracoesRoute: typeof AuthenticatedConfiguracoesRouteWithChildren
+  AuthenticatedConversasRoute: typeof AuthenticatedConversasRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
+  AuthenticatedDocumentosRoute: typeof AuthenticatedDocumentosRoute
   AuthenticatedDrafterRoute: typeof AuthenticatedDrafterRoute
   AuthenticatedExpertOpinionRoute: typeof AuthenticatedExpertOpinionRoute
   AuthenticatedInboxRoute: typeof AuthenticatedInboxRoute
+  AuthenticatedIntegracoesRoute: typeof AuthenticatedIntegracoesRoute
   AuthenticatedIntegrationsRoute: typeof AuthenticatedIntegrationsRoute
   AuthenticatedMarketingRoute: typeof AuthenticatedMarketingRoute
   AuthenticatedMonitoringRoute: typeof AuthenticatedMonitoringRoute
   AuthenticatedMyFilesRoute: typeof AuthenticatedMyFilesRoute
   AuthenticatedMyTasksRoute: typeof AuthenticatedMyTasksRoute
+  AuthenticatedNotificacoesRoute: typeof AuthenticatedNotificacoesRoute
   AuthenticatedNotificationsRoute: typeof AuthenticatedNotificationsRoute
   AuthenticatedOnboardingRoute: typeof AuthenticatedOnboardingRoute
+  AuthenticatedPainelRoute: typeof AuthenticatedPainelRoute
+  AuthenticatedParecerTecnicoRoute: typeof AuthenticatedParecerTecnicoRoute
+  AuthenticatedPecasRoute: typeof AuthenticatedPecasRoute
   AuthenticatedProposalRoute: typeof AuthenticatedProposalRoute
+  AuthenticatedPropostasRoute: typeof AuthenticatedPropostasRoute
+  AuthenticatedPublicacoesRoute: typeof AuthenticatedPublicacoesRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRouteWithChildren
+  AuthenticatedTarefasRoute: typeof AuthenticatedTarefasRoute
+  AuthenticatedPlataformaIndexRoute: typeof AuthenticatedPlataformaIndexRoute
   AuthenticatedPlatformIndexRoute: typeof AuthenticatedPlatformIndexRoute
+  AuthenticatedPlataformaClientesIdRoute: typeof AuthenticatedPlataformaClientesIdRoute
   AuthenticatedPlatformCustomersIdRoute: typeof AuthenticatedPlatformCustomersIdRoute
+  AuthenticatedPlataformaAuditoriaIndexRoute: typeof AuthenticatedPlataformaAuditoriaIndexRoute
+  AuthenticatedPlataformaClientesIndexRoute: typeof AuthenticatedPlataformaClientesIndexRoute
+  AuthenticatedPlataformaCredenciaisIndexRoute: typeof AuthenticatedPlataformaCredenciaisIndexRoute
+  AuthenticatedPlataformaUsuariosIndexRoute: typeof AuthenticatedPlataformaUsuariosIndexRoute
   AuthenticatedPlatformAuditIndexRoute: typeof AuthenticatedPlatformAuditIndexRoute
   AuthenticatedPlatformCredentialsIndexRoute: typeof AuthenticatedPlatformCredentialsIndexRoute
   AuthenticatedPlatformCustomersIndexRoute: typeof AuthenticatedPlatformCustomersIndexRoute
@@ -885,24 +1548,50 @@ interface AuthenticatedRouteChildren {
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
+  AuthenticatedAgendaRoute: AuthenticatedAgendaRoute,
+  AuthenticatedAssistenciasRoute: AuthenticatedAssistenciasRouteWithChildren,
+  AuthenticatedAssistenteRoute: AuthenticatedAssistenteRoute,
+  AuthenticatedBoasVindasRoute: AuthenticatedBoasVindasRoute,
   AuthenticatedCalendarRoute: AuthenticatedCalendarRoute,
   AuthenticatedCasesRoute: AuthenticatedCasesRouteWithChildren,
   AuthenticatedChatRoute: AuthenticatedChatRoute,
+  AuthenticatedConfiguracoesRoute: AuthenticatedConfiguracoesRouteWithChildren,
+  AuthenticatedConversasRoute: AuthenticatedConversasRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
+  AuthenticatedDocumentosRoute: AuthenticatedDocumentosRoute,
   AuthenticatedDrafterRoute: AuthenticatedDrafterRoute,
   AuthenticatedExpertOpinionRoute: AuthenticatedExpertOpinionRoute,
   AuthenticatedInboxRoute: AuthenticatedInboxRoute,
+  AuthenticatedIntegracoesRoute: AuthenticatedIntegracoesRoute,
   AuthenticatedIntegrationsRoute: AuthenticatedIntegrationsRoute,
   AuthenticatedMarketingRoute: AuthenticatedMarketingRoute,
   AuthenticatedMonitoringRoute: AuthenticatedMonitoringRoute,
   AuthenticatedMyFilesRoute: AuthenticatedMyFilesRoute,
   AuthenticatedMyTasksRoute: AuthenticatedMyTasksRoute,
+  AuthenticatedNotificacoesRoute: AuthenticatedNotificacoesRoute,
   AuthenticatedNotificationsRoute: AuthenticatedNotificationsRoute,
   AuthenticatedOnboardingRoute: AuthenticatedOnboardingRoute,
+  AuthenticatedPainelRoute: AuthenticatedPainelRoute,
+  AuthenticatedParecerTecnicoRoute: AuthenticatedParecerTecnicoRoute,
+  AuthenticatedPecasRoute: AuthenticatedPecasRoute,
   AuthenticatedProposalRoute: AuthenticatedProposalRoute,
+  AuthenticatedPropostasRoute: AuthenticatedPropostasRoute,
+  AuthenticatedPublicacoesRoute: AuthenticatedPublicacoesRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRouteWithChildren,
+  AuthenticatedTarefasRoute: AuthenticatedTarefasRoute,
+  AuthenticatedPlataformaIndexRoute: AuthenticatedPlataformaIndexRoute,
   AuthenticatedPlatformIndexRoute: AuthenticatedPlatformIndexRoute,
+  AuthenticatedPlataformaClientesIdRoute:
+    AuthenticatedPlataformaClientesIdRoute,
   AuthenticatedPlatformCustomersIdRoute: AuthenticatedPlatformCustomersIdRoute,
+  AuthenticatedPlataformaAuditoriaIndexRoute:
+    AuthenticatedPlataformaAuditoriaIndexRoute,
+  AuthenticatedPlataformaClientesIndexRoute:
+    AuthenticatedPlataformaClientesIndexRoute,
+  AuthenticatedPlataformaCredenciaisIndexRoute:
+    AuthenticatedPlataformaCredenciaisIndexRoute,
+  AuthenticatedPlataformaUsuariosIndexRoute:
+    AuthenticatedPlataformaUsuariosIndexRoute,
   AuthenticatedPlatformAuditIndexRoute: AuthenticatedPlatformAuditIndexRoute,
   AuthenticatedPlatformCredentialsIndexRoute:
     AuthenticatedPlatformCredentialsIndexRoute,
@@ -919,6 +1608,8 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRoute: AuthenticatedRouteWithChildren,
   AuthRoute: AuthRoute,
+  EntrarRoute: EntrarRoute,
+  ConviteTokenRoute: ConviteTokenRoute,
   InviteTokenRoute: InviteTokenRoute,
   ApiToolsPdfRoute: ApiToolsPdfRoute,
   ApiToolsPetitionRoute: ApiToolsPetitionRoute,

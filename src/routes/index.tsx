@@ -67,17 +67,17 @@ function LandingPage() {
           <div className="flex items-center gap-2">
             {user ? (
               <Button asChild>
-                <Link to="/dashboard">
+                <Link to="/painel">
                   Ir para o painel <ArrowRight className="ml-1 h-4 w-4" />
                 </Link>
               </Button>
             ) : (
               <>
                 <Button variant="ghost" asChild>
-                  <Link to="/auth">Entrar</Link>
+                  <Link to="/entrar">Entrar</Link>
                 </Button>
                 <Button asChild>
-                  <Link to="/auth">Começar grátis</Link>
+                  <Link to="/entrar">Começar grátis</Link>
                 </Button>
               </>
             )}
@@ -109,7 +109,7 @@ function LandingPage() {
           </p>
           <div className="mt-8 flex flex-wrap justify-center gap-3">
             <Button size="lg" asChild className="bg-accent text-accent-foreground hover:bg-accent/90">
-              <Link to={user ? "/dashboard" : "/auth"}>
+              <Link to={user ? "/painel" : "/entrar"}>
                 {user ? "Abrir painel" : "Começar agora"} <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
             </Button>
@@ -197,7 +197,7 @@ function LandingPage() {
             Crie sua conta gratuita, suba seus primeiros documentos e converse com o B2B | JurisMind AI.
           </p>
           <Button size="lg" asChild className="mt-6">
-            <Link to={user ? "/dashboard" : "/auth"}>
+            <Link to={user ? "/painel" : "/entrar"}>
               {user ? "Abrir painel" : "Criar conta grátis"} <ArrowRight className="ml-2 h-4 w-4" />
             </Link>
           </Button>

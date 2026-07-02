@@ -1,20 +1,7 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { ChatPanel } from "@/components/chat/chat-panel";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/_authenticated/chat")({
-  component: ChatPage,
+  beforeLoad: ({}) => {
+    throw redirect({ to: "/assistente", replace: true });
+  },
 });
-
-function ChatPage() {
-  return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight text-foreground">Assistente Jurídico</h1>
-        <p className="mt-1 text-muted-foreground">
-          Pergunte sobre todos os seus documentos indexados.
-        </p>
-      </div>
-      <ChatPanel />
-    </div>
-  );
-}
