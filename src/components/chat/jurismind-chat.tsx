@@ -910,7 +910,7 @@ export function JurisMindChat({
                   <Square className="h-4 w-4" />
                 ) : (
                   <Mic className="h-4 w-4" />
-                )}
+              </Button>
               <Textarea
                 ref={inputRef}
                 value={input}
