@@ -708,8 +708,39 @@ export function JurisMindChat({
       return;
     }
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const buildConstraints = (deviceId: string | null): MediaStreamConstraints => ({
+        audio: deviceId ? { deviceId: { exact: deviceId } } : true,
+      });
+      let stream: MediaStream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia(
+          buildConstraints(selectedMicId),
+        );
+      } catch (err) {
+        const name = (err as { name?: string })?.name;
+        if (
+          selectedMicId &&
+          (name === "OverconstrainedError" ||
+            name === "NotFoundError" ||
+            name === "NotReadableError")
+        ) {
+          try {
+            localStorage.removeItem(MIC_STORAGE_KEY);
+          } catch {}
+          setSelectedMicId(null);
+          toast.message(
+            "Microfone selecionado indisponível — usando o padrão.",
+          );
+          stream = await navigator.mediaDevices.getUserMedia(
+            buildConstraints(null),
+          );
+        } else {
+          throw err;
+        }
+      }
       streamRef.current = stream;
+      // Após conceder permissão, labels ficam disponíveis — re-enumera.
+      void refreshMics();
       const mime = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
         ? "audio/webm;codecs=opus"
         : "audio/webm";
