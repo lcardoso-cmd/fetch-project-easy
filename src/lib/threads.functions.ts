@@ -10,14 +10,23 @@ export interface AiThread {
   created_at: string;
 }
 
+export interface AiToolStep {
+  name: string;
+  args_json: string;
+  result_json: string;
+}
+export interface AiCitation {
+  filename: string;
+  similarity: number;
+}
 export interface AiMessage {
   id: string;
   thread_id: string;
   role: "user" | "assistant";
   content: string;
   images: string[] | null;
-  tool_steps: unknown[] | null;
-  citations: unknown[] | null;
+  tool_steps: AiToolStep[] | null;
+  citations: AiCitation[] | null;
   model_tier: string | null;
   created_at: string;
 }
