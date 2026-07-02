@@ -250,6 +250,18 @@ export function JurisMindChat({
   const [transcribing, setTranscribing] = useState(false);
   const recorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
+  const streamRef = useRef<MediaStream | null>(null);
+  const audioCtxRef = useRef<AudioContext | null>(null);
+  const analyserRef = useRef<AnalyserNode | null>(null);
+  const rafRef = useRef<number | null>(null);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const autoStopRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const startedAtRef = useRef<number>(0);
+  const silenceSinceRef = useRef<number | null>(null);
+  const [recordingMs, setRecordingMs] = useState(0);
+  const [audioLevel, setAudioLevel] = useState(0);
+  const [micSilent, setMicSilent] = useState(false);
+  const [micError, setMicError] = useState<string | null>(null);
   const [modelTier, setModelTier] = useState<ModelTier>(() => {
     if (typeof window === "undefined") return "fast";
     return (localStorage.getItem("jurismind:model") as ModelTier) || "fast";
