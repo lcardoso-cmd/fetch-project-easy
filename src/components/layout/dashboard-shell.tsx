@@ -117,7 +117,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
           )}
         >
           <Link to="/dashboard" className="flex items-center gap-3 overflow-hidden">
-            <JurisMindMark size={36} variant="square-navy" className="rounded-lg" />
+            <JurisMindMark size={36} variant="sidebar" />
             {!collapsed && (
               <h2 className="font-heading text-base font-semibold leading-tight truncate">
                 B2B | JurisMind AI
@@ -199,7 +199,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
         {/* Mobile header */}
         <header className="flex h-16 items-center justify-between border-b bg-card px-4 lg:hidden">
           <Link to="/dashboard" className="flex items-center gap-2">
-            <JurisMindMark size={32} variant="square-navy" className="rounded-lg" />
+            <JurisMindMark size={32} variant="sidebar" />
             <span className="font-heading text-lg font-bold">B2B | JurisMind AI</span>
           </Link>
           <div className="flex items-center gap-1">
