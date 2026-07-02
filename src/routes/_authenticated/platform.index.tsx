@@ -1,43 +1,19 @@
 import { createFileRoute, redirect, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
-import { createServerFn } from "@tanstack/react-start";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Building2, Users, CreditCard, Activity } from "lucide-react";
-
-const getPlatformOverview = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => {
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const admin = supabaseAdmin as unknown as {
-      rpc: (fn: string, args: Record<string, unknown>) => Promise<{ data: boolean | null }>;
-      from: (t: string) => {
-        select: (c: string, opts?: unknown) => Promise<{
-          count: number | null;
-          data: unknown;
-          error: { message: string } | null;
-        }>;
-      };
-    };
-    const isPlat = await admin.rpc("has_capability", {
-      _user_id: context.userId,
-      _capability: "platform_admin",
-    });
-    if (!isPlat.data) throw new Error("Sem permissão");
-
-    const profiles = await admin.from("profiles").select("id", { count: "exact", head: true });
-    return {
-      customers: profiles.count ?? 0,
-    };
-  });
+import { Badge } from "@/components/ui/badge";
+import { Building2, Users, CreditCard, Activity, ArrowRight } from "lucide-react";
+import { getPlatformKpis } from "@/lib/platform.functions";
+import { getMyCapabilities } from "@/lib/capabilities.functions";
 
 export const Route = createFileRoute("/_authenticated/platform/")({
   beforeLoad: async () => {
-    // Guard via server call; if it throws, redirect to dashboard.
     try {
-      const fn = getPlatformOverview;
-      await fn();
+      const caps = await getMyCapabilities();
+      if (!caps.includes("platform_admin") && !caps.includes("super_admin")) {
+        throw new Error("nope");
+      }
     } catch {
       throw redirect({ to: "/dashboard" });
     }
@@ -45,81 +21,134 @@ export const Route = createFileRoute("/_authenticated/platform/")({
   component: PlatformOverview,
 });
 
+function money(cents: number) {
+  return (cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+}
+
 function PlatformOverview() {
-  const fn = useServerFn(getPlatformOverview);
-  const { data } = useQuery({ queryKey: ["platform-overview"], queryFn: () => fn() });
+  const fn = useServerFn(getPlatformKpis);
+  const { data, isLoading } = useQuery({ queryKey: ["platform-kpis"], queryFn: () => fn() });
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold font-heading tracking-tight">Plataforma JurisMind</h1>
         <p className="mt-1 text-muted-foreground">
-          Visão B2B — clientes, assinaturas e uso agregado da plataforma.
+          Visão B2B — clientes do SaaS, assinaturas e uso agregado.
         </p>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <Kpi
+          icon={<Building2 className="h-4 w-4" />}
+          label="Clientes SaaS"
+          value={isLoading ? "…" : String(data?.customers ?? 0)}
+          hint={data ? `+${data.newLast30} nos últimos 30 dias` : undefined}
+        />
+        <Kpi
+          icon={<Users className="h-4 w-4" />}
+          label="Usuários ativos (30d)"
+          value={isLoading ? "…" : String(data?.activeUsersLast30 ?? 0)}
+        />
+        <Kpi
+          icon={<CreditCard className="h-4 w-4" />}
+          label="MRR"
+          value={isLoading ? "…" : money(data?.mrrCents ?? 0)}
+        />
+        <Kpi
+          icon={<Activity className="h-4 w-4" />}
+          label="Contas ativas"
+          value={isLoading ? "…" : String(data?.statuses?.active ?? 0)}
+          hint={
+            data
+              ? `${data.statuses?.trial ?? 0} trial · ${data.statuses?.suspended ?? 0} suspensas`
+              : undefined
+          }
+        />
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-2">
         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Building2 className="h-4 w-4" /> Escritórios/Profissionais
-            </CardTitle>
+          <CardHeader>
+            <CardTitle className="text-base">Distribuição por status</CardTitle>
+            <CardDescription>Situação atual dos clientes do SaaS.</CardDescription>
           </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-semibold">{data?.customers ?? "—"}</p>
+          <CardContent className="flex flex-wrap gap-2">
+            {data
+              ? Object.entries(data.statuses).map(([k, v]) => (
+                  <Badge key={k} variant="secondary">
+                    {k}: {v}
+                  </Badge>
+                ))
+              : "…"}
           </CardContent>
         </Card>
         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Users className="h-4 w-4" /> Usuários ativos
-            </CardTitle>
+          <CardHeader>
+            <CardTitle className="text-base">Distribuição por plano</CardTitle>
+            <CardDescription>Free, Pro, Enterprise.</CardDescription>
           </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-semibold text-muted-foreground">—</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2 text-sm text-muted-foreground">
-              <CreditCard className="h-4 w-4" /> MRR
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-semibold text-muted-foreground">—</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Activity className="h-4 w-4" /> Uso último 30d
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-semibold text-muted-foreground">—</p>
+          <CardContent className="flex flex-wrap gap-2">
+            {data
+              ? Object.entries(data.plans).map(([k, v]) => (
+                  <Badge key={k} variant="outline">
+                    {k}: {v}
+                  </Badge>
+                ))
+              : "…"}
           </CardContent>
         </Card>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Próximos módulos</CardTitle>
-          <CardDescription>
-            Área dedicada à operação B2B da JurisMind — separada da gestão de cada escritório.
-          </CardDescription>
+          <CardTitle className="text-lg">Acessos rápidos</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-2 text-sm text-muted-foreground">
-          <p>• Cadastro e busca de clientes (escritórios/profissionais)</p>
-          <p>• Assinaturas, planos e faturamento consolidado</p>
-          <p>• Métricas de engajamento e saúde da conta</p>
-          <p>• Concessão manual de acessos e overrides de plano</p>
-          <div className="pt-3">
-            <Link to="/dashboard" className="text-primary underline">
-              ← Voltar ao painel operacional
-            </Link>
-          </div>
+        <CardContent className="grid gap-2 sm:grid-cols-2">
+          <QuickLink to="/platform/customers" label="Gerir clientes SaaS" />
+          <QuickLink to="/platform/users" label="Gerir usuários da plataforma" />
+          <QuickLink to="/platform/credentials" label="Credenciais OAuth do SaaS" />
+          <QuickLink to="/platform/audit" label="Log de auditoria" />
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+function Kpi({
+  icon,
+  label,
+  value,
+  hint,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+  hint?: string;
+}) {
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <CardTitle className="flex items-center gap-2 text-sm text-muted-foreground">
+          {icon} {label}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <p className="text-3xl font-semibold">{value}</p>
+        {hint && <p className="mt-1 text-xs text-muted-foreground">{hint}</p>}
+      </CardContent>
+    </Card>
+  );
+}
+
+function QuickLink({ to, label }: { to: string; label: string }) {
+  return (
+    <Link
+      to={to}
+      className="flex items-center justify-between rounded-md border px-3 py-2 text-sm hover:bg-muted"
+    >
+      <span>{label}</span>
+      <ArrowRight className="h-4 w-4 text-muted-foreground" />
+    </Link>
   );
 }

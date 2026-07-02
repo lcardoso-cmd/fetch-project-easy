@@ -315,6 +315,45 @@ export type Database = {
           },
         ]
       }
+      customer_accounts: {
+        Row: {
+          billing_email: string | null
+          created_at: string
+          id: string
+          mrr_cents: number
+          name: string | null
+          notes: string | null
+          owner_user_id: string
+          plan: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          billing_email?: string | null
+          created_at?: string
+          id?: string
+          mrr_cents?: number
+          name?: string | null
+          notes?: string | null
+          owner_user_id: string
+          plan?: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          billing_email?: string | null
+          created_at?: string
+          id?: string
+          mrr_cents?: number
+          name?: string | null
+          notes?: string | null
+          owner_user_id?: string
+          plan?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       document_chunks: {
         Row: {
           case_id: string
@@ -732,6 +771,44 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      platform_audit_log: {
+        Row: {
+          action: string
+          actor_user_id: string
+          created_at: string
+          id: string
+          metadata: Json
+          target_customer_id: string | null
+          target_user_id: string | null
+        }
+        Insert: {
+          action: string
+          actor_user_id: string
+          created_at?: string
+          id?: string
+          metadata?: Json
+          target_customer_id?: string | null
+          target_user_id?: string | null
+        }
+        Update: {
+          action?: string
+          actor_user_id?: string
+          created_at?: string
+          id?: string
+          metadata?: Json
+          target_customer_id?: string | null
+          target_user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "platform_audit_log_target_customer_id_fkey"
+            columns: ["target_customer_id"]
+            isOneToOne: false
+            referencedRelation: "customer_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
@@ -1162,6 +1239,8 @@ export type Database = {
         Args: { _conversation_id: string; _user_id: string }
         Returns: boolean
       }
+      is_platform_staff: { Args: { _user_id: string }; Returns: boolean }
+      is_super_admin: { Args: { _user_id: string }; Returns: boolean }
       match_chunks: {
         Args: {
           filter_user_id?: string
@@ -1209,6 +1288,7 @@ export type Database = {
         | "marketing"
         | "office_admin"
         | "platform_admin"
+        | "super_admin"
       app_role: "admin" | "user"
     }
     CompositeTypes: {
@@ -1344,6 +1424,7 @@ export const Constants = {
         "marketing",
         "office_admin",
         "platform_admin",
+        "super_admin",
       ],
       app_role: ["admin", "user"],
     },

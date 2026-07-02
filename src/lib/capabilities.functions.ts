@@ -9,6 +9,7 @@ export const CAPABILITIES = [
   "marketing",
   "office_admin",
   "platform_admin",
+  "super_admin",
 ] as const;
 
 export type Capability = (typeof CAPABILITIES)[number];
@@ -20,6 +21,7 @@ export const CAPABILITY_LABELS: Record<Capability, string> = {
   marketing: "Marketing e publicações",
   office_admin: "Gestão do escritório",
   platform_admin: "Administração da plataforma (B2B)",
+  super_admin: "Super administrador da B2B",
 };
 
 /**
@@ -41,6 +43,8 @@ export const CAPABILITY_DESCRIPTIONS: Record<Capability, string> = {
     "Gestão do escritório: equipe, integrações, cobrança e configurações.",
   platform_admin:
     "Administração B2B da JurisMind — restrita à equipe interna.",
+  super_admin:
+    "Controle total do SaaS — só para o time B2B da JurisMind.",
 };
 
 /**
@@ -52,6 +56,7 @@ export function formatRequiresPhrase(cap: Capability): string {
 
 /**
  * Retorna as capacidades do usuário autenticado.
+ * super_admin implicitamente concede todas as demais.
  */
 export const getMyCapabilities = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
@@ -74,7 +79,12 @@ export const getMyCapabilities = createServerFn({ method: "GET" })
       .select("capability")
       .eq("user_id", context.userId);
     if (error) throw new Error(error.message);
-    return (data ?? []).map((r) => r.capability);
+    const caps = new Set<Capability>((data ?? []).map((r) => r.capability));
+    // super_admin implica todas as outras
+    if (caps.has("super_admin")) {
+      for (const c of CAPABILITIES) caps.add(c);
+    }
+    return Array.from(caps);
   });
 
 /**
@@ -117,8 +127,10 @@ export const setMemberCapabilities = createServerFn({ method: "POST" })
   .handler(async ({ context, data }) => {
     await assertOfficeAdmin(context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    // Substitui o conjunto: apaga tudo (exceto platform_admin, que só a B2B controla) e insere o novo.
-    const filtered = data.capabilities.filter((c) => c !== "platform_admin");
+    // Substitui o conjunto do escritório: office_admin nunca revoga permissões da B2B.
+    const filtered = data.capabilities.filter(
+      (c) => c !== "platform_admin" && c !== "super_admin",
+    );
     const client = supabaseAdmin as unknown as {
       from: (t: string) => {
         delete: () => {
@@ -129,11 +141,19 @@ export const setMemberCapabilities = createServerFn({ method: "POST" })
         insert: (rows: unknown[]) => Promise<{ error: { message: string } | null }>;
       };
     };
-    const del = await client
+    const del = await (client as unknown as {
+      from: (t: string) => {
+        delete: () => {
+          eq: (k: string, v: string) => {
+            in: (k: string, v: string[]) => Promise<{ error: { message: string } | null }>;
+          };
+        };
+      };
+    })
       .from("user_capabilities")
       .delete()
       .eq("user_id", data.user_id)
-      .neq("capability", "platform_admin");
+      .in("capability", ["cases", "expert_opinion", "commercial", "marketing", "office_admin"]);
     if (del.error) throw new Error(del.error.message);
     if (filtered.length > 0) {
       const ins = await client

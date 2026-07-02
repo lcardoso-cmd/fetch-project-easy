@@ -1,122 +1,107 @@
-
 ## Objetivo
 
-Reorganizar o sidebar de forma profissional, refletindo os três níveis de visão do produto e mostrando cada ferramenta apenas para quem realmente a usa.
-
-## Modelo de acesso (três visões)
+Transformar o JurisMind em um SaaS de 3 camadas com estrutura clara:
 
 ```text
-┌─────────────────────────────────────────────────────────────┐
-│ 1. PLATAFORMA B2B (JurisMind)                               │
-│    Você vendendo. Vê todos os escritórios/clientes,         │
-│    assinaturas, métricas. Role: platform_admin              │
-├─────────────────────────────────────────────────────────────┤
-│ 2. ESCRITÓRIO / EMPRESA / PROFISSIONAL AUTÔNOMO             │
-│    Cliente que comprou. Admin do escritório: equipe,        │
-│    faturamento, assinatura, integrações.                    │
-│    Role: office_admin (ou owner solo)                       │
-├─────────────────────────────────────────────────────────────┤
-│ 3. USUÁRIO OPERACIONAL                                      │
-│    Advogado, perito, comercial, marketing. Só vê as         │
-│    ferramentas do seu perfil. Role: member + capabilities   │
-└─────────────────────────────────────────────────────────────┘
+B2B (dono do SaaS)  ──►  Clientes (escritórios/profissionais)  ──►  Usuários do escritório
+      super_admin              office_admin do tenant                  operadores
+      platform_admin
 ```
 
-Um profissional autônomo é `office_admin` **e** `member` com todas as capabilities — vê tudo, exceto a visão de Plataforma B2B.
+Além disso: conceder super_admin a `lcardoso@b2bconsulting.com.br`, remover a legenda de "menus ocultos" do sidebar, e adicionar um seletor "Ver como…" que deixa você pré-visualizar o sistema com os acessos de qualquer perfil.
 
-## Perfis profissionais e capabilities
+---
 
-Cada membro do escritório recebe um conjunto de capabilities que controla a visibilidade das ferramentas. Um mesmo usuário pode ter mais de uma:
+## 1. Modelo de dados (migração)
 
-| Capability            | Habilita                          |
-| --------------------- | --------------------------------- |
-| `cases`               | Painel, Assistências, Tarefas, Conversas, Agenda, Meus Documentos, Peças Jurídicas (todos têm por padrão) |
-| `expert_opinion`      | Parecer Técnico (peritos)         |
-| `commercial`          | Proposta Comercial                |
-| `marketing`           | Marketing, Publicações            |
-| `office_admin`        | Equipe, Faturamento, Integrações, Configurações do escritório |
-| `platform_admin`      | Painel B2B (clientes, assinaturas, métricas) |
+Nova capacidade e tabelas — nada é deletado, apenas somado.
 
-## Nova estrutura do sidebar
+**`app_capability` recebe `super_admin`.** Fica acima de `platform_admin` e habilita tudo (nova função `is_super_admin(uid)` + reuso de `has_capability`).
 
-```text
-PRINCIPAL                          (todos)
-  Painel
-  Assistências / Casos
-  Minhas Tarefas
-  Conversas
-  Agenda
-  Meus Documentos
-  Peças Jurídicas
-  Parecer Técnico                  (só expert_opinion) ← sobe para Principal
+**`customer_accounts`** — 1 linha por cliente da B2B (tenant). O "dono" é o profile que fez signup do escritório.
 
-PRODUÇÃO                           (aparece só se tiver alguma)
-  Proposta Comercial               (só commercial)
-  Publicações                      (só marketing)
-  Marketing                        (só marketing)
+- `id`, `owner_user_id` (FK `profiles.id`, único), `name`, `status` (`trial|active|suspended|canceled`), `plan` (`free|pro|enterprise`), `billing_email`, `mrr_cents`, `notes`, `created_at`, `updated_at`.
+- RLS: SELECT/UPDATE só para `super_admin`/`platform_admin`; o próprio dono lê a sua linha.
+- Trigger `AFTER INSERT ON auth.users` cria automaticamente um `customer_accounts` (status `trial`) para todo novo signup — assim todo escritório vira automaticamente um "cliente B2B".
 
-ESCRITÓRIO                         (só office_admin)
-  Equipe & Permissões
-  Faturamento & Assinatura
-  Integrações
-  Configurações
+**`platform_audit_log`** (opcional nesta fase, deixo pronto) — registra quando um super_admin altera plano/status/capacidade de outro usuário.
 
-PLATAFORMA B2B                     (só platform_admin — visão JurisMind)
-  Clientes
-  Assinaturas
-  Métricas
-```
+**Backfill + grant do super admin**
 
-Seções inteiras somem quando o usuário não tem nenhum item — sem headers vazios.
+- `INSERT` em `customer_accounts` para todos os profiles existentes.
+- `INSERT` em `user_capabilities` das capacidades `super_admin` + `platform_admin` para o `user_id` correspondente a `lcardoso@b2bconsulting.com.br` (lookup em `auth.users` dentro da migração via SECURITY DEFINER — é a única forma segura).
 
-## O que muda no backend
+---
 
-1. **Novo enum `app_capability`** com os valores da tabela acima.
-2. **Nova tabela `user_capabilities`** (`user_id`, `capability`), com RLS + GRANTs padrão; leitura via função `security definer` `has_capability(_user_id, _capability)`, análoga ao `has_role` já existente.
-3. **`app_role` ganha `platform_admin`** (mantém `admin`/`user` para compat). `admin` do escritório vira `office_admin` semanticamente via capability — o enum não precisa quebrar.
-4. **Server function `getMyCapabilities()`** (`requireSupabaseAuth`) retorna as capabilities do usuário logado + flags derivadas (`isPlatformAdmin`, `isOfficeAdmin`). Cache no `QueryClient` por sessão.
-5. **Tela de Equipe** ganha edição das capabilities por membro (checkboxes), visível só para `office_admin`.
-6. **Migration seed**: usuários com `app_role = 'admin'` recebem `office_admin` + todas as capabilities operacionais, para não perderem acesso.
+## 2. Backend (server functions em `src/lib/platform.functions.ts`)
 
-## O que muda no frontend
+Todas protegidas por `requireSupabaseAuth` + checagem de `super_admin` ou `platform_admin`:
 
-1. **`dashboard-shell.tsx`**: converter `navItems` em função pura `buildNav(capabilities)` que retorna as seções filtradas. Remover seções sem itens. Renderizar labels de seção só quando houver conteúdo.
-2. **Hook `useCapabilities()`** que consome `getMyCapabilities()` via `useSuspenseQuery`. `DashboardShell` já é `_authenticated`, então é seguro chamar no loader.
-3. **Guardas de rota** em `/proposal`, `/marketing`, `/monitoring`, `/drafter` (quando parecer técnico), `/integrations`, `/settings`: se faltar capability, redirect para `/dashboard` com toast "Sem permissão".
-4. **Novas rotas de Plataforma B2B** (esqueleto, só para `platform_admin`): `/platform/customers`, `/platform/subscriptions`, `/platform/metrics`. Conteúdo real fica para depois — nesta entrega, páginas placeholder com layout consistente.
-5. **Rota `/office/team`**: já existe tela de equipe; adicionar coluna/editor de capabilities.
+- `getPlatformKpis()` → clientes totais, novos (30d), usuários ativos (30d por `ai_chat_messages` + `messages`), MRR somado, breakdown por plano/status.
+- `listCustomerAccounts({ search, status, plan, limit, offset })` → join com profile do dono e contagem de usuários.
+- `getCustomerAccount(id)` → detalhes + lista de usuários do tenant (via `team_members` daquele `owner_user_id`) + capacidades de cada um.
+- `updateCustomerAccount(id, { plan, status, mrr_cents, billing_email, notes })`.
+- `listPlatformUsers({ search, capability, limit, offset })` → todos os usuários do sistema, com tenant + capacidades.
+- `grantCapability(user_id, capability)` / `revokeCapability(user_id, capability)` — só super_admin pode conceder `super_admin`/`platform_admin`.
+
+---
+
+## 3. Frontend — área Plataforma (super_admin/platform_admin)
+
+Novas rotas dentro de `src/routes/_authenticated/`:
+
+- `platform.index.tsx` — dashboard com KPIs reais (clientes, novos, usuários ativos, MRR, gráfico simples de signups por semana).
+- `platform.customers.tsx` — tabela de clientes (escritórios) com busca, filtro de status/plano, coluna "usuários", ações Ativar/Suspender.
+- `platform.customers.$id.tsx` — detalhe do cliente: dados do escritório, plano/status editáveis, usuários do tenant, faturamento (placeholder pronto para conectar Stripe/Chargebee depois).
+- `platform.users.tsx` — todos os usuários; filtrar por capacidade; conceder/revogar capacidades (super_admin/platform_admin só editável por super_admin).
+- `platform.team.tsx` — "Time B2B" — atalho para listar/adicionar quem é super_admin ou platform_admin (rosto humano da lista de usuários acima, para a operação B2B).
+- `platform.credentials.tsx` — recebe a tela hoje em `/settings/oauth` (credenciais Google/Outlook são do SaaS, não do tenant). O arquivo `settings.oauth.tsx` vira um redirect para `platform.credentials` e some do menu do escritório.
+
+O sidebar ganha uma seção **Plataforma JurisMind** já existente, expandida com esses 5 itens (só aparecem para quem tem `platform_admin` ou `super_admin`).
+
+---
+
+## 4. Seletor "Ver como…" (view switcher para super_admin)
+
+Novo item no sidebar (topo da seção Plataforma), disponível **só para super_admin**: um dropdown "Ver como…" com presets:
+
+- Super admin (padrão, tudo liberado)
+- Platform admin
+- Office admin (dono de escritório)
+- Advogado operador (só `cases`)
+- Perito (só `expert_opinion`)
+- Comercial (só `commercial`)
+- Marketing (só `marketing`)
+- Sem permissões (usuário recém convidado)
+
+Implementação: `useCapabilities()` passa a ler primeiro um override de `sessionStorage` (`viewAsCapabilities`). O override é puramente visual — só filtra o sidebar e telas condicionais no cliente; **não afeta RLS nem chamadas ao servidor** (que continuam autorizadas pelas capacidades reais do super_admin). Um badge fixo aparece no topo ("Visualizando como: Advogado — sair da simulação") para deixar claro que é um preview.
+
+---
+
+## 5. Ajustes no sidebar (`dashboard-shell.tsx`)
+
+- **Remover** o popover "N menus ocultos" e a lista de itens escondidos.
+- **Remover** os tooltips que expõem "Requer a permissão «X»" para o usuário final — mantemos apenas a descrição funcional do item. Os labels e permissões continuam centralizados em `src/lib/nav-registry.ts` e `capabilities.functions.ts`, só param de ser mostrados no UI para usuários comuns.
+- Super_admin continua vendo as descrições de permissão nos tooltips (útil para o dono do SaaS entender o que cada perfil vê) — mostrado apenas quando `is_super_admin` for verdadeiro.
+- Move `Configurações › Credenciais OAuth` para dentro de Plataforma.
+
+---
+
+## 6. Ordem de execução
+
+1. Migração (schema + backfill + grant do super_admin).
+2. `platform.functions.ts` + hook `useIsSuperAdmin`.
+3. `nav-registry` recebe as novas entradas; `dashboard-shell` limpa popover/tooltips e adiciona o seletor "Ver como…".
+4. Rotas `/platform/*` novas + redirect de `/settings/oauth`.
+5. Ajuste do hook `useCapabilities` para respeitar o override de simulação.
+
+---
 
 ## Detalhes técnicos
 
-- **Enum novo (SQL)**:
-  ```sql
-  create type public.app_capability as enum
-    ('cases','expert_opinion','commercial','marketing','office_admin','platform_admin');
-  ```
-- **Tabela**:
-  ```sql
-  create table public.user_capabilities (
-    user_id uuid references auth.users(id) on delete cascade not null,
-    capability public.app_capability not null,
-    granted_at timestamptz not null default now(),
-    primary key (user_id, capability)
-  );
-  grant select on public.user_capabilities to authenticated;
-  grant all on public.user_capabilities to service_role;
-  alter table public.user_capabilities enable row level security;
-  create policy "self read" on public.user_capabilities
-    for select to authenticated using (user_id = auth.uid());
-  create policy "office admin manage" on public.user_capabilities
-    for all to authenticated
-    using (public.has_capability(auth.uid(),'office_admin'))
-    with check (public.has_capability(auth.uid(),'office_admin'));
-  ```
-- **`has_capability`**: security definer idêntico ao `has_role`.
-- **`buildNav`** recebe `{ capabilities: Set<Capability>, labels, isLawyer }` e devolve `NavItem[]` já filtrado. Testável isoladamente.
-- Zero mudança em rotas existentes além das guardas; nenhum item é removido, só condicionado.
-
-## Fora do escopo desta entrega
-
-- UI real das telas de Plataforma B2B (clientes/assinaturas/métricas) — só esqueleto e roteamento.
-- Cobrança/Stripe do escritório — só o item de menu apontando para uma página de "em breve" se ainda não existir.
-- Multi-tenant real (isolamento por escritório em todas as tabelas) — mantém o modelo atual; capabilities já resolvem a visibilidade pedida agora.
+- **Tenant model**: por ora, tenant = `profiles` do usuário que criou a conta. Todos os `team_members` daquele `user_id` são "usuários do tenant". Não precisamos criar coluna `tenant_id` em cada tabela agora — o join por `owner_user_id` já funciona porque as RLS existentes já escopam por `user_id` do dono.
+- **Grant do super_admin na migração**: usar CTE `WITH u AS (SELECT id FROM auth.users WHERE email = 'lcardoso@b2bconsulting.com.br')` e `INSERT ... SELECT id, 'super_admin' FROM u ON CONFLICT DO NOTHING`. Mesmo bloco para `platform_admin`.
+- **Auto-provisionamento de customer_account**: trigger `AFTER INSERT ON auth.users` chamando `SECURITY DEFINER` que insere em `customer_accounts` com `owner_user_id = NEW.id`, `status='trial'`, `plan='free'`. Backfill idempotente para os profiles atuais.
+- **View switcher**: `useCapabilities` retorna `{ real, effective, simulating, setSimulation, clearSimulation }`. Componentes usam `effective` para UI; server functions ignoram e re-checam com `has_capability` real.
+- **Sem impersonation real**: não trocamos a sessão Supabase — evita risco de RLS e auditoria. Preview é só filtro de UI.
+- **Faturamento**: `mrr_cents` fica manual agora; deixo a coluna e a UI prontas para plugar Stripe/Chargebee depois via connector.

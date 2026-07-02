@@ -33,7 +33,11 @@ export type NavKey =
   | "integrations"
   | "settings"
   // Plataforma
-  | "platform";
+  | "platform"
+  | "platform-customers"
+  | "platform-users"
+  | "platform-credentials"
+  | "platform-audit";
 
 export type NavSectionKey = "principal" | "business" | "office" | "platform";
 
@@ -47,40 +51,40 @@ export type NavEntry = {
 export const NAV_SECTIONS: Record<NavSectionKey, NavEntry> = {
   principal: {
     base:
-      "Trabalho documental do dia-a-dia: painel, casos, tarefas, conversas, agenda, documentos e peças. Visível para todos os usuários do escritório.",
+      "Trabalho documental do dia-a-dia: painel, casos, tarefas, conversas, agenda, documentos e peças.",
   },
   business: {
     base:
-      "Área comercial e de marketing. Cada item exige uma permissão específica — nem todo operador do escritório precisa gerar propostas ou publicações.",
+      "Área comercial e de marketing do escritório.",
   },
   office: {
     base:
-      "Gestão do escritório: equipe, integrações, cobrança e configurações.",
+      "Gestão do escritório: equipe e configurações.",
     requires: "office_admin",
   },
   platform: {
     base:
-      "Visão B2B da JurisMind — gestão de clientes, assinaturas e uso da plataforma. Restrita à equipe interna da JurisMind.",
+      "Operação B2B da JurisMind — clientes, usuários, credenciais e métricas do SaaS.",
     requires: "platform_admin",
   },
 };
 
 export const NAV_ENTRIES: Record<NavKey, NavEntry> = {
   // Principal
-  dashboard: { base: "Visão geral. Disponível para todos os usuários autenticados." },
+  dashboard: { base: "Visão geral." },
   cases: {
-    base: "Gerencia casos, clientes e documentos vinculados.",
+    base: "Casos, clientes e documentos vinculados.",
     requires: "cases",
   },
-  "my-tasks": { base: "Suas tarefas pessoais. Disponível para todos." },
-  inbox: { base: "Conversas internas do escritório. Disponível para todos." },
-  calendar: { base: "Sua agenda pessoal e integrada (Google/Outlook)." },
+  "my-tasks": { base: "Suas tarefas pessoais." },
+  inbox: { base: "Conversas internas do escritório." },
+  calendar: { base: "Sua agenda integrada (Google/Outlook)." },
   "my-files": { base: "Seus documentos pessoais e enviados." },
   drafter: {
-    base: "Gerador de peças jurídicas com IA. Disponível para todos os operadores.",
+    base: "Gerador de peças jurídicas com IA.",
   },
   "expert-opinion": {
-    base: "Elaboração de pareceres técnicos. Aparece apenas para peritos.",
+    base: "Elaboração de pareceres técnicos.",
     requires: "expert_opinion",
   },
 
@@ -108,9 +112,25 @@ export const NAV_ENTRIES: Record<NavKey, NavEntry> = {
     requires: "office_admin",
   },
 
-  // Plataforma
+  // Plataforma B2B
   platform: {
-    base: "Painel B2B da JurisMind.",
+    base: "Painel B2B — KPIs, novos clientes e uso agregado.",
+    requires: "platform_admin",
+  },
+  "platform-customers": {
+    base: "Clientes do SaaS — escritórios e profissionais que compraram a plataforma.",
+    requires: "platform_admin",
+  },
+  "platform-users": {
+    base: "Todos os usuários do sistema, com escritório e permissões.",
+    requires: "platform_admin",
+  },
+  "platform-credentials": {
+    base: "Credenciais OAuth do SaaS (Google, Outlook) usadas por todos os clientes.",
+    requires: "super_admin",
+  },
+  "platform-audit": {
+    base: "Log de ações administrativas da B2B.",
     requires: "platform_admin",
   },
 };

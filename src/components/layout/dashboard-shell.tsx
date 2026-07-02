@@ -4,13 +4,10 @@ import { Button } from "@/components/ui/button";
 import { JurisMindMark } from "@/components/brand/jurismind-mark";
 import { useAuth } from "@/hooks/use-auth";
 import { useProfile } from "@/hooks/use-profile";
-import { useCapabilities } from "@/hooks/use-capabilities";
+import { useCapabilities, VIEW_AS_PRESETS } from "@/hooks/use-capabilities";
 import { labelsForPractice } from "@/lib/practice-labels";
 import type { PracticeType } from "@/lib/profile.functions";
-import {
-  CAPABILITY_LABELS,
-  type Capability,
-} from "@/lib/capabilities.functions";
+import type { Capability } from "@/lib/capabilities.functions";
 import {
   NAV_ENTRIES,
   NAV_SECTIONS,
@@ -48,8 +45,12 @@ import {
   Microscope,
   Globe2,
   Info,
-  Lock,
-  HelpCircle,
+  Users2,
+  Building2,
+  KeyRound,
+  ScrollText,
+  Eye,
+  ShieldCheck,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -71,9 +72,7 @@ type NavLabel = {
 };
 type NavItem = NavLabel | { type: "separator" } | NavLink;
 
-function buildNav(
-  practice: PracticeType | null | undefined,
-): NavItem[] {
+function buildNav(practice: PracticeType | null | undefined): NavItem[] {
   const labels = labelsForPractice(practice);
   const isLawyer = !practice || practice === "advogado";
 
@@ -135,23 +134,24 @@ function buildNav(
     // ─── PLATAFORMA B2B ───
     { type: "separator" },
     section("platform", "Plataforma JurisMind"),
-    link("platform", "/platform", "Visão B2B", Globe2, "startsWith"),
+    link("platform", "/platform", "Visão B2B", Globe2, "exact"),
+    link("platform-customers", "/platform/customers", "Clientes SaaS", Building2, "startsWith"),
+    link("platform-users", "/platform/users", "Usuários", Users2, "startsWith"),
+    link("platform-credentials", "/platform/credentials", "Credenciais SaaS", KeyRound, "startsWith"),
+    link("platform-audit", "/platform/audit", "Log de auditoria", ScrollText, "startsWith"),
   ];
 }
 
-// Filtra links por capacidade + limpa labels/separators órfãos, retornando
-// também os itens ocultos para exibir a legenda de “menus ocultos”.
+// Filtra links por capacidade e remove labels/separators órfãos.
+// Não expõe nada ao usuário sobre itens escondidos.
 function applyCapabilities(
   raw: NavItem[],
   has: (c: Capability) => boolean,
-): { items: NavItem[]; hidden: NavLink[] } {
-  const hidden: NavLink[] = [];
+): NavItem[] {
   const filtered: NavItem[] = raw.filter((item) => {
     if (item.type !== "link") return true;
     if (!item.requires) return true;
-    if (has(item.requires)) return true;
-    hidden.push(item);
-    return false;
+    return has(item.requires);
   });
 
   const cleaned: NavItem[] = [];
@@ -177,22 +177,71 @@ function applyCapabilities(
   }
   while (cleaned.length && cleaned[cleaned.length - 1].type === "separator") cleaned.pop();
 
-  return { items: cleaned, hidden };
+  return cleaned;
+}
+
+function ViewAsSwitcher() {
+  const { isSuperAdmin, simulation, activePreset, setSimulation } = useCapabilities();
+  if (!isSuperAdmin) return null;
+  const currentId = simulation ?? "super_admin";
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          className={cn(
+            "flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-xs transition",
+            activePreset
+              ? "bg-amber-500/15 text-amber-200 ring-1 ring-amber-400/40"
+              : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground",
+          )}
+        >
+          <Eye className="h-3.5 w-3.5 shrink-0" />
+          <span className="truncate">
+            {activePreset ? `Vendo como: ${activePreset.label}` : "Ver como…"}
+          </span>
+        </button>
+      </PopoverTrigger>
+      <PopoverContent side="right" align="start" className="w-72 p-2">
+        <div className="mb-2 flex items-center gap-1.5 px-2 pt-1 text-xs text-muted-foreground">
+          <ShieldCheck className="h-3.5 w-3.5" />
+          <span>Simulação visual — o servidor mantém sua permissão real.</span>
+        </div>
+        <ul className="space-y-0.5">
+          {VIEW_AS_PRESETS.map((p) => {
+            const active = currentId === p.id;
+            return (
+              <li key={p.id}>
+                <button
+                  type="button"
+                  onClick={() => setSimulation(p.id === "super_admin" ? null : p.id)}
+                  className={cn(
+                    "w-full rounded-md px-2.5 py-1.5 text-left text-xs transition",
+                    active ? "bg-primary/10 text-foreground" : "hover:bg-muted",
+                  )}
+                >
+                  <div className="font-medium">{p.label}</div>
+                  <div className="text-[11px] text-muted-foreground">{p.description}</div>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      </PopoverContent>
+    </Popover>
+  );
 }
 
 export function DashboardShell({ children }: { children: React.ReactNode }) {
   const { pathname } = useLocation();
   const { user, signOut } = useAuth();
   const { data: profile } = useProfile();
-  const { has } = useCapabilities();
+  const { has, isSuperAdmin, activePreset, clearSimulation } = useCapabilities();
   const raw = useMemo(
     () => buildNav((profile?.practice_type as PracticeType | undefined) ?? null),
     [profile?.practice_type],
   );
-  const { items: NAV, hidden: HIDDEN } = useMemo(
-    () => applyCapabilities(raw, has),
-    [raw, has],
-  );
+  const NAV = useMemo(() => applyCapabilities(raw, has), [raw, has]);
   const [collapsed, setCollapsed] = useState(false);
 
   useEffect(() => {
@@ -214,14 +263,31 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   return (
     <TooltipProvider delayDuration={200}>
       <div className="flex h-screen w-full overflow-hidden bg-background">
+        {/* Simulation banner */}
+        {activePreset && (
+          <div className="fixed inset-x-0 top-0 z-50 flex items-center justify-center gap-3 bg-amber-500 py-1 text-center text-xs font-medium text-black shadow">
+            <Eye className="h-3.5 w-3.5" />
+            <span>
+              Você está vendo o sistema como <strong>{activePreset.label}</strong>. As
+              autorizações do servidor continuam usando sua conta real.
+            </span>
+            <button
+              type="button"
+              className="rounded bg-black/10 px-2 py-0.5 hover:bg-black/20"
+              onClick={clearSimulation}
+            >
+              Sair da simulação
+            </button>
+          </div>
+        )}
         {/* Sidebar */}
         <aside
           className={cn(
             "relative hidden flex-col bg-sidebar text-sidebar-foreground transition-all duration-300 ease-in-out lg:flex",
-            collapsed ? "w-20" : "w-64"
+            collapsed ? "w-20" : "w-64",
+            activePreset && "mt-6",
           )}
         >
-          {/* Logo button (toggle) */}
           <button
             onClick={toggle}
             className="absolute top-16 -right-4 z-20 flex h-9 w-9 items-center justify-center rounded-full bg-sidebar text-sidebar-primary shadow-lg ring-1 ring-sidebar-border transition-transform hover:scale-105"
@@ -230,11 +296,10 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
             {collapsed ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
           </button>
 
-          {/* Header */}
           <div
             className={cn(
               "flex h-20 items-center border-b border-sidebar-border px-4",
-              collapsed && "justify-center px-2"
+              collapsed && "justify-center px-2",
             )}
           >
             <Link
@@ -251,7 +316,6 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
             </Link>
           </div>
 
-          {/* Nav */}
           <nav className="flex-1 space-y-1 overflow-y-auto overflow-x-hidden px-2 py-4">
             {NAV.map((item, idx) => {
               if (item.type === "separator") {
@@ -287,7 +351,6 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
               }
               const Icon = item.icon;
               const active = isActive(item.to, item.match);
-              const capLabel = item.requires ? CAPABILITY_LABELS[item.requires] : null;
               return (
                 <Tooltip key={item.to}>
                   <TooltipTrigger asChild>
@@ -298,7 +361,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                         active
                           ? "bg-sidebar-primary text-sidebar-primary-foreground"
                           : "text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground",
-                        collapsed && "justify-center px-2"
+                        collapsed && "justify-center px-2",
                       )}
                     >
                       <Icon className="h-4 w-4 shrink-0" />
@@ -312,70 +375,18 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                     <div className="space-y-1">
                       <div className="text-xs font-semibold">{item.label}</div>
                       <p className="text-xs text-muted-foreground">{item.description}</p>
-                      {capLabel && (
-                        <div className="flex items-center gap-1 pt-1 text-[11px] text-muted-foreground">
-                          <Lock className="h-3 w-3" />
-                          <span>Permissão: {capLabel}</span>
-                        </div>
-                      )}
                     </div>
                   </TooltipContent>
                 </Tooltip>
               );
             })}
-
-            {/* Legenda: menus ocultos por falta de permissão */}
-            {!collapsed && HIDDEN.length > 0 && (
-              <div className="mt-4 border-t border-sidebar-border/50 pt-3">
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <button
-                      type="button"
-                      className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-[11px] text-sidebar-foreground/60 transition hover:bg-sidebar-accent hover:text-sidebar-foreground"
-                    >
-                      <HelpCircle className="h-3.5 w-3.5 shrink-0" />
-                      <span className="truncate">
-                        {HIDDEN.length} {HIDDEN.length === 1 ? "menu oculto" : "menus ocultos"}
-                      </span>
-                    </button>
-                  </PopoverTrigger>
-                  <PopoverContent side="right" align="start" className="w-72">
-                    <div className="space-y-2 text-xs">
-                      <p className="font-semibold text-foreground">
-                        Menus ocultos por permissão
-                      </p>
-                      <p className="text-muted-foreground">
-                        Estes itens existem no sistema mas estão escondidos porque
-                        sua conta não tem a permissão necessária. Fale com o
-                        administrador do escritório para solicitar acesso.
-                      </p>
-                      <ul className="space-y-1.5 pt-1">
-                        {HIDDEN.map((h) => {
-                          const HIcon = h.icon;
-                          return (
-                            <li key={h.to} className="flex items-start gap-2">
-                              <HIcon className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                              <div className="min-w-0">
-                                <div className="font-medium text-foreground">{h.label}</div>
-                                <div className="text-[11px] text-muted-foreground">
-                                  Requer: {h.requires ? CAPABILITY_LABELS[h.requires] : "—"}
-                                </div>
-                              </div>
-                            </li>
-                          );
-                        })}
-                      </ul>
-                    </div>
-                  </PopoverContent>
-                </Popover>
-              </div>
-            )}
           </nav>
 
           {/* Footer */}
-          <div className="border-t border-sidebar-border p-3">
+          <div className="border-t border-sidebar-border p-3 space-y-2">
+            {isSuperAdmin && !collapsed && <ViewAsSwitcher />}
             {!collapsed && user && (
-              <div className="mb-3 flex items-center gap-2 px-2">
+              <div className="flex items-center gap-2 px-2">
                 <div className="flex h-8 w-8 items-center justify-center rounded-full bg-sidebar-accent text-xs font-semibold uppercase">
                   {user.email?.charAt(0) ?? "U"}
                 </div>
@@ -392,7 +403,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
               onClick={signOut}
               className={cn(
                 "text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground",
-                collapsed ? "h-9 w-9 mx-auto" : "w-full justify-start gap-2"
+                collapsed ? "h-9 w-9 mx-auto" : "w-full justify-start gap-2",
               )}
             >
               <LogOut className="h-4 w-4" />
@@ -402,8 +413,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
         </aside>
 
         {/* Main column */}
-        <div className="flex flex-1 flex-col min-w-0">
-          {/* Mobile header */}
+        <div className={cn("flex flex-1 flex-col min-w-0", activePreset && "mt-6")}>
           <header className="flex h-16 items-center justify-between border-b bg-card px-4 lg:hidden">
             <Link
               to="/dashboard"
@@ -421,7 +431,6 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
             </div>
           </header>
 
-          {/* Mobile nav strip */}
           <nav className="flex gap-1 overflow-x-auto border-b bg-card px-2 py-2 lg:hidden">
             {NAV.filter((i) => i.type === "link").map((item) => {
               if (item.type !== "link") return null;
@@ -434,7 +443,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                   title={item.description}
                   className={cn(
                     "flex shrink-0 items-center gap-2 rounded-md px-3 py-2 text-xs font-medium",
-                    active ? "bg-primary text-primary-foreground" : "text-muted-foreground"
+                    active ? "bg-primary text-primary-foreground" : "text-muted-foreground",
                   )}
                 >
                   <Icon className="h-4 w-4" />
@@ -444,7 +453,6 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
             })}
           </nav>
 
-          {/* Desktop topbar */}
           <header className="hidden h-16 items-center justify-end gap-3 border-b bg-card px-6 lg:flex">
             <NotificationBell />
             <div className="text-xs text-muted-foreground">{user?.email}</div>
