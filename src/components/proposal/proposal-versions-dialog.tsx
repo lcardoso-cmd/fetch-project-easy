@@ -120,6 +120,7 @@ export function ProposalVersionsDialog({
   const [dateFrom, setDateFrom] = useState<Date | undefined>();
   const [dateTo, setDateTo] = useState<Date | undefined>();
   const [origin, setOrigin] = useState<string>("all");
+  const [client, setClient] = useState<string>("all");
   const [pinnedOnly, setPinnedOnly] = useState(false);
   const [sortBy, setSortBy] = useState<"newest" | "oldest" | "label">("newest");
 
@@ -128,6 +129,7 @@ export function ProposalVersionsDialog({
     setDateFrom(undefined);
     setDateTo(undefined);
     setOrigin("all");
+    setClient("all");
     setPinnedOnly(false);
     setSortBy("newest");
   };
@@ -139,6 +141,19 @@ export function ProposalVersionsDialog({
     setDateTo(to);
   };
 
+  const uniqueClients = useMemo(() => {
+    const set = new Map<string, string>(); // key normalized -> display
+    for (const v of allVersions) {
+      const name = clientOf(v);
+      if (!name) continue;
+      const key = norm(name);
+      if (!set.has(key)) set.set(key, name);
+    }
+    return Array.from(set.entries())
+      .map(([key, name]) => ({ key, name }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [allVersions]);
+
   const filtered = useMemo(() => {
     const q = norm(search.trim());
     const fromMs = dateFrom ? dateFrom.setHours(0, 0, 0, 0) : null;
@@ -147,6 +162,7 @@ export function ProposalVersionsDialog({
     const list = allVersions.filter((v) => {
       if (pinnedOnly && !v.pinned) return false;
       if (origin !== "all" && v.origin !== origin) return false;
+      if (client !== "all" && norm(clientOf(v)) !== client) return false;
       const created = new Date(v.created_at).getTime();
       if (fromMs !== null && created < fromMs) return false;
       if (toMs !== null && created > toMs) return false;
@@ -166,10 +182,11 @@ export function ProposalVersionsDialog({
       return sortBy === "newest" ? db - da : da - db;
     });
     return list;
-  }, [allVersions, search, dateFrom, dateTo, origin, pinnedOnly, sortBy]);
+  }, [allVersions, search, dateFrom, dateTo, origin, client, pinnedOnly, sortBy]);
 
   const hasFilter =
-    !!search || !!dateFrom || !!dateTo || origin !== "all" || pinnedOnly;
+    !!search || !!dateFrom || !!dateTo || origin !== "all" || client !== "all" || pinnedOnly;
+
 
   // ---------- Seleção ----------
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -419,6 +436,23 @@ export function ProposalVersionsDialog({
                     <SelectItem value="manual">Manual</SelectItem>
                     <SelectItem value="auto-generate">Gerada</SelectItem>
                     <SelectItem value="auto-restore">Auto</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                <Select value={client} onValueChange={setClient} disabled={uniqueClients.length === 0}>
+                  <SelectTrigger
+                    className="h-8 w-auto max-w-[180px] gap-1 text-xs"
+                    title="Filtrar por cliente"
+                  >
+                    <SelectValue placeholder="Cliente" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos os clientes</SelectItem>
+                    {uniqueClients.map((c) => (
+                      <SelectItem key={c.key} value={c.key}>
+                        {c.name}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
 
