@@ -674,6 +674,7 @@ export function htmlToDocxChildren(html: string): Paragraph[] {
   let lastIndex = 0;
   let hasMatch = false;
   let hasEmittedContent = false; // controla pageBreakBefore em H1
+  let pendingPageBreak = false; // absorve quebras duplicadas (ex.: <hr> seguido de <h1>)
   // Rastreia se o LI está dentro de <ol> ou <ul>
   let inOrdered = false;
   const olOpen = /<ol[\s>]/gi;
@@ -692,6 +693,12 @@ export function htmlToDocxChildren(html: string): Paragraph[] {
     return depth > 0;
   }
 
+  function flushPendingBreak() {
+    if (pendingPageBreak) {
+      out.push(pageBreakParagraph());
+      pendingPageBreak = false;
+    }
+  }
   function pageBreakParagraph(): Paragraph {
     return new Paragraph({
       spacing: { before: 0, after: 0 },
@@ -716,6 +723,7 @@ export function htmlToDocxChildren(html: string): Paragraph[] {
       const between = normalized.slice(lastIndex, m.index);
       const stripped = between.replace(/<[^>]+>/g, "").trim();
       if (stripped) {
+        flushPendingBreak();
         out.push(
           new Paragraph({
             alignment: AlignmentType.JUSTIFIED,
@@ -729,7 +737,7 @@ export function htmlToDocxChildren(html: string): Paragraph[] {
     const full = m[0];
     // <hr /> como quebra de página / separador de seção
     if (/^<hr\b/i.test(full)) {
-      if (hasEmittedContent) out.push(pageBreakParagraph());
+      if (hasEmittedContent) pendingPageBreak = true;
       lastIndex = blockRegex.lastIndex;
       continue;
     }
@@ -743,19 +751,23 @@ export function htmlToDocxChildren(html: string): Paragraph[] {
 
     // Quebra de página antes deste bloco (via class ou style)
     const forceBreakBefore = hasClass(attrs, "page-break") || pageBreakBeforeStyle(attrs);
-    if (forceBreakBefore && hasEmittedContent) out.push(pageBreakParagraph());
+    if (forceBreakBefore && hasEmittedContent) pendingPageBreak = true;
 
     if (tag === "h1") {
+      // H1 já quebra sozinho — absorve pendingPageBreak sem duplicar.
+      const wantsBreak = hasEmittedContent || pendingPageBreak;
+      pendingPageBreak = false;
       out.push(
         new Paragraph({
           heading: HeadingLevel.HEADING_1,
           alignment: explicitAlign,
           keepNext: true,
-          pageBreakBefore: hasEmittedContent && !forceBreakBefore,
+          pageBreakBefore: wantsBreak,
           children: inlineToTextRuns(inner),
         }),
       );
     } else if (tag === "h2") {
+      flushPendingBreak();
       out.push(
         new Paragraph({
           heading: HeadingLevel.HEADING_2,
@@ -765,6 +777,7 @@ export function htmlToDocxChildren(html: string): Paragraph[] {
         }),
       );
     } else if (tag === "h3") {
+      flushPendingBreak();
       out.push(
         new Paragraph({
           heading: HeadingLevel.HEADING_3,
