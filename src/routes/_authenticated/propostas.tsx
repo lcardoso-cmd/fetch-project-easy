@@ -572,17 +572,36 @@ function ProposalPage() {
         </div>
         <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
           {saving ? (
-            <span className="inline-flex items-center gap-1.5">
+            <span
+              role="status"
+              aria-live="polite"
+              className="inline-flex items-center gap-1.5 rounded-full border border-sky-500/30 bg-sky-500/10 px-2 py-0.5 text-sky-700 dark:text-sky-300"
+            >
               <Loader2 className="h-3.5 w-3.5 animate-spin" /> Salvando na nuvem…
             </span>
+          ) : pending ? (
+            <span
+              role="status"
+              aria-live="polite"
+              className="inline-flex items-center gap-1.5 rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-amber-700 dark:text-amber-300"
+            >
+              <span className="relative flex h-2 w-2">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-500 opacity-75" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-amber-500" />
+              </span>
+              Alterações não salvas — autosave pendente
+            </span>
           ) : syncError ? (
-            <span className="inline-flex items-center gap-1.5 text-destructive">
+            <span
+              role="alert"
+              className="inline-flex items-center gap-1.5 rounded-full border border-destructive/30 bg-destructive/10 px-2 py-0.5 text-destructive"
+            >
               <CloudOff className="h-3.5 w-3.5" /> Falha ao sincronizar
             </span>
           ) : savedAt ? (
-            <span className="inline-flex items-center gap-1.5">
-              <Cloud className="h-3.5 w-3.5 text-emerald-600" />
-              <Check className="h-3.5 w-3.5 text-emerald-600" /> Rascunho salvo {formatSavedAt(savedAt)}
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-emerald-700 dark:text-emerald-300">
+              <Cloud className="h-3.5 w-3.5" />
+              <Check className="h-3.5 w-3.5" /> Rascunho salvo {formatSavedAt(savedAt)}
             </span>
           ) : (
             <span>Alterações são salvas automaticamente</span>
