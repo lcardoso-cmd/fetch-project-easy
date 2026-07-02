@@ -220,6 +220,83 @@ const MODEL_LABELS: Record<ModelTier, string> = {
   max: "Máximo",
 };
 
+function formatDurationMs(ms: number | null | undefined): string {
+  if (!ms || ms <= 0) return "";
+  const total = Math.round(ms / 1000);
+  const m = Math.floor(total / 60);
+  const s = total % 60;
+  return `${m}:${String(s).padStart(2, "0")}`;
+}
+
+function VoiceMessagePlayback({
+  messageId,
+  audioBlobUrl,
+  hasAudio,
+  durationMs,
+  getAudioUrl,
+}: {
+  messageId?: string;
+  audioBlobUrl?: string;
+  hasAudio: boolean;
+  durationMs: number | null;
+  getAudioUrl: (opts: { data: { message_id: string } }) => Promise<{ url: string }>;
+}) {
+  const [url, setUrl] = useState<string | null>(audioBlobUrl ?? null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const dur = formatDurationMs(durationMs);
+
+  const load = async () => {
+    if (url || !messageId) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await getAudioUrl({ data: { message_id: messageId } });
+      setUrl(res.url);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Falha ao carregar áudio.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (!hasAudio) {
+    return (
+      <div className="mb-2 flex items-center gap-1.5 text-[11px] opacity-80">
+        <Mic className="h-3 w-3" />
+        <span>Ditado por voz{dur ? ` · ${dur}` : ""}</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mb-2 flex flex-col gap-1.5">
+      <div className="flex items-center gap-1.5 text-[11px] opacity-80">
+        <Mic className="h-3 w-3" />
+        <span>Ditado por voz{dur ? ` · ${dur}` : ""}</span>
+      </div>
+      {url ? (
+        <audio
+          controls
+          src={url}
+          className="h-8 w-full max-w-[280px]"
+          preload="none"
+        />
+      ) : (
+        <button
+          type="button"
+          onClick={load}
+          disabled={loading}
+          className="inline-flex w-fit items-center gap-1 rounded-md bg-background/20 px-2 py-1 text-[11px] hover:bg-background/30 disabled:opacity-60"
+        >
+          {loading ? "Carregando…" : error ?? "Ouvir áudio"}
+        </button>
+      )}
+    </div>
+  );
+}
+
+
 export function JurisMindChat({
   caseId,
   caseInfo,
