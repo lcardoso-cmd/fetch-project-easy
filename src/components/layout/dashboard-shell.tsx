@@ -12,6 +12,13 @@ import {
   type Capability,
 } from "@/lib/capabilities.functions";
 import {
+  NAV_ENTRIES,
+  NAV_SECTIONS,
+  describeNav,
+  type NavKey,
+  type NavSectionKey,
+} from "@/lib/nav-registry";
+import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
