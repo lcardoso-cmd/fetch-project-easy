@@ -1883,12 +1883,15 @@ export function JurisMindChat({
                   <div className="flex items-center gap-2 rounded-full border bg-muted px-2.5 py-1 text-muted-foreground">
                     <Loader2 className="h-3 w-3 animate-spin" />
                     <span>
-                      {transcribing
-                        ? "Transcrevendo…"
-                        : "Transcrevendo em tempo real…"}
+                      {retryInfo
+                        ? `Reprocessando… (tentativa ${retryInfo.attempt}/${retryInfo.max})`
+                        : transcribing
+                          ? "Transcrevendo…"
+                          : "Transcrevendo em tempo real…"}
                     </span>
                   </div>
                 )}
+
                 {!recording && !transcribing && micError && (
                   <div
                     ref={micErrorRef}
