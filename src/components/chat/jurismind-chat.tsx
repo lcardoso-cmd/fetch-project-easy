@@ -1909,6 +1909,7 @@ export function JurisMindChat({
                         variant="secondary"
                         onClick={() => void unlockMicLabels()}
                         disabled={unlockingLabels}
+                        aria-busy={unlockingLabels}
                         className="h-7 w-full"
                       >
                         {unlockingLabels ? (
