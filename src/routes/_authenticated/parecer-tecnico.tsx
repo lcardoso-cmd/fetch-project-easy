@@ -59,12 +59,18 @@ function ExpertOpinionPage() {
           <Button asChild>
             <Link
               to="/contratar-b2b/solicitar"
-              search={{ service: "parecer-tecnico" }}
+              search={{
+                service: "parecer-tecnico",
+                title: "Parecer Técnico - contratação B2B",
+                description:
+                  "Necessito de parecer técnico elaborado pela B2B Consulting para instruir processo em que o escritório não dispõe de perito próprio.\n\nContexto do caso:\n- Natureza da demanda (cível, trabalhista, tributária, societária, regulatória): \n- Área do parecer (econômica, contábil, financeira, de engenharia, contratual): \n- Partes envolvidas: \n- Fase processual e prazo judicial (se houver): \n- Objeto/pergunta técnica a ser respondida: \n- Quesitos preliminares: \n- Documentos disponíveis (anexar abaixo): \n\nObservações adicionais: ",
+              }}
             >
               Contratar Parecer Técnico com a B2B
               <ArrowRight className="ml-2 h-4 w-4" />
             </Link>
           </Button>
+
         </CardContent>
       </Card>
 
