@@ -415,3 +415,68 @@ function SettingsPage() {
     </div>
   );
 }
+
+const EDITABLE_CAPS: Capability[] = [
+  "cases",
+  "expert_opinion",
+  "commercial",
+  "marketing",
+  "office_admin",
+];
+
+function MemberCapabilities({ userId }: { userId: string }) {
+  const qc = useQueryClient();
+  const listFn = useServerFn(listMemberCapabilities);
+  const setFn = useServerFn(setMemberCapabilities);
+  const { data: caps = [], isLoading } = useQuery({
+    queryKey: ["member-caps", userId],
+    queryFn: () => listFn({ data: { user_id: userId } }),
+  });
+
+  const mut = useMutation({
+    mutationFn: (next: Capability[]) =>
+      setFn({ data: { user_id: userId, capabilities: next } }),
+    onSuccess: () => {
+      toast.success("Permissões atualizadas");
+      qc.invalidateQueries({ queryKey: ["member-caps", userId] });
+    },
+    onError: (e: Error) => toast.error(e.message || "Falha ao salvar"),
+  });
+
+  function toggle(cap: Capability, checked: boolean) {
+    const set = new Set(caps);
+    if (checked) set.add(cap);
+    else set.delete(cap);
+    mut.mutate(Array.from(set));
+  }
+
+  if (isLoading) {
+    return <p className="text-xs text-muted-foreground pl-1">Carregando permissões…</p>;
+  }
+
+  return (
+    <div className="rounded-md border bg-muted/30 p-3">
+      <p className="mb-2 text-xs font-medium text-muted-foreground">
+        Permissões (o que aparece no menu)
+      </p>
+      <div className="grid gap-2 sm:grid-cols-2">
+        {EDITABLE_CAPS.map((cap) => {
+          const checked = caps.includes(cap);
+          return (
+            <label
+              key={cap}
+              className="flex items-center gap-2 text-xs cursor-pointer select-none"
+            >
+              <Checkbox
+                checked={checked}
+                disabled={mut.isPending}
+                onCheckedChange={(v) => toggle(cap, Boolean(v))}
+              />
+              <span>{CAPABILITY_LABELS[cap]}</span>
+            </label>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
