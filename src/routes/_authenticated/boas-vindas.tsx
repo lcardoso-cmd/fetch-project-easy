@@ -47,7 +47,7 @@ function OnboardingPage() {
   // Se já completou o onboarding, redireciona pro painel.
   useEffect(() => {
     if (profile?.onboarding_completed) {
-      navigate({ to: "/dashboard", replace: true });
+      navigate({ to: "/painel", replace: true });
     }
   }, [profile?.onboarding_completed, navigate]);
 
@@ -72,7 +72,7 @@ function OnboardingPage() {
     onSuccess: () => {
       toast.success("Perfil configurado");
       qc.invalidateQueries({ queryKey: ["profile"] });
-      navigate({ to: "/dashboard" });
+      navigate({ to: "/painel" });
     },
     onError: (e: Error) => toast.error(e.message || "Falha ao salvar"),
   });

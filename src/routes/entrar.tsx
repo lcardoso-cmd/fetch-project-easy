@@ -25,7 +25,7 @@ function AuthPage() {
   const [isLoading, setIsLoading] = useState(false);
 
   if (user) {
-    navigate({ to: "/dashboard", replace: true });
+    navigate({ to: "/painel", replace: true });
     return null;
   }
 
@@ -36,7 +36,7 @@ function AuthPage() {
     try {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
-      navigate({ to: "/dashboard", replace: true });
+      navigate({ to: "/painel", replace: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erro ao entrar");
     } finally {
@@ -55,7 +55,7 @@ function AuthPage() {
         options: { data: { full_name: fullName } },
       });
       if (error) throw error;
-      navigate({ to: "/dashboard", replace: true });
+      navigate({ to: "/painel", replace: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erro ao criar conta");
     } finally {

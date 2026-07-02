@@ -15,7 +15,7 @@ export const Route = createFileRoute("/_authenticated/plataforma/")({
         throw new Error("nope");
       }
     } catch {
-      throw redirect({ to: "/dashboard" });
+      throw redirect({ to: "/painel" });
     }
   },
   component: PlatformOverview,
@@ -105,10 +105,10 @@ function PlatformOverview() {
           <CardTitle className="text-lg">Acessos rápidos</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-2 sm:grid-cols-2">
-          <QuickLink to="/platform/customers" label="Gerir clientes SaaS" />
-          <QuickLink to="/platform/users" label="Gerir usuários da plataforma" />
-          <QuickLink to="/platform/credentials" label="Credenciais OAuth do SaaS" />
-          <QuickLink to="/platform/audit" label="Log de auditoria" />
+          <QuickLink to="/plataforma/clientes" label="Gerir clientes SaaS" />
+          <QuickLink to="/plataforma/usuarios" label="Gerir usuários da plataforma" />
+          <QuickLink to="/plataforma/credenciais" label="Credenciais OAuth do SaaS" />
+          <QuickLink to="/plataforma/auditoria" label="Log de auditoria" />
         </CardContent>
       </Card>
     </div>

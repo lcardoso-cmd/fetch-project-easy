@@ -201,7 +201,7 @@ function NotificationsPage() {
                 {selected.case_id && (
                   <Button asChild variant="outline" size="sm">
                     <Link
-                      to="/cases/$caseId"
+                      to="/assistencias/$caseId"
                       params={{ caseId: selected.case_id }}
                     >
                       <FolderOpen className="mr-2 h-4 w-4" />
@@ -211,12 +211,12 @@ function NotificationsPage() {
                 )}
                 {selected.kind === "mention" && (
                   <Button asChild variant="outline" size="sm">
-                    <Link to="/inbox">Ir para a conversa</Link>
+                    <Link to="/conversas">Ir para a conversa</Link>
                   </Button>
                 )}
                 {selected.kind === "task" && (
                   <Button asChild variant="outline" size="sm">
-                    <Link to="/my-tasks">Ver tarefas</Link>
+                    <Link to="/tarefas">Ver tarefas</Link>
                   </Button>
                 )}
                 {selected.kind === "mention" && !selected.read && (

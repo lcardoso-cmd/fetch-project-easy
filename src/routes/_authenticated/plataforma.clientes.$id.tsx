@@ -19,7 +19,7 @@ export const Route = createFileRoute("/_authenticated/plataforma/clientes/$id")(
       const caps = await getMyCapabilities();
       if (!caps.includes("platform_admin") && !caps.includes("super_admin")) throw new Error();
     } catch {
-      throw redirect({ to: "/dashboard" });
+      throw redirect({ to: "/painel" });
     }
   },
   component: CustomerDetail,
@@ -93,7 +93,7 @@ function CustomerDetail() {
     <div className="space-y-6">
       <div>
         <Link
-          to="/platform/customers"
+          to="/plataforma/clientes"
           className="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1"
         >
           <ArrowLeft className="h-3 w-3" /> Todos os clientes
@@ -180,7 +180,7 @@ function CustomerDetail() {
               />
             </div>
             <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => navigate({ to: "/platform/customers" })}>
+              <Button variant="outline" onClick={() => navigate({ to: "/plataforma/clientes" })}>
                 Cancelar
               </Button>
               <Button onClick={() => save.mutate()} disabled={save.isPending}>

@@ -193,7 +193,7 @@ function InboxPage() {
 
       {active?.kind === "case" && active.case_id && (
         <div className="text-xs text-muted-foreground">
-          <Link to="/cases/$caseId" params={{ caseId: active.case_id }} className="underline">
+          <Link to="/assistencias/$caseId" params={{ caseId: active.case_id }} className="underline">
             Abrir caso completo
           </Link>
         </div>

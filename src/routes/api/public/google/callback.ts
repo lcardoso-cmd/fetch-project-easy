@@ -13,7 +13,7 @@ export const Route = createFileRoute("/api/public/google/callback")({
 
         const origin = url.origin;
         const redirectBack = (status: "success" | "error", msg?: string, detail?: string) => {
-          const target = new URL("/calendar", origin);
+          const target = new URL("/agenda", origin);
           target.searchParams.set("google", status);
           if (msg) target.searchParams.set("msg", msg);
           if (detail) target.searchParams.set("detail", detail);

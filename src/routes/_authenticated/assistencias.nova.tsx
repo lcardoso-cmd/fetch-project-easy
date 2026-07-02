@@ -492,7 +492,7 @@ function NewCasePage() {
         try { localStorage.removeItem(REVIEW_STORAGE_KEY); } catch { /* noop */ }
       }
       toast.success("Caso criado");
-      navigate({ to: "/cases/$caseId", params: { caseId: newCase.id } });
+      navigate({ to: "/assistencias/$caseId", params: { caseId: newCase.id } });
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       toast.error(`Falha ao criar caso: ${msg}`);
@@ -568,7 +568,7 @@ function NewCasePage() {
     <div className="space-y-6 max-w-5xl">
       <div>
         <Button variant="ghost" size="sm" asChild className="mb-2 -ml-2">
-          <Link to="/cases">
+          <Link to="/assistencias">
             <ArrowLeft className="mr-1 h-4 w-4" /> Voltar
           </Link>
         </Button>
@@ -1029,7 +1029,7 @@ function NewCasePage() {
             {team.length === 0 ? (
               <p className="text-sm text-muted-foreground">
                 Nenhum membro cadastrado. Adicione abaixo ou gerencie em{" "}
-                <Link to="/settings" className="underline">Configurações</Link>.
+                <Link to="/configuracoes" className="underline">Configurações</Link>.
               </p>
             ) : (
               <div className="grid gap-2 sm:grid-cols-2">
@@ -1113,7 +1113,7 @@ function NewCasePage() {
           )}
           <div className="flex justify-end gap-2">
             <Button type="button" variant="ghost" asChild>
-              <Link to="/cases">Cancelar</Link>
+              <Link to="/assistencias">Cancelar</Link>
             </Button>
             <Button
               type="submit"

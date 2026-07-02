@@ -382,7 +382,7 @@ function SettingsPage() {
         </CardHeader>
         <CardContent>
           <Link
-            to="/settings/firm"
+            to="/configuracoes/escritorio"
             className="flex items-center justify-between rounded-lg border p-3 hover:bg-accent/50"
           >
             <span className="text-sm">Abrir identidade do escritório</span>
@@ -404,7 +404,7 @@ function SettingsPage() {
           </CardHeader>
           <CardContent>
             <Link
-              to="/settings/oauth"
+              to="/configuracoes/oauth"
               className="flex items-center justify-between rounded-lg border p-3 hover:bg-accent/50"
             >
               <span className="text-sm">Abrir configurações OAuth</span>

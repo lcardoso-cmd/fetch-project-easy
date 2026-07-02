@@ -69,11 +69,11 @@ function CasesPage() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={() => navigate({ to: "/cases/bulk" })}>
+          <Button variant="outline" onClick={() => navigate({ to: "/assistencias/lote" })}>
             <Upload className="mr-2 h-4 w-4" />
             Upload em lote
           </Button>
-          <Button onClick={() => navigate({ to: "/cases/new" })}>
+          <Button onClick={() => navigate({ to: "/assistencias/nova" })}>
             <Plus className="mr-2 h-4 w-4" />
             Novo
           </Button>
@@ -107,7 +107,7 @@ function CasesPage() {
               : "Nenhum resultado para este filtro."}
           </p>
           {cases.length === 0 && (
-            <Button className="mt-4" onClick={() => navigate({ to: "/cases/new" })}>
+            <Button className="mt-4" onClick={() => navigate({ to: "/assistencias/nova" })}>
               Criar primeiro
             </Button>
           )}
@@ -157,7 +157,7 @@ function CasesPage() {
                     </p>
                   )}
                   <Button variant="outline" className="w-full" asChild>
-                    <Link to="/cases/$caseId" params={{ caseId: caseItem.id }}>
+                    <Link to="/assistencias/$caseId" params={{ caseId: caseItem.id }}>
                       Abrir
                     </Link>
                   </Button>

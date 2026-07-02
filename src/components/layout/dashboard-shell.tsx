@@ -103,42 +103,42 @@ function buildNav(practice: PracticeType | null | undefined): NavItem[] {
   return [
     // ─── PRINCIPAL ───
     section("principal", "Principal"),
-    link("dashboard", "/dashboard", "Painel", Home, "exact"),
+    link("dashboard", "/painel", "Painel", Home, "exact"),
     link(
       "cases",
-      "/cases",
+      "/assistencias",
       isLawyer ? "Casos" : labels.entityPlural,
       FolderKanban,
       "startsWith",
     ),
-    link("my-tasks", "/my-tasks", "Minhas Tarefas", ClipboardCheck),
-    link("inbox", "/inbox", "Conversas", MessageSquare, "startsWith"),
-    link("calendar", "/calendar", "Agenda", CalendarDays),
-    link("my-files", "/my-files", "Meus Documentos", FileArchive),
-    link("drafter", "/drafter", isLawyer ? "Peças Jurídicas" : labels.outputLabel, Scale),
-    link("expert-opinion", "/expert-opinion", "Parecer Técnico", Microscope),
+    link("my-tasks", "/tarefas", "Minhas Tarefas", ClipboardCheck),
+    link("inbox", "/conversas", "Conversas", MessageSquare, "startsWith"),
+    link("calendar", "/agenda", "Agenda", CalendarDays),
+    link("my-files", "/documentos", "Meus Documentos", FileArchive),
+    link("drafter", "/pecas", isLawyer ? "Peças Jurídicas" : labels.outputLabel, Scale),
+    link("expert-opinion", "/parecer-tecnico", "Parecer Técnico", Microscope),
 
     // ─── NEGÓCIO ───
     { type: "separator" },
     section("business", "Negócio"),
-    link("proposal", "/proposal", "Proposta Comercial", Handshake),
-    link("monitoring", "/monitoring", "Publicações", FileSearch),
+    link("proposal", "/propostas", "Proposta Comercial", Handshake),
+    link("monitoring", "/publicacoes", "Publicações", FileSearch),
     link("marketing", "/marketing", "Marketing", Megaphone),
 
     // ─── ESCRITÓRIO ───
     { type: "separator" },
     section("office", "Escritório"),
-    link("integrations", "/integrations", "Integrações", Puzzle),
-    link("settings", "/settings", "Configurações", Settings2),
+    link("integrations", "/integracoes", "Integrações", Puzzle),
+    link("settings", "/configuracoes", "Configurações", Settings2),
 
     // ─── PLATAFORMA B2B ───
     { type: "separator" },
     section("platform", "Plataforma JurisMind"),
-    link("platform", "/platform", "Visão B2B", Globe2, "exact"),
-    link("platform-customers", "/platform/customers", "Clientes SaaS", Building2, "startsWith"),
-    link("platform-users", "/platform/users", "Usuários", Users2, "startsWith"),
-    link("platform-credentials", "/platform/credentials", "Credenciais SaaS", KeyRound, "startsWith"),
-    link("platform-audit", "/platform/audit", "Log de auditoria", ScrollText, "startsWith"),
+    link("platform", "/plataforma", "Visão B2B", Globe2, "exact"),
+    link("platform-customers", "/plataforma/clientes", "Clientes SaaS", Building2, "startsWith"),
+    link("platform-users", "/plataforma/usuarios", "Usuários", Users2, "startsWith"),
+    link("platform-credentials", "/plataforma/credenciais", "Credenciais SaaS", KeyRound, "startsWith"),
+    link("platform-audit", "/plataforma/auditoria", "Log de auditoria", ScrollText, "startsWith"),
   ];
 }
 
@@ -303,7 +303,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
             )}
           >
             <Link
-              to="/dashboard"
+              to="/painel"
               aria-label="Ir para o Dashboard"
               className="group flex items-center gap-3 overflow-hidden rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-sidebar"
             >
@@ -416,7 +416,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
         <div className={cn("flex flex-1 flex-col min-w-0", activePreset && "mt-6")}>
           <header className="flex h-16 items-center justify-between border-b bg-card px-4 lg:hidden">
             <Link
-              to="/dashboard"
+              to="/painel"
               aria-label="Ir para o Dashboard"
               className="group flex items-center gap-2 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             >

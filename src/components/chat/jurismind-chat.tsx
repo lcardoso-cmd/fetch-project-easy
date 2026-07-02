@@ -910,7 +910,7 @@ export function JurisMindChat({
             </Select>
             {!fullscreen && (
               <Button asChild variant="ghost" size="icon" title="Abrir em tela cheia">
-                <Link to="/cases/$caseId/chat" params={{ caseId }}>
+                <Link to="/assistencias/$caseId/chat" params={{ caseId }}>
                   <Maximize2 className="h-4 w-4" />
                 </Link>
               </Button>

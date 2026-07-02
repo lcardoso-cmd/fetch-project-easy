@@ -76,9 +76,9 @@ export function NotificationBell() {
       }
       queryClient.invalidateQueries({ queryKey: ["notifications"] });
       if (n.case_id) {
-        navigate({ to: "/cases/$caseId", params: { caseId: n.case_id } });
+        navigate({ to: "/assistencias/$caseId", params: { caseId: n.case_id } });
       } else {
-        navigate({ to: "/inbox" });
+        navigate({ to: "/conversas" });
       }
     } else {
       navigate({ to: "/tasks" });
@@ -179,7 +179,7 @@ export function NotificationBell() {
         </div>
         <div className="border-t px-3 py-2 text-center">
           <Link
-            to="/notifications"
+            to="/notificacoes"
             className="text-xs font-medium text-primary hover:underline"
           >
             Ver todas as notificações

@@ -18,7 +18,7 @@ export const Route = createFileRoute("/_authenticated/plataforma/clientes/")({
         throw new Error("no");
       }
     } catch {
-      throw redirect({ to: "/dashboard" });
+      throw redirect({ to: "/painel" });
     }
   },
   component: PlatformCustomers,
@@ -61,7 +61,7 @@ function PlatformCustomers() {
         <div>
           <div className="mb-1">
             <Link
-              to="/platform"
+              to="/plataforma"
               className="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1"
             >
               <ArrowLeft className="h-3 w-3" /> Plataforma
@@ -164,7 +164,7 @@ function PlatformCustomers() {
                       {new Date(r.created_at).toLocaleDateString("pt-BR")}
                     </td>
                     <td className="px-4 py-2 text-right">
-                      <Link to="/platform/customers/$id" params={{ id: r.id }}>
+                      <Link to="/plataforma/clientes/$id" params={{ id: r.id }}>
                         <Button variant="ghost" size="sm">
                           Abrir
                         </Button>

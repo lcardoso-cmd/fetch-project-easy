@@ -115,7 +115,7 @@ function CaseChatFullPage() {
     <div className="flex h-[calc(100svh-4.5rem)] min-h-0 flex-col">
       <div className="flex shrink-0 items-center gap-3 border-b bg-background/95 px-4 py-2 backdrop-blur">
         <Button variant="ghost" size="sm" asChild>
-          <Link to="/cases/$caseId" params={{ caseId }}>
+          <Link to="/assistencias/$caseId" params={{ caseId }}>
             <ArrowLeft className="mr-1 h-4 w-4" /> Voltar ao caso
           </Link>
         </Button>

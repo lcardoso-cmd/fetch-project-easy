@@ -153,7 +153,7 @@ function CaseDetailPage() {
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0 flex-1">
           <Button variant="ghost" size="sm" asChild className="mb-2 -ml-2">
-            <Link to="/cases">
+            <Link to="/assistencias">
               <ArrowLeft className="mr-1 h-4 w-4" /> Voltar
             </Link>
           </Button>
@@ -383,7 +383,7 @@ function CaseDetailPage() {
               <CalendarClock className="h-4 w-4" /> Prazos e eventos
             </CardTitle>
             <Button size="sm" variant="ghost" asChild>
-              <Link to="/calendar">Ver agenda</Link>
+              <Link to="/agenda">Ver agenda</Link>
             </Button>
           </CardHeader>
           <CardContent>

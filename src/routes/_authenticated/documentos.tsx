@@ -88,7 +88,7 @@ function MyFilesPage() {
                     <p className="font-medium truncate">{d.filename}</p>
                     <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-2 flex-wrap">
                       <Link
-                        to="/cases/$caseId"
+                        to="/assistencias/$caseId"
                         params={{ caseId: d.case_id }}
                         className="underline"
                       >

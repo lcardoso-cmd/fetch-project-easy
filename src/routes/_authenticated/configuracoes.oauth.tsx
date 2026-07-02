@@ -69,7 +69,7 @@ function OAuthSettingsPage() {
   if (!isAdmin) {
     return (
       <div className="max-w-2xl space-y-4">
-        <Link to="/settings" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
+        <Link to="/configuracoes" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
           <ArrowLeft className="h-3.5 w-3.5" /> Voltar a Configurações
         </Link>
         <Alert variant="destructive">
@@ -85,7 +85,7 @@ function OAuthSettingsPage() {
   return (
     <div className="max-w-3xl space-y-6">
       <div>
-        <Link to="/settings" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
+        <Link to="/configuracoes" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
           <ArrowLeft className="h-3.5 w-3.5" /> Voltar a Configurações
         </Link>
         <h1 className="mt-2 text-3xl font-bold font-heading tracking-tight">Credenciais OAuth</h1>

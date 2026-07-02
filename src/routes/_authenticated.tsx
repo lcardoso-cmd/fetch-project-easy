@@ -16,7 +16,7 @@ function AuthenticatedLayout() {
 
   useEffect(() => {
     if (!isLoading && !user) {
-      navigate({ to: "/auth", replace: true });
+      navigate({ to: "/entrar", replace: true });
     }
   }, [isLoading, user, navigate]);
 
@@ -34,12 +34,12 @@ function AuthenticatedLayout() {
 function Gate({ path }: { path: string }) {
   const { data: profile, isLoading } = useProfile();
   const navigate = useNavigate();
-  const isOnboarding = path.startsWith("/onboarding");
+  const isOnboarding = path.startsWith("/boas-vindas");
 
   useEffect(() => {
     if (isLoading || !profile) return;
     if (!profile.onboarding_completed && !isOnboarding) {
-      navigate({ to: "/onboarding", replace: true });
+      navigate({ to: "/boas-vindas", replace: true });
     }
   }, [profile, isLoading, isOnboarding, navigate]);
 

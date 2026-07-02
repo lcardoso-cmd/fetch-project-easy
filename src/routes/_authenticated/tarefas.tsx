@@ -194,7 +194,7 @@ function MyTasksPage() {
                               <TableCell className="font-medium">
                                 {group.caseInfo ? (
                                   <Link
-                                    to="/cases/$caseId"
+                                    to="/assistencias/$caseId"
                                     params={{ caseId: group.caseInfo.id }}
                                     className="text-primary hover:underline"
                                   >

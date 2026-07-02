@@ -23,7 +23,7 @@ export const Route = createFileRoute("/_authenticated/parecer-tecnico")({
     try {
       await assertExpert();
     } catch {
-      throw redirect({ to: "/dashboard" });
+      throw redirect({ to: "/painel" });
     }
   },
   component: ExpertOpinionPage,
@@ -54,7 +54,7 @@ function ExpertOpinionPage() {
         <CardContent className="text-sm text-muted-foreground">
           <p>
             Enquanto isso, você pode criar rascunhos em{" "}
-            <Link to="/drafter" className="text-primary underline">
+            <Link to="/pecas" className="text-primary underline">
               Peças Jurídicas
             </Link>{" "}
             e exportar com o mesmo padrão.

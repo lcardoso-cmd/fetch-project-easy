@@ -225,7 +225,7 @@ function BulkUploadPage() {
     <div className="space-y-6">
       <div className="flex items-center gap-3">
         <Button variant="ghost" size="icon" asChild>
-          <Link to="/cases">
+          <Link to="/assistencias">
             <ArrowLeft className="h-4 w-4" />
           </Link>
         </Button>
@@ -333,7 +333,7 @@ function BulkUploadPage() {
             </Button>
             <div className="flex gap-2">
               {phase === "done" && (
-                <Button variant="outline" onClick={() => navigate({ to: "/cases" })}>
+                <Button variant="outline" onClick={() => navigate({ to: "/assistencias" })}>
                   Ver todos os casos
                 </Button>
               )}

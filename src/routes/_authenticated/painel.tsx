@@ -92,7 +92,7 @@ function DashboardPage() {
                 <p className="mt-3 font-medium">Nenhum caso ainda</p>
                 <p className="text-sm text-muted-foreground">Comece criando seu primeiro caso.</p>
                 <Button asChild className="mt-4">
-                  <Link to="/cases">Ir para Casos</Link>
+                  <Link to="/assistencias">Ir para Casos</Link>
                 </Button>
               </div>
             ) : (
@@ -127,7 +127,7 @@ function DashboardPage() {
           </CardHeader>
           <CardContent>
             <Button asChild className="w-full">
-              <Link to="/chat">Abrir assistente</Link>
+              <Link to="/assistente">Abrir assistente</Link>
             </Button>
           </CardContent>
         </Card>

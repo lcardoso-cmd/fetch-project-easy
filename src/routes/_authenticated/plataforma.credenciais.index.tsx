@@ -6,7 +6,7 @@ import { createFileRoute, redirect } from "@tanstack/react-router";
 // única fonte de UI e evitando duplicação.
 export const Route = createFileRoute("/_authenticated/plataforma/credenciais/")({
   beforeLoad: () => {
-    throw redirect({ to: "/settings/oauth" });
+    throw redirect({ to: "/configuracoes/oauth" });
   },
   component: () => null,
 });

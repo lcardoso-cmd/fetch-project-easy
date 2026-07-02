@@ -87,7 +87,7 @@ function IntegrationsPage() {
     if (search.google || search.outlook) {
       qc.invalidateQueries({ queryKey: ["google-connection"] });
       qc.invalidateQueries({ queryKey: ["outlook-connection"] });
-      window.history.replaceState({}, "", "/integrations");
+      window.history.replaceState({}, "", "/integracoes");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search.google, search.outlook]);

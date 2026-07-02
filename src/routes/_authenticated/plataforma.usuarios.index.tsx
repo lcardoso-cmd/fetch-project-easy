@@ -26,7 +26,7 @@ export const Route = createFileRoute("/_authenticated/plataforma/usuarios/")({
       const caps = await getMyCapabilities();
       if (!caps.includes("platform_admin") && !caps.includes("super_admin")) throw new Error();
     } catch {
-      throw redirect({ to: "/dashboard" });
+      throw redirect({ to: "/painel" });
     }
   },
   component: PlatformUsers,
@@ -86,7 +86,7 @@ function PlatformUsers() {
     <div className="space-y-6">
       <div>
         <Link
-          to="/platform"
+          to="/plataforma"
           className="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1"
         >
           <ArrowLeft className="h-3 w-3" /> Plataforma

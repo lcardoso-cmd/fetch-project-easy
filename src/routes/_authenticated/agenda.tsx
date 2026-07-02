@@ -125,7 +125,7 @@ function CalendarPage() {
       qc.invalidateQueries({ queryKey: ["outlook-connection"] });
       // clear params but keep the user on /calendar
       navigate({
-        to: "/calendar",
+        to: "/agenda",
         search: {},
         replace: true,
       });
@@ -137,7 +137,7 @@ function CalendarPage() {
 
   const dismissOAuthBanner = () => {
     setDismissedOAuth(true);
-    navigate({ to: "/calendar", search: {}, replace: true });
+    navigate({ to: "/agenda", search: {}, replace: true });
   };
 
 
@@ -998,7 +998,7 @@ function CalendarPage() {
                         {ev.case_id && caseTitle(ev.case_id) && (
                           <>
                             {" · "}
-                            <Link to="/cases/$caseId" params={{ caseId: ev.case_id }} className="underline">
+                            <Link to="/assistencias/$caseId" params={{ caseId: ev.case_id }} className="underline">
                               {caseTitle(ev.case_id)}
                             </Link>
                           </>

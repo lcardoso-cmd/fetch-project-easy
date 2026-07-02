@@ -39,7 +39,7 @@ function InvitePage() {
       await acceptFn({ data: { token } });
       sessionStorage.removeItem("pending_invite_token");
       toast.success("Convite aceito! Bem-vindo à equipe.");
-      navigate({ to: "/dashboard" });
+      navigate({ to: "/painel" });
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Falha ao aceitar");
     } finally {
@@ -66,7 +66,7 @@ function InvitePage() {
           ) : inv.status === "accepted" ? (
             <p className="text-sm">
               Este convite já foi aceito.{" "}
-              <button onClick={() => navigate({ to: "/dashboard" })} className="underline">
+              <button onClick={() => navigate({ to: "/painel" })} className="underline">
                 Ir ao painel
               </button>
               .
@@ -96,7 +96,7 @@ function InvitePage() {
                     Faça login (ou crie sua conta) com o e-mail <strong>{inv.email}</strong> para
                     aceitar.
                   </p>
-                  <Button className="w-full" onClick={() => navigate({ to: "/auth" })}>
+                  <Button className="w-full" onClick={() => navigate({ to: "/entrar" })}>
                     Entrar / criar conta
                   </Button>
                 </div>
