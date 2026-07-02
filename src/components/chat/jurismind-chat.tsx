@@ -80,11 +80,16 @@ interface ToolStep {
   result_json: string;
 }
 interface Msg {
+  id?: string;
   role: "user" | "assistant";
   content: string;
   images?: string[];
   citations?: Citation[];
   steps?: ToolStep[];
+  input_kind?: "text" | "voice";
+  audio_path?: string | null;
+  audio_duration_ms?: number | null;
+  audio_blob_url?: string; // local playback for freshly sent audio
 }
 
 interface PartyRef {
