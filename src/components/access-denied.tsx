@@ -1,7 +1,9 @@
+import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { ShieldAlert, ArrowLeft, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CAPABILITY_LABELS, type Capability } from "@/lib/capabilities.functions";
+import { RequestAccessDialog } from "@/components/request-access-dialog";
 
 type Props = {
   requires?: Capability | null;
@@ -19,6 +21,7 @@ export function AccessDenied({ requires, attemptedPath }: Props) {
   const isPlatformScope =
     requires === "platform_admin" || requires === "super_admin";
   const capLabel = requires ? CAPABILITY_LABELS[requires] : null;
+  const [requestOpen, setRequestOpen] = useState(false);
 
   return (
     <div className="mx-auto max-w-xl py-10">
@@ -75,15 +78,22 @@ export function AccessDenied({ requires, attemptedPath }: Props) {
             </Link>
           </Button>
           {!isPlatformScope ? (
-            <Button asChild variant="outline">
-              <a href="mailto:?subject=Solicitação de acesso no JurisMind&body=Olá, preciso de acesso à área bloqueada no JurisMind. Poderia liberar a permissão correspondente em Configurações → Equipe e permissões?">
-                <Mail className="mr-2 h-4 w-4" />
-                Solicitar por e-mail
-              </a>
+            <Button variant="outline" onClick={() => setRequestOpen(true)}>
+              <Mail className="mr-2 h-4 w-4" />
+              Solicitar por e-mail
             </Button>
           ) : null}
         </div>
       </div>
+
+      {!isPlatformScope ? (
+        <RequestAccessDialog
+          open={requestOpen}
+          onOpenChange={setRequestOpen}
+          requires={requires}
+          attemptedPath={attemptedPath}
+        />
+      ) : null}
     </div>
   );
 }
