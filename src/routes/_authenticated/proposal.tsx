@@ -240,7 +240,7 @@ function ProposalPage() {
       <div>
         <h1 className="text-3xl font-bold font-heading tracking-tight">Proposta Comercial</h1>
         <p className="mt-1 text-muted-foreground">
-          Escolha um caso existente para preencher os dados do cliente automaticamente. Todos os campos são opcionais.
+          Escolha um caso existente para preencher os dados do cliente automaticamente. Campos marcados com <span className="text-destructive">*</span> são obrigatórios.
         </p>
       </div>
 
@@ -250,7 +250,7 @@ function ProposalPage() {
             <CardTitle className="font-heading flex items-center gap-2">
               <Handshake className="h-5 w-5" /> Dados da proposta
             </CardTitle>
-            <CardDescription>Nenhum campo é obrigatório.</CardDescription>
+            <CardDescription>Campos com <span className="text-destructive">*</span> são obrigatórios.</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={submit} className="space-y-5">
