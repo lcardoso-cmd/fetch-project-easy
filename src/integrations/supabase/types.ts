@@ -235,30 +235,36 @@ export type Database = {
           case_id: string
           chunk_index: number
           content: string
+          content_tsv: unknown
           created_at: string
           document_id: string
           embedding: string | null
           id: string
+          source_kind: string
           user_id: string
         }
         Insert: {
           case_id: string
           chunk_index: number
           content: string
+          content_tsv?: unknown
           created_at?: string
           document_id: string
           embedding?: string | null
           id?: string
+          source_kind?: string
           user_id: string
         }
         Update: {
           case_id?: string
           chunk_index?: number
           content?: string
+          content_tsv?: unknown
           created_at?: string
           document_id?: string
           embedding?: string | null
           id?: string
+          source_kind?: string
           user_id?: string
         }
         Relationships: [
@@ -858,6 +864,27 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      hybrid_search_chunks: {
+        Args: {
+          filter_case_id?: string
+          filter_doc_ids?: string[]
+          filter_user_id: string
+          match_count?: number
+          query_embedding: string
+          query_text: string
+          rrf_k?: number
+        }
+        Returns: {
+          case_id: string
+          content: string
+          document_id: string
+          fts_rank: number
+          id: string
+          score: number
+          source_kind: string
+          vector_similarity: number
+        }[]
       }
       is_conversation_participant: {
         Args: { _conversation_id: string; _user_id: string }
