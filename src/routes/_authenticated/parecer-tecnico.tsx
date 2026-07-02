@@ -19,7 +19,9 @@ import {
   MessageSquare,
   FileText,
   CircleDot,
+  Inbox,
 } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 import { createServerFn, useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
