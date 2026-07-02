@@ -98,6 +98,7 @@ function ProposalPage() {
   const [loading, setLoading] = useState(false);
   const [output, setOutput] = useState("");
   const [form, setForm] = useState<FormState>(EMPTY);
+  const [errors, setErrors] = useState<FieldErrors>({});
 
   // Autofill escritório/advogado a partir do profile — só quando ainda vazio.
   useEffect(() => {
