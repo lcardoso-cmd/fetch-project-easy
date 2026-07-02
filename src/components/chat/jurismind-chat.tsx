@@ -895,6 +895,22 @@ export function JurisMindChat({
               >
                 <ImagePlus className="h-4 w-4" />
               </Button>
+              <Button
+                type="button"
+                size="icon"
+                variant={recording ? "destructive" : "outline"}
+                onClick={() => (recording ? stopRecording() : void startRecording())}
+                disabled={busy || transcribing}
+                title={recording ? "Parar gravação" : "Ditar mensagem"}
+                className="h-10 w-10 shrink-0"
+              >
+                {transcribing ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : recording ? (
+                  <Square className="h-4 w-4" />
+                ) : (
+                  <Mic className="h-4 w-4" />
+                )}
               <Textarea
                 ref={inputRef}
                 value={input}
