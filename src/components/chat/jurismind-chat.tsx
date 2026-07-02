@@ -39,11 +39,15 @@ import {
   Loader2,
   Maximize2,
   Mic,
+  RefreshCw,
   Search,
   Send,
+  Settings2,
   Square,
   X,
 } from "lucide-react";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
 import {
   DropdownMenu,
   DropdownMenuContent,
