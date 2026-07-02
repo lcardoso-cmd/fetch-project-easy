@@ -175,7 +175,11 @@ export function RichTextEditor({ html, onChange, minHeight = 360, contentClassNa
         suppressContentEditableWarning
         onInput={emit}
         onPaste={handlePaste}
-        className="prose prose-sm max-w-none p-4 font-serif leading-relaxed text-foreground focus:outline-none"
+        className={
+          contentClassName ??
+          "prose prose-sm max-w-none p-4 font-serif leading-relaxed text-foreground focus:outline-none"
+        }
+
         style={{ minHeight }}
       />
     </div>
