@@ -16,8 +16,8 @@ export interface AiMessage {
   role: "user" | "assistant";
   content: string;
   images: string[] | null;
-  tool_steps: unknown;
-  citations: unknown;
+  tool_steps: unknown[] | null;
+  citations: unknown[] | null;
   model_tier: string | null;
   created_at: string;
 }

@@ -29,6 +29,7 @@ import { Route as AuthenticatedChatRouteImport } from './routes/_authenticated/c
 import { Route as AuthenticatedCasesRouteImport } from './routes/_authenticated/cases'
 import { Route as AuthenticatedCalendarRouteImport } from './routes/_authenticated/calendar'
 import { Route as AuthenticatedCasesIndexRouteImport } from './routes/_authenticated/cases.index'
+import { Route as ApiToolsTranscribeRouteImport } from './routes/api/tools/transcribe'
 import { Route as ApiToolsTableRouteImport } from './routes/api/tools/table'
 import { Route as ApiToolsPresentationRouteImport } from './routes/api/tools/presentation'
 import { Route as ApiToolsPetitionRouteImport } from './routes/api/tools/petition'
@@ -142,6 +143,11 @@ const AuthenticatedCasesIndexRoute = AuthenticatedCasesIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AuthenticatedCasesRoute,
 } as any)
+const ApiToolsTranscribeRoute = ApiToolsTranscribeRouteImport.update({
+  id: '/api/tools/transcribe',
+  path: '/api/tools/transcribe',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiToolsTableRoute = ApiToolsTableRouteImport.update({
   id: '/api/tools/table',
   path: '/api/tools/table',
@@ -229,6 +235,7 @@ export interface FileRoutesByFullPath {
   '/api/tools/petition': typeof ApiToolsPetitionRoute
   '/api/tools/presentation': typeof ApiToolsPresentationRoute
   '/api/tools/table': typeof ApiToolsTableRoute
+  '/api/tools/transcribe': typeof ApiToolsTranscribeRoute
   '/cases/': typeof AuthenticatedCasesIndexRoute
   '/cases/$caseId/chat': typeof AuthenticatedCasesCaseIdChatRoute
   '/api/public/google/callback': typeof ApiPublicGoogleCallbackRoute
@@ -260,6 +267,7 @@ export interface FileRoutesByTo {
   '/api/tools/petition': typeof ApiToolsPetitionRoute
   '/api/tools/presentation': typeof ApiToolsPresentationRoute
   '/api/tools/table': typeof ApiToolsTableRoute
+  '/api/tools/transcribe': typeof ApiToolsTranscribeRoute
   '/cases': typeof AuthenticatedCasesIndexRoute
   '/cases/$caseId/chat': typeof AuthenticatedCasesCaseIdChatRoute
   '/api/public/google/callback': typeof ApiPublicGoogleCallbackRoute
@@ -294,6 +302,7 @@ export interface FileRoutesById {
   '/api/tools/petition': typeof ApiToolsPetitionRoute
   '/api/tools/presentation': typeof ApiToolsPresentationRoute
   '/api/tools/table': typeof ApiToolsTableRoute
+  '/api/tools/transcribe': typeof ApiToolsTranscribeRoute
   '/_authenticated/cases/': typeof AuthenticatedCasesIndexRoute
   '/_authenticated/cases/$caseId/chat': typeof AuthenticatedCasesCaseIdChatRoute
   '/api/public/google/callback': typeof ApiPublicGoogleCallbackRoute
@@ -328,6 +337,7 @@ export interface FileRouteTypes {
     | '/api/tools/petition'
     | '/api/tools/presentation'
     | '/api/tools/table'
+    | '/api/tools/transcribe'
     | '/cases/'
     | '/cases/$caseId/chat'
     | '/api/public/google/callback'
@@ -359,6 +369,7 @@ export interface FileRouteTypes {
     | '/api/tools/petition'
     | '/api/tools/presentation'
     | '/api/tools/table'
+    | '/api/tools/transcribe'
     | '/cases'
     | '/cases/$caseId/chat'
     | '/api/public/google/callback'
@@ -392,6 +403,7 @@ export interface FileRouteTypes {
     | '/api/tools/petition'
     | '/api/tools/presentation'
     | '/api/tools/table'
+    | '/api/tools/transcribe'
     | '/_authenticated/cases/'
     | '/_authenticated/cases/$caseId/chat'
     | '/api/public/google/callback'
@@ -407,6 +419,7 @@ export interface RootRouteChildren {
   ApiToolsPetitionRoute: typeof ApiToolsPetitionRoute
   ApiToolsPresentationRoute: typeof ApiToolsPresentationRoute
   ApiToolsTableRoute: typeof ApiToolsTableRoute
+  ApiToolsTranscribeRoute: typeof ApiToolsTranscribeRoute
   ApiPublicGoogleCallbackRoute: typeof ApiPublicGoogleCallbackRoute
   ApiPublicOutlookCallbackRoute: typeof ApiPublicOutlookCallbackRoute
 }
@@ -552,6 +565,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/cases/'
       preLoaderRoute: typeof AuthenticatedCasesIndexRouteImport
       parentRoute: typeof AuthenticatedCasesRoute
+    }
+    '/api/tools/transcribe': {
+      id: '/api/tools/transcribe'
+      path: '/api/tools/transcribe'
+      fullPath: '/api/tools/transcribe'
+      preLoaderRoute: typeof ApiToolsTranscribeRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/api/tools/table': {
       id: '/api/tools/table'
@@ -726,6 +746,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiToolsPetitionRoute: ApiToolsPetitionRoute,
   ApiToolsPresentationRoute: ApiToolsPresentationRoute,
   ApiToolsTableRoute: ApiToolsTableRoute,
+  ApiToolsTranscribeRoute: ApiToolsTranscribeRoute,
   ApiPublicGoogleCallbackRoute: ApiPublicGoogleCallbackRoute,
   ApiPublicOutlookCallbackRoute: ApiPublicOutlookCallbackRoute,
 }
