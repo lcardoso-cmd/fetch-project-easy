@@ -10,7 +10,15 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable";
 import { useNavigate } from "@tanstack/react-router";
-import { ArrowLeft, Mail, Lock, User, LogIn, UserPlus, MailCheck } from "lucide-react";
+import { ArrowLeft, Mail, Lock, User, LogIn, UserPlus, MailCheck, KeyRound } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -67,6 +75,30 @@ function AuthPage() {
   const [pendingEmail, setPendingEmail] = useState<string | null>(null);
   const [resendCooldown, setResendCooldown] = useState(0);
   const [isResending, setIsResending] = useState(false);
+  const [forgotOpen, setForgotOpen] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState("");
+  const [isSendingReset, setIsSendingReset] = useState(false);
+
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!forgotEmail) return;
+    setIsSendingReset(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(forgotEmail, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      if (error) throw error;
+      toast.success("Email enviado", {
+        description: `Se houver conta para ${forgotEmail}, você receberá o link em instantes.`,
+      });
+      setForgotOpen(false);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Falha ao enviar email";
+      toast.error("Não foi possível enviar", { description: message });
+    } finally {
+      setIsSendingReset(false);
+    }
+  };
 
   // Timer para o cooldown do botão de reenviar confirmação.
   useEffect(() => {
@@ -298,7 +330,19 @@ function AuthPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <FieldLabel htmlFor="password" icon={Lock}>Senha</FieldLabel>
+                  <div className="flex items-center justify-between">
+                    <FieldLabel htmlFor="password" icon={Lock}>Senha</FieldLabel>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setForgotEmail(email);
+                        setForgotOpen(true);
+                      }}
+                      className="text-xs font-medium text-primary underline-offset-4 hover:underline"
+                    >
+                      Esqueci minha senha
+                    </button>
+                  </div>
                   <Input
                     id="password"
                     type="password"
@@ -389,6 +433,42 @@ function AuthPage() {
           </Tabs>
         </div>
       </div>
+
+      <Dialog open={forgotOpen} onOpenChange={setForgotOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <IconBox icon={KeyRound} size="xs" />
+              Redefinir senha
+            </DialogTitle>
+            <DialogDescription>
+              Informe o email da sua conta. Enviaremos um link para você criar uma nova senha.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleForgotPassword} className="space-y-4">
+            <div className="space-y-2">
+              <FieldLabel htmlFor="forgotEmail" icon={Mail}>Email</FieldLabel>
+              <Input
+                id="forgotEmail"
+                type="email"
+                placeholder="seu@email.com"
+                value={forgotEmail}
+                onChange={(e) => setForgotEmail(e.target.value)}
+                required
+                autoFocus
+              />
+            </div>
+            <DialogFooter className="gap-2 sm:gap-2">
+              <Button type="button" variant="ghost" onClick={() => setForgotOpen(false)}>
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={isSendingReset || !forgotEmail}>
+                {isSendingReset ? "Enviando..." : "Enviar link"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
