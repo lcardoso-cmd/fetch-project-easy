@@ -560,7 +560,7 @@ function drawHeaderFooter(
   const pw = widthOf(fonts.body, pageText, 9);
   const px = layout.width - layout.marginRight - pw;
   drawTextSafe(page, pageText, px, footerY, fonts.body, 9, muted);
-  void degrees; // silence unused import guard
+  
 }
 
 function drawCoverPage(
