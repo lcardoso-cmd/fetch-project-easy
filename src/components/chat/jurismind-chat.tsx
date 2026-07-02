@@ -53,6 +53,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { JurisMindMark } from "@/components/brand/jurismind-mark";
+import {
+  blobToBase64,
+  concatFloat32,
+  downsampleTo,
+  encodeWavPcm16,
+  rmsOf,
+} from "@/lib/audio/wav-encoder";
 
 function capitalize(s: string) {
   if (!s) return s;
@@ -346,6 +353,19 @@ export function JurisMindChat({
   const [audioLevel, setAudioLevel] = useState(0);
   const [micSilent, setMicSilent] = useState(false);
   const [micError, setMicError] = useState<string | null>(null);
+
+  // --- Live transcription (streaming) refs ---
+  const pcmChunksRef = useRef<Float32Array[]>([]);
+  const pcmSampleRateRef = useRef<number>(48000);
+  const processorRef = useRef<ScriptProcessorNode | null>(null);
+  const flushIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const activeSegCtrlRef = useRef<AbortController | null>(null);
+  const baseInputRef = useRef<string>("");
+  const committedRef = useRef<string>("");
+  const livePartialRef = useRef<string>("");
+  const [segmentInFlight, setSegmentInFlight] = useState(false);
+  const liveSupportedRef = useRef<boolean>(true);
+
   const [modelTier, setModelTier] = useState<ModelTier>(() => {
     if (typeof window === "undefined") return "fast";
     return (localStorage.getItem("jurismind:model") as ModelTier) || "fast";
@@ -419,6 +439,20 @@ export function JurisMindChat({
       clearTimeout(autoStopRef.current);
       autoStopRef.current = null;
     }
+    if (flushIntervalRef.current) {
+      clearInterval(flushIntervalRef.current);
+      flushIntervalRef.current = null;
+    }
+    try {
+      processorRef.current?.disconnect();
+    } catch {}
+    processorRef.current = null;
+    try {
+      activeSegCtrlRef.current?.abort();
+    } catch {}
+    activeSegCtrlRef.current = null;
+    pcmChunksRef.current = [];
+    setSegmentInFlight(false);
     try {
       analyserRef.current?.disconnect();
     } catch {}
@@ -433,6 +467,134 @@ export function JurisMindChat({
     setAudioLevel(0);
     setMicSilent(false);
   };
+
+  // Reflete base + committed + partial no textarea sem sobrescrever edições do usuário fora dos segmentos.
+  const syncLiveInput = () => {
+    const parts = [
+      baseInputRef.current.trim(),
+      committedRef.current.trim(),
+      livePartialRef.current.trim(),
+    ].filter(Boolean);
+    setInput(parts.join(" "));
+  };
+
+  const setPartial = (text: string) => {
+    livePartialRef.current = text;
+    syncLiveInput();
+  };
+
+  const appendCommitted = (text: string) => {
+    const clean = text.trim();
+    if (!clean) return;
+    committedRef.current = committedRef.current
+      ? committedRef.current + " " + clean
+      : clean;
+    livePartialRef.current = "";
+    syncLiveInput();
+  };
+
+  // Envia um segmento WAV e consome o SSE, atualizando partial/committed.
+  const flushSegment = async (final: boolean): Promise<void> => {
+    const srcRate = pcmSampleRateRef.current;
+    const chunks = pcmChunksRef.current;
+    pcmChunksRef.current = [];
+    if (chunks.length === 0) return;
+    const merged = concatFloat32(chunks);
+    // Descarta segmento muito curto (<400ms) se não for final.
+    const minSamples = Math.floor(srcRate * 0.4);
+    if (!final && merged.length < minSamples) {
+      // devolve os chunks para o próximo flush não perder áudio
+      pcmChunksRef.current.unshift(merged);
+      return;
+    }
+    // Silêncio? Descarta.
+    if (rmsOf(merged) < 0.008) return;
+
+    const down = downsampleTo(merged, srcRate, 16000);
+    const wav = encodeWavPcm16(down, 16000);
+    if (wav.size < 1024) return;
+    const b64 = await blobToBase64(wav);
+
+    // Segmentos sequenciais: aborta o anterior se ainda não terminou.
+    try {
+      activeSegCtrlRef.current?.abort();
+    } catch {}
+    const ctrl = new AbortController();
+    activeSegCtrlRef.current = ctrl;
+    setSegmentInFlight(true);
+    let segmentText = "";
+    try {
+      const res = await fetch("/api/tools/transcribe-stream", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ audio_base64: b64, format: "wav" }),
+        signal: ctrl.signal,
+      });
+      if (!res.ok || !res.body) {
+        if (res.status === 402) {
+          toast.error("Créditos de IA esgotados.");
+        } else if (res.status === 429) {
+          // silencioso — próximo segmento tenta de novo
+        } else if (final) {
+          toast.error(humanizeTranscribeError(res.status));
+        }
+        return;
+      }
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        let idx;
+        while ((idx = buffer.indexOf("\n\n")) >= 0) {
+          const raw = buffer.slice(0, idx);
+          buffer = buffer.slice(idx + 2);
+          const line = raw
+            .split("\n")
+            .filter((l) => l.startsWith("data:"))
+            .map((l) => l.slice(5).trim())
+            .join("");
+          if (!line || line === "[DONE]") continue;
+          try {
+            const evt = JSON.parse(line) as {
+              type?: string;
+              delta?: string;
+              text?: string;
+            };
+            if (evt.type === "transcript.text.delta" && evt.delta) {
+              segmentText += evt.delta;
+              setPartial(segmentText);
+            } else if (evt.type === "transcript.text.done") {
+              segmentText = evt.text ?? segmentText;
+            }
+          } catch {
+            // ignore
+          }
+        }
+      }
+      appendCommitted(segmentText);
+    } catch (e) {
+      const name = (e as { name?: string })?.name;
+      if (name === "AbortError") {
+        // segmento cancelado — preserva o que já veio como parcial (ficará como committed no próximo done, ou descartado ao parar)
+        if (segmentText && final) appendCommitted(segmentText);
+        return;
+      }
+      if (final) {
+        toast.error(
+          e instanceof Error ? e.message : "Erro ao transcrever segmento.",
+        );
+      }
+    } finally {
+      if (activeSegCtrlRef.current === ctrl) {
+        activeSegCtrlRef.current = null;
+        setSegmentInFlight(false);
+      }
+    }
+  };
+
 
   const humanizeMicError = (e: unknown): string => {
     const err = e as { name?: string; message?: string } | undefined;
@@ -482,74 +644,27 @@ export function JurisMindChat({
       rec.ondataavailable = (e) => {
         if (e.data.size > 0) audioChunksRef.current.push(e.data);
       };
-      rec.onstop = async () => {
-        cleanupAudioMonitor();
+      rec.onstop = () => {
         const durationMs = startedAtRef.current
           ? Date.now() - startedAtRef.current
           : 0;
         const blob = new Blob(audioChunksRef.current, { type: "audio/webm" });
-        if (blob.size < 500) {
-          const msg = "Nada capturado — segure o botão e fale próximo ao microfone.";
-          setMicError(msg);
-          toast.error(msg);
-          return;
-        }
-        setTranscribing(true);
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 30_000);
-        try {
-          const b64 = await new Promise<string>((resolve, reject) => {
-            const r = new FileReader();
-            r.onerror = () => reject(r.error);
-            r.onload = () => {
-              const s = String(r.result);
-              resolve(s.slice(s.indexOf(",") + 1));
-            };
-            r.readAsDataURL(blob);
-          });
-          const res = await fetch("/api/tools/transcribe", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ audio_base64: b64, format: "webm" }),
-            signal: controller.signal,
-          });
-          let json: { text?: string; error?: string } = {};
-          try {
-            json = (await res.json()) as { text?: string; error?: string };
-          } catch {}
-          if (!res.ok || json.error) {
-            throw new Error(humanizeTranscribeError(res.status, json.error));
-          }
-          const text = (json.text ?? "").trim();
-          if (!text) {
-            const msg = "Não consegui transcrever — tente falar mais claramente.";
-            setMicError(msg);
-            toast.error(msg);
-            return;
-          }
-          // Guarda o áudio para upload junto do envio da mensagem
+        // Preserva áudio para upload junto do envio (mesmo que a transcrição seja parcial).
+        if (blob.size >= 500) {
           pendingAudioRef.current = { blob, durationMs };
-          setInput((prev) => (prev ? prev + " " + text : text));
-          setMicError(null);
-          setTimeout(() => inputRef.current?.focus(), 30);
-        } catch (e) {
-          const isAbort = (e as { name?: string })?.name === "AbortError";
-          const msg = isAbort
-            ? "A transcrição demorou demais. Tente novamente."
-            : e instanceof Error
-              ? e.message
-              : "Erro ao transcrever.";
-          setMicError(msg);
-          toast.error(msg);
-        } finally {
-          clearTimeout(timeout);
-          setTranscribing(false);
         }
+        // Não fecha o AudioContext aqui: o stopRecording já chamou o flush final.
+        setTimeout(() => inputRef.current?.focus(), 30);
       };
       recorderRef.current = rec;
       rec.start();
 
-      // Audio level monitor
+      // Audio level monitor + PCM capture para transcrição parcial
+      baseInputRef.current = input;
+      committedRef.current = "";
+      livePartialRef.current = "";
+      pcmChunksRef.current = [];
+      liveSupportedRef.current = true;
       try {
         const AC =
           window.AudioContext ||
@@ -558,6 +673,7 @@ export function JurisMindChat({
         if (AC) {
           const ctx = new AC();
           audioCtxRef.current = ctx;
+          pcmSampleRateRef.current = ctx.sampleRate;
           const source = ctx.createMediaStreamSource(stream);
           const analyser = ctx.createAnalyser();
           analyser.fftSize = 256;
@@ -586,9 +702,29 @@ export function JurisMindChat({
             rafRef.current = requestAnimationFrame(tick);
           };
           rafRef.current = requestAnimationFrame(tick);
+
+          // PCM processor para transcrição segmentada
+          try {
+            const processor = ctx.createScriptProcessor(4096, 1, 1);
+            processor.onaudioprocess = (ev) => {
+              const ch = ev.inputBuffer.getChannelData(0);
+              pcmChunksRef.current.push(new Float32Array(ch));
+            };
+            source.connect(processor);
+            processor.connect(ctx.destination);
+            processorRef.current = processor;
+            // Dispara flush a cada 3s
+            flushIntervalRef.current = setInterval(() => {
+              void flushSegment(false);
+            }, 3000);
+          } catch {
+            liveSupportedRef.current = false;
+          }
+        } else {
+          liveSupportedRef.current = false;
         }
       } catch {
-        // audio meter is optional
+        liveSupportedRef.current = false;
       }
 
       startedAtRef.current = Date.now();
@@ -599,7 +735,7 @@ export function JurisMindChat({
       autoStopRef.current = setTimeout(() => {
         if (recorderRef.current && recorderRef.current.state === "recording") {
           toast.message("Gravação encerrada aos 60s.");
-          stopRecording();
+          void stopRecording();
         }
       }, MAX_RECORDING_MS);
 
@@ -612,13 +748,44 @@ export function JurisMindChat({
     }
   };
 
-  const stopRecording = () => {
+  const stopRecording = async () => {
     if (!recording) return;
+    setRecording(false);
+    // Para o timer/flush primeiro para não disparar novos segmentos.
+    if (flushIntervalRef.current) {
+      clearInterval(flushIntervalRef.current);
+      flushIntervalRef.current = null;
+    }
+    // Desconecta o processor para congelar o buffer PCM.
+    try {
+      processorRef.current?.disconnect();
+    } catch {}
+    processorRef.current = null;
+
+    // Flush final com timeout (não bloqueia UI por muito tempo).
+    const finalFlush = flushSegment(true);
+    await Promise.race([
+      finalFlush,
+      new Promise<void>((resolve) => setTimeout(resolve, 2500)),
+    ]).catch(() => {});
+
     try {
       recorderRef.current?.stop();
     } catch {}
-    setRecording(false);
+    // cleanupAudioMonitor fecha o AudioContext e libera o mic.
+    cleanupAudioMonitor();
+
+    if (!committedRef.current.trim() && !livePartialRef.current.trim()) {
+      // Nada foi transcrito — mostra dica leve, mas não trata como erro fatal.
+      const msg =
+        "Não consegui transcrever — fale mais próximo do microfone e tente de novo.";
+      setMicError(msg);
+    } else {
+      setMicError(null);
+    }
+    livePartialRef.current = "";
   };
+
 
   useEffect(() => {
     return () => {
@@ -1412,10 +1579,14 @@ export function JurisMindChat({
                     Microfone parece silencioso — verifique o dispositivo.
                   </span>
                 )}
-                {transcribing && (
+                {(transcribing || (recording && segmentInFlight)) && (
                   <div className="flex items-center gap-2 rounded-full border bg-muted px-2.5 py-1 text-muted-foreground">
                     <Loader2 className="h-3 w-3 animate-spin" />
-                    <span>Transcrevendo…</span>
+                    <span>
+                      {transcribing
+                        ? "Transcrevendo…"
+                        : "Transcrevendo em tempo real…"}
+                    </span>
                   </div>
                 )}
                 {!recording && !transcribing && micError && (

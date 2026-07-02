@@ -52,6 +52,7 @@ import { Route as AuthenticatedPlataformaIndexRouteImport } from './routes/_auth
 import { Route as AuthenticatedContratarB2bIndexRouteImport } from './routes/_authenticated/contratar-b2b.index'
 import { Route as AuthenticatedCasesIndexRouteImport } from './routes/_authenticated/cases.index'
 import { Route as AuthenticatedAssistenciasIndexRouteImport } from './routes/_authenticated/assistencias.index'
+import { Route as ApiToolsTranscribeStreamRouteImport } from './routes/api/tools/transcribe-stream'
 import { Route as ApiToolsTranscribeRouteImport } from './routes/api/tools/transcribe'
 import { Route as ApiToolsTableRouteImport } from './routes/api/tools/table'
 import { Route as ApiToolsPresentationRouteImport } from './routes/api/tools/presentation'
@@ -315,6 +316,12 @@ const AuthenticatedAssistenciasIndexRoute =
     path: '/',
     getParentRoute: () => AuthenticatedAssistenciasRoute,
   } as any)
+const ApiToolsTranscribeStreamRoute =
+  ApiToolsTranscribeStreamRouteImport.update({
+    id: '/api/tools/transcribe-stream',
+    path: '/api/tools/transcribe-stream',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiToolsTranscribeRoute = ApiToolsTranscribeRouteImport.update({
   id: '/api/tools/transcribe',
   path: '/api/tools/transcribe',
@@ -575,6 +582,7 @@ export interface FileRoutesByFullPath {
   '/api/tools/presentation': typeof ApiToolsPresentationRoute
   '/api/tools/table': typeof ApiToolsTableRoute
   '/api/tools/transcribe': typeof ApiToolsTranscribeRoute
+  '/api/tools/transcribe-stream': typeof ApiToolsTranscribeStreamRoute
   '/assistencias/': typeof AuthenticatedAssistenciasIndexRoute
   '/cases/': typeof AuthenticatedCasesIndexRoute
   '/contratar-b2b/': typeof AuthenticatedContratarB2bIndexRoute
@@ -652,6 +660,7 @@ export interface FileRoutesByTo {
   '/api/tools/presentation': typeof ApiToolsPresentationRoute
   '/api/tools/table': typeof ApiToolsTableRoute
   '/api/tools/transcribe': typeof ApiToolsTranscribeRoute
+  '/api/tools/transcribe-stream': typeof ApiToolsTranscribeStreamRoute
   '/assistencias': typeof AuthenticatedAssistenciasIndexRoute
   '/cases': typeof AuthenticatedCasesIndexRoute
   '/contratar-b2b': typeof AuthenticatedContratarB2bIndexRoute
@@ -733,6 +742,7 @@ export interface FileRoutesById {
   '/api/tools/presentation': typeof ApiToolsPresentationRoute
   '/api/tools/table': typeof ApiToolsTableRoute
   '/api/tools/transcribe': typeof ApiToolsTranscribeRoute
+  '/api/tools/transcribe-stream': typeof ApiToolsTranscribeStreamRoute
   '/_authenticated/assistencias/': typeof AuthenticatedAssistenciasIndexRoute
   '/_authenticated/cases/': typeof AuthenticatedCasesIndexRoute
   '/_authenticated/contratar-b2b/': typeof AuthenticatedContratarB2bIndexRoute
@@ -814,6 +824,7 @@ export interface FileRouteTypes {
     | '/api/tools/presentation'
     | '/api/tools/table'
     | '/api/tools/transcribe'
+    | '/api/tools/transcribe-stream'
     | '/assistencias/'
     | '/cases/'
     | '/contratar-b2b/'
@@ -891,6 +902,7 @@ export interface FileRouteTypes {
     | '/api/tools/presentation'
     | '/api/tools/table'
     | '/api/tools/transcribe'
+    | '/api/tools/transcribe-stream'
     | '/assistencias'
     | '/cases'
     | '/contratar-b2b'
@@ -971,6 +983,7 @@ export interface FileRouteTypes {
     | '/api/tools/presentation'
     | '/api/tools/table'
     | '/api/tools/transcribe'
+    | '/api/tools/transcribe-stream'
     | '/_authenticated/assistencias/'
     | '/_authenticated/cases/'
     | '/_authenticated/contratar-b2b/'
@@ -1007,6 +1020,7 @@ export interface RootRouteChildren {
   ApiToolsPresentationRoute: typeof ApiToolsPresentationRoute
   ApiToolsTableRoute: typeof ApiToolsTableRoute
   ApiToolsTranscribeRoute: typeof ApiToolsTranscribeRoute
+  ApiToolsTranscribeStreamRoute: typeof ApiToolsTranscribeStreamRoute
   ApiPublicGoogleCallbackRoute: typeof ApiPublicGoogleCallbackRoute
   ApiPublicOutlookCallbackRoute: typeof ApiPublicOutlookCallbackRoute
 }
@@ -1313,6 +1327,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/assistencias/'
       preLoaderRoute: typeof AuthenticatedAssistenciasIndexRouteImport
       parentRoute: typeof AuthenticatedAssistenciasRoute
+    }
+    '/api/tools/transcribe-stream': {
+      id: '/api/tools/transcribe-stream'
+      path: '/api/tools/transcribe-stream'
+      fullPath: '/api/tools/transcribe-stream'
+      preLoaderRoute: typeof ApiToolsTranscribeStreamRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/api/tools/transcribe': {
       id: '/api/tools/transcribe'
@@ -1794,19 +1815,10 @@ const rootRouteChildren: RootRouteChildren = {
   ApiToolsPresentationRoute: ApiToolsPresentationRoute,
   ApiToolsTableRoute: ApiToolsTableRoute,
   ApiToolsTranscribeRoute: ApiToolsTranscribeRoute,
+  ApiToolsTranscribeStreamRoute: ApiToolsTranscribeStreamRoute,
   ApiPublicGoogleCallbackRoute: ApiPublicGoogleCallbackRoute,
   ApiPublicOutlookCallbackRoute: ApiPublicOutlookCallbackRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
