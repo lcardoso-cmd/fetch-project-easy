@@ -877,6 +877,22 @@ export type Database = {
           similarity: number
         }[]
       }
+      match_chunks_scoped: {
+        Args: {
+          filter_case_id?: string
+          filter_doc_ids?: string[]
+          filter_user_id: string
+          match_count?: number
+          query_embedding: string
+        }
+        Returns: {
+          case_id: string
+          content: string
+          document_id: string
+          id: string
+          similarity: number
+        }[]
+      }
       user_can_access_case: {
         Args: { _case_id: string; _user_id: string }
         Returns: boolean
