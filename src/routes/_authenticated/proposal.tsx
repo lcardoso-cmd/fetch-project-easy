@@ -149,6 +149,8 @@ function ProposalPage() {
   const [saving, setSaving] = useState(false);
   const [hydrated, setHydrated] = useState(false);
   const [, forceTick] = useState(0);
+  const [versionsOpen, setVersionsOpen] = useState(false);
+  const [versionsRefresh, setVersionsRefresh] = useState(0);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Restaurar rascunho ao montar (client-only).
