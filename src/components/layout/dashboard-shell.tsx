@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { JurisMindMark } from "@/components/brand/jurismind-mark";
@@ -7,7 +7,21 @@ import { useProfile } from "@/hooks/use-profile";
 import { useCapabilities } from "@/hooks/use-capabilities";
 import { labelsForPractice } from "@/lib/practice-labels";
 import type { PracticeType } from "@/lib/profile.functions";
-import type { Capability } from "@/lib/capabilities.functions";
+import {
+  CAPABILITY_LABELS,
+  type Capability,
+} from "@/lib/capabilities.functions";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import {
   Home,
   FolderKanban,
@@ -26,6 +40,9 @@ import {
   PanelLeftOpen,
   Microscope,
   Globe2,
+  Info,
+  Lock,
+  HelpCircle,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -38,23 +55,37 @@ type NavLink = {
   icon: LucideIcon;
   match?: "exact" | "startsWith";
   requires?: Capability;
+  description: string;
 };
-type NavItem =
-  | { type: "label"; label: string }
-  | { type: "separator" }
-  | NavLink;
+type NavLabel = {
+  type: "label";
+  label: string;
+  description: string;
+};
+type NavItem = NavLabel | { type: "separator" } | NavLink;
 
 function buildNav(
   practice: PracticeType | null | undefined,
-  has: (c: Capability) => boolean,
 ): NavItem[] {
   const labels = labelsForPractice(practice);
   const isLawyer = !practice || practice === "advogado";
 
-  const raw: NavItem[] = [
-    // ─── PRINCIPAL: trabalho documental do dia-a-dia ───
-    { type: "label", label: "Principal" },
-    { type: "link", to: "/dashboard", label: "Painel", icon: Home, match: "exact" },
+  return [
+    // ─── PRINCIPAL ───
+    {
+      type: "label",
+      label: "Principal",
+      description:
+        "Trabalho documental do dia-a-dia: painel, casos, tarefas, conversas, agenda, documentos e peças. Visível para todos os usuários do escritório.",
+    },
+    {
+      type: "link",
+      to: "/dashboard",
+      label: "Painel",
+      icon: Home,
+      match: "exact",
+      description: "Visão geral. Disponível para todos os usuários autenticados.",
+    },
     {
       type: "link",
       to: "/cases",
@@ -62,35 +93,72 @@ function buildNav(
       icon: FolderKanban,
       match: "startsWith",
       requires: "cases",
+      description:
+        "Gerencia casos, clientes e documentos vinculados. Requer a permissão “Casos e trabalho diário”.",
     },
-    { type: "link", to: "/my-tasks", label: "Minhas Tarefas", icon: ClipboardCheck },
-    { type: "link", to: "/inbox", label: "Conversas", icon: MessageSquare, match: "startsWith" },
-    { type: "link", to: "/calendar", label: "Agenda", icon: CalendarDays },
-    { type: "link", to: "/my-files", label: "Meus Documentos", icon: FileArchive },
+    {
+      type: "link",
+      to: "/my-tasks",
+      label: "Minhas Tarefas",
+      icon: ClipboardCheck,
+      description: "Suas tarefas pessoais. Disponível para todos.",
+    },
+    {
+      type: "link",
+      to: "/inbox",
+      label: "Conversas",
+      icon: MessageSquare,
+      match: "startsWith",
+      description: "Conversas internas do escritório. Disponível para todos.",
+    },
+    {
+      type: "link",
+      to: "/calendar",
+      label: "Agenda",
+      icon: CalendarDays,
+      description: "Sua agenda pessoal e integrada (Google/Outlook).",
+    },
+    {
+      type: "link",
+      to: "/my-files",
+      label: "Meus Documentos",
+      icon: FileArchive,
+      description: "Seus documentos pessoais e enviados.",
+    },
     {
       type: "link",
       to: "/drafter",
       label: isLawyer ? "Peças Jurídicas" : labels.outputLabel,
       icon: Scale,
+      description:
+        "Gerador de peças jurídicas com IA. Disponível para todos os operadores.",
     },
-    // Parecer técnico entra no Principal, mas só para peritos.
     {
       type: "link",
       to: "/expert-opinion",
       label: "Parecer Técnico",
       icon: Microscope,
       requires: "expert_opinion",
+      description:
+        "Elaboração de pareceres técnicos. Aparece apenas para peritos — requer a permissão “Parecer técnico (peritos)”.",
     },
 
-    // ─── NEGÓCIO: comercial + marketing ───
+    // ─── NEGÓCIO ───
     { type: "separator" },
-    { type: "label", label: "Negócio" },
+    {
+      type: "label",
+      label: "Negócio",
+      description:
+        "Área comercial e de marketing. Cada item exige uma permissão específica — nem todo operador do escritório precisa gerar propostas ou publicações.",
+    },
     {
       type: "link",
       to: "/proposal",
       label: "Proposta Comercial",
       icon: Handshake,
       requires: "commercial",
+      description:
+        "Gera e versiona propostas comerciais. Requer a permissão “Proposta comercial”.",
     },
     {
       type: "link",
@@ -98,18 +166,35 @@ function buildNav(
       label: "Publicações",
       icon: FileSearch,
       requires: "marketing",
+      description:
+        "Monitoramento de publicações. Requer a permissão “Marketing e publicações”.",
     },
-    { type: "link", to: "/marketing", label: "Marketing", icon: Megaphone, requires: "marketing" },
+    {
+      type: "link",
+      to: "/marketing",
+      label: "Marketing",
+      icon: Megaphone,
+      requires: "marketing",
+      description:
+        "Materiais e campanhas de marketing. Requer a permissão “Marketing e publicações”.",
+    },
 
-    // ─── GESTÃO DO ESCRITÓRIO ───
+    // ─── ESCRITÓRIO ───
     { type: "separator" },
-    { type: "label", label: "Escritório" },
+    {
+      type: "label",
+      label: "Escritório",
+      description:
+        "Gestão do escritório: equipe, integrações, cobrança e configurações. Só aparece para quem tem a permissão “Gestão do escritório”.",
+    },
     {
       type: "link",
       to: "/integrations",
       label: "Integrações",
       icon: Puzzle,
       requires: "office_admin",
+      description:
+        "Integrações do escritório (Google, Outlook, etc.). Requer “Gestão do escritório”.",
     },
     {
       type: "link",
@@ -117,11 +202,18 @@ function buildNav(
       label: "Configurações",
       icon: Settings2,
       requires: "office_admin",
+      description:
+        "Configurações do escritório, equipe e permissões. Requer “Gestão do escritório”.",
     },
 
-    // ─── VISÃO B2B JurisMind (plataforma) ───
+    // ─── PLATAFORMA B2B ───
     { type: "separator" },
-    { type: "label", label: "Plataforma JurisMind" },
+    {
+      type: "label",
+      label: "Plataforma JurisMind",
+      description:
+        "Visão B2B da JurisMind — gestão de clientes, assinaturas e uso da plataforma. Restrita à equipe interna da JurisMind (permissão “Administração da plataforma”).",
+    },
     {
       type: "link",
       to: "/platform",
@@ -129,17 +221,27 @@ function buildNav(
       icon: Globe2,
       match: "startsWith",
       requires: "platform_admin",
+      description:
+        "Painel B2B da JurisMind. Restrito a administradores da plataforma.",
     },
   ];
+}
 
-  // Filtra links por capacidade.
+// Filtra links por capacidade + limpa labels/separators órfãos, retornando
+// também os itens ocultos para exibir a legenda de “menus ocultos”.
+function applyCapabilities(
+  raw: NavItem[],
+  has: (c: Capability) => boolean,
+): { items: NavItem[]; hidden: NavLink[] } {
+  const hidden: NavLink[] = [];
   const filtered: NavItem[] = raw.filter((item) => {
     if (item.type !== "link") return true;
     if (!item.requires) return true;
-    return has(item.requires);
+    if (has(item.requires)) return true;
+    hidden.push(item);
+    return false;
   });
 
-  // Remove seções (label) sem links e separators órfãos.
   const cleaned: NavItem[] = [];
   for (let i = 0; i < filtered.length; i++) {
     const item = filtered[i];
@@ -163,16 +265,22 @@ function buildNav(
   }
   while (cleaned.length && cleaned[cleaned.length - 1].type === "separator") cleaned.pop();
 
-  return cleaned;
+  return { items: cleaned, hidden };
 }
-
 
 export function DashboardShell({ children }: { children: React.ReactNode }) {
   const { pathname } = useLocation();
   const { user, signOut } = useAuth();
   const { data: profile } = useProfile();
   const { has } = useCapabilities();
-  const NAV = buildNav((profile?.practice_type as PracticeType | undefined) ?? null, has);
+  const raw = useMemo(
+    () => buildNav((profile?.practice_type as PracticeType | undefined) ?? null),
+    [profile?.practice_type],
+  );
+  const { items: NAV, hidden: HIDDEN } = useMemo(
+    () => applyCapabilities(raw, has),
+    [raw, has],
+  );
   const [collapsed, setCollapsed] = useState(false);
 
   useEffect(() => {
@@ -192,164 +300,249 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
     match === "exact" ? pathname === to : pathname === to || pathname.startsWith(`${to}/`);
 
   return (
-    <div className="flex h-screen w-full overflow-hidden bg-background">
-      {/* Sidebar */}
-      <aside
-        className={cn(
-          "relative hidden flex-col bg-sidebar text-sidebar-foreground transition-all duration-300 ease-in-out lg:flex",
-          collapsed ? "w-20" : "w-64"
-        )}
-      >
-        {/* Logo button (toggle) */}
-        <button
-          onClick={toggle}
-          className="absolute top-16 -right-4 z-20 flex h-9 w-9 items-center justify-center rounded-full bg-sidebar text-sidebar-primary shadow-lg ring-1 ring-sidebar-border transition-transform hover:scale-105"
-          aria-label={collapsed ? "Expandir" : "Recolher"}
-        >
-          {collapsed ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
-        </button>
-
-        {/* Header */}
-        <div
+    <TooltipProvider delayDuration={200}>
+      <div className="flex h-screen w-full overflow-hidden bg-background">
+        {/* Sidebar */}
+        <aside
           className={cn(
-            "flex h-20 items-center border-b border-sidebar-border px-4",
-            collapsed && "justify-center px-2"
+            "relative hidden flex-col bg-sidebar text-sidebar-foreground transition-all duration-300 ease-in-out lg:flex",
+            collapsed ? "w-20" : "w-64"
           )}
         >
-          <Link
-            to="/dashboard"
-            aria-label="Ir para o Dashboard"
-            className="group flex items-center gap-3 overflow-hidden rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-sidebar"
+          {/* Logo button (toggle) */}
+          <button
+            onClick={toggle}
+            className="absolute top-16 -right-4 z-20 flex h-9 w-9 items-center justify-center rounded-full bg-sidebar text-sidebar-primary shadow-lg ring-1 ring-sidebar-border transition-transform hover:scale-105"
+            aria-label={collapsed ? "Expandir" : "Recolher"}
           >
-            <JurisMindMark size={32} context="sidebar" interactive />
-            {!collapsed && (
-              <h2 className="font-heading text-base font-semibold leading-tight truncate">
-                B2B | JurisMind AI
-              </h2>
-            )}
-          </Link>
-        </div>
+            {collapsed ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
+          </button>
 
-        {/* Nav */}
-        <nav className="flex-1 space-y-1 overflow-y-auto overflow-x-hidden px-2 py-4">
-          {NAV.map((item, idx) => {
-            if (item.type === "separator") {
-              return <div key={idx} className="my-2 border-t border-sidebar-border/50" />;
-            }
-            if (item.type === "label") {
-              if (collapsed) return null;
-              return (
-                <div
-                  key={idx}
-                  className="px-3 pb-1 pt-3 text-[11px] font-semibold uppercase tracking-wider text-sidebar-foreground/50"
-                >
-                  {item.label}
-                </div>
-              );
-            }
-            const Icon = item.icon;
-            const active = isActive(item.to, item.match);
-            return (
-              <Link
-                key={item.to}
-                to={item.to}
-                title={collapsed ? item.label : undefined}
-                className={cn(
-                  "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
-                  active
-                    ? "bg-sidebar-primary text-sidebar-primary-foreground"
-                    : "text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground",
-                  collapsed && "justify-center px-2"
-                )}
-              >
-                <Icon className="h-4 w-4 shrink-0" />
-                {!collapsed && <span className="truncate">{item.label}</span>}
-              </Link>
-            );
-          })}
-        </nav>
-
-        {/* Footer */}
-        <div className="border-t border-sidebar-border p-3">
-          {!collapsed && user && (
-            <div className="mb-3 flex items-center gap-2 px-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-sidebar-accent text-xs font-semibold uppercase">
-                {user.email?.charAt(0) ?? "U"}
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-xs font-medium text-sidebar-foreground">
-                  {user.email}
-                </p>
-              </div>
-            </div>
-          )}
-          <Button
-            variant="ghost"
-            size={collapsed ? "icon" : "sm"}
-            onClick={signOut}
+          {/* Header */}
+          <div
             className={cn(
-              "text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground",
-              collapsed ? "h-9 w-9 mx-auto" : "w-full justify-start gap-2"
+              "flex h-20 items-center border-b border-sidebar-border px-4",
+              collapsed && "justify-center px-2"
             )}
           >
-            <LogOut className="h-4 w-4" />
-            {!collapsed && "Sair"}
-          </Button>
-        </div>
-      </aside>
+            <Link
+              to="/dashboard"
+              aria-label="Ir para o Dashboard"
+              className="group flex items-center gap-3 overflow-hidden rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-sidebar"
+            >
+              <JurisMindMark size={32} context="sidebar" interactive />
+              {!collapsed && (
+                <h2 className="font-heading text-base font-semibold leading-tight truncate">
+                  B2B | JurisMind AI
+                </h2>
+              )}
+            </Link>
+          </div>
 
-      {/* Main column */}
-      <div className="flex flex-1 flex-col min-w-0">
-        {/* Mobile header */}
-        <header className="flex h-16 items-center justify-between border-b bg-card px-4 lg:hidden">
-          <Link
-            to="/dashboard"
-            aria-label="Ir para o Dashboard"
-            className="group flex items-center gap-2 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-          >
-            <JurisMindMark size={32} context="sidebar" interactive />
-            <span className="font-heading text-lg font-bold">B2B | JurisMind AI</span>
-          </Link>
-          <div className="flex items-center gap-1">
-            <NotificationBell />
-            <Button variant="ghost" size="icon" onClick={signOut}>
+          {/* Nav */}
+          <nav className="flex-1 space-y-1 overflow-y-auto overflow-x-hidden px-2 py-4">
+            {NAV.map((item, idx) => {
+              if (item.type === "separator") {
+                return <div key={idx} className="my-2 border-t border-sidebar-border/50" />;
+              }
+              if (item.type === "label") {
+                if (collapsed) return null;
+                return (
+                  <div
+                    key={idx}
+                    className="flex items-center gap-1 px-3 pb-1 pt-3 text-[11px] font-semibold uppercase tracking-wider text-sidebar-foreground/50"
+                  >
+                    <span>{item.label}</span>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          type="button"
+                          aria-label={`Sobre a seção ${item.label}`}
+                          className="rounded-full p-0.5 opacity-60 transition hover:opacity-100 focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                        >
+                          <Info className="h-3 w-3" />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent
+                        side="right"
+                        className="max-w-xs bg-popover text-popover-foreground border shadow-md"
+                      >
+                        {item.description}
+                      </TooltipContent>
+                    </Tooltip>
+                  </div>
+                );
+              }
+              const Icon = item.icon;
+              const active = isActive(item.to, item.match);
+              const capLabel = item.requires ? CAPABILITY_LABELS[item.requires] : null;
+              return (
+                <Tooltip key={item.to}>
+                  <TooltipTrigger asChild>
+                    <Link
+                      to={item.to}
+                      className={cn(
+                        "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                        active
+                          ? "bg-sidebar-primary text-sidebar-primary-foreground"
+                          : "text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground",
+                        collapsed && "justify-center px-2"
+                      )}
+                    >
+                      <Icon className="h-4 w-4 shrink-0" />
+                      {!collapsed && <span className="truncate">{item.label}</span>}
+                    </Link>
+                  </TooltipTrigger>
+                  <TooltipContent
+                    side="right"
+                    className="max-w-xs bg-popover text-popover-foreground border shadow-md"
+                  >
+                    <div className="space-y-1">
+                      <div className="text-xs font-semibold">{item.label}</div>
+                      <p className="text-xs text-muted-foreground">{item.description}</p>
+                      {capLabel && (
+                        <div className="flex items-center gap-1 pt-1 text-[11px] text-muted-foreground">
+                          <Lock className="h-3 w-3" />
+                          <span>Permissão: {capLabel}</span>
+                        </div>
+                      )}
+                    </div>
+                  </TooltipContent>
+                </Tooltip>
+              );
+            })}
+
+            {/* Legenda: menus ocultos por falta de permissão */}
+            {!collapsed && HIDDEN.length > 0 && (
+              <div className="mt-4 border-t border-sidebar-border/50 pt-3">
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <button
+                      type="button"
+                      className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-[11px] text-sidebar-foreground/60 transition hover:bg-sidebar-accent hover:text-sidebar-foreground"
+                    >
+                      <HelpCircle className="h-3.5 w-3.5 shrink-0" />
+                      <span className="truncate">
+                        {HIDDEN.length} {HIDDEN.length === 1 ? "menu oculto" : "menus ocultos"}
+                      </span>
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent side="right" align="start" className="w-72">
+                    <div className="space-y-2 text-xs">
+                      <p className="font-semibold text-foreground">
+                        Menus ocultos por permissão
+                      </p>
+                      <p className="text-muted-foreground">
+                        Estes itens existem no sistema mas estão escondidos porque
+                        sua conta não tem a permissão necessária. Fale com o
+                        administrador do escritório para solicitar acesso.
+                      </p>
+                      <ul className="space-y-1.5 pt-1">
+                        {HIDDEN.map((h) => {
+                          const HIcon = h.icon;
+                          return (
+                            <li key={h.to} className="flex items-start gap-2">
+                              <HIcon className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                              <div className="min-w-0">
+                                <div className="font-medium text-foreground">{h.label}</div>
+                                <div className="text-[11px] text-muted-foreground">
+                                  Requer: {h.requires ? CAPABILITY_LABELS[h.requires] : "—"}
+                                </div>
+                              </div>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              </div>
+            )}
+          </nav>
+
+          {/* Footer */}
+          <div className="border-t border-sidebar-border p-3">
+            {!collapsed && user && (
+              <div className="mb-3 flex items-center gap-2 px-2">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-sidebar-accent text-xs font-semibold uppercase">
+                  {user.email?.charAt(0) ?? "U"}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-xs font-medium text-sidebar-foreground">
+                    {user.email}
+                  </p>
+                </div>
+              </div>
+            )}
+            <Button
+              variant="ghost"
+              size={collapsed ? "icon" : "sm"}
+              onClick={signOut}
+              className={cn(
+                "text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground",
+                collapsed ? "h-9 w-9 mx-auto" : "w-full justify-start gap-2"
+              )}
+            >
               <LogOut className="h-4 w-4" />
+              {!collapsed && "Sair"}
             </Button>
           </div>
-        </header>
+        </aside>
 
-        {/* Mobile nav strip */}
-        <nav className="flex gap-1 overflow-x-auto border-b bg-card px-2 py-2 lg:hidden">
-          {NAV.filter((i) => i.type === "link").map((item) => {
-            if (item.type !== "link") return null;
-            const Icon = item.icon;
-            const active = isActive(item.to, item.match);
-            return (
-              <Link
-                key={item.to}
-                to={item.to}
-                className={cn(
-                  "flex shrink-0 items-center gap-2 rounded-md px-3 py-2 text-xs font-medium",
-                  active ? "bg-primary text-primary-foreground" : "text-muted-foreground"
-                )}
-              >
-                <Icon className="h-4 w-4" />
-                {item.label}
-              </Link>
-            );
-          })}
-        </nav>
+        {/* Main column */}
+        <div className="flex flex-1 flex-col min-w-0">
+          {/* Mobile header */}
+          <header className="flex h-16 items-center justify-between border-b bg-card px-4 lg:hidden">
+            <Link
+              to="/dashboard"
+              aria-label="Ir para o Dashboard"
+              className="group flex items-center gap-2 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+            >
+              <JurisMindMark size={32} context="sidebar" interactive />
+              <span className="font-heading text-lg font-bold">B2B | JurisMind AI</span>
+            </Link>
+            <div className="flex items-center gap-1">
+              <NotificationBell />
+              <Button variant="ghost" size="icon" onClick={signOut}>
+                <LogOut className="h-4 w-4" />
+              </Button>
+            </div>
+          </header>
 
-        {/* Desktop topbar */}
-        <header className="hidden h-16 items-center justify-end gap-3 border-b bg-card px-6 lg:flex">
-          <NotificationBell />
-          <div className="text-xs text-muted-foreground">{user?.email}</div>
-        </header>
+          {/* Mobile nav strip */}
+          <nav className="flex gap-1 overflow-x-auto border-b bg-card px-2 py-2 lg:hidden">
+            {NAV.filter((i) => i.type === "link").map((item) => {
+              if (item.type !== "link") return null;
+              const Icon = item.icon;
+              const active = isActive(item.to, item.match);
+              return (
+                <Link
+                  key={item.to}
+                  to={item.to}
+                  title={item.description}
+                  className={cn(
+                    "flex shrink-0 items-center gap-2 rounded-md px-3 py-2 text-xs font-medium",
+                    active ? "bg-primary text-primary-foreground" : "text-muted-foreground"
+                  )}
+                >
+                  <Icon className="h-4 w-4" />
+                  {item.label}
+                </Link>
+              );
+            })}
+          </nav>
 
-        <main className="flex-1 overflow-y-auto">
-          <div className="mx-auto max-w-7xl p-4 md:p-6 lg:p-8">{children}</div>
-        </main>
+          {/* Desktop topbar */}
+          <header className="hidden h-16 items-center justify-end gap-3 border-b bg-card px-6 lg:flex">
+            <NotificationBell />
+            <div className="text-xs text-muted-foreground">{user?.email}</div>
+          </header>
+
+          <main className="flex-1 overflow-y-auto">
+            <div className="mx-auto max-w-7xl p-4 md:p-6 lg:p-8">{children}</div>
+          </main>
+        </div>
       </div>
-    </div>
+    </TooltipProvider>
   );
 }
