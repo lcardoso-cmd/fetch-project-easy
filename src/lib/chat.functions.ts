@@ -575,7 +575,6 @@ INSTRUÇÕES:
       return { error: `Tool desconhecida: ${name}` };
     };
 
-    const tier = data.model_tier ?? "fast";
     const { content, steps } = await chatWithTools(messages, tools, executor, {
       model: MODEL_MAP[tier],
       temperature: 0.2,
