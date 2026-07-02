@@ -164,14 +164,14 @@ function CaseDetailPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-start justify-between gap-4">
-        <div className="min-w-0 flex-1">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="min-w-0 flex-1 basis-full sm:basis-auto">
           <Button variant="ghost" size="sm" asChild className="mb-2 -ml-2">
             <Link to="/assistencias">
               <ArrowLeft className="mr-1 h-4 w-4" /> Voltar
             </Link>
           </Button>
-          <h1 className="text-3xl font-bold tracking-tight text-foreground">
+          <h1 className="text-2xl font-bold tracking-tight text-foreground break-words sm:text-3xl">
             {caseData.title}
           </h1>
         </div>
