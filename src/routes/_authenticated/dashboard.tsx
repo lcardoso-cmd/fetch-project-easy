@@ -2,7 +2,8 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { FolderKanban, FileText, CalendarClock, Sparkles } from "lucide-react";
+import { FolderKanban, FileText, CalendarClock } from "lucide-react";
+import { JurisMindMark } from "@/components/brand/jurismind-mark";
 import { getCases } from "@/lib/cases.functions";
 import { listAllDocuments } from "@/lib/documents.functions";
 import { listEvents } from "@/lib/events.functions";
@@ -117,7 +118,7 @@ function DashboardPage() {
         <Card className="lg:col-span-3">
           <CardHeader>
             <CardTitle className="font-heading flex items-center gap-2">
-              <Sparkles className="h-4 w-4 text-accent" />
+              <JurisMindMark size={18} />
               Assistente JurisMind
             </CardTitle>
             <CardDescription>

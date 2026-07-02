@@ -33,7 +33,7 @@ import {
   Maximize2,
   Presentation,
   RefreshCw,
-  Sparkles,
+  
 } from "lucide-react";
 import { summarizeCase } from "@/lib/chat.functions";
 import { exportSummaryDocx, exportSummaryPptx } from "@/lib/export.functions";
@@ -214,7 +214,7 @@ export function CaseSummaryCard({
                 : "Indexe documentos para gerar um resumo automático."}
             </p>
             <Button onClick={generate} disabled={busy || !hasReadyDocs}>
-              <Sparkles className="mr-2 h-4 w-4" /> Gerar resumo com IA
+              <JurisMindMark size={16} className="mr-2" /> Gerar resumo com IA
             </Button>
           </div>
         )}

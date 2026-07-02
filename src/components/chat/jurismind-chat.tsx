@@ -874,8 +874,8 @@ export function JurisMindChat({
 
           <div className="shrink-0 border-t p-3">
             {messages.length === 0 && (
-              <div className="mb-2 flex flex-wrap gap-1.5">
-                {QUICK_ACTIONS.map((qa) => (
+              <div className="mb-2 flex flex-wrap items-center gap-1.5">
+                {PRIMARY_ACTIONS.map((qa) => (
                   <button
                     key={qa.label}
                     type="button"
@@ -886,6 +886,39 @@ export function JurisMindChat({
                     {qa.label}
                   </button>
                 ))}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      type="button"
+                      disabled={busy}
+                      className="inline-flex items-center gap-1 rounded-full border bg-background px-2.5 py-1 text-xs text-foreground hover:bg-muted disabled:opacity-50"
+                    >
+                      Mais ações
+                      <ChevronDown className="h-3 w-3" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="w-64">
+                    {ACTION_GROUPS.map((group, gi) => (
+                      <div key={group.label}>
+                        {gi > 0 && <DropdownMenuSeparator />}
+                        <DropdownMenuLabel className="text-xs text-muted-foreground">
+                          {group.label}
+                        </DropdownMenuLabel>
+                        {group.actions.map((qa) => (
+                          <DropdownMenuItem
+                            key={qa.label}
+                            onSelect={(e) => {
+                              e.preventDefault();
+                              send(qa.prompt);
+                            }}
+                          >
+                            {qa.label}
+                          </DropdownMenuItem>
+                        ))}
+                      </div>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             )}
             {images.length > 0 && (
