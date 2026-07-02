@@ -14,6 +14,7 @@ import { toast } from "sonner";
 import { getCases } from "@/lib/cases.functions";
 import { draftLegalPiece } from "@/lib/generators.functions";
 import { labelsForMatter, type MatterKind } from "@/lib/practice-labels";
+import { useUnsavedChangesGuard } from "@/hooks/use-unsaved-changes-guard";
 
 export const Route = createFileRoute("/_authenticated/pecas")({
   component: DrafterPage,
@@ -64,6 +65,11 @@ function DrafterPage() {
   );
   const matterKind = (selectedCase?.matter_kind as MatterKind | undefined) ?? "processo";
   const labels = labelsForMatter(matterKind);
+
+  // Protege contra perda do documento gerado (não é persistido) ou de instruções digitadas.
+  useUnsavedChangesGuard({
+    when: !loading && (output.trim().length > 0 || instructions.trim().length > 0),
+  });
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();

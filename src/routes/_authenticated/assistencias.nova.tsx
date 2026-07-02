@@ -57,6 +57,7 @@ import { listTeamMembers, createTeamMember } from "@/lib/team.functions";
 import { indexDocument } from "@/lib/rag.functions";
 import { createUploadSignedUrl } from "@/lib/documents.functions";
 import { Progress } from "@/components/ui/progress";
+import { useUnsavedChangesGuard } from "@/hooks/use-unsaved-changes-guard";
 
 export const Route = createFileRoute("/_authenticated/assistencias/nova")({
   component: NewCasePage,
@@ -166,6 +167,7 @@ function NewCasePage() {
   >("idle");
   const [uploadPct, setUploadPct] = useState(0);
   const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
@@ -216,6 +218,20 @@ function NewCasePage() {
   const [extractionWarnings, setExtractionWarnings] = useState<ExtractionWarning[]>([]);
   const [reviewConfirmed, setReviewConfirmed] = useState(false);
   const [hydratedReview, setHydratedReview] = useState(false);
+
+  // Bloqueia saída se o usuário já preencheu algo relevante e ainda não enviou.
+  const novaDirty =
+    !submitting &&
+    !submitted &&
+    (title.trim().length > 0 ||
+      clientName.trim().length > 0 ||
+      caseNumber.trim().length > 0 ||
+      jurisdiction.trim().length > 0 ||
+      caseType.trim().length > 0 ||
+      description.trim().length > 0 ||
+      parties.some((p) => (p.name ?? "").trim().length > 0) ||
+      !!uploaded);
+  useUnsavedChangesGuard({ when: novaDirty });
 
   // Carrega estado salvo ao montar
   useEffect(() => {
@@ -551,6 +567,7 @@ function NewCasePage() {
         try { localStorage.removeItem(REVIEW_STORAGE_KEY); } catch { /* noop */ }
       }
       toast.success("Caso criado");
+      setSubmitted(true);
       navigate({ to: "/assistencias/$caseId", params: { caseId: newCase.id } });
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);

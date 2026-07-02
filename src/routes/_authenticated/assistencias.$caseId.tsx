@@ -48,6 +48,7 @@ import { CaseTasksDialog } from "@/components/tasks/case-tasks-dialog";
 import { FloatingTeamChat } from "@/components/chat/floating-team-chat";
 import { QuesitosCard } from "@/components/cases/quesitos-card";
 import type { MatterKind } from "@/lib/practice-labels";
+import { useUnsavedChangesGuard } from "@/hooks/use-unsaved-changes-guard";
 
 function capitalize(str: string): string {
   return str.charAt(0).toUpperCase() + str.slice(1);
@@ -141,6 +142,18 @@ function CaseDetailPage() {
     setEditing(false);
     toast.success("Caso atualizado");
   };
+
+  // Bloqueia saída se estiver editando e houver diferenças em relação ao caso persistido.
+  const editDirty =
+    editing &&
+    !!caseData &&
+    (form.title !== (caseData.title ?? "") ||
+      form.case_number !== (caseData.case_number ?? "") ||
+      form.jurisdiction !== (caseData.jurisdiction ?? "") ||
+      form.case_type !== (caseData.case_type ?? "") ||
+      form.client_name !== (caseData.client_name ?? "") ||
+      form.description !== (caseData.description ?? ""));
+  useUnsavedChangesGuard({ when: editDirty });
 
   if (isLoading)
     return <p className="text-muted-foreground">Carregando...</p>;
