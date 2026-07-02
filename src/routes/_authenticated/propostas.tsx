@@ -151,6 +151,9 @@ function ProposalPage() {
   // Margens em milímetros na UI (convertidas para pt no envio)
   const [pdfMargins, setPdfMargins] = useState({ top: 25, right: 25, bottom: 25, left: 25 });
   const [pdfSettingsOpen, setPdfSettingsOpen] = useState(false);
+  const [pdfCoverEnabled, setPdfCoverEnabled] = useState(true);
+  const [pdfWatermarkMode, setPdfWatermarkMode] = useState<"none" | "draft" | "version">("none");
+  const [pdfWatermarkVersion, setPdfWatermarkVersion] = useState("1");
   const [form, setForm] = useState<FormState>(EMPTY);
   const [errors, setErrors] = useState<FieldErrors>({});
   const [savedAt, setSavedAt] = useState<number | null>(null);
