@@ -1,20 +1,56 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { useEffect } from "react";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
+import { z } from "zod";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { FolderKanban, FileText, CalendarClock } from "lucide-react";
+import { FolderKanban, FileText, CalendarClock, RotateCcw } from "lucide-react";
 import { JurisMindMark } from "@/components/brand/jurismind-mark";
 import { getCases } from "@/lib/cases.functions";
 import { listAllDocuments } from "@/lib/documents.functions";
 import { listEvents } from "@/lib/events.functions";
 import { Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
+import { useCapabilities } from "@/hooks/use-capabilities";
+import { requiredCapabilityForPath } from "@/lib/route-capabilities";
+
+const RETURN_STORAGE_KEY = "jm.accessReturn";
 
 export const Route = createFileRoute("/_authenticated/painel")({
+  validateSearch: (s) =>
+    z.object({ next: z.string().optional() }).parse(s),
   component: DashboardPage,
 });
 
+
 function DashboardPage() {
+  const navigate = useNavigate();
+  const { next } = Route.useSearch();
+  const { has, isLoading: capsLoading } = useCapabilities();
+
+  // Resolve retorno: prioriza `?next=` do query; caso contrário, o valor persistido.
+  const pendingReturn =
+    next ??
+    (typeof window !== "undefined"
+      ? sessionStorage.getItem(RETURN_STORAGE_KEY) ?? undefined
+      : undefined);
+
+  const pendingCap = pendingReturn ? requiredCapabilityForPath(pendingReturn) : null;
+  const canReturn =
+    !!pendingReturn && (!pendingCap || (!capsLoading && has(pendingCap)));
+
+  // Se o usuário já tem a permissão do destino pendente, redireciona imediatamente.
+  useEffect(() => {
+    if (!pendingReturn || capsLoading) return;
+    if (pendingCap && !has(pendingCap)) return;
+    try {
+      sessionStorage.removeItem(RETURN_STORAGE_KEY);
+    } catch {
+      /* noop */
+    }
+    navigate({ to: pendingReturn, replace: true });
+  }, [pendingReturn, pendingCap, capsLoading, has, navigate]);
+
   const getCasesFn = useServerFn(getCases);
   const listDocsFn = useServerFn(listAllDocuments);
   const listEventsFn = useServerFn(listEvents);
@@ -38,9 +74,30 @@ function DashboardPage() {
 
   return (
     <div className="space-y-6">
+      {pendingReturn && !canReturn ? (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-amber-500/40 bg-amber-500/10 p-4 text-sm">
+          <div>
+            <p className="font-medium">Aguardando liberação de acesso</p>
+            <p className="text-muted-foreground">
+              Assim que o administrador liberar, retornaremos para{" "}
+              <code className="rounded bg-muted px-1 py-0.5">{pendingReturn}</code>.
+            </p>
+          </div>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => navigate({ to: pendingReturn })}
+          >
+            <RotateCcw className="mr-2 h-4 w-4" />
+            Tentar novamente
+          </Button>
+        </div>
+      ) : null}
+
       <div className="flex items-center justify-between">
         <h2 className="text-3xl font-bold font-heading tracking-tight">Painel de Controle</h2>
       </div>
+
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         <Card>
