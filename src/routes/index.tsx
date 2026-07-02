@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
-import { BrainCircuit, ListTodo, Scale, FileText, ArrowRight, Microscope } from "lucide-react";
+import { IconBox } from "@/components/ui/icon-box";
+import { ListTodo, Scale, FileText, ArrowRight, Microscope, MessageSquare } from "lucide-react";
 import { JurisMindMark } from "@/components/brand/jurismind-mark";
 import { useAuth } from "@/hooks/use-auth";
 
@@ -20,7 +21,7 @@ export const Route = createFileRoute("/")({
 
 const features = [
   {
-    icon: BrainCircuit,
+    icon: MessageSquare,
     title: "Chat com seus documentos",
     description:
       "Pergunte sobre processos, laudos, quesitos ou contratos. O JurisMind AI busca trechos relevantes e responde citando as fontes.",
@@ -143,9 +144,7 @@ function LandingPage() {
             const Icon = p.icon;
             return (
               <div key={p.title} className="flex items-start gap-3 rounded-xl border bg-card p-4">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-primary text-primary-foreground">
-                  <Icon className="h-5 w-5" />
-                </div>
+                <IconBox icon={Icon} size={40} iconSize={20} />
                 <div>
                   <h3 className="font-heading font-bold text-foreground">{p.title}</h3>
                   <p className="text-sm text-muted-foreground">{p.text}</p>
@@ -175,9 +174,7 @@ function LandingPage() {
                 key={f.title}
                 className="rounded-2xl border bg-card p-6 shadow-sm transition-shadow hover:shadow-md"
               >
-                <div className="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-primary text-primary-foreground">
-                  <Icon className="h-5 w-5" />
-                </div>
+                <IconBox icon={Icon} size={40} iconSize={20} className="mb-4" />
                 <h3 className="font-heading text-xl font-bold text-foreground">{f.title}</h3>
                 <p className="mt-2 text-sm text-muted-foreground">{f.description}</p>
               </div>
