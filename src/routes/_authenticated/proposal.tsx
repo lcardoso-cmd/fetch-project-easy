@@ -8,13 +8,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Handshake, Loader2, Copy, Download, FileText, Check, Trash2 } from "lucide-react";
+import { Handshake, Loader2, Copy, Download, FileText, Check, Trash2, History, Save } from "lucide-react";
 import { toast } from "sonner";
 import { generateProposal } from "@/lib/generators.functions";
 import { getCases } from "@/lib/cases.functions";
 import { useProfile } from "@/hooks/use-profile";
 import { RichTextEditor } from "@/components/chat/rich-text-editor";
 import { z } from "zod";
+import { ProposalVersionsDialog } from "@/components/proposal/proposal-versions-dialog";
+import { addVersion } from "@/lib/proposal-versions";
 
 const DRAFT_KEY = "jurismind:proposal-draft:v1";
 const DRAFT_DEBOUNCE_MS = 800;
@@ -147,6 +149,8 @@ function ProposalPage() {
   const [saving, setSaving] = useState(false);
   const [hydrated, setHydrated] = useState(false);
   const [, forceTick] = useState(0);
+  const [versionsOpen, setVersionsOpen] = useState(false);
+  const [versionsRefresh, setVersionsRefresh] = useState(0);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Restaurar rascunho ao montar (client-only).
@@ -256,11 +260,42 @@ function ProposalPage() {
       } = form;
       const r = await gen({ data: payload });
       setOutput(r.content);
+      // Snapshot automático da versão gerada
+      const label = `Gerada — ${form.client_name || "Cliente"}`;
+      addVersion<FormState>({ label, origin: "auto-generate", form, output: r.content });
+      setVersionsRefresh((n) => n + 1);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Falha ao gerar");
     } finally {
       setLoading(false);
     }
+  };
+
+  const saveVersionManually = () => {
+    if (!output && !form.client_name && !form.matter) {
+      toast.error("Nada para salvar ainda.");
+      return;
+    }
+    const label = `Versão — ${form.client_name || "sem cliente"} (${new Date().toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })})`;
+    addVersion<FormState>({ label, origin: "manual", form, output });
+    setVersionsRefresh((n) => n + 1);
+    toast.success("Versão salva no histórico");
+  };
+
+  const restoreVersion = (v: { form: FormState; output: string }) => {
+    // Preserva o rascunho atual como backup antes de sobrescrever
+    if (output || form.client_name || form.matter) {
+      addVersion<FormState>({
+        label: `Backup antes de restaurar (${new Date().toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })})`,
+        origin: "auto-restore",
+        form,
+        output,
+      });
+    }
+    setForm(v.form);
+    setOutput(v.output);
+    setErrors({});
+    setVersionsRefresh((n) => n + 1);
   };
 
   const copy = async () => {
@@ -356,8 +391,24 @@ function ProposalPage() {
               <Trash2 className="mr-1 h-3.5 w-3.5" /> Descartar
             </Button>
           )}
+          <Button size="sm" variant="outline" onClick={saveVersionManually} className="h-7 px-2">
+            <Save className="mr-1 h-3.5 w-3.5" /> Salvar versão
+          </Button>
+          <Button size="sm" variant="outline" onClick={() => setVersionsOpen(true)} className="h-7 px-2">
+            <History className="mr-1 h-3.5 w-3.5" /> Histórico
+          </Button>
         </div>
       </div>
+
+      <ProposalVersionsDialog<FormState>
+        open={versionsOpen}
+        onOpenChange={setVersionsOpen}
+        currentForm={form}
+        currentOutput={output}
+        onRestore={restoreVersion}
+        refreshKey={versionsRefresh}
+      />
+
 
 
       <div className="grid gap-6 lg:grid-cols-2">
