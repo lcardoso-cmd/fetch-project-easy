@@ -127,6 +127,11 @@ export function UploadDialog({
   const signFn = useServerFn(createUploadSignedUrl);
   const indexFn = useServerFn(indexDocument);
   const deleteFn = useServerFn(deleteDocument);
+  const discardFn = useServerFn(discardUploadedObject);
+  // Controllers por item — permitem abortar hash/upload em andamento.
+  const abortersRef = useRef<Map<string, AbortController>>(new Map());
+  // Flag para interromper o loop da fila sem depender do estado React.
+  const cancelAllRef = useRef(false);
 
   const [open, setOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
