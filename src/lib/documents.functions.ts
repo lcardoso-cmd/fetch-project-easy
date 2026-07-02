@@ -102,14 +102,15 @@ export const createUploadSignedUrl = createServerFn({ method: "POST" })
   .inputValidator((i: unknown) =>
     z
       .object({
-        case_id: z.string().uuid(),
+        case_id: z.string().uuid().optional(),
         filename: z.string().min(1).max(300),
       })
       .parse(i),
   )
   .handler(async ({ data, context }) => {
     const safeName = data.filename.replace(/[^\w.\-]+/g, "_");
-    const path = `${context.userId}/${data.case_id}/${Date.now()}-${safeName}`;
+    const folder = data.case_id ?? "_intake";
+    const path = `${context.userId}/${folder}/${Date.now()}-${safeName}`;
     const { data: signed, error } = await context.supabase.storage
       .from("documents")
       .createSignedUploadUrl(path);
