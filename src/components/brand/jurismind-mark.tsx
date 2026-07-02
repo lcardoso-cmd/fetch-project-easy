@@ -186,8 +186,9 @@ export function JurisMindMark({
    */
   interactive?: boolean;
 }) {
-  const resolved: JurisMindVariant =
-    variant ?? (context ? CONTEXT_TO_VARIANT[context] : "sidebar");
+  const resolved: JurisMindVariant = isJurisMindVariant(variant)
+    ? variant
+    : variantForContext(context);
   const isSquare =
     resolved === "sidebar" || resolved === "square-navy" || resolved === "square-white";
   const shouldRound = rounded ?? isSquare;
