@@ -90,7 +90,7 @@ function LandingPage() {
         />
         <div className="relative mx-auto max-w-6xl px-4 py-24 text-center">
           <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-accent/20 px-3 py-1 text-xs font-semibold text-accent">
-            <JurisMindMark size={16} />
+            <JurisMindMark size={14} variant="glyph" />
             Para advogados, peritos e assistentes técnicos
           </div>
           <h1 className="font-heading text-5xl font-extrabold tracking-tight md:text-6xl">
