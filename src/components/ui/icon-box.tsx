@@ -1,11 +1,13 @@
 import { cn } from "@/lib/utils";
 import type { LucideIcon } from "lucide-react";
+import { JURISMIND_ROUND_CLASS } from "@/components/brand/jurismind-mark";
 
 /**
  * IconBox — ícone com fundo primário e cantos arredondados.
  *
- * Use para ícones de recursos, cards e listas. Garante consistência de
- * arredondamento, cor e alinhamento em toda a aplicação.
+ * Usa o mesmo token de arredondamento do `JurisMindMark` para garantir
+ * que ícones de recursos e a marca fiquem visualmente coerentes lado a lado,
+ * em qualquer tamanho, no desktop e no mobile.
  */
 export function IconBox({
   icon: Icon,
@@ -21,7 +23,8 @@ export function IconBox({
   return (
     <div
       className={cn(
-        "inline-flex shrink-0 items-center justify-center rounded-2xl bg-primary text-primary-foreground",
+        "inline-flex shrink-0 items-center justify-center bg-primary text-primary-foreground align-middle",
+        JURISMIND_ROUND_CLASS,
         className,
       )}
       style={{ width: size, height: size }}
