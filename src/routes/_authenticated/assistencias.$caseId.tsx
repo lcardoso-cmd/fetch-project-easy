@@ -258,7 +258,7 @@ function CaseDetailPage() {
                 <CaseDataRow label="Cliente" value={caseData.client_name} />
               )}
               {caseData.case_number && (
-                <CaseDataRow label="Número do processo" value={caseData.case_number} breakAll />
+                <CaseDataRow label="Número do processo" value={caseData.case_number} />
               )}
               {caseData.jurisdiction && (
                 <CaseDataRow label="Vara / Tribunal" value={caseData.jurisdiction} />
