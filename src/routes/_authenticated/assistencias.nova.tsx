@@ -219,6 +219,20 @@ function NewCasePage() {
   const [reviewConfirmed, setReviewConfirmed] = useState(false);
   const [hydratedReview, setHydratedReview] = useState(false);
 
+  // Bloqueia saída se o usuário já preencheu algo relevante e ainda não enviou.
+  const novaDirty =
+    !submitting &&
+    !submitted &&
+    (title.trim().length > 0 ||
+      clientName.trim().length > 0 ||
+      caseNumber.trim().length > 0 ||
+      jurisdiction.trim().length > 0 ||
+      caseType.trim().length > 0 ||
+      description.trim().length > 0 ||
+      parties.some((p) => (p.name ?? "").trim().length > 0) ||
+      !!uploaded);
+  useUnsavedChangesGuard({ when: novaDirty });
+
   // Carrega estado salvo ao montar
   useEffect(() => {
     if (!REVIEW_STORAGE_KEY) return;
