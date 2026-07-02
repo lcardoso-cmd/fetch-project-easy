@@ -52,6 +52,7 @@ import {
   attachDocumentToCase,
   type ExtractedCaseData,
 } from "@/lib/cases.functions";
+import { buildCaseTitle } from "@/lib/case-title";
 import { listTeamMembers, createTeamMember } from "@/lib/team.functions";
 import { indexDocument } from "@/lib/rag.functions";
 import { createUploadSignedUrl } from "@/lib/documents.functions";
@@ -134,6 +135,14 @@ function NewCasePage() {
 
   // form state
   const [title, setTitle] = useState("");
+  // Rastreia se o título foi editado manualmente. Enquanto for "auto",
+  // regeneramos automaticamente a partir das partes (assistida vs contrária,
+  // requerida vs requerente, etc). Ao digitar, o usuário assume controle.
+  const [titleAuto, setTitleAuto] = useState(true);
+  const onTitleChange = (v: string) => {
+    setTitle(v);
+    setTitleAuto(false);
+  };
   const [clientName, setClientName] = useState("");
   const [caseNumber, setCaseNumber] = useState("");
   const [jurisdiction, setJurisdiction] = useState("");
@@ -278,7 +287,11 @@ function NewCasePage() {
   });
 
   const applyExtracted = (e: ExtractedCaseData) => {
+    // Título só é preenchido a partir do documento se o usuário ainda não
+    // customizou nada — caso contrário respeitamos a edição manual.
+    // A auto-geração final baseada nas partes é feita pelo useEffect abaixo.
     setTitle(e.title);
+    setTitleAuto(true);
     setClientName(e.client_name ?? "");
     setCaseNumber(e.case_number ?? "");
     setJurisdiction(e.jurisdiction ?? "");
@@ -291,6 +304,17 @@ function NewCasePage() {
       }),
     );
   };
+
+  // Auto-geração do título: quando o usuário identifica assistida/contrária
+  // (ou requerida/requerente, dependendo da matéria), montamos o caption
+  // "Parte A vs Parte B" — desde que o título ainda esteja em modo "auto".
+  useEffect(() => {
+    if (!titleAuto) return;
+    const generated = buildCaseTitle(matterKind, parties);
+    if (generated && generated !== title) {
+      setTitle(generated);
+    }
+  }, [titleAuto, matterKind, parties, title]);
 
   const handleFile = async (file: File) => {
     if (!user) return;
@@ -805,17 +829,38 @@ function NewCasePage() {
           </CardHeader>
           <CardContent className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2 md:col-span-2">
-              <Label htmlFor="title">Título *</Label>
+              <div className="flex items-center justify-between gap-2">
+                <Label htmlFor="title">Título *</Label>
+                {!titleAuto && buildCaseTitle(matterKind, parties) ? (
+                  <button
+                    type="button"
+                    onClick={() => setTitleAuto(true)}
+                    className="text-xs text-accent hover:underline"
+                  >
+                    Regenerar a partir das partes
+                  </button>
+                ) : null}
+              </div>
               <Input
                 id="title"
                 value={title}
-                onChange={(e) => setTitle(e.target.value)}
+                onChange={(e) => onTitleChange(e.target.value)}
                 onBlur={() => markTouched("title")}
                 required
                 maxLength={200}
                 aria-invalid={showError("title") || undefined}
                 className={errorRing("title")}
+                placeholder={
+                  matterKind === "pericia"
+                    ? "Ex.: Requerida vs Requerente (gerado a partir das partes)"
+                    : "Ex.: Parte assistida vs Parte contrária (gerado a partir das partes)"
+                }
               />
+              <p className="text-xs text-muted-foreground">
+                {titleAuto
+                  ? "O título é gerado automaticamente assim que você classificar a parte assistida/requerida e a parte contrária/requerente."
+                  : "Você está editando o título manualmente."}
+              </p>
               <ErrorMsg k="title" />
             </div>
             <div className="space-y-2">
