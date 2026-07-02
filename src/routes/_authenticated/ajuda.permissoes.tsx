@@ -36,8 +36,9 @@ export const Route = createFileRoute("/_authenticated/ajuda/permissoes")({
 const B2B_ONLY: Capability[] = ["platform_admin", "super_admin"];
 
 function PermissionsHelpPage() {
-  const { capabilities, isOfficeAdmin } = useCapabilities();
+  const { capabilities, has } = useCapabilities();
   const myCaps = new Set(capabilities);
+  const isOfficeAdmin = has("office_admin");
 
   return (
     <div className="mx-auto max-w-4xl space-y-6 p-4 sm:p-6">
