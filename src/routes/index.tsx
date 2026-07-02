@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
-import { BrainCircuit, ListTodo, Scale, FileText, ArrowRight, Sparkles } from "lucide-react";
+import { BrainCircuit, ListTodo, Scale, FileText, ArrowRight, Microscope } from "lucide-react";
+import { JurisMindMark } from "@/components/brand/jurismind-mark";
 import { useAuth } from "@/hooks/use-auth";
 
 export const Route = createFileRoute("/")({
@@ -11,7 +12,7 @@ export const Route = createFileRoute("/")({
       {
         name: "description",
         content:
-          "B2B | JurisMind AI: plataforma de IA jurídica para advogados, peritos judiciais e assistentes técnicos. RAG de documentos, prazos e modelos de petição, laudo e parecer.",
+          "B2B | JurisMind AI: plataforma de IA jurídica para advogados, peritos judiciais e assistentes técnicos. RAG de documentos, prazos, petições, laudos e pareceres técnicos.",
       },
     ],
   }),
@@ -22,25 +23,25 @@ const features = [
     icon: BrainCircuit,
     title: "Chat com seus documentos",
     description:
-      "Pergunte qualquer coisa sobre seus processos, perícias ou laudos. O JurisMind AI busca trechos relevantes e responde citando as fontes.",
+      "Pergunte sobre processos, laudos, quesitos ou contratos. O JurisMind AI busca trechos relevantes e responde citando as fontes.",
   },
   {
     icon: FileText,
-    title: "Análise automática",
+    title: "Peças e laudos em minutos",
     description:
-      "Faça upload de PDFs, contratos, despachos de nomeação e laudos. O JurisMind AI extrai, indexa e gera resumos em segundos.",
+      "Petições, contestações, quesitos, laudos periciais, pareceres técnicos e manifestações a partir dos documentos do caso.",
   },
   {
     icon: ListTodo,
     title: "Casos, perícias e assistências",
     description:
-      "Organize processos do cliente, perícias nomeadas pelo juízo e assistências técnicas em um único painel adaptável ao seu perfil.",
+      "Organize processos do escritório, perícias nomeadas pelo juízo e assistências técnicas em um único painel adaptável ao seu perfil.",
   },
   {
-    icon: Scale,
-    title: "Para todo o jurídico técnico",
+    icon: Microscope,
+    title: "Feito para o jurídico técnico",
     description:
-      "Advogados, peritos contadores, peritos engenheiros, peritos médicos e assistentes técnicos das partes — com vocabulário e modelos próprios para cada um.",
+      "Advogados, peritos judiciais (contadores, engenheiros, médicos) e assistentes técnicos das partes — com vocabulário e modelos próprios para cada perfil.",
   },
 ];
 
@@ -53,9 +54,7 @@ function LandingPage() {
       <header className="border-b">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4">
           <div className="flex items-center gap-2">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-              <BrainCircuit className="h-5 w-5" />
-            </div>
+            <JurisMindMark size={36} />
             <span className="font-heading text-xl font-extrabold tracking-tight text-foreground">
               B2B | JurisMind AI
             </span>
@@ -91,17 +90,17 @@ function LandingPage() {
         />
         <div className="relative mx-auto max-w-6xl px-4 py-24 text-center">
           <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-accent/20 px-3 py-1 text-xs font-semibold text-accent">
-            <Sparkles className="h-3 w-3" />
-            B2B | JurisMind AI aplicado à advocacia
+            <JurisMindMark size={16} />
+            Para advogados, peritos e assistentes técnicos
           </div>
           <h1 className="font-heading text-5xl font-extrabold tracking-tight md:text-6xl">
-            Sua mente jurídica,
+            Inteligência jurídica e técnica,
             <br />
-            potencializada por B2B | JurisMind AI.
+            de ponta a ponta.
           </h1>
           <p className="mx-auto mt-6 max-w-2xl text-lg text-primary-foreground/80">
-            B2B | JurisMind AI transforma a forma como você lida com documentos: faça upload, pergunte,
-            obtenha resumos e cite as fontes — tudo em um único lugar.
+            B2B | JurisMind AI reúne processos, laudos e contratos em um só lugar: pergunte,
+            gere petições, quesitos, pareceres técnicos e planilhas — sempre com citação das fontes.
           </p>
           <div className="mt-8 flex flex-wrap justify-center gap-3">
             <Button size="lg" asChild className="bg-accent text-accent-foreground hover:bg-accent/90">
@@ -121,14 +120,51 @@ function LandingPage() {
         </div>
       </section>
 
+      {/* Personas */}
+      <section className="border-b bg-muted/30">
+        <div className="mx-auto grid max-w-6xl gap-6 px-4 py-12 md:grid-cols-3">
+          {[
+            {
+              icon: Scale,
+              title: "Advogados",
+              text: "Petições, contestações, contrarrazões, alegações finais e análise de risco.",
+            },
+            {
+              icon: Microscope,
+              title: "Peritos judiciais",
+              text: "Laudos periciais, resposta a quesitos e organização de nomeações do juízo.",
+            },
+            {
+              icon: FileText,
+              title: "Assistentes técnicos",
+              text: "Pareceres técnicos, manifestações e apoio à parte contratante no processo.",
+            },
+          ].map((p) => {
+            const Icon = p.icon;
+            return (
+              <div key={p.title} className="flex items-start gap-3 rounded-xl border bg-card p-4">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+                  <Icon className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="font-heading font-bold text-foreground">{p.title}</h3>
+                  <p className="text-sm text-muted-foreground">{p.text}</p>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </section>
+
       {/* Features */}
       <section id="features" className="mx-auto max-w-6xl px-4 py-20">
         <div className="mx-auto max-w-2xl text-center">
           <h2 className="font-heading text-3xl font-bold tracking-tight text-foreground md:text-4xl">
-            Tudo que sua banca precisa em um só lugar
+            Tudo que o jurídico técnico precisa em um só lugar
           </h2>
           <p className="mt-3 text-muted-foreground">
-            Reduza horas de leitura, encontre informação em segundos e foque no que importa: a tese.
+            Reduza horas de leitura, encontre informação em segundos e foque no que importa:
+            a tese, o laudo, o parecer.
           </p>
         </div>
         <div className="mt-12 grid gap-6 md:grid-cols-2">
@@ -169,7 +205,7 @@ function LandingPage() {
 
       <footer className="border-t">
         <div className="mx-auto max-w-6xl px-4 py-6 text-center text-sm text-muted-foreground">
-          © {new Date().getFullYear()} B2B | JurisMind AI. Feito para advogados.
+          © {new Date().getFullYear()} B2B | JurisMind AI. Feito para advogados, peritos e assistentes técnicos.
         </div>
       </footer>
     </div>
