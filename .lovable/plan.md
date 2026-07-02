@@ -1,53 +1,42 @@
-## 1. Rótulos com letra maiúscula (Partes / Parte representada)
+Instalar e configurar Storybook para o projeto, depois criar uma story completa para o JurisMindMark.
 
-Aplicar `capitalize` em todos os lugares onde `party.role` / `represented_party.role` é renderizado como badge ou entre parênteses:
+## Contexto
+O projeto usa TanStack Start + Vite 8 + Tailwind v4 e ainda não tem Storybook instalado. O usuário pediu uma seção de Storybook para o componente `JurisMindMark` mostrando cada `context` e o efeito de `variant` como override. A recomendação é instalar o Storybook, que é a ferramenta padrão (e gratuita) para documentação visual de componentes.
 
-- `src/components/chat/jurismind-chat.tsx`
-  - linha 511-512: `caseInfo.represented_party.role` → capitalizar
-  - linha 543: `{p.role}` (badge da lista de partes no painel do caso) → capitalizar
-- Confirmar que `src/routes/_authenticated/cases.$caseId.tsx` já usa `capitalize` (ok) e reforçar o mesmo padrão em qualquer novo render.
-- Padronizar utilitário `capitalize` em `src/lib/formatters.ts` (ou reutilizar) para ambos os arquivos importarem, evitando divergência futura.
+## Passos
 
-## 2. Substituir o ícone genérico (Sparkles) pela logo B2B | JurisMind AI
+1. Instalar Storybook e addons necessários
+   - `storybook` (framework)
+   - `@storybook/react-vite` (renderer para React + Vite)
+   - `@storybook/addon-essentials` (controls, docs, actions)
+   - `@storybook/addon-interactions` (opcional, para testes de interação)
+   - `@storybook/test` (auxiliares de teste, já inclui `@storybook/testing-library`)
 
-- Registrar a logo enviada (`user-uploads://LOGO_JURISMIND.png`) como asset via `lovable-assets` em `src/assets/jurismind-logo.png.asset.json`.
-- Criar componente `src/components/brand/jurismind-mark.tsx` que renderiza a logo como `<img>` com tamanho controlável (`size`, `className`) — variação escura/clara conforme fundo (a arte tem fundo azul; usamos como-está em superfícies claras e invertemos com `dark:invert` só se necessário).
-- Substituir todos os usos de `Sparkles` de `lucide-react` como marca do agente pelos seguintes arquivos:
-  - `src/routes/index.tsx` (hero / header / seção)
-  - `src/routes/_authenticated/dashboard.tsx`
-  - `src/components/chat/chat-panel.tsx`
-  - `src/components/chat/jurismind-chat.tsx` (avatar do assistente, empty state)
-  - `src/components/cases/case-summary-card.tsx`
-  - `src/routes/_authenticated/cases.new.tsx`
-- Manter Sparkles apenas se ainda for útil como ícone decorativo de "ação de IA" em botões (não como identidade do agente); caso contrário, remover import.
+2. Inicializar configuração do Storybook
+   - Criar `.storybook/main.ts` apontando para arquivos `*.stories.tsx` dentro de `src/components/brand/` (ou `src/**/*.stories.tsx`).
+   - Criar `.storybook/preview.ts` importando os estilos globais (`src/styles.css`) para que o Tailwind v4 e os tokens funcionem nos stories.
+   - Configurar path aliases (`@/`) e framework Vite corretamente.
 
-## 3. Reorganizar os botões de ações rápidas do chat (imagem 4)
+3. Garantir compatibilidade com Tailwind v4
+   - O Tailwind v4 carrega via `@import "tailwindcss"` no CSS. A preview do Storybook deve importar `src/styles.css` para que as classes utilitárias e os temas funcionem.
+   - Verificar se `storybook dev` renderiza corretamente sem erros de CSS/PostCSS.
 
-Em `src/components/chat/jurismind-chat.tsx` a barra tem ~16 botões em duas linhas — poluído.
+4. Criar a story de JurisMindMark
+   - Arquivo: `src/components/brand/jurismind-mark.stories.tsx`.
+   - Meta com `argTypes` para `context`, `variant`, `size`, `rounded` e `className`.
+   - Uma story padrão para brincar com os controls.
+   - Uma story "All Contexts" que renderiza todos os contextos em grid com labels.
+   - Uma story "Variant Override" mostrando o mesmo contexto com diferentes variantes, para deixar explícito o efeito de override.
 
-Nova organização:
-- Manter 4-5 atalhos "estrela" sempre visíveis como chips: **Resumo do caso**, **Linha do tempo**, **Pontos críticos**, **Análise de risco**, **Extrair prazos**.
-- Agrupar o resto em um `DropdownMenu` (`shadcn/ui`) com botão **"Mais ações ▾"** contendo submenus:
-  - **Peças** → Petição inicial, Contestação, Contrarrazões, Alegações finais, Notificação extrajudicial
-  - **Perícia / Técnica** → Quesitos periciais, Manifestação técnica, Parecer técnico, Planilha de cálculo, Apresentação
-  - **Utilidades** → Extrair partes, Extrair prazos
-- Preservar os mesmos `prompt`s já definidos no array `QUICK_ACTIONS`, apenas categorizando.
-- Layout compacto, alinhado à esquerda logo acima do composer, com rolagem horizontal em mobile.
+5. Ajustar scripts no `package.json`
+   - `storybook`: `storybook dev -p 6006`
+   - `build-storybook`: `storybook build`
 
-## 4. Homepage: linguagem para advogados, peritos e assistentes técnicos
+6. Verificar
+   - Rodar `bun storybook` (ou `storybook dev`) para garantir que inicia sem erros.
+   - Verificar que as imagens dos assets aparecem corretamente nas stories (o Storybook via Vite deve respeitar os imports de `.asset.json`).
 
-Em `src/routes/index.tsx`:
-- Substituir textos que dão tom exclusivo de advocacia:
-  - "B2B | JurisMind AI aplicado à advocacia" → "B2B | JurisMind AI para o jurídico técnico"
-  - "Sua mente jurídica, potencializada…" → título neutro, ex.: **"Inteligência para advogados, peritos e assistentes técnicos"**
-  - "Feito para advogados" no footer → "Feito para advogados, peritos e assistentes técnicos."
-- Ajustar copy do hero, features e CTA para citar as três personas de forma equilibrada (petições / laudos / pareceres técnicos, prazos processuais / quesitos periciais / manifestações).
-- Meta `title` / `description` já cita as três — manter e alinhar restante da página com essa promessa.
-- Ícones das features: substituir Sparkles pela marca JurisMind onde representa o "agente"; manter ícones lucide temáticos (Scale, Microscope, FileSearch etc.) para as três personas.
-
-### Detalhes técnicos
-
-- Nenhuma mudança de schema/banco.
-- Sem novas dependências (usa `DropdownMenu` já do shadcn).
-- Asset da logo entra via `lovable-assets create --file /mnt/user-uploads/LOGO_JURISMIND.png`.
-- Alterações puramente de frontend/presentational.
+## Notas técnicas
+- Storybook 8+ é compatível com Vite 5/6/7/8. Usar a versão mais recente estável.
+- Não alterar o runtime de produção do app (rotas, server functions, etc.) — o Storybook vive fora do fluxo principal.
+- Se a instalação do Storybook padrão conflitar com o Vite 8 beta, usar flags para forçar a versão compatível ou ajustar manualmente os pacotes.
