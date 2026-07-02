@@ -23,7 +23,7 @@ import { JurisMindChat } from "@/components/chat/jurismind-chat";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-export const Route = createFileRoute("/_authenticated/cases/$caseId/chat")({
+export const Route = createFileRoute("/_authenticated/assistencias/$caseId/chat")({
   component: CaseChatFullPage,
 });
 

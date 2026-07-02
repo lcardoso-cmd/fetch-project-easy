@@ -38,17 +38,17 @@ import { Route as ApiToolsPetitionRouteImport } from './routes/api/tools/petitio
 import { Route as ApiToolsPdfRouteImport } from './routes/api/tools/pdf'
 import { Route as AuthenticatedConfiguracoesOauthRouteImport } from './routes/_authenticated/configuracoes.oauth'
 import { Route as AuthenticatedConfiguracoesEscritorioRouteImport } from './routes/_authenticated/configuracoes.escritorio'
-import { Route as AuthenticatedCasesCaseIdRouteImport } from './routes/_authenticated/cases.$caseId'
 import { Route as AuthenticatedAssistenciasNovaRouteImport } from './routes/_authenticated/assistencias.nova'
 import { Route as AuthenticatedAssistenciasLoteRouteImport } from './routes/_authenticated/assistencias.lote'
+import { Route as AuthenticatedAssistenciasCaseIdRouteImport } from './routes/_authenticated/assistencias.$caseId'
 import { Route as AuthenticatedPlataformaUsuariosIndexRouteImport } from './routes/_authenticated/plataforma.usuarios.index'
 import { Route as AuthenticatedPlataformaCredenciaisIndexRouteImport } from './routes/_authenticated/plataforma.credenciais.index'
 import { Route as AuthenticatedPlataformaClientesIndexRouteImport } from './routes/_authenticated/plataforma.clientes.index'
 import { Route as AuthenticatedPlataformaAuditoriaIndexRouteImport } from './routes/_authenticated/plataforma.auditoria.index'
 import { Route as ApiPublicOutlookCallbackRouteImport } from './routes/api/public/outlook/callback'
 import { Route as ApiPublicGoogleCallbackRouteImport } from './routes/api/public/google/callback'
-import { Route as AuthenticatedPlatformCustomersIdRouteImport } from './routes/_authenticated/platform.customers.$id'
-import { Route as AuthenticatedCasesCaseIdChatRouteImport } from './routes/_authenticated/cases.$caseId.chat'
+import { Route as AuthenticatedPlataformaClientesIdRouteImport } from './routes/_authenticated/plataforma.clientes.$id'
+import { Route as AuthenticatedAssistenciasCaseIdChatRouteImport } from './routes/_authenticated/assistencias.$caseId.chat'
 
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
@@ -204,12 +204,6 @@ const AuthenticatedConfiguracoesEscritorioRoute =
     path: '/escritorio',
     getParentRoute: () => AuthenticatedConfiguracoesRoute,
   } as any)
-const AuthenticatedCasesCaseIdRoute =
-  AuthenticatedCasesCaseIdRouteImport.update({
-    id: '/cases/$caseId',
-    path: '/cases/$caseId',
-    getParentRoute: () => AuthenticatedRoute,
-  } as any)
 const AuthenticatedAssistenciasNovaRoute =
   AuthenticatedAssistenciasNovaRouteImport.update({
     id: '/nova',
@@ -220,6 +214,12 @@ const AuthenticatedAssistenciasLoteRoute =
   AuthenticatedAssistenciasLoteRouteImport.update({
     id: '/lote',
     path: '/lote',
+    getParentRoute: () => AuthenticatedAssistenciasRoute,
+  } as any)
+const AuthenticatedAssistenciasCaseIdRoute =
+  AuthenticatedAssistenciasCaseIdRouteImport.update({
+    id: '/$caseId',
+    path: '/$caseId',
     getParentRoute: () => AuthenticatedAssistenciasRoute,
   } as any)
 const AuthenticatedPlataformaUsuariosIndexRoute =
@@ -257,17 +257,17 @@ const ApiPublicGoogleCallbackRoute = ApiPublicGoogleCallbackRouteImport.update({
   path: '/api/public/google/callback',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AuthenticatedPlatformCustomersIdRoute =
-  AuthenticatedPlatformCustomersIdRouteImport.update({
-    id: '/platform/customers/$id',
-    path: '/platform/customers/$id',
+const AuthenticatedPlataformaClientesIdRoute =
+  AuthenticatedPlataformaClientesIdRouteImport.update({
+    id: '/plataforma/clientes/$id',
+    path: '/plataforma/clientes/$id',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
-const AuthenticatedCasesCaseIdChatRoute =
-  AuthenticatedCasesCaseIdChatRouteImport.update({
+const AuthenticatedAssistenciasCaseIdChatRoute =
+  AuthenticatedAssistenciasCaseIdChatRouteImport.update({
     id: '/chat',
     path: '/chat',
-    getParentRoute: () => AuthenticatedCasesCaseIdRoute,
+    getParentRoute: () => AuthenticatedAssistenciasCaseIdRoute,
   } as any)
 
 export interface FileRoutesByFullPath {
@@ -290,9 +290,9 @@ export interface FileRoutesByFullPath {
   '/publicacoes': typeof AuthenticatedPublicacoesRoute
   '/tarefas': typeof AuthenticatedTarefasRoute
   '/invite/$token': typeof InviteTokenRoute
+  '/assistencias/$caseId': typeof AuthenticatedAssistenciasCaseIdRouteWithChildren
   '/assistencias/lote': typeof AuthenticatedAssistenciasLoteRoute
   '/assistencias/nova': typeof AuthenticatedAssistenciasNovaRoute
-  '/cases/$caseId': typeof AuthenticatedCasesCaseIdRouteWithChildren
   '/configuracoes/escritorio': typeof AuthenticatedConfiguracoesEscritorioRoute
   '/configuracoes/oauth': typeof AuthenticatedConfiguracoesOauthRoute
   '/api/tools/pdf': typeof ApiToolsPdfRoute
@@ -302,8 +302,8 @@ export interface FileRoutesByFullPath {
   '/api/tools/transcribe': typeof ApiToolsTranscribeRoute
   '/assistencias/': typeof AuthenticatedAssistenciasIndexRoute
   '/plataforma/': typeof AuthenticatedPlataformaIndexRoute
-  '/cases/$caseId/chat': typeof AuthenticatedCasesCaseIdChatRoute
-  '/platform/customers/$id': typeof AuthenticatedPlatformCustomersIdRoute
+  '/assistencias/$caseId/chat': typeof AuthenticatedAssistenciasCaseIdChatRoute
+  '/plataforma/clientes/$id': typeof AuthenticatedPlataformaClientesIdRoute
   '/api/public/google/callback': typeof ApiPublicGoogleCallbackRoute
   '/api/public/outlook/callback': typeof ApiPublicOutlookCallbackRoute
   '/plataforma/auditoria/': typeof AuthenticatedPlataformaAuditoriaIndexRoute
@@ -330,9 +330,9 @@ export interface FileRoutesByTo {
   '/publicacoes': typeof AuthenticatedPublicacoesRoute
   '/tarefas': typeof AuthenticatedTarefasRoute
   '/invite/$token': typeof InviteTokenRoute
+  '/assistencias/$caseId': typeof AuthenticatedAssistenciasCaseIdRouteWithChildren
   '/assistencias/lote': typeof AuthenticatedAssistenciasLoteRoute
   '/assistencias/nova': typeof AuthenticatedAssistenciasNovaRoute
-  '/cases/$caseId': typeof AuthenticatedCasesCaseIdRouteWithChildren
   '/configuracoes/escritorio': typeof AuthenticatedConfiguracoesEscritorioRoute
   '/configuracoes/oauth': typeof AuthenticatedConfiguracoesOauthRoute
   '/api/tools/pdf': typeof ApiToolsPdfRoute
@@ -342,8 +342,8 @@ export interface FileRoutesByTo {
   '/api/tools/transcribe': typeof ApiToolsTranscribeRoute
   '/assistencias': typeof AuthenticatedAssistenciasIndexRoute
   '/plataforma': typeof AuthenticatedPlataformaIndexRoute
-  '/cases/$caseId/chat': typeof AuthenticatedCasesCaseIdChatRoute
-  '/platform/customers/$id': typeof AuthenticatedPlatformCustomersIdRoute
+  '/assistencias/$caseId/chat': typeof AuthenticatedAssistenciasCaseIdChatRoute
+  '/plataforma/clientes/$id': typeof AuthenticatedPlataformaClientesIdRoute
   '/api/public/google/callback': typeof ApiPublicGoogleCallbackRoute
   '/api/public/outlook/callback': typeof ApiPublicOutlookCallbackRoute
   '/plataforma/auditoria': typeof AuthenticatedPlataformaAuditoriaIndexRoute
@@ -373,9 +373,9 @@ export interface FileRoutesById {
   '/_authenticated/publicacoes': typeof AuthenticatedPublicacoesRoute
   '/_authenticated/tarefas': typeof AuthenticatedTarefasRoute
   '/invite/$token': typeof InviteTokenRoute
+  '/_authenticated/assistencias/$caseId': typeof AuthenticatedAssistenciasCaseIdRouteWithChildren
   '/_authenticated/assistencias/lote': typeof AuthenticatedAssistenciasLoteRoute
   '/_authenticated/assistencias/nova': typeof AuthenticatedAssistenciasNovaRoute
-  '/_authenticated/cases/$caseId': typeof AuthenticatedCasesCaseIdRouteWithChildren
   '/_authenticated/configuracoes/escritorio': typeof AuthenticatedConfiguracoesEscritorioRoute
   '/_authenticated/configuracoes/oauth': typeof AuthenticatedConfiguracoesOauthRoute
   '/api/tools/pdf': typeof ApiToolsPdfRoute
@@ -385,8 +385,8 @@ export interface FileRoutesById {
   '/api/tools/transcribe': typeof ApiToolsTranscribeRoute
   '/_authenticated/assistencias/': typeof AuthenticatedAssistenciasIndexRoute
   '/_authenticated/plataforma/': typeof AuthenticatedPlataformaIndexRoute
-  '/_authenticated/cases/$caseId/chat': typeof AuthenticatedCasesCaseIdChatRoute
-  '/_authenticated/platform/customers/$id': typeof AuthenticatedPlatformCustomersIdRoute
+  '/_authenticated/assistencias/$caseId/chat': typeof AuthenticatedAssistenciasCaseIdChatRoute
+  '/_authenticated/plataforma/clientes/$id': typeof AuthenticatedPlataformaClientesIdRoute
   '/api/public/google/callback': typeof ApiPublicGoogleCallbackRoute
   '/api/public/outlook/callback': typeof ApiPublicOutlookCallbackRoute
   '/_authenticated/plataforma/auditoria/': typeof AuthenticatedPlataformaAuditoriaIndexRoute
@@ -416,9 +416,9 @@ export interface FileRouteTypes {
     | '/publicacoes'
     | '/tarefas'
     | '/invite/$token'
+    | '/assistencias/$caseId'
     | '/assistencias/lote'
     | '/assistencias/nova'
-    | '/cases/$caseId'
     | '/configuracoes/escritorio'
     | '/configuracoes/oauth'
     | '/api/tools/pdf'
@@ -428,8 +428,8 @@ export interface FileRouteTypes {
     | '/api/tools/transcribe'
     | '/assistencias/'
     | '/plataforma/'
-    | '/cases/$caseId/chat'
-    | '/platform/customers/$id'
+    | '/assistencias/$caseId/chat'
+    | '/plataforma/clientes/$id'
     | '/api/public/google/callback'
     | '/api/public/outlook/callback'
     | '/plataforma/auditoria/'
@@ -456,9 +456,9 @@ export interface FileRouteTypes {
     | '/publicacoes'
     | '/tarefas'
     | '/invite/$token'
+    | '/assistencias/$caseId'
     | '/assistencias/lote'
     | '/assistencias/nova'
-    | '/cases/$caseId'
     | '/configuracoes/escritorio'
     | '/configuracoes/oauth'
     | '/api/tools/pdf'
@@ -468,8 +468,8 @@ export interface FileRouteTypes {
     | '/api/tools/transcribe'
     | '/assistencias'
     | '/plataforma'
-    | '/cases/$caseId/chat'
-    | '/platform/customers/$id'
+    | '/assistencias/$caseId/chat'
+    | '/plataforma/clientes/$id'
     | '/api/public/google/callback'
     | '/api/public/outlook/callback'
     | '/plataforma/auditoria'
@@ -498,9 +498,9 @@ export interface FileRouteTypes {
     | '/_authenticated/publicacoes'
     | '/_authenticated/tarefas'
     | '/invite/$token'
+    | '/_authenticated/assistencias/$caseId'
     | '/_authenticated/assistencias/lote'
     | '/_authenticated/assistencias/nova'
-    | '/_authenticated/cases/$caseId'
     | '/_authenticated/configuracoes/escritorio'
     | '/_authenticated/configuracoes/oauth'
     | '/api/tools/pdf'
@@ -510,8 +510,8 @@ export interface FileRouteTypes {
     | '/api/tools/transcribe'
     | '/_authenticated/assistencias/'
     | '/_authenticated/plataforma/'
-    | '/_authenticated/cases/$caseId/chat'
-    | '/_authenticated/platform/customers/$id'
+    | '/_authenticated/assistencias/$caseId/chat'
+    | '/_authenticated/plataforma/clientes/$id'
     | '/api/public/google/callback'
     | '/api/public/outlook/callback'
     | '/_authenticated/plataforma/auditoria/'
@@ -739,13 +739,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedConfiguracoesEscritorioRouteImport
       parentRoute: typeof AuthenticatedConfiguracoesRoute
     }
-    '/_authenticated/cases/$caseId': {
-      id: '/_authenticated/cases/$caseId'
-      path: '/cases/$caseId'
-      fullPath: '/cases/$caseId'
-      preLoaderRoute: typeof AuthenticatedCasesCaseIdRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
     '/_authenticated/assistencias/nova': {
       id: '/_authenticated/assistencias/nova'
       path: '/nova'
@@ -758,6 +751,13 @@ declare module '@tanstack/react-router' {
       path: '/lote'
       fullPath: '/assistencias/lote'
       preLoaderRoute: typeof AuthenticatedAssistenciasLoteRouteImport
+      parentRoute: typeof AuthenticatedAssistenciasRoute
+    }
+    '/_authenticated/assistencias/$caseId': {
+      id: '/_authenticated/assistencias/$caseId'
+      path: '/$caseId'
+      fullPath: '/assistencias/$caseId'
+      preLoaderRoute: typeof AuthenticatedAssistenciasCaseIdRouteImport
       parentRoute: typeof AuthenticatedAssistenciasRoute
     }
     '/_authenticated/plataforma/usuarios/': {
@@ -802,24 +802,40 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicGoogleCallbackRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_authenticated/platform/customers/$id': {
-      id: '/_authenticated/platform/customers/$id'
-      path: '/platform/customers/$id'
-      fullPath: '/platform/customers/$id'
-      preLoaderRoute: typeof AuthenticatedPlatformCustomersIdRouteImport
+    '/_authenticated/plataforma/clientes/$id': {
+      id: '/_authenticated/plataforma/clientes/$id'
+      path: '/plataforma/clientes/$id'
+      fullPath: '/plataforma/clientes/$id'
+      preLoaderRoute: typeof AuthenticatedPlataformaClientesIdRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
-    '/_authenticated/cases/$caseId/chat': {
-      id: '/_authenticated/cases/$caseId/chat'
+    '/_authenticated/assistencias/$caseId/chat': {
+      id: '/_authenticated/assistencias/$caseId/chat'
       path: '/chat'
-      fullPath: '/cases/$caseId/chat'
-      preLoaderRoute: typeof AuthenticatedCasesCaseIdChatRouteImport
-      parentRoute: typeof AuthenticatedCasesCaseIdRoute
+      fullPath: '/assistencias/$caseId/chat'
+      preLoaderRoute: typeof AuthenticatedAssistenciasCaseIdChatRouteImport
+      parentRoute: typeof AuthenticatedAssistenciasCaseIdRoute
     }
   }
 }
 
+interface AuthenticatedAssistenciasCaseIdRouteChildren {
+  AuthenticatedAssistenciasCaseIdChatRoute: typeof AuthenticatedAssistenciasCaseIdChatRoute
+}
+
+const AuthenticatedAssistenciasCaseIdRouteChildren: AuthenticatedAssistenciasCaseIdRouteChildren =
+  {
+    AuthenticatedAssistenciasCaseIdChatRoute:
+      AuthenticatedAssistenciasCaseIdChatRoute,
+  }
+
+const AuthenticatedAssistenciasCaseIdRouteWithChildren =
+  AuthenticatedAssistenciasCaseIdRoute._addFileChildren(
+    AuthenticatedAssistenciasCaseIdRouteChildren,
+  )
+
 interface AuthenticatedAssistenciasRouteChildren {
+  AuthenticatedAssistenciasCaseIdRoute: typeof AuthenticatedAssistenciasCaseIdRouteWithChildren
   AuthenticatedAssistenciasLoteRoute: typeof AuthenticatedAssistenciasLoteRoute
   AuthenticatedAssistenciasNovaRoute: typeof AuthenticatedAssistenciasNovaRoute
   AuthenticatedAssistenciasIndexRoute: typeof AuthenticatedAssistenciasIndexRoute
@@ -827,6 +843,8 @@ interface AuthenticatedAssistenciasRouteChildren {
 
 const AuthenticatedAssistenciasRouteChildren: AuthenticatedAssistenciasRouteChildren =
   {
+    AuthenticatedAssistenciasCaseIdRoute:
+      AuthenticatedAssistenciasCaseIdRouteWithChildren,
     AuthenticatedAssistenciasLoteRoute: AuthenticatedAssistenciasLoteRoute,
     AuthenticatedAssistenciasNovaRoute: AuthenticatedAssistenciasNovaRoute,
     AuthenticatedAssistenciasIndexRoute: AuthenticatedAssistenciasIndexRoute,
@@ -854,20 +872,6 @@ const AuthenticatedConfiguracoesRouteWithChildren =
     AuthenticatedConfiguracoesRouteChildren,
   )
 
-interface AuthenticatedCasesCaseIdRouteChildren {
-  AuthenticatedCasesCaseIdChatRoute: typeof AuthenticatedCasesCaseIdChatRoute
-}
-
-const AuthenticatedCasesCaseIdRouteChildren: AuthenticatedCasesCaseIdRouteChildren =
-  {
-    AuthenticatedCasesCaseIdChatRoute: AuthenticatedCasesCaseIdChatRoute,
-  }
-
-const AuthenticatedCasesCaseIdRouteWithChildren =
-  AuthenticatedCasesCaseIdRoute._addFileChildren(
-    AuthenticatedCasesCaseIdRouteChildren,
-  )
-
 interface AuthenticatedRouteChildren {
   AuthenticatedAgendaRoute: typeof AuthenticatedAgendaRoute
   AuthenticatedAssistenciasRoute: typeof AuthenticatedAssistenciasRouteWithChildren
@@ -885,9 +889,8 @@ interface AuthenticatedRouteChildren {
   AuthenticatedPropostasRoute: typeof AuthenticatedPropostasRoute
   AuthenticatedPublicacoesRoute: typeof AuthenticatedPublicacoesRoute
   AuthenticatedTarefasRoute: typeof AuthenticatedTarefasRoute
-  AuthenticatedCasesCaseIdRoute: typeof AuthenticatedCasesCaseIdRouteWithChildren
   AuthenticatedPlataformaIndexRoute: typeof AuthenticatedPlataformaIndexRoute
-  AuthenticatedPlatformCustomersIdRoute: typeof AuthenticatedPlatformCustomersIdRoute
+  AuthenticatedPlataformaClientesIdRoute: typeof AuthenticatedPlataformaClientesIdRoute
   AuthenticatedPlataformaAuditoriaIndexRoute: typeof AuthenticatedPlataformaAuditoriaIndexRoute
   AuthenticatedPlataformaClientesIndexRoute: typeof AuthenticatedPlataformaClientesIndexRoute
   AuthenticatedPlataformaCredenciaisIndexRoute: typeof AuthenticatedPlataformaCredenciaisIndexRoute
@@ -911,9 +914,9 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedPropostasRoute: AuthenticatedPropostasRoute,
   AuthenticatedPublicacoesRoute: AuthenticatedPublicacoesRoute,
   AuthenticatedTarefasRoute: AuthenticatedTarefasRoute,
-  AuthenticatedCasesCaseIdRoute: AuthenticatedCasesCaseIdRouteWithChildren,
   AuthenticatedPlataformaIndexRoute: AuthenticatedPlataformaIndexRoute,
-  AuthenticatedPlatformCustomersIdRoute: AuthenticatedPlatformCustomersIdRoute,
+  AuthenticatedPlataformaClientesIdRoute:
+    AuthenticatedPlataformaClientesIdRoute,
   AuthenticatedPlataformaAuditoriaIndexRoute:
     AuthenticatedPlataformaAuditoriaIndexRoute,
   AuthenticatedPlataformaClientesIndexRoute:

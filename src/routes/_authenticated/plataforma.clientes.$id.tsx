@@ -13,7 +13,7 @@ import { toast } from "sonner";
 import { getCustomerAccount, updateCustomerAccount } from "@/lib/platform.functions";
 import { getMyCapabilities } from "@/lib/capabilities.functions";
 
-export const Route = createFileRoute("/_authenticated/platform/customers/$id")({
+export const Route = createFileRoute("/_authenticated/plataforma/clientes/$id")({
   beforeLoad: async () => {
     try {
       const caps = await getMyCapabilities();

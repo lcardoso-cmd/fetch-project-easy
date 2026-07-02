@@ -53,7 +53,7 @@ function capitalize(str: string): string {
   return str.charAt(0).toUpperCase() + str.slice(1);
 }
 
-export const Route = createFileRoute("/_authenticated/cases/$caseId")({
+export const Route = createFileRoute("/_authenticated/assistencias/$caseId")({
   component: CaseDetailPage,
 });
 
