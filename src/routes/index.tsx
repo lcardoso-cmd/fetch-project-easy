@@ -54,12 +54,16 @@ function LandingPage() {
       {/* Header */}
       <header className="border-b">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4">
-          <div className="flex items-center gap-2">
-            <JurisMindMark size={32} context="header" rounded />
+          <Link
+            to="/"
+            aria-label="B2B | JurisMind AI — início"
+            className="group flex items-center gap-2 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+          >
+            <JurisMindMark size={32} context="header" interactive />
             <span className="font-heading text-xl font-extrabold tracking-tight text-foreground">
               B2B | JurisMind AI
             </span>
-          </div>
+          </Link>
           <div className="flex items-center gap-2">
             {user ? (
               <Button asChild>
