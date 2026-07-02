@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
+import { JurisMindMark } from "@/components/brand/jurismind-mark";
 import { useAuth } from "@/hooks/use-auth";
 import { useProfile } from "@/hooks/use-profile";
 import { labelsForPractice } from "@/lib/practice-labels";
@@ -13,13 +14,11 @@ import {
   FileArchive,
   FileSearch,
   Scale,
-
   Handshake,
   Megaphone,
   Puzzle,
   Settings2,
   LogOut,
-  BrainCircuit,
   MessageSquare,
   PanelLeftClose,
   PanelLeftOpen,
