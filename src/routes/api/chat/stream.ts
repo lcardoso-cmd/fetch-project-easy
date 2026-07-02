@@ -17,6 +17,9 @@ const AskSchema = z.object({
     .optional(),
   model_tier: z.enum(["fast", "balanced", "max"]).optional(),
   thread_id: z.string().uuid().optional(),
+  input_kind: z.enum(["text", "voice"]).optional(),
+  audio_path: z.string().max(500).optional(),
+  audio_duration_ms: z.number().int().min(0).max(3_600_000).optional(),
 });
 
 export const Route = createFileRoute("/api/chat/stream")({
