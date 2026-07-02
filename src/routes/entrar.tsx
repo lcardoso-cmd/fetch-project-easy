@@ -146,10 +146,14 @@ function AuthPage() {
     } catch (err) {
       const message = err instanceof Error ? err.message : "Erro ao entrar";
       setError(message);
+      if (isUnconfirmedError(message) && email) {
+        setPendingEmail(email);
+      }
       toast.error("Não foi possível entrar", { description: message });
     } finally {
       setIsLoading(false);
     }
+
   };
 
   const handleSignup = async (e: React.FormEvent) => {
