@@ -151,6 +151,9 @@ function ProposalPage() {
   // Margens em milímetros na UI (convertidas para pt no envio)
   const [pdfMargins, setPdfMargins] = useState({ top: 25, right: 25, bottom: 25, left: 25 });
   const [pdfSettingsOpen, setPdfSettingsOpen] = useState(false);
+  const [pdfCoverEnabled, setPdfCoverEnabled] = useState(true);
+  const [pdfWatermarkMode, setPdfWatermarkMode] = useState<"none" | "draft" | "version">("none");
+  const [pdfWatermarkVersion, setPdfWatermarkVersion] = useState("1");
   const [form, setForm] = useState<FormState>(EMPTY);
   const [errors, setErrors] = useState<FieldErrors>({});
   const [savedAt, setSavedAt] = useState<number | null>(null);
@@ -546,6 +549,22 @@ function ProposalPage() {
               left: mmToPt(pdfMargins.left),
             },
           },
+          cover: pdfCoverEnabled
+            ? {
+                clientName: form.client_name,
+                clientDocument: form.client_document,
+                clientAddress: [form.client_address, form.client_city_state]
+                  .filter(Boolean)
+                  .join(" — "),
+                matter: form.matter,
+              }
+            : null,
+          watermark:
+            pdfWatermarkMode === "draft"
+              ? { text: "RASCUNHO", opacity: 0.12 }
+              : pdfWatermarkMode === "version"
+                ? { text: `VERSÃO ${pdfWatermarkVersion || "1"}`, opacity: 0.12 }
+                : null,
         }),
       });
       if (!res.ok) throw new Error(await res.text());
@@ -986,6 +1005,52 @@ function ProposalPage() {
                           </div>
                         ))}
                       </div>
+                    </div>
+                    <div className="space-y-2 border-t pt-3">
+                      <div className="flex items-center justify-between gap-2">
+                        <Label htmlFor="pdf-cover-toggle" className="text-xs">
+                          Incluir capa com dados do cliente
+                        </Label>
+                        <input
+                          id="pdf-cover-toggle"
+                          type="checkbox"
+                          checked={pdfCoverEnabled}
+                          onChange={(e) => setPdfCoverEnabled(e.target.checked)}
+                          className="h-4 w-4 accent-primary"
+                        />
+                      </div>
+                      <p className="text-[11px] text-muted-foreground">
+                        Usa nome, documento, endereço e assunto do formulário.
+                      </p>
+                    </div>
+                    <div className="space-y-2 border-t pt-3">
+                      <Label className="text-xs">Marca d’água</Label>
+                      <Select
+                        value={pdfWatermarkMode}
+                        onValueChange={(v) =>
+                          setPdfWatermarkMode(v as "none" | "draft" | "version")
+                        }
+                      >
+                        <SelectTrigger className="h-8">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">Nenhuma</SelectItem>
+                          <SelectItem value="draft">Rascunho</SelectItem>
+                          <SelectItem value="version">Versão…</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      {pdfWatermarkMode === "version" && (
+                        <div className="flex items-center gap-2">
+                          <Label className="text-[11px] text-muted-foreground">Nº</Label>
+                          <Input
+                            value={pdfWatermarkVersion}
+                            onChange={(e) => setPdfWatermarkVersion(e.target.value)}
+                            className="h-8"
+                            placeholder="1"
+                          />
+                        </div>
+                      )}
                     </div>
                     <Button
                       size="sm"

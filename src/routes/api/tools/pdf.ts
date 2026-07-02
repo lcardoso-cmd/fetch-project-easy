@@ -54,8 +54,17 @@ export const Route = createFileRoute("/api/tools/pdf")({
                 left?: number;
               };
             };
+            cover?: {
+              clientName?: string;
+              clientDocument?: string;
+              clientAddress?: string;
+              matter?: string;
+              reference?: string;
+              date?: string;
+            } | null;
+            watermark?: { text?: string; opacity?: number } | null;
           };
-          const { titulo, conteudo, html, page: pageCfg } = body;
+          const { titulo, conteudo, html, page: pageCfg, cover, watermark } = body;
           if (!titulo || (!conteudo && !html)) {
             return new Response("titulo e conteudo obrigatórios", { status: 400 });
           }
@@ -74,12 +83,31 @@ export const Route = createFileRoute("/api/tools/pdf")({
             branding = await loadBrandingForUser(userId);
           }
 
+          const clip = (s: string | undefined) =>
+            typeof s === "string" ? s.slice(0, 300) : undefined;
+          const coverClean = cover
+            ? {
+                clientName: clip(cover.clientName),
+                clientDocument: clip(cover.clientDocument),
+                clientAddress: clip(cover.clientAddress),
+                matter: clip(cover.matter),
+                reference: clip(cover.reference),
+                date: clip(cover.date),
+              }
+            : null;
+          const wmClean =
+            watermark && typeof watermark.text === "string" && watermark.text.trim()
+              ? { text: watermark.text.slice(0, 60), opacity: watermark.opacity }
+              : null;
+
           const pdfBytes = await renderPdf({
             title: String(titulo),
             blocks,
             branding,
             headerLabel,
             page: pageCfg,
+            cover: coverClean,
+            watermark: wmClean,
           });
           return new Response(pdfBytes as unknown as BodyInit, {
             status: 200,
