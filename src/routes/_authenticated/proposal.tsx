@@ -109,7 +109,11 @@ const EMPTY: FormState = {
 function ProposalPage() {
   const gen = useServerFn(generateProposal);
   const getCasesFn = useServerFn(getCases);
+  const getDraftFn = useServerFn(getProposalDraft);
+  const upsertDraftFn = useServerFn(upsertProposalDraft);
+  const createVersionFn = useServerFn(createProposalVersion);
   const { data: profile } = useProfile();
+  const qc = useQueryClient();
   const casesQ = useQuery({
     queryKey: ["cases", "list-for-proposal"],
     queryFn: () => getCasesFn(),
@@ -122,25 +126,69 @@ function ProposalPage() {
   const [errors, setErrors] = useState<FieldErrors>({});
   const [savedAt, setSavedAt] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
+  const [syncError, setSyncError] = useState<string | null>(null);
   const [hydrated, setHydrated] = useState(false);
   const [, forceTick] = useState(0);
   const [versionsOpen, setVersionsOpen] = useState(false);
-  const [versionsRefresh, setVersionsRefresh] = useState(0);
-  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Restaurar rascunho ao montar (client-only).
+  // Popover state para salvar versão com rótulo/descrição/fixar
+  const [savePopoverOpen, setSavePopoverOpen] = useState(false);
+  const [versionLabel, setVersionLabel] = useState("");
+  const [versionDescription, setVersionDescription] = useState("");
+  const [versionPinned, setVersionPinned] = useState(false);
+  const [savingVersion, setSavingVersion] = useState(false);
+
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastSerializedRef = useRef<string>("");
+
+  const activeCaseId = form.case_id && form.case_id !== NO_CASE ? form.case_id : null;
+
+  // Hidratar: buscar draft do backend para o caso atual (ou "sem caso"). Migra localStorage legado.
   useEffect(() => {
-    const d = loadDraft();
-    if (d) {
-      setForm(d.form);
-      if (d.output) setOutput(d.output);
-      setSavedAt(d.savedAt);
-      toast.success("Rascunho restaurado", {
-        description: `Salvo ${formatSavedAt(d.savedAt)}.`,
-      });
-    }
-    setHydrated(true);
-  }, []);
+    let cancelled = false;
+    setHydrated(false);
+    (async () => {
+      try {
+        const d = await getDraftFn({ data: { case_id: activeCaseId } });
+        if (cancelled) return;
+        if (d?.form) {
+          setForm((f) => ({ ...(d.form as FormState), case_id: f.case_id }));
+          setOutput(typeof d.output === "string" ? d.output : "");
+          const ts = new Date(d.updated_at).getTime();
+          setSavedAt(ts);
+          toast.success("Rascunho restaurado", { description: `Salvo ${formatSavedAt(ts)}.` });
+        } else if (!activeCaseId && typeof window !== "undefined") {
+          // Migração one-shot do localStorage
+          try {
+            const raw = window.localStorage.getItem(LEGACY_DRAFT_KEY);
+            if (raw) {
+              const legacy = JSON.parse(raw) as { form: FormState; output: string; savedAt: number };
+              if (legacy?.form) {
+                setForm(legacy.form);
+                setOutput(legacy.output ?? "");
+                setSavedAt(legacy.savedAt ?? Date.now());
+                toast.info("Rascunho local migrado para a nuvem.");
+              }
+              window.localStorage.removeItem(LEGACY_DRAFT_KEY);
+            }
+          } catch {
+            /* ignora */
+          }
+        }
+      } catch (err) {
+        setSyncError(err instanceof Error ? err.message : "Falha ao carregar rascunho");
+      } finally {
+        if (!cancelled) {
+          lastSerializedRef.current = "";
+          setHydrated(true);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeCaseId]);
 
   // Autofill escritório/advogado a partir do profile — só quando ainda vazio.
   useEffect(() => {
@@ -153,21 +201,31 @@ function ProposalPage() {
     }));
   }, [profile]);
 
-  // Autosave com debounce sempre que o form ou o output mudam (após hidratar).
+  // Autosave com debounce -> backend.
   useEffect(() => {
     if (!hydrated) return;
+    const serialized = JSON.stringify({ form, output });
+    if (serialized === lastSerializedRef.current) return;
     setSaving(true);
     if (saveTimer.current) clearTimeout(saveTimer.current);
-    saveTimer.current = setTimeout(() => {
-      const ts = Date.now();
-      saveDraft({ form, output, savedAt: ts });
-      setSavedAt(ts);
-      setSaving(false);
+    saveTimer.current = setTimeout(async () => {
+      try {
+        await upsertDraftFn({
+          data: { case_id: activeCaseId, form: form as unknown as Record<string, unknown>, output },
+        });
+        lastSerializedRef.current = serialized;
+        setSavedAt(Date.now());
+        setSyncError(null);
+      } catch (err) {
+        setSyncError(err instanceof Error ? err.message : "Falha ao salvar");
+      } finally {
+        setSaving(false);
+      }
     }, DRAFT_DEBOUNCE_MS);
     return () => {
       if (saveTimer.current) clearTimeout(saveTimer.current);
     };
-  }, [form, output, hydrated]);
+  }, [form, output, hydrated, activeCaseId, upsertDraftFn]);
 
   // Atualiza o rótulo "salvo há Xs" a cada 20s.
   useEffect(() => {
@@ -175,15 +233,21 @@ function ProposalPage() {
     return () => clearInterval(id);
   }, []);
 
-  const discardDraft = () => {
-    clearDraft();
+  const discardDraft = async () => {
     setForm(EMPTY);
     setOutput("");
     setErrors({});
     setSavedAt(null);
-    toast.success("Rascunho descartado");
+    lastSerializedRef.current = "";
+    try {
+      await upsertDraftFn({
+        data: { case_id: activeCaseId, form: EMPTY as unknown as Record<string, unknown>, output: "" },
+      });
+      toast.success("Rascunho descartado");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Falha ao descartar");
+    }
   };
-
 
   const cases = casesQ.data ?? [];
 
@@ -210,7 +274,27 @@ function ProposalPage() {
 
   const previewHtml = useMemo(() => buildPreviewHtml(form), [form]);
 
-
+  const persistVersion = async (input: {
+    label: string;
+    description?: string | null;
+    pinned?: boolean;
+    origin: "manual" | "auto-generate" | "auto-restore";
+    form: FormState;
+    output: string;
+  }) => {
+    await createVersionFn({
+      data: {
+        case_id: activeCaseId,
+        label: input.label,
+        description: input.description ?? null,
+        pinned: input.pinned ?? false,
+        origin: input.origin,
+        form: input.form as unknown as Record<string, unknown>,
+        output: input.output,
+      },
+    });
+    qc.invalidateQueries({ queryKey: ["proposal-versions", activeCaseId ?? "none"] });
+  };
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -229,16 +313,19 @@ function ProposalPage() {
     setLoading(true);
     setOutput("");
     try {
-      const {
-        case_id: _omit,
-        ...payload
-      } = form;
+      const { case_id: _omit, ...payload } = form;
       const r = await gen({ data: payload });
       setOutput(r.content);
-      // Snapshot automático da versão gerada
-      const label = `Gerada — ${form.client_name || "Cliente"}`;
-      addVersion<FormState>({ label, origin: "auto-generate", form, output: r.content });
-      setVersionsRefresh((n) => n + 1);
+      try {
+        await persistVersion({
+          label: `Gerada — ${form.client_name || "Cliente"}`,
+          origin: "auto-generate",
+          form,
+          output: r.content,
+        });
+      } catch (err) {
+        console.warn("Falha ao criar snapshot", err);
+      }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Falha ao gerar");
     } finally {
@@ -246,31 +333,56 @@ function ProposalPage() {
     }
   };
 
-  const saveVersionManually = () => {
+  const openSavePopover = () => {
     if (!output && !form.client_name && !form.matter) {
       toast.error("Nada para salvar ainda.");
       return;
     }
-    const label = `Versão — ${form.client_name || "sem cliente"} (${new Date().toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })})`;
-    addVersion<FormState>({ label, origin: "manual", form, output });
-    setVersionsRefresh((n) => n + 1);
-    toast.success("Versão salva no histórico");
+    const now = new Date().toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
+    setVersionLabel(`Versão — ${form.client_name || "sem cliente"} (${now})`);
+    setVersionDescription("");
+    setVersionPinned(false);
+    setSavePopoverOpen(true);
   };
 
-  const restoreVersion = (v: { form: FormState; output: string }) => {
-    // Preserva o rascunho atual como backup antes de sobrescrever
-    if (output || form.client_name || form.matter) {
-      addVersion<FormState>({
-        label: `Backup antes de restaurar (${new Date().toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })})`,
-        origin: "auto-restore",
+  const confirmSaveVersion = async () => {
+    setSavingVersion(true);
+    try {
+      await persistVersion({
+        label: versionLabel.trim() || "Versão sem rótulo",
+        description: versionDescription.trim() || null,
+        pinned: versionPinned,
+        origin: "manual",
         form,
         output,
       });
+      toast.success("Versão salva na nuvem");
+      setSavePopoverOpen(false);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Falha ao salvar versão");
+    } finally {
+      setSavingVersion(false);
     }
-    setForm(v.form);
+  };
+
+  const restoreVersion = async (v: ProposalVersion) => {
+    // Backup do estado atual antes de sobrescrever
+    if (output || form.client_name || form.matter) {
+      try {
+        await persistVersion({
+          label: `Backup antes de restaurar (${new Date().toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })})`,
+          origin: "auto-restore",
+          form,
+          output,
+        });
+      } catch {
+        /* segue mesmo se backup falhar */
+      }
+    }
+    setForm({ ...(v.form as FormState), case_id: form.case_id });
     setOutput(v.output);
     setErrors({});
-    setVersionsRefresh((n) => n + 1);
+    toast.success("Versão restaurada");
   };
 
   const copy = async () => {
@@ -349,13 +461,18 @@ function ProposalPage() {
             Escolha um caso existente para preencher os dados do cliente automaticamente. Campos marcados com <span className="text-destructive">*</span> são obrigatórios.
           </p>
         </div>
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+        <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
           {saving ? (
             <span className="inline-flex items-center gap-1.5">
-              <Loader2 className="h-3.5 w-3.5 animate-spin" /> Salvando rascunho…
+              <Loader2 className="h-3.5 w-3.5 animate-spin" /> Salvando na nuvem…
+            </span>
+          ) : syncError ? (
+            <span className="inline-flex items-center gap-1.5 text-destructive">
+              <CloudOff className="h-3.5 w-3.5" /> Falha ao sincronizar
             </span>
           ) : savedAt ? (
             <span className="inline-flex items-center gap-1.5">
+              <Cloud className="h-3.5 w-3.5 text-emerald-600" />
               <Check className="h-3.5 w-3.5 text-emerald-600" /> Rascunho salvo {formatSavedAt(savedAt)}
             </span>
           ) : (
@@ -366,23 +483,66 @@ function ProposalPage() {
               <Trash2 className="mr-1 h-3.5 w-3.5" /> Descartar
             </Button>
           )}
-          <Button size="sm" variant="outline" onClick={saveVersionManually} className="h-7 px-2">
-            <Save className="mr-1 h-3.5 w-3.5" /> Salvar versão
-          </Button>
+          <Popover open={savePopoverOpen} onOpenChange={setSavePopoverOpen}>
+            <PopoverTrigger asChild>
+              <Button size="sm" variant="outline" onClick={openSavePopover} className="h-7 px-2">
+                <Save className="mr-1 h-3.5 w-3.5" /> Salvar versão
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent align="end" className="w-80 space-y-3">
+              <div className="space-y-1">
+                <Label htmlFor="v-label" className="text-xs">Rótulo</Label>
+                <Input
+                  id="v-label"
+                  value={versionLabel}
+                  onChange={(e) => setVersionLabel(e.target.value)}
+                  placeholder="Ex.: Envio ao cliente v1"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="v-desc" className="text-xs">Descrição (opcional)</Label>
+                <Textarea
+                  id="v-desc"
+                  rows={2}
+                  value={versionDescription}
+                  onChange={(e) => setVersionDescription(e.target.value)}
+                  placeholder="Anotações sobre esta versão…"
+                />
+              </div>
+              <label className="flex items-center gap-2 text-xs">
+                <input
+                  type="checkbox"
+                  checked={versionPinned}
+                  onChange={(e) => setVersionPinned(e.target.checked)}
+                />
+                Fixar versão (não será removida pelo limite automático)
+              </label>
+              <div className="flex justify-end gap-2">
+                <Button size="sm" variant="ghost" onClick={() => setSavePopoverOpen(false)}>
+                  Cancelar
+                </Button>
+                <Button size="sm" onClick={confirmSaveVersion} disabled={savingVersion}>
+                  {savingVersion && <Loader2 className="mr-1 h-3 w-3 animate-spin" />}
+                  Salvar
+                </Button>
+              </div>
+            </PopoverContent>
+          </Popover>
           <Button size="sm" variant="outline" onClick={() => setVersionsOpen(true)} className="h-7 px-2">
             <History className="mr-1 h-3.5 w-3.5" /> Histórico
           </Button>
         </div>
       </div>
 
-      <ProposalVersionsDialog<FormState>
+      <ProposalVersionsDialog
         open={versionsOpen}
         onOpenChange={setVersionsOpen}
-        currentForm={form}
+        caseId={activeCaseId}
+        currentForm={form as unknown as Record<string, string>}
         currentOutput={output}
         onRestore={restoreVersion}
-        refreshKey={versionsRefresh}
       />
+
 
 
 
