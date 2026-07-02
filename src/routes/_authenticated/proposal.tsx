@@ -143,6 +143,25 @@ function ProposalPage() {
   const [output, setOutput] = useState("");
   const [form, setForm] = useState<FormState>(EMPTY);
   const [errors, setErrors] = useState<FieldErrors>({});
+  const [savedAt, setSavedAt] = useState<number | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [hydrated, setHydrated] = useState(false);
+  const [, forceTick] = useState(0);
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Restaurar rascunho ao montar (client-only).
+  useEffect(() => {
+    const d = loadDraft();
+    if (d) {
+      setForm(d.form);
+      if (d.output) setOutput(d.output);
+      setSavedAt(d.savedAt);
+      toast.success("Rascunho restaurado", {
+        description: `Salvo ${formatSavedAt(d.savedAt)}.`,
+      });
+    }
+    setHydrated(true);
+  }, []);
 
   // Autofill escritório/advogado a partir do profile — só quando ainda vazio.
   useEffect(() => {
@@ -154,6 +173,38 @@ function ProposalPage() {
       firm_phone: f.firm_phone || profile.phone || "",
     }));
   }, [profile]);
+
+  // Autosave com debounce sempre que o form ou o output mudam (após hidratar).
+  useEffect(() => {
+    if (!hydrated) return;
+    setSaving(true);
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(() => {
+      const ts = Date.now();
+      saveDraft({ form, output, savedAt: ts });
+      setSavedAt(ts);
+      setSaving(false);
+    }, DRAFT_DEBOUNCE_MS);
+    return () => {
+      if (saveTimer.current) clearTimeout(saveTimer.current);
+    };
+  }, [form, output, hydrated]);
+
+  // Atualiza o rótulo "salvo há Xs" a cada 20s.
+  useEffect(() => {
+    const id = setInterval(() => forceTick((n) => n + 1), 20_000);
+    return () => clearInterval(id);
+  }, []);
+
+  const discardDraft = () => {
+    clearDraft();
+    setForm(EMPTY);
+    setOutput("");
+    setErrors({});
+    setSavedAt(null);
+    toast.success("Rascunho descartado");
+  };
+
 
   const cases = casesQ.data ?? [];
 
