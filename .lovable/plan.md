@@ -1,39 +1,29 @@
 ## Objetivo
 
-Facilitar a localização de solicitações no painel `/contratar-b2b` adicionando filtro por status e busca por título.
+Na página `/parecer-tecnico`, mostrar um estado vazio informativo quando o usuário ainda não tiver nenhuma solicitação B2B do serviço `parecer-tecnico`, com sugestão de ação clara.
 
 ## Onde
 
-`src/routes/_authenticated/contratar-b2b.index.tsx` — seção "Minhas solicitações".
+`src/routes/_authenticated/parecer-tecnico.tsx` — seção "Minhas solicitações de Parecer Técnico" (hoje só renderiza quando `parecerRequests.length > 0`).
 
 ## Mudanças
 
-1. **Persistir filtros na URL** via `validateSearch` (Zod + `fallback`) da rota:
-   - `q?: string` (busca)
-   - `status?: B2bRequestStatus | "todos"` (default `todos`)
-   Assim o estado sobrevive à navegação para o detalhe e volta.
+1. Remover o gate `parecerRequests.length > 0 && …` e sempre renderizar o Card "Minhas solicitações de Parecer Técnico" (após a query terminar).
 
-2. **UI de filtros** logo abaixo do título "Minhas solicitações":
-   - `Input` com ícone de busca (placeholder "Buscar por título…") — debounce leve (150 ms) para não redigitar a URL a cada tecla.
-   - `Select` com opções: Todos, Novo, Em análise, Proposta enviada, Aceita, Recusada, Cancelada, Concluído (usando `B2B_REQUEST_STATUS_LABEL`).
-   - Botão "Limpar" aparece quando há filtro ativo.
-   - Layout responsivo: linha única em desktop, empilhado em mobile.
+2. Enquanto a query estiver carregando, exibir um skeleton discreto (2-3 linhas) para evitar flash do empty state.
 
-3. **Filtragem client-side** (a lista já vem completa de `listMyB2bRequests`, então nada de servidor):
-   - Match por `status` exato quando ≠ "todos".
-   - Match por título via `includes` case/acento-insensível (`String.prototype.normalize("NFD").replace(/\p{Diacritic}/gu,"")`).
+3. Quando `parecerRequests.length === 0` e a query já resolveu:
+   - Renderizar bloco central com ícone `Inbox` (lucide) esmaecido.
+   - Título: "Nenhuma solicitação encontrada".
+   - Texto: "Você ainda não abriu solicitações de Parecer Técnico com a B2B Consulting. Crie uma agora para receber orçamento e acompanhar o andamento por aqui."
+   - CTA primário `Button` → mesmo `Link` do card "Não tem perito no escritório?" (`/contratar-b2b/solicitar` com `service`, `title` e `description` pré-preenchidos — extrair o objeto de search para uma constante `PARECER_PREFILL` no topo do arquivo para reutilizar nos dois pontos e evitar drift).
+   - CTA secundário `Button variant="ghost"` → `/contratar-b2b` ("Ver catálogo B2B").
+   - `role="status"` no wrapper para leitores de tela.
 
-4. **Feedback**:
-   - Contador "X de Y solicitações" acima da lista.
-   - Empty state distinto quando há solicitações mas nenhuma bate com o filtro ("Nenhuma solicitação corresponde aos filtros" + botão limpar), diferente do empty state atual (nenhuma criada).
-
-## Detalhes técnicos
-
-- `validateSearch` com `zodValidator(z.object({ q: fallback(z.string(),"").default(""), status: fallback(z.enum([...,"todos"]),"todos").default("todos") }))`.
-- Atualização dos filtros via `useNavigate({ from: Route.fullPath })` com `search: (prev) => ({ ...prev, q: novo })` para preservar params.
-- Nada muda em backend/server functions nem no schema.
+4. Quando houver solicitações, comportamento atual mantido (accordion + botão "Ver catálogo B2B").
 
 ## Fora de escopo
 
-- Filtro por serviço/data (pode virar iteração futura).
-- Filtros no painel administrativo `plataforma.solicitacoes.index.tsx`.
+- Alterações no painel `/contratar-b2b`.
+- Filtro por serviço no painel geral.
+- Backend / server functions.
