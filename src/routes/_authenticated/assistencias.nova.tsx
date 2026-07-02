@@ -553,6 +553,7 @@ function NewCasePage() {
         try { localStorage.removeItem(REVIEW_STORAGE_KEY); } catch { /* noop */ }
       }
       toast.success("Caso criado");
+      setSubmitted(true);
       navigate({ to: "/assistencias/$caseId", params: { caseId: newCase.id } });
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
