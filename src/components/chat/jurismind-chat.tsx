@@ -124,6 +124,51 @@ type ModelTier = "fast" | "balanced" | "max";
 
 type QuickAction = { label: string; prompt: string };
 
+// --- Retentativa automática da transcrição ---
+const TRANSCRIBE_MAX_ATTEMPTS = 3;
+const TRANSCRIBE_BACKOFF_MS = [500, 1200, 2500];
+const SEGMENT_TIMEOUT_MS = 15_000;
+const RETRYABLE_TRANSCRIBE_STATUSES = new Set([408, 425, 429, 500, 502, 503, 504]);
+
+function isRetryableTranscribeStatus(status: number): boolean {
+  return RETRYABLE_TRANSCRIBE_STATUSES.has(status);
+}
+
+function computeBackoffDelay(attempt: number, retryAfterMs?: number): number {
+  const base =
+    TRANSCRIBE_BACKOFF_MS[Math.min(attempt - 1, TRANSCRIBE_BACKOFF_MS.length - 1)] ??
+    2500;
+  const jitter = base * (0.8 + Math.random() * 0.4);
+  return Math.max(jitter, retryAfterMs ?? 0);
+}
+
+function parseRetryAfterMs(header: string | null): number | undefined {
+  if (!header) return undefined;
+  const sec = Number(header);
+  if (Number.isFinite(sec)) return Math.max(0, sec * 1000);
+  const dateMs = Date.parse(header);
+  if (!Number.isNaN(dateMs)) return Math.max(0, dateMs - Date.now());
+  return undefined;
+}
+
+function sleepWithAbort(ms: number, signal: AbortSignal): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (signal.aborted) return reject(new DOMException("Aborted", "AbortError"));
+    const t = setTimeout(() => {
+      signal.removeEventListener("abort", onAbort);
+      resolve();
+    }, ms);
+    const onAbort = () => {
+      clearTimeout(t);
+      signal.removeEventListener("abort", onAbort);
+      reject(new DOMException("Aborted", "AbortError"));
+    };
+    signal.addEventListener("abort", onAbort, { once: true });
+  });
+}
+
+
+
 const PRIMARY_ACTIONS: QuickAction[] = [
   {
     label: "Resumo do caso",
