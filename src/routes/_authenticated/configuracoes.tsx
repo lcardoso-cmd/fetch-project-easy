@@ -36,6 +36,7 @@ import { isCurrentUserAdmin } from "@/lib/oauth-settings.functions";
 import {
   listMemberCapabilities,
   setMemberCapabilities,
+  listMemberCapabilityAudit,
   CAPABILITY_LABELS,
   CAPABILITY_DESCRIPTIONS,
   type Capability,
@@ -440,6 +441,7 @@ function MemberCapabilities({ userId }: { userId: string }) {
     onSuccess: () => {
       toast.success("Permissões atualizadas");
       qc.invalidateQueries({ queryKey: ["member-caps", userId] });
+      qc.invalidateQueries({ queryKey: ["member-caps-audit", userId] });
     },
     onError: (e: Error) => toast.error(e.message || "Falha ao salvar"),
   });
@@ -485,6 +487,75 @@ function MemberCapabilities({ userId }: { userId: string }) {
           );
         })}
       </div>
+      <MemberCapabilityAudit userId={userId} />
+    </div>
+  );
+}
+
+function MemberCapabilityAudit({ userId }: { userId: string }) {
+  const [open, setOpen] = useState(false);
+  const listAuditFn = useServerFn(listMemberCapabilityAudit);
+  const { data: entries, isLoading } = useQuery({
+    queryKey: ["member-caps-audit", userId],
+    queryFn: () => listAuditFn({ data: { user_id: userId, limit: 50 } }),
+    enabled: open,
+  });
+
+  return (
+    <div className="mt-3 border-t pt-2">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="text-[11px] font-medium text-muted-foreground hover:text-foreground"
+      >
+        {open ? "Ocultar" : "Ver"} histórico de alterações
+      </button>
+      {open && (
+        <div className="mt-2 space-y-1.5">
+          {isLoading && <p className="text-[11px] text-muted-foreground">Carregando…</p>}
+          {!isLoading && (entries?.length ?? 0) === 0 && (
+            <p className="text-[11px] text-muted-foreground">Sem alterações registradas.</p>
+          )}
+          {(entries ?? []).map((e) => {
+            const cap = e.metadata?.capability as Capability | undefined;
+            const isGrant = e.action === "capability.grant";
+            return (
+              <div
+                key={e.id}
+                className="flex items-start justify-between gap-2 rounded border bg-background px-2 py-1 text-[11px]"
+              >
+                <div className="min-w-0">
+                  <span
+                    className={
+                      isGrant
+                        ? "font-medium text-emerald-600 dark:text-emerald-400"
+                        : "font-medium text-destructive"
+                    }
+                  >
+                    {isGrant ? "Concedeu" : "Revogou"}
+                  </span>{" "}
+                  <span className="font-medium">
+                    {cap ? CAPABILITY_LABELS[cap] : "permissão"}
+                  </span>
+                </div>
+                <time
+                  className="shrink-0 text-muted-foreground"
+                  dateTime={e.created_at}
+                  title={new Date(e.created_at).toLocaleString("pt-BR")}
+                >
+                  {new Date(e.created_at).toLocaleString("pt-BR", {
+                    day: "2-digit",
+                    month: "2-digit",
+                    year: "2-digit",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </time>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

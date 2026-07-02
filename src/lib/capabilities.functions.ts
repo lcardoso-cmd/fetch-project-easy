@@ -128,46 +128,111 @@ export const setMemberCapabilities = createServerFn({ method: "POST" })
     await assertOfficeAdmin(context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     // Substitui o conjunto do escritório: office_admin nunca revoga permissões da B2B.
+    const OFFICE_SCOPED = [
+      "cases",
+      "expert_opinion",
+      "commercial",
+      "marketing",
+      "office_admin",
+    ] as const;
     const filtered = data.capabilities.filter(
       (c) => c !== "platform_admin" && c !== "super_admin",
     );
-    const client = supabaseAdmin as unknown as {
-      from: (t: string) => {
-        delete: () => {
-          eq: (k: string, v: string) => {
-            neq: (k: string, v: string) => Promise<{ error: { message: string } | null }>;
-          };
-        };
-        insert: (rows: unknown[]) => Promise<{ error: { message: string } | null }>;
-      };
+
+    const admin = supabaseAdmin as unknown as {
+      from: (t: string) => any;
     };
-    const del = await (client as unknown as {
-      from: (t: string) => {
-        delete: () => {
-          eq: (k: string, v: string) => {
-            in: (k: string, v: string[]) => Promise<{ error: { message: string } | null }>;
-          };
-        };
-      };
-    })
+
+    // 1) Snapshot dos valores atuais para calcular o diff (auditoria).
+    const beforeRes = await admin
+      .from("user_capabilities")
+      .select("capability")
+      .eq("user_id", data.user_id)
+      .in("capability", OFFICE_SCOPED as unknown as string[]);
+    if (beforeRes.error) throw new Error(beforeRes.error.message);
+    const before = new Set<Capability>(
+      ((beforeRes.data ?? []) as Array<{ capability: Capability }>).map((r) => r.capability),
+    );
+    const after = new Set<Capability>(filtered);
+    const added = [...after].filter((c) => !before.has(c));
+    const removed = [...before].filter((c) => !after.has(c));
+
+    // 2) Aplica a substituição.
+    const del = await admin
       .from("user_capabilities")
       .delete()
       .eq("user_id", data.user_id)
-      .in("capability", ["cases", "expert_opinion", "commercial", "marketing", "office_admin"]);
+      .in("capability", OFFICE_SCOPED as unknown as string[]);
     if (del.error) throw new Error(del.error.message);
     if (filtered.length > 0) {
-      const ins = await client
-        .from("user_capabilities")
-        .insert(
-          filtered.map((capability) => ({
-            user_id: data.user_id,
-            capability,
-            granted_by: context.userId,
-          })),
-        );
+      const ins = await admin.from("user_capabilities").insert(
+        filtered.map((capability) => ({
+          user_id: data.user_id,
+          capability,
+          granted_by: context.userId,
+        })),
+      );
       if (ins.error) throw new Error(ins.error.message);
     }
-    return { ok: true };
+
+    // 3) Registra auditoria (uma linha por capacidade concedida/revogada).
+    const auditRows = [
+      ...added.map((capability) => ({
+        actor_user_id: context.userId,
+        action: "capability.grant" as const,
+        target_user_id: data.user_id,
+        metadata: { capability, scope: "office" },
+      })),
+      ...removed.map((capability) => ({
+        actor_user_id: context.userId,
+        action: "capability.revoke" as const,
+        target_user_id: data.user_id,
+        metadata: { capability, scope: "office" },
+      })),
+    ];
+    if (auditRows.length > 0) {
+      // Best-effort: falhas de auditoria não devem reverter a alteração já aplicada.
+      const auditRes = await admin.from("platform_audit_log").insert(auditRows);
+      if (auditRes.error) {
+        console.error("[capabilities] falha ao registrar auditoria", auditRes.error.message);
+      }
+    }
+
+    return { ok: true, granted: added, revoked: removed };
+  });
+
+/**
+ * Histórico de concessões/revogações de capacidades de um membro do escritório.
+ * Somente office_admin do próprio escritório (ou platform staff) pode consultar.
+ */
+export const listMemberCapabilityAudit = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator(
+    z.object({
+      user_id: z.string().uuid(),
+      limit: z.number().int().min(1).max(200).default(50),
+    }),
+  )
+  .handler(async ({ context, data }) => {
+    await assertOfficeAdmin(context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const admin = supabaseAdmin as unknown as { from: (t: string) => any };
+    const { data: rows, error } = await admin
+      .from("platform_audit_log")
+      .select("id, created_at, actor_user_id, action, target_user_id, metadata")
+      .eq("target_user_id", data.user_id)
+      .in("action", ["capability.grant", "capability.revoke"])
+      .order("created_at", { ascending: false })
+      .limit(data.limit);
+    if (error) throw new Error(error.message);
+    return (rows ?? []) as Array<{
+      id: string;
+      created_at: string;
+      actor_user_id: string;
+      action: "capability.grant" | "capability.revoke";
+      target_user_id: string;
+      metadata: { capability?: Capability; scope?: string } | null;
+    }>;
   });
 
 async function assertOfficeAdmin(userId: string) {
