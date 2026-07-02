@@ -137,7 +137,23 @@ function HireB2bRequestForm() {
   useEffect(() => {
     if (noticeShown.current) return;
     if (!catalog.length) return;
+    const hasDraft = Boolean(
+      savedDraft && (savedDraft.description || savedDraft.title || savedDraft.serviceSlug),
+    );
     const hasPrefill = Boolean(search.service && search.description);
+
+    if (hasDraft) {
+      noticeShown.current = true;
+      toast.info("Rascunho restaurado", {
+        description:
+          "Recuperamos os dados que você havia preenchido. Arquivos anexados precisam ser selecionados novamente.",
+        action: hasPrefill
+          ? { label: "Usar template", onClick: applyPrefillFromUrl }
+          : undefined,
+        duration: 8000,
+      });
+      return;
+    }
     if (hasPrefill) {
       const svc = catalog.find((c) => c.slug === search.service);
       noticeShown.current = true;
@@ -146,16 +162,9 @@ function HireB2bRequestForm() {
           ? `Serviço "${svc.title}" e contexto do parecer já foram preenchidos. Ajuste os detalhes antes de enviar.`
           : "Serviço e contexto do parecer já foram preenchidos. Ajuste os detalhes antes de enviar.",
       });
-      return;
-    }
-    if (savedDraft && (savedDraft.description || savedDraft.title || savedDraft.serviceSlug)) {
-      noticeShown.current = true;
-      toast.info("Rascunho restaurado", {
-        description:
-          "Recuperamos os dados que você havia preenchido nesta solicitação. Arquivos anexados precisam ser selecionados novamente.",
-      });
     }
   }, [catalog, search.service, search.description, savedDraft]);
+
 
 
 
