@@ -67,7 +67,7 @@ function DrafterPage() {
   const labels = labelsForMatter(matterKind);
 
   // Protege contra perda do documento gerado (não é persistido) ou de instruções digitadas.
-  useUnsavedChangesGuard({
+  const { dialog: unsavedDialog } = useUnsavedChangesGuard({
     when: !loading && (output.trim().length > 0 || instructions.trim().length > 0),
   });
 
@@ -210,6 +210,7 @@ function DrafterPage() {
           </CardContent>
         </Card>
       </div>
+      {unsavedDialog}
     </div>
   );
 }

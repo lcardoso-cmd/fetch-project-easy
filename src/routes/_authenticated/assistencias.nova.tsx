@@ -231,7 +231,7 @@ function NewCasePage() {
       description.trim().length > 0 ||
       parties.some((p) => (p.name ?? "").trim().length > 0) ||
       !!uploaded);
-  useUnsavedChangesGuard({ when: novaDirty });
+  const { dialog: unsavedDialog } = useUnsavedChangesGuard({ when: novaDirty });
 
   // Carrega estado salvo ao montar
   useEffect(() => {
@@ -1281,6 +1281,7 @@ function NewCasePage() {
           </div>
         </DialogContent>
       </Dialog>
+      {unsavedDialog}
     </div>
   );
 }
