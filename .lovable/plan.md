@@ -1,86 +1,40 @@
 ## Objetivo
 
-Trazer para este projeto (TanStack Start + Supabase) a experiência completa que existe no repositório original `lcardoso-cmd/jurismind` (Next.js + Firebase) para as duas telas-chave: **Detalhe do Caso** e **Chat JurisMind AI**. O original não pode ser copiado linha-a-linha (stack diferente, Firebase vs Supabase), então vou **portar a UX e as funcionalidades** reaproveitando o backend já existente (server functions, RAG, conversations, tasks, events).
+Tornar a tela de Proposta Comercial mais profissional: nenhum campo obrigatório, dados do cliente vindos do cadastro do caso (não digitados de novo), adição da contraparte, saída em editor rich-text editável dentro do app e exportação para Word (.docx) já formatado — sem markdown.
 
-## O que já existe aqui (reaproveitar)
-- `getCase / updateCase`, `listDocuments / registerDocument / deleteDocument`, `indexDocument` (RAG), `askWithRag` (chat com citations + tool steps), `summarizeCase`, `listEvents`, `listTasks / toggleTask`, `getOrCreateCaseConversation`, `QuesitosCard`, `UploadZone` simples, `ChatPanel` básico.
-- Bucket `documents`, tabela `document_chunks` + `match_chunks`, conversations/messages.
+## Mudanças
 
-## O que falta (vou criar/portar)
+### 1. `src/routes/_authenticated/proposal.tsx` — Formulário
 
-### 1. Tela de Detalhe do Caso (`src/routes/_authenticated/cases.$caseId.tsx`) — reorganizar
-Layout igual ao original:
-- Header: voltar, título do caso, cliente, e **botão grande "JurisMind AI"** (BrainCircuit) abrindo Sheet/Dialog maximizável com o chat completo.
-- Card **Resumo do Caso (IA)** com:
-  - Botão "Gerar/Atualizar Resumo", data da última atualização.
-  - Menu "Exportar" → **Word (.docx)** e **Apresentação (.pptx)**.
-- Card **Detalhes do Caso** (edição inline com o form atual, incluindo título).
-- Card **Equipe do caso** (a partir de `team_members` quando aplicável; placeholder se vazio).
-- `QuesitosCard` (já existe).
-- **Lista de Documentos** rica (componente novo, ver abaixo).
-- Botão **"Gerenciar Tarefas do Caso"** abrindo dialog com Kanban/lista simples baseada em `tasks.functions`.
-- **Agenda/Eventos** do caso (lista compacta) — já temos `listEvents`.
+- **Novo seletor "Caso" no topo** (opcional). Ao escolher um caso existente, autopreenche `client_name`, `matter` (a partir de `title`/`summary`) e, quando existir, `client_document` / cidade / endereço. Usa `listCases` já disponível em `cases.functions.ts`.
+- **Autofill do escritório/advogado** a partir do `profile` do usuário logado (nome do advogado, OAB → Cargo/Título, telefone). Feito só na 1ª montagem — o usuário pode editar/apagar.
+- **Remover a seção "Cliente" do formulário** (nome, CPF, endereço, cidade). Passa a ser apenas leitura, mostrada como resumo do caso escolhido (com opção "editar" para casos avulsos sem cadastro).
+- **Nova seção "Contraparte"** com campos opcionais: nome/razão social, CPF/CNPJ, endereço, cidade/estado, advogado da contraparte (nome + OAB).
+- **Remover validação obrigatória** do submit — nada é required; se tudo estiver vazio, ainda assim gera (a IA usa o que houver).
+- Manter seções Objeto, Honorários e prazo, Escritório/Advogado, Tom.
 
-### 2. Novo `DocumentList` (`src/components/documents/document-list.tsx`)
-Porta de `case-view`/`document-list.tsx` original:
-- Tabela com nome, tamanho, data de upload, **status do embedding** (Na fila / Baixando / Analisando / Gerando busca / Pronto / Erro) com ícones e cores.
-- Botão **Carregar** abrindo Dialog com drag-and-drop, multi-arquivo, lista de selecionados removíveis, limite 15 MB, tipos aceitos (PDF, DOCX, XLS/XLSX, CSV, PNG, JPG).
-- Detecção de **arquivo duplicado** → AlertDialog "Substituir?".
-- Botão **Reprocessar / Tentar novamente** em documentos com erro → chama `indexDocument` novamente.
-- Checkbox por linha alimentando o **doc-selection store** (Zustand) para escopar o chat.
-- Botão excluir com confirmação.
-- Reaproveita `UploadZone` atual como base, mas substitui pelo novo componente (o `UploadZone` pode virar interno do dialog).
+### 2. `src/lib/generators.functions.ts` — `generateProposal`
 
-### 3. Doc-selection store (`src/lib/document-selection-store.ts`)
-Zustand: `{ selectedDocIds: Set<string>, toggle, selectAll, deselect, setDocuments }`. Igual ao do original. `askWithRag` ganha parâmetro opcional `selected_doc_ids: string[]` → quando enviado, `match_chunks` é filtrado por esses ids (ajusto a server fn e, se preciso, crio variante `match_chunks_by_docs`).
+- Ampliar `ProposalSchema` com campos da contraparte: `counterparty_name`, `counterparty_document`, `counterparty_address`, `counterparty_city_state`, `counterparty_lawyer`.
+- Tornar `client_name` e `matter` **opcionais** (schema); ajustar o prompt para não exigir e omitir seções sem dados.
+- Instruir o modelo a produzir **HTML semântico** limpo (h1/h2/h3, p, ul/ol/li, strong, em, com `style="text-align:..."` quando aplicável) em vez de Markdown. Sem ``` cercas, sem `#`, sem `**`. Isso alimenta o editor rich-text e o exportador .docx já existente.
 
-### 4. Chat completo (`src/components/chat/jurismind-chat.tsx`)
-Substitui o `ChatPanel` quando aberto a partir do caso. Porta de `case-chat-view.tsx`:
-- Layout 1/3 + 2/3 dentro do Sheet (maximizável).
-- **Sidebar**:
-  - Card "Detalhes do Caso" (cliente, status, nº processo, tipo).
-  - Card "Equipe".
-  - Card "Documentos do Caso" com **busca** por nome, **filtro por intervalo de data** (Popover + Calendar range), botões "Marcar todos / Desmarcar todos", checkboxes ligados ao store.
-  - Botão "Gerenciar Tarefas" (mesmo dialog do caso).
-- **Coluna principal**: chat (askWithRag) com mensagens, citações (file + snippet + score), tool steps recolhíveis, indicador de "Pensando…", input com Enter para enviar, botão Stop quando ocupado.
-- Mensagens sem Markdown (já temos `stripMarkdown`).
+### 3. Resultado — editor + exportação .docx
 
-### 5. Export DOCX/PPTX (`src/lib/export.functions.ts`)
-Server functions novas:
-- `exportSummaryDocx({ case_id, title, content })` → usa `docx` (npm) para gerar e retornar `{ base64, fileName }`.
-- `exportSummaryPptx({ case_id, title, content })` → usa `pptxgenjs` para gerar slides simples (capa + tópicos quebrando o resumo por parágrafo).
-- Cliente baixa via `saveAs` (Blob a partir de base64). Adicionar deps: `docx`, `pptxgenjs`, `file-saver`.
+- Substituir a área `<ReactMarkdown>` por `RichTextEditor` (`src/components/chat/rich-text-editor.tsx`) já usado no chat. O HTML retornado pela IA é carregado nele; o usuário pode **expandir, editar, formatar**.
+- Botão "Baixar Word (.docx)" faz `POST /api/tools/petition` (endpoint que já converte HTML → docx com títulos, listas, alinhamento) com `{ titulo, html }` e dispara download.
+- Botão "Copiar" agora copia o HTML como rich text (via `ClipboardItem` `text/html`) para colar formatado no Word/Google Docs; fallback para texto puro.
+- Remover import/uso de `react-markdown` neste arquivo e a exportação `.md`.
 
-### 6. Tarefas do caso (dialog reutilizável)
-`src/components/tasks/case-tasks-dialog.tsx`: lista as `tasks` do caso, permite marcar concluído (`toggleTask`), adicionar nova (form simples chamando uma nova `createTask` se ainda não existir; verifico antes de implementar).
+## Detalhes técnicos
 
-### 7. Ajustes pontuais
-- `askWithRag` aceita `selected_doc_ids` e repassa ao filtro de chunks.
-- `indexDocument` exposto também via botão "Reprocessar" (já existe; só conectar UI).
-- Mantém `getOrCreateCaseConversation` para persistir histórico do chat (cada caso = 1 conversa).
-- Sem alterações destrutivas em schema; uso `team_member_ids` já presente em `cases` se necessário para o painel de equipe.
-
-## Arquivos (resumo)
-
-Criar:
-- `src/components/documents/document-list.tsx`
-- `src/components/documents/upload-dialog.tsx`
-- `src/components/chat/jurismind-chat.tsx`
-- `src/components/chat/document-picker.tsx`
-- `src/components/cases/case-summary-card.tsx`
-- `src/components/cases/case-team-panel.tsx`
-- `src/components/tasks/case-tasks-dialog.tsx`
-- `src/lib/document-selection-store.ts`
-- `src/lib/export.functions.ts`
-
-Editar:
-- `src/routes/_authenticated/cases.$caseId.tsx` (reorganiza layout)
-- `src/lib/chat.functions.ts` (`askWithRag` aceita `selected_doc_ids`)
-- `package.json` (`docx`, `pptxgenjs`, `file-saver`, `zustand` se ainda não tiver, `react-day-picker` se faltar)
+- Seletor de caso: `useQuery(["cases","list"], () => listCases({}))`, `<Select>` com placeholder "Sem caso vinculado".
+- Autofill de profile: `useProfile()` no primeiro render preenche `lawyer_name`, `lawyer_title` (`OAB ${oab_number}`), `firm_phone` se ainda vazios.
+- Prompt: adicionar seção **CONTRAPARTE** ao `user` message via helper `line()`; regra de sistema atualizada para "Formato de saída: HTML puro (h1/h2/h3/p/ul/ol/li/strong/em, opcional style=text-align). Não use Markdown, não use crases, não use `#` nem `**`."
+- Exportação: reutiliza `Route` `/api/tools/petition` — já aceita `{ titulo, html }` e devolve `.docx` com heading/bullet/alinhamento.
+- Nenhum campo required no Zod nem no submit (tudo `.optional().default("")`).
 
 ## Fora de escopo
-- Não vou trazer Genkit/Firebase, gamma.app, marketing chat, admin de tenants, geração de petição, OCR — não foram pedidos.
-- Não vou alterar policies/migrations além do necessário (nenhuma alteração prevista).
 
-## Validação
-Após implementar: `bun x tsgo --noEmit`, abrir o caso atual no preview, testar upload + indexação + chat com filtro de docs + exportar DOCX.
+- Não criar tabela de "clientes" separada — o cadastro do cliente já mora em `cases.client_name` etc.
+- Não alterar rotas de casos.
