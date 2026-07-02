@@ -4,6 +4,7 @@ import { Link } from "@tanstack/react-router";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { askWithRag } from "@/lib/chat.functions";
+import { getThreadMessages } from "@/lib/threads.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -36,9 +37,11 @@ import {
   ImagePlus,
   Loader2,
   Maximize2,
+  Mic,
   Search,
   Send,
   Sparkles,
+  Square,
   X,
 } from "lucide-react";
 import type { DocItem } from "@/components/documents/document-list";
@@ -49,6 +52,7 @@ import {
   TableCard,
 } from "@/components/chat/artifact-cards";
 import { toast } from "sonner";
+
 
 interface Citation {
   document_id: string;
@@ -186,6 +190,8 @@ export function JurisMindChat({
   onSelectAll,
   onDeselectAll,
   fullscreen = false,
+  threadId,
+  onThreadCreated,
 }: {
   caseId: string;
   caseInfo: CaseSummary;
@@ -195,14 +201,21 @@ export function JurisMindChat({
   onSelectAll: () => void;
   onDeselectAll: () => void;
   fullscreen?: boolean;
+  threadId?: string | null;
+  onThreadCreated?: (id: string) => void;
 }) {
   const askFn = useServerFn(askWithRag);
+  const getMessagesFn = useServerFn(getThreadMessages);
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [search, setSearch] = useState("");
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const [images, setImages] = useState<string[]>([]);
+  const [recording, setRecording] = useState(false);
+  const [transcribing, setTranscribing] = useState(false);
+  const recorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
   const [modelTier, setModelTier] = useState<ModelTier>(() => {
     if (typeof window === "undefined") return "fast";
     return (localStorage.getItem("jurismind:model") as ModelTier) || "fast";
@@ -210,6 +223,7 @@ export function JurisMindChat({
   const fileRef = useRef<HTMLInputElement>(null);
   const endRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+
 
   useEffect(() => {
     if (typeof window !== "undefined") {
