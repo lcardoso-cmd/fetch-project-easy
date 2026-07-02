@@ -46,6 +46,7 @@ const STATUS_COLOR: Record<B2bRequestStatus, string> = {
   aceita: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300",
   recusada: "bg-rose-500/15 text-rose-700 dark:text-rose-300",
   cancelada: "bg-muted text-muted-foreground",
+  concluido: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300",
 };
 
 function HireB2bIndex() {
