@@ -641,7 +641,7 @@ export function renderPdf(input: RenderPdfInput): Uint8Array {
       stream += drawLine(line, cursorY, contentX, contentWidth, COLORS.ink);
       cursorY -= line.spacingAfter;
     }
-    const bytes = new TextEncoder().encode(stream);
+    const bytes = encodeLatin1(stream);
     const contentId = builder.addObject(
       `<< /Length ${bytes.length} >>\nstream\n${stream}\nendstream`,
     );
