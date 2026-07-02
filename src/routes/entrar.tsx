@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { JurisMindMark } from "@/components/brand/jurismind-mark";
+import { JurisMindMark, JURISMIND_CONTEXT } from "@/components/brand/jurismind-mark";
 import { IconBox } from "@/components/ui/icon-box";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -258,7 +258,7 @@ function AuthPage() {
       <div className="flex flex-1 flex-col items-center justify-center px-4 py-8">
         <div className="w-full max-w-md space-y-6">
           <div className="text-center">
-            <JurisMindMark size={48} context="auth" rounded className="mb-4" />
+            <JurisMindMark size={48} context={JURISMIND_CONTEXT.auth} rounded className="mb-4" />
             <h1 className="text-3xl font-bold text-foreground">B2B | JurisMind AI</h1>
             <p className="mt-2 text-sm text-muted-foreground">
               Inteligência para advogados, peritos e assistentes técnicos

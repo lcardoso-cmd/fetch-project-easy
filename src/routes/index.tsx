@@ -19,7 +19,7 @@ import {
   Workflow,
   FileCheck2,
 } from "lucide-react";
-import { JurisMindMark } from "@/components/brand/jurismind-mark";
+import { JurisMindMark, JURISMIND_CONTEXT } from "@/components/brand/jurismind-mark";
 import { useAuth } from "@/hooks/use-auth";
 
 export const Route = createFileRoute("/")({
@@ -129,7 +129,7 @@ function LandingPage() {
             aria-label="B2B | JurisMind AI — início"
             className="group flex items-center gap-2 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
           >
-            <JurisMindMark size={32} context="header" interactive />
+            <JurisMindMark size={32} context={JURISMIND_CONTEXT.header} interactive />
             <span className="font-heading text-xl font-extrabold tracking-tight text-foreground">
               B2B | JurisMind AI
             </span>
@@ -166,7 +166,7 @@ function LandingPage() {
         />
         <div className="relative mx-auto max-w-6xl px-4 py-24 text-center">
           <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-accent/20 px-3 py-1 text-xs font-semibold text-accent">
-            <JurisMindMark size={14} context="inline-dark" />
+            <JurisMindMark size={14} context={JURISMIND_CONTEXT.inlineDark} />
             Para advogados, peritos e assistentes técnicos
           </div>
           <h1 className="font-heading text-5xl font-extrabold tracking-tight md:text-6xl">

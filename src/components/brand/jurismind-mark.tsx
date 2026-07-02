@@ -117,6 +117,24 @@ export const JURISMIND_CONTEXTS = [
 
 export type JurisMindContext = (typeof JURISMIND_CONTEXTS)[number];
 
+/**
+ * Named lookup for every `JurisMindContext` literal. Prefer this over passing
+ * raw strings so misspellings become type errors and future renames propagate.
+ *
+ * @example
+ * <JurisMindMark context={JURISMIND_CONTEXT.header} size={32} />
+ */
+export const JURISMIND_CONTEXT = {
+  sidebar: "sidebar",
+  header: "header",
+  landing: "landing",
+  auth: "auth",
+  chat: "chat",
+  chipDark: "chip-dark",
+  inlineLight: "inline-light",
+  inlineDark: "inline-dark",
+} as const satisfies Record<string, JurisMindContext>;
+
 export function isJurisMindContext(value: unknown): value is JurisMindContext {
   return (
     typeof value === "string" &&

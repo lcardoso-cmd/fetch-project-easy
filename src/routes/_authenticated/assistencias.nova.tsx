@@ -34,7 +34,7 @@ import {
   CheckCircle2,
   AlertTriangle,
 } from "lucide-react";
-import { JurisMindMark } from "@/components/brand/jurismind-mark";
+import { JurisMindMark, JURISMIND_CONTEXT } from "@/components/brand/jurismind-mark";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
@@ -668,7 +668,7 @@ function NewCasePage() {
         <Card>
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
-              <JurisMindMark size={20} context="inline-light" /> Importar documento (opcional)
+              <JurisMindMark size={20} context={JURISMIND_CONTEXT.inlineLight} /> Importar documento (opcional)
             </CardTitle>
             <CardDescription>
               Envie a petição, contrato ou processo. O JurisMind lê e preenche os campos abaixo.

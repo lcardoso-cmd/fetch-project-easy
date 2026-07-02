@@ -35,7 +35,7 @@ import {
   RefreshCw,
   
 } from "lucide-react";
-import { JurisMindMark } from "@/components/brand/jurismind-mark";
+import { JurisMindMark, JURISMIND_CONTEXT } from "@/components/brand/jurismind-mark";
 import { summarizeCase } from "@/lib/chat.functions";
 import { exportSummaryDocx, exportSummaryPptx } from "@/lib/export.functions";
 import { stripMarkdown } from "@/lib/strip-markdown";
@@ -215,7 +215,7 @@ export function CaseSummaryCard({
                 : "Indexe documentos para gerar um resumo automático."}
             </p>
             <Button onClick={generate} disabled={busy || !hasReadyDocs}>
-              <JurisMindMark size={16} context="inline-light" className="mr-2" /> Gerar resumo com IA
+              <JurisMindMark size={16} context={JURISMIND_CONTEXT.inlineLight} className="mr-2" /> Gerar resumo com IA
             </Button>
           </div>
         )}

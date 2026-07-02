@@ -5,7 +5,7 @@ import { stripMarkdown } from "@/lib/strip-markdown";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Loader2, Send, FileText, AlertCircle } from "lucide-react";
-import { JurisMindMark } from "@/components/brand/jurismind-mark";
+import { JurisMindMark, JURISMIND_CONTEXT } from "@/components/brand/jurismind-mark";
 
 interface Citation {
   document_id: string;
@@ -84,7 +84,7 @@ export function ChatPanel({
 
         {messages.length === 0 ? (
           <div className="flex h-full flex-col items-center justify-center gap-3 text-center text-muted-foreground">
-            <JurisMindMark size={56} context="chat" />
+            <JurisMindMark size={56} context={JURISMIND_CONTEXT.chat} />
             <p className="font-medium text-foreground">Pergunte sobre seus documentos</p>
             <p className="text-sm">O JurisMind busca os trechos relevantes e responde citando as fontes.</p>
           </div>

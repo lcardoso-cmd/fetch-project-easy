@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { z } from "zod";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { FolderKanban, FileText, CalendarClock, RotateCcw } from "lucide-react";
-import { JurisMindMark } from "@/components/brand/jurismind-mark";
+import { JurisMindMark, JURISMIND_CONTEXT } from "@/components/brand/jurismind-mark";
 import { getCases } from "@/lib/cases.functions";
 import { listAllDocuments } from "@/lib/documents.functions";
 import { listEvents } from "@/lib/events.functions";
@@ -175,7 +175,7 @@ function DashboardPage() {
         <Card className="lg:col-span-3">
           <CardHeader>
             <CardTitle className="font-heading flex items-center gap-2">
-              <JurisMindMark size={18} context="inline-light" />
+              <JurisMindMark size={18} context={JURISMIND_CONTEXT.inlineLight} />
               Assistente JurisMind
             </CardTitle>
             <CardDescription>
