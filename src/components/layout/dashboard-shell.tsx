@@ -133,6 +133,7 @@ function buildNav(practice: PracticeType | null | undefined): NavItem[] {
     link("proposal", "/propostas", "Proposta Comercial", Handshake),
     link("monitoring", "/publicacoes", "Publicações", FileSearch),
     link("marketing", "/marketing", "Marketing", Megaphone),
+    link("hire-b2b", "/contratar-b2b", "Contratar B2B", ShieldCheck, "startsWith"),
 
     // ─── ESCRITÓRIO ───
     { type: "separator" },
