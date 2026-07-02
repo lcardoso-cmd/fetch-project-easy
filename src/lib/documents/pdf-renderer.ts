@@ -502,6 +502,7 @@ function drawHeaderFooter(
   pageIndex: number,
   totalPages: number,
   fonts: Fonts,
+  layout: ReturnType<typeof resolvePageLayout>,
 ) {
   const firmName = sanitize(branding?.firmName?.trim() || DEFAULT_BRAND_NAME);
   const muted = hexToRgb01(COLORS.muted);
@@ -509,18 +510,18 @@ function drawHeaderFooter(
   const border = hexToRgb01(COLORS.border);
 
   // Header
-  const headerY = PAGE_PT.height - 48;
-  drawTextSafe(page, firmName, PAGE_PT.marginLeft, headerY, fonts.bold, 10, ink);
+  const headerY = layout.height - 48;
+  drawTextSafe(page, firmName, layout.marginLeft, headerY, fonts.bold, 10, ink);
   if (headerLabel) {
     const label = sanitize(headerLabel);
     const w = widthOf(fonts.body, label, 10);
-    const x = PAGE_PT.width - PAGE_PT.marginRight - w;
+    const x = layout.width - layout.marginRight - w;
     drawTextSafe(page, label, x, headerY, fonts.body, 10, muted);
   }
   const headerBorderY = headerY - 6;
   page.drawLine({
-    start: { x: PAGE_PT.marginLeft, y: headerBorderY },
-    end: { x: PAGE_PT.width - PAGE_PT.marginRight, y: headerBorderY },
+    start: { x: layout.marginLeft, y: headerBorderY },
+    end: { x: layout.width - layout.marginRight, y: headerBorderY },
     thickness: 0.5,
     color: rgb(border[0], border[1], border[2]),
   });
@@ -529,21 +530,22 @@ function drawHeaderFooter(
   const footerY = 40;
   const footerBorderY = footerY + 14;
   page.drawLine({
-    start: { x: PAGE_PT.marginLeft, y: footerBorderY },
-    end: { x: PAGE_PT.width - PAGE_PT.marginRight, y: footerBorderY },
+    start: { x: layout.marginLeft, y: footerBorderY },
+    end: { x: layout.width - layout.marginRight, y: footerBorderY },
     thickness: 0.5,
     color: rgb(border[0], border[1], border[2]),
   });
   const footerLeft = sanitize(
     [firmName, branding?.taxId, branding?.website].filter(Boolean).join(" · "),
   );
-  drawTextSafe(page, footerLeft, PAGE_PT.marginLeft, footerY, fonts.body, 9, muted);
+  drawTextSafe(page, footerLeft, layout.marginLeft, footerY, fonts.body, 9, muted);
   const pageText = `Página ${pageIndex} de ${totalPages}`;
   const pw = widthOf(fonts.body, pageText, 9);
-  const px = PAGE_PT.width - PAGE_PT.marginRight - pw;
+  const px = layout.width - layout.marginRight - pw;
   drawTextSafe(page, pageText, px, footerY, fonts.body, 9, muted);
   void degrees; // silence unused import guard
 }
+
 
 // ---------------------------------------------------------------------------
 // Entry point
