@@ -154,6 +154,7 @@ export function UploadDialog({
       // Aborta tudo que estiver em voo ao fechar o diálogo.
       abortersRef.current.forEach((c) => c.abort());
       abortersRef.current.clear();
+      precomputedHashesRef.current.clear();
       cancelAllRef.current = false;
       setFiles([]);
       setItems([]);
