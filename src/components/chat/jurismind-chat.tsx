@@ -245,6 +245,8 @@ export function JurisMindChat({
 }) {
   // askFn removido: agora usamos SSE em /api/chat/stream (streaming token-a-token)
   const getMessagesFn = useServerFn(getThreadMessages);
+  const getAudioUrlFn = useServerFn(getMessageAudioUrl);
+  const pendingAudioRef = useRef<{ blob: Blob; durationMs: number } | null>(null);
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
