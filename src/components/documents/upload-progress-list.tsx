@@ -118,17 +118,30 @@ export function UploadProgressList({
                       ? ` (${it.chunks} trechos)`
                       : ""}
                   </span>
-                  {!isDone && !isError && (
+                  {!isFinal && (
                     <span className="ml-auto text-xs tabular-nums text-muted-foreground">
                       {Math.round(displayPct)}%
                     </span>
                   )}
                 </div>
-                {!isDone && !isError && (
+                {!isFinal && (
                   <Progress value={displayPct} className="mt-2 h-1.5" />
                 )}
               </div>
               <div className="flex shrink-0 items-center gap-1">
+                {canCancel && onCancel && (
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="ghost"
+                    className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                    onClick={() => onCancel(it.id)}
+                    title="Cancelar envio"
+                    aria-label={`Cancelar envio de ${it.filename}`}
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </Button>
+                )}
                 {isError && onRetry && (
                   <Button
                     type="button"
@@ -141,7 +154,7 @@ export function UploadProgressList({
                     <RefreshCw className="h-3.5 w-3.5" />
                   </Button>
                 )}
-                {onRemove && (isDone || isError) && (
+                {onRemove && isFinal && (
                   <Button
                     type="button"
                     size="icon"
