@@ -608,11 +608,11 @@ INSTRUÇÕES:
             user_id: context.userId,
             role: "assistant",
             content,
-            tool_steps: toolSteps,
+            tool_steps: toolSteps as unknown as import("@/integrations/supabase/types").Json,
             citations: citations.map((c) => ({
               filename: c.filename,
               similarity: c.similarity,
-            })),
+            })) as unknown as import("@/integrations/supabase/types").Json,
             model_tier: tier,
           },
         ]);
