@@ -5,6 +5,18 @@ import { getMyCapabilities, type Capability } from "@/lib/capabilities.functions
 import { useAuth } from "@/hooks/use-auth";
 
 const SIM_KEY = "jm.viewAsCapabilities";
+const SIM_EVENT = "jm.viewAsCapabilities.change";
+
+function readSim(): string | null {
+  if (typeof window === "undefined") return null;
+  return window.sessionStorage.getItem(SIM_KEY);
+}
+function writeSim(id: string | null) {
+  if (typeof window === "undefined") return;
+  if (id) window.sessionStorage.setItem(SIM_KEY, id);
+  else window.sessionStorage.removeItem(SIM_KEY);
+  window.dispatchEvent(new CustomEvent(SIM_EVENT));
+}
 
 /**
  * Presets de simulação usados pelo super_admin no menu "Ver como…".
