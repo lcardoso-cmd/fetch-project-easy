@@ -290,7 +290,7 @@ function ProposalPage() {
     hydrated &&
     (saving || pending ||
       JSON.stringify({ form, output }) !== lastSerializedRef.current);
-  useUnsavedChangesGuard({ when: hasUnsavedChanges });
+  const { dialog: unsavedDialog } = useUnsavedChangesGuard({ when: hasUnsavedChanges });
 
   // Atualiza o rótulo "salvo há Xs" a cada 20s.
   useEffect(() => {
