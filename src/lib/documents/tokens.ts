@@ -37,18 +37,16 @@ export const CONTENT_WIDTH_PT = PAGE_PT.width - PAGE_PT.marginLeft - PAGE_PT.mar
 
 /**
  * Famílias tipográficas do documento. Calibri é usada no DOCX (nativo do
- * Word). No PDF, mapeia para Helvetica (fonte Type 1 embutida em todo
- * reader) — metricamente similar, mantendo layout consistente.
+ * Word). No PDF, mapeia para Carlito — fonte livre (SIL OFL) metricamente
+ * compatível com Calibri (mesma largura de caractere e altura de linha).
+ * Resultado: PDF e DOCX visualmente idênticos.
  */
 export const FONTS = {
   body: "Calibri",
   heading: "Calibri",
-  /** Fallback PDF (Type 1 built-in). */
-  pdfBody: "Helvetica",
-  pdfBodyBold: "Helvetica-Bold",
-  pdfBodyItalic: "Helvetica-Oblique",
-  pdfBodyBoldItalic: "Helvetica-BoldOblique",
+  pdfBody: "Carlito",
 } as const;
+
 
 /** Tamanhos em pontos (11 pt body é o padrão profissional Word/Calibri). */
 export const FONT_SIZES_PT = {
