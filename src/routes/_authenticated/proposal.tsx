@@ -321,12 +321,26 @@ function ProposalPage() {
               <div className="space-y-3">
                 <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Objeto</p>
                 <div>
-                  <Label>Matéria / Caso</Label>
-                  <Textarea rows={3} value={form.matter} onChange={(e) => setForm({ ...form, matter: e.target.value })} />
+                  <Label>Matéria / Caso <span className="text-destructive">*</span></Label>
+                  <Textarea
+                    rows={3}
+                    value={form.matter}
+                    onChange={(e) => setForm({ ...form, matter: e.target.value })}
+                    aria-invalid={!!errors.matter}
+                    className={errors.matter ? "border-destructive" : ""}
+                  />
+                  {errors.matter && <p className="mt-1 text-xs text-destructive">{errors.matter}</p>}
                 </div>
                 <div>
-                  <Label>Escopo</Label>
-                  <Textarea rows={2} value={form.scope} onChange={(e) => setForm({ ...form, scope: e.target.value })} />
+                  <Label>Escopo <span className="text-destructive">*</span></Label>
+                  <Textarea
+                    rows={2}
+                    value={form.scope}
+                    onChange={(e) => setForm({ ...form, scope: e.target.value })}
+                    aria-invalid={!!errors.scope}
+                    className={errors.scope ? "border-destructive" : ""}
+                  />
+                  {errors.scope && <p className="mt-1 text-xs text-destructive">{errors.scope}</p>}
                 </div>
               </div>
 
