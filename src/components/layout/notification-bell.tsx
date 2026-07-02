@@ -8,7 +8,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
-import { Bell, MessageSquare, ClipboardCheck, Loader2 } from "lucide-react";
+import { Bell, MessageSquare, ClipboardCheck, Loader2, Sparkles, Paperclip } from "lucide-react";
 import {
   listNotifications,
   markMentionRead,
@@ -39,6 +39,8 @@ export function NotificationBell() {
   // Realtime: invalidate when a mention or task touching this user lands
   useEffect(() => {
     if (!user) return;
+    const invalidate = () =>
+      queryClient.invalidateQueries({ queryKey: ["notifications"] });
     const channel = supabase
       .channel(`notif:${user.id}:${Math.random().toString(36).slice(2)}`)
       .on(
@@ -49,7 +51,7 @@ export function NotificationBell() {
           table: "message_mentions",
           filter: `mentioned_user_id=eq.${user.id}`,
         },
-        () => queryClient.invalidateQueries({ queryKey: ["notifications"] }),
+        invalidate,
       )
       .on(
         "postgres_changes",
@@ -59,7 +61,14 @@ export function NotificationBell() {
           table: "tasks",
           filter: `assigned_to_user_id=eq.${user.id}`,
         },
-        () => queryClient.invalidateQueries({ queryKey: ["notifications"] }),
+        invalidate,
+      )
+      // Eventos B2B: sem coluna de user_id no evento, então filtramos
+      // do lado do servidor (listNotifications) e apenas invalidamos aqui.
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "b2b_service_request_events" },
+        invalidate,
       )
       .subscribe();
     return () => {
@@ -80,8 +89,14 @@ export function NotificationBell() {
       } else {
         navigate({ to: "/conversas" });
       }
+    } else if (n.kind === "task") {
+      navigate({ to: "/tarefas" });
     } else {
-      navigate({ to: "/tasks" });
+      // b2b_event → abrir o pedido correspondente
+      navigate({
+        to: "/contratar-b2b/$requestId",
+        params: { requestId: n.request_id },
+      });
     }
   }
 
