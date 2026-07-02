@@ -426,8 +426,8 @@ export function createStyledDocument(input: CreateStyledDocumentInput): Document
         },
       },
     },
-    headers: meta.bare ? undefined : { default: buildHeader(meta.header) },
-    footers: meta.bare ? undefined : { default: buildFooter() },
+    headers: meta.bare ? undefined : { default: buildHeader(meta.header, meta.branding) },
+    footers: meta.bare ? undefined : { default: buildFooter(meta.branding) },
     children: [...headChildren, ...children],
   };
 
