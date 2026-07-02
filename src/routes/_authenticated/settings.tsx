@@ -260,58 +260,63 @@ function SettingsPage() {
                 );
                 const linked = Boolean(m.member_user_id);
                 return (
-                  <li key={m.id} className="flex items-center justify-between gap-3 p-3">
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium truncate">{m.name}</p>
-                      <p className="text-xs text-muted-foreground truncate">
-                        {[m.role, m.email].filter(Boolean).join(" · ") || "—"}
-                      </p>
-                      <p className="text-xs">
-                        {linked ? (
-                          <span className="text-emerald-600 dark:text-emerald-400">
-                            ✓ Conta vinculada · {m.access_role ?? "editor"}
-                          </span>
-                        ) : inv ? (
-                          <span className="text-amber-600 dark:text-amber-400">
-                            ⏳ Convite pendente
-                          </span>
-                        ) : (
-                          <span className="text-muted-foreground">Sem convite ativo</span>
+                  <li key={m.id} className="space-y-3 p-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium truncate">{m.name}</p>
+                        <p className="text-xs text-muted-foreground truncate">
+                          {[m.role, m.email].filter(Boolean).join(" · ") || "—"}
+                        </p>
+                        <p className="text-xs">
+                          {linked ? (
+                            <span className="text-emerald-600 dark:text-emerald-400">
+                              ✓ Conta vinculada · {m.access_role ?? "editor"}
+                            </span>
+                          ) : inv ? (
+                            <span className="text-amber-600 dark:text-amber-400">
+                              ⏳ Convite pendente
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground">Sem convite ativo</span>
+                          )}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {inv && (
+                          <>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-8"
+                              onClick={() => copyInviteLink(inv.token)}
+                            >
+                              Copiar link
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 text-destructive"
+                              onClick={() => revokeMut.mutate(inv.id)}
+                            >
+                              Revogar
+                            </Button>
+                          </>
                         )}
-                      </p>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                          onClick={() => {
+                            if (confirm(`Remover ${m.name}?`)) deleteMut.mutate(m.id);
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      {inv && (
-                        <>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-8"
-                            onClick={() => copyInviteLink(inv.token)}
-                          >
-                            Copiar link
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-8 text-destructive"
-                            onClick={() => revokeMut.mutate(inv.id)}
-                          >
-                            Revogar
-                          </Button>
-                        </>
-                      )}
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                        onClick={() => {
-                          if (confirm(`Remover ${m.name}?`)) deleteMut.mutate(m.id);
-                        }}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
+                    {linked && m.member_user_id && (
+                      <MemberCapabilities userId={m.member_user_id} />
+                    )}
                   </li>
                 );
               })}
