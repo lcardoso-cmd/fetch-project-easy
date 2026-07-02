@@ -197,7 +197,6 @@ export const ContextLink = React.forwardRef<HTMLAnchorElement, ContextLinkProps>
       [safe, trigger, onClick, rest],
     );
 
-    // @ts-expect-error — repassamos props tipadas do TanStack Link.
     return <Link ref={ref} {...rest} onClick={handleClick} />;
   },
 );
