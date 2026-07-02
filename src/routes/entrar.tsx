@@ -11,7 +11,7 @@ import { lovable } from "@/integrations/lovable";
 import { useNavigate } from "@tanstack/react-router";
 import { ArrowLeft } from "lucide-react";
 
-export const Route = createFileRoute("/auth")({
+export const Route = createFileRoute("/entrar")({
   component: AuthPage,
 });
 

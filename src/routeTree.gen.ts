@@ -9,10 +9,10 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as AuthRouteImport } from './routes/auth'
+import { Route as EntrarRouteImport } from './routes/entrar'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as InviteTokenRouteImport } from './routes/invite.$token'
+import { Route as ConviteTokenRouteImport } from './routes/convite.$token'
 import { Route as AuthenticatedTarefasRouteImport } from './routes/_authenticated/tarefas'
 import { Route as AuthenticatedPublicacoesRouteImport } from './routes/_authenticated/publicacoes'
 import { Route as AuthenticatedPropostasRouteImport } from './routes/_authenticated/propostas'
@@ -50,9 +50,9 @@ import { Route as ApiPublicGoogleCallbackRouteImport } from './routes/api/public
 import { Route as AuthenticatedPlataformaClientesIdRouteImport } from './routes/_authenticated/plataforma.clientes.$id'
 import { Route as AuthenticatedAssistenciasCaseIdChatRouteImport } from './routes/_authenticated/assistencias.$caseId.chat'
 
-const AuthRoute = AuthRouteImport.update({
-  id: '/auth',
-  path: '/auth',
+const EntrarRoute = EntrarRouteImport.update({
+  id: '/entrar',
+  path: '/entrar',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedRoute = AuthenticatedRouteImport.update({
@@ -64,9 +64,9 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const InviteTokenRoute = InviteTokenRouteImport.update({
-  id: '/invite/$token',
-  path: '/invite/$token',
+const ConviteTokenRoute = ConviteTokenRouteImport.update({
+  id: '/convite/$token',
+  path: '/convite/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedTarefasRoute = AuthenticatedTarefasRouteImport.update({
@@ -272,7 +272,7 @@ const AuthenticatedAssistenciasCaseIdChatRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/auth': typeof AuthRoute
+  '/entrar': typeof EntrarRoute
   '/agenda': typeof AuthenticatedAgendaRoute
   '/assistencias': typeof AuthenticatedAssistenciasRouteWithChildren
   '/assistente': typeof AuthenticatedAssistenteRoute
@@ -289,7 +289,7 @@ export interface FileRoutesByFullPath {
   '/propostas': typeof AuthenticatedPropostasRoute
   '/publicacoes': typeof AuthenticatedPublicacoesRoute
   '/tarefas': typeof AuthenticatedTarefasRoute
-  '/invite/$token': typeof InviteTokenRoute
+  '/convite/$token': typeof ConviteTokenRoute
   '/assistencias/$caseId': typeof AuthenticatedAssistenciasCaseIdRouteWithChildren
   '/assistencias/lote': typeof AuthenticatedAssistenciasLoteRoute
   '/assistencias/nova': typeof AuthenticatedAssistenciasNovaRoute
@@ -313,7 +313,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/auth': typeof AuthRoute
+  '/entrar': typeof EntrarRoute
   '/agenda': typeof AuthenticatedAgendaRoute
   '/assistente': typeof AuthenticatedAssistenteRoute
   '/boas-vindas': typeof AuthenticatedBoasVindasRoute
@@ -329,7 +329,7 @@ export interface FileRoutesByTo {
   '/propostas': typeof AuthenticatedPropostasRoute
   '/publicacoes': typeof AuthenticatedPublicacoesRoute
   '/tarefas': typeof AuthenticatedTarefasRoute
-  '/invite/$token': typeof InviteTokenRoute
+  '/convite/$token': typeof ConviteTokenRoute
   '/assistencias/$caseId': typeof AuthenticatedAssistenciasCaseIdRouteWithChildren
   '/assistencias/lote': typeof AuthenticatedAssistenciasLoteRoute
   '/assistencias/nova': typeof AuthenticatedAssistenciasNovaRoute
@@ -355,7 +355,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteWithChildren
-  '/auth': typeof AuthRoute
+  '/entrar': typeof EntrarRoute
   '/_authenticated/agenda': typeof AuthenticatedAgendaRoute
   '/_authenticated/assistencias': typeof AuthenticatedAssistenciasRouteWithChildren
   '/_authenticated/assistente': typeof AuthenticatedAssistenteRoute
@@ -372,7 +372,7 @@ export interface FileRoutesById {
   '/_authenticated/propostas': typeof AuthenticatedPropostasRoute
   '/_authenticated/publicacoes': typeof AuthenticatedPublicacoesRoute
   '/_authenticated/tarefas': typeof AuthenticatedTarefasRoute
-  '/invite/$token': typeof InviteTokenRoute
+  '/convite/$token': typeof ConviteTokenRoute
   '/_authenticated/assistencias/$caseId': typeof AuthenticatedAssistenciasCaseIdRouteWithChildren
   '/_authenticated/assistencias/lote': typeof AuthenticatedAssistenciasLoteRoute
   '/_authenticated/assistencias/nova': typeof AuthenticatedAssistenciasNovaRoute
@@ -398,7 +398,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
-    | '/auth'
+    | '/entrar'
     | '/agenda'
     | '/assistencias'
     | '/assistente'
@@ -415,7 +415,7 @@ export interface FileRouteTypes {
     | '/propostas'
     | '/publicacoes'
     | '/tarefas'
-    | '/invite/$token'
+    | '/convite/$token'
     | '/assistencias/$caseId'
     | '/assistencias/lote'
     | '/assistencias/nova'
@@ -439,7 +439,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/auth'
+    | '/entrar'
     | '/agenda'
     | '/assistente'
     | '/boas-vindas'
@@ -455,7 +455,7 @@ export interface FileRouteTypes {
     | '/propostas'
     | '/publicacoes'
     | '/tarefas'
-    | '/invite/$token'
+    | '/convite/$token'
     | '/assistencias/$caseId'
     | '/assistencias/lote'
     | '/assistencias/nova'
@@ -480,7 +480,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/_authenticated'
-    | '/auth'
+    | '/entrar'
     | '/_authenticated/agenda'
     | '/_authenticated/assistencias'
     | '/_authenticated/assistente'
@@ -497,7 +497,7 @@ export interface FileRouteTypes {
     | '/_authenticated/propostas'
     | '/_authenticated/publicacoes'
     | '/_authenticated/tarefas'
-    | '/invite/$token'
+    | '/convite/$token'
     | '/_authenticated/assistencias/$caseId'
     | '/_authenticated/assistencias/lote'
     | '/_authenticated/assistencias/nova'
@@ -523,8 +523,8 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
-  AuthRoute: typeof AuthRoute
-  InviteTokenRoute: typeof InviteTokenRoute
+  EntrarRoute: typeof EntrarRoute
+  ConviteTokenRoute: typeof ConviteTokenRoute
   ApiToolsPdfRoute: typeof ApiToolsPdfRoute
   ApiToolsPetitionRoute: typeof ApiToolsPetitionRoute
   ApiToolsPresentationRoute: typeof ApiToolsPresentationRoute
@@ -536,11 +536,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/auth': {
-      id: '/auth'
-      path: '/auth'
-      fullPath: '/auth'
-      preLoaderRoute: typeof AuthRouteImport
+    '/entrar': {
+      id: '/entrar'
+      path: '/entrar'
+      fullPath: '/entrar'
+      preLoaderRoute: typeof EntrarRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated': {
@@ -557,11 +557,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/invite/$token': {
-      id: '/invite/$token'
-      path: '/invite/$token'
-      fullPath: '/invite/$token'
-      preLoaderRoute: typeof InviteTokenRouteImport
+    '/convite/$token': {
+      id: '/convite/$token'
+      path: '/convite/$token'
+      fullPath: '/convite/$token'
+      preLoaderRoute: typeof ConviteTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/tarefas': {
@@ -934,8 +934,8 @@ const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRoute: AuthenticatedRouteWithChildren,
-  AuthRoute: AuthRoute,
-  InviteTokenRoute: InviteTokenRoute,
+  EntrarRoute: EntrarRoute,
+  ConviteTokenRoute: ConviteTokenRoute,
   ApiToolsPdfRoute: ApiToolsPdfRoute,
   ApiToolsPetitionRoute: ApiToolsPetitionRoute,
   ApiToolsPresentationRoute: ApiToolsPresentationRoute,

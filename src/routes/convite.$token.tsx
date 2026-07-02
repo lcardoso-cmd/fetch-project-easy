@@ -9,7 +9,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
-export const Route = createFileRoute("/invite/$token")({
+export const Route = createFileRoute("/convite/$token")({
   component: InvitePage,
 });
 
