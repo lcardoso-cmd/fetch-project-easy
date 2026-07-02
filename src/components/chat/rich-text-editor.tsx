@@ -19,7 +19,14 @@ interface Props {
   html: string;
   onChange: (html: string) => void;
   minHeight?: number;
+  /**
+   * Classe aplicada ao contentEditable. Permite trocar a tipografia padrão
+   * (prose/serif) por variantes como `word-doc` para casar com o template
+   * do .docx exportado.
+   */
+  contentClassName?: string;
 }
+
 
 /** Remove tags perigosas e atributos indesejados de um HTML colado. */
 function sanitizePastedHtml(raw: string): string {
@@ -36,7 +43,7 @@ function sanitizePastedHtml(raw: string): string {
   return s;
 }
 
-export function RichTextEditor({ html, onChange, minHeight = 360 }: Props) {
+export function RichTextEditor({ html, onChange, minHeight = 360, contentClassName }: Props) {
   const ref = useRef<HTMLDivElement>(null);
   const lastEmittedRef = useRef<string>(html);
 
@@ -168,7 +175,11 @@ export function RichTextEditor({ html, onChange, minHeight = 360 }: Props) {
         suppressContentEditableWarning
         onInput={emit}
         onPaste={handlePaste}
-        className="prose prose-sm max-w-none p-4 font-serif leading-relaxed text-foreground focus:outline-none"
+        className={
+          contentClassName ??
+          "prose prose-sm max-w-none p-4 font-serif leading-relaxed text-foreground focus:outline-none"
+        }
+
         style={{ minHeight }}
       />
     </div>

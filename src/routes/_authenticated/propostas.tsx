@@ -863,7 +863,12 @@ function ProposalPage() {
                   <TabsTrigger value="preview">Prévia Word</TabsTrigger>
                 </TabsList>
                 <TabsContent value="editor" className="mt-0">
-                  <RichTextEditor html={output} onChange={setOutput} minHeight={520} />
+                  <RichTextEditor
+                    html={output}
+                    onChange={setOutput}
+                    minHeight={520}
+                    contentClassName="word-doc max-w-none p-6 focus:outline-none"
+                  />
                 </TabsContent>
                 <TabsContent value="preview" className="mt-0">
                   <WordPreview
@@ -875,14 +880,15 @@ function ProposalPage() {
             ) : (
               <div className="space-y-2">
                 <p className="text-xs text-muted-foreground">
-                  Prévia em tempo real dos campos preenchidos. Clique em <strong>Gerar proposta</strong> para produzir a versão final com JurisMind.
+                  Prévia em tempo real dos campos preenchidos — mesmo layout do .docx exportado. Clique em <strong>Gerar proposta</strong> para produzir a versão final com JurisMind.
                 </p>
-                <div
-                  className="proposal-preview rounded-md border bg-background p-6 text-sm leading-relaxed max-h-[560px] overflow-auto"
-                  dangerouslySetInnerHTML={{ __html: previewHtml }}
+                <WordPreview
+                  html={previewHtml}
+                  title={`Proposta - ${form.client_name || "Cliente"}`}
                 />
               </div>
             )}
+
           </CardContent>
         </Card>
       </div>
