@@ -26,7 +26,7 @@ import {
   ArrowLeft,
   UploadCloud,
   Loader2,
-  Sparkles,
+  
   Trash2,
   Plus,
   Users,
@@ -34,6 +34,7 @@ import {
   CheckCircle2,
   AlertTriangle,
 } from "lucide-react";
+import { JurisMindMark } from "@/components/brand/jurismind-mark";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
@@ -591,7 +592,7 @@ function NewCasePage() {
         <Card>
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
-              <Sparkles className="h-5 w-5 text-accent" /> Importar documento (opcional)
+              <JurisMindMark size={20} /> Importar documento (opcional)
             </CardTitle>
             <CardDescription>
               Envie a petição, contrato ou processo. O JurisMind lê e preenche os campos abaixo.
