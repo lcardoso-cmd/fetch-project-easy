@@ -37,6 +37,7 @@ import {
   listMemberCapabilities,
   setMemberCapabilities,
   CAPABILITY_LABELS,
+  CAPABILITY_DESCRIPTIONS,
   type Capability,
 } from "@/lib/capabilities.functions";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -465,14 +466,21 @@ function MemberCapabilities({ userId }: { userId: string }) {
           return (
             <label
               key={cap}
-              className="flex items-center gap-2 text-xs cursor-pointer select-none"
+              className="flex items-start gap-2 text-xs cursor-pointer select-none"
+              title={CAPABILITY_DESCRIPTIONS[cap]}
             >
               <Checkbox
                 checked={checked}
                 disabled={mut.isPending}
                 onCheckedChange={(v) => toggle(cap, Boolean(v))}
+                className="mt-0.5"
               />
-              <span>{CAPABILITY_LABELS[cap]}</span>
+              <span className="flex-1">
+                <span className="font-medium">{CAPABILITY_LABELS[cap]}</span>
+                <span className="block text-[11px] text-muted-foreground">
+                  {CAPABILITY_DESCRIPTIONS[cap]}
+                </span>
+              </span>
             </label>
           );
         })}

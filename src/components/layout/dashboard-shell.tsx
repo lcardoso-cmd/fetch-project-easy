@@ -12,6 +12,13 @@ import {
   type Capability,
 } from "@/lib/capabilities.functions";
 import {
+  NAV_ENTRIES,
+  NAV_SECTIONS,
+  describeNav,
+  type NavKey,
+  type NavSectionKey,
+} from "@/lib/nav-registry";
+import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
@@ -70,160 +77,65 @@ function buildNav(
   const labels = labelsForPractice(practice);
   const isLawyer = !practice || practice === "advogado";
 
+  const link = (
+    key: NavKey,
+    to: string,
+    label: string,
+    icon: LucideIcon,
+    match?: "exact" | "startsWith",
+  ): NavLink => {
+    const entry = NAV_ENTRIES[key];
+    return {
+      type: "link",
+      to,
+      label,
+      icon,
+      match,
+      requires: entry.requires,
+      description: describeNav(entry),
+    };
+  };
+  const section = (key: NavSectionKey, label: string): NavLabel => ({
+    type: "label",
+    label,
+    description: describeNav(NAV_SECTIONS[key]),
+  });
+
   return [
     // ─── PRINCIPAL ───
-    {
-      type: "label",
-      label: "Principal",
-      description:
-        "Trabalho documental do dia-a-dia: painel, casos, tarefas, conversas, agenda, documentos e peças. Visível para todos os usuários do escritório.",
-    },
-    {
-      type: "link",
-      to: "/dashboard",
-      label: "Painel",
-      icon: Home,
-      match: "exact",
-      description: "Visão geral. Disponível para todos os usuários autenticados.",
-    },
-    {
-      type: "link",
-      to: "/cases",
-      label: isLawyer ? "Casos" : labels.entityPlural,
-      icon: FolderKanban,
-      match: "startsWith",
-      requires: "cases",
-      description:
-        "Gerencia casos, clientes e documentos vinculados. Requer a permissão “Casos e trabalho diário”.",
-    },
-    {
-      type: "link",
-      to: "/my-tasks",
-      label: "Minhas Tarefas",
-      icon: ClipboardCheck,
-      description: "Suas tarefas pessoais. Disponível para todos.",
-    },
-    {
-      type: "link",
-      to: "/inbox",
-      label: "Conversas",
-      icon: MessageSquare,
-      match: "startsWith",
-      description: "Conversas internas do escritório. Disponível para todos.",
-    },
-    {
-      type: "link",
-      to: "/calendar",
-      label: "Agenda",
-      icon: CalendarDays,
-      description: "Sua agenda pessoal e integrada (Google/Outlook).",
-    },
-    {
-      type: "link",
-      to: "/my-files",
-      label: "Meus Documentos",
-      icon: FileArchive,
-      description: "Seus documentos pessoais e enviados.",
-    },
-    {
-      type: "link",
-      to: "/drafter",
-      label: isLawyer ? "Peças Jurídicas" : labels.outputLabel,
-      icon: Scale,
-      description:
-        "Gerador de peças jurídicas com IA. Disponível para todos os operadores.",
-    },
-    {
-      type: "link",
-      to: "/expert-opinion",
-      label: "Parecer Técnico",
-      icon: Microscope,
-      requires: "expert_opinion",
-      description:
-        "Elaboração de pareceres técnicos. Aparece apenas para peritos — requer a permissão “Parecer técnico (peritos)”.",
-    },
+    section("principal", "Principal"),
+    link("dashboard", "/dashboard", "Painel", Home, "exact"),
+    link(
+      "cases",
+      "/cases",
+      isLawyer ? "Casos" : labels.entityPlural,
+      FolderKanban,
+      "startsWith",
+    ),
+    link("my-tasks", "/my-tasks", "Minhas Tarefas", ClipboardCheck),
+    link("inbox", "/inbox", "Conversas", MessageSquare, "startsWith"),
+    link("calendar", "/calendar", "Agenda", CalendarDays),
+    link("my-files", "/my-files", "Meus Documentos", FileArchive),
+    link("drafter", "/drafter", isLawyer ? "Peças Jurídicas" : labels.outputLabel, Scale),
+    link("expert-opinion", "/expert-opinion", "Parecer Técnico", Microscope),
 
     // ─── NEGÓCIO ───
     { type: "separator" },
-    {
-      type: "label",
-      label: "Negócio",
-      description:
-        "Área comercial e de marketing. Cada item exige uma permissão específica — nem todo operador do escritório precisa gerar propostas ou publicações.",
-    },
-    {
-      type: "link",
-      to: "/proposal",
-      label: "Proposta Comercial",
-      icon: Handshake,
-      requires: "commercial",
-      description:
-        "Gera e versiona propostas comerciais. Requer a permissão “Proposta comercial”.",
-    },
-    {
-      type: "link",
-      to: "/monitoring",
-      label: "Publicações",
-      icon: FileSearch,
-      requires: "marketing",
-      description:
-        "Monitoramento de publicações. Requer a permissão “Marketing e publicações”.",
-    },
-    {
-      type: "link",
-      to: "/marketing",
-      label: "Marketing",
-      icon: Megaphone,
-      requires: "marketing",
-      description:
-        "Materiais e campanhas de marketing. Requer a permissão “Marketing e publicações”.",
-    },
+    section("business", "Negócio"),
+    link("proposal", "/proposal", "Proposta Comercial", Handshake),
+    link("monitoring", "/monitoring", "Publicações", FileSearch),
+    link("marketing", "/marketing", "Marketing", Megaphone),
 
     // ─── ESCRITÓRIO ───
     { type: "separator" },
-    {
-      type: "label",
-      label: "Escritório",
-      description:
-        "Gestão do escritório: equipe, integrações, cobrança e configurações. Só aparece para quem tem a permissão “Gestão do escritório”.",
-    },
-    {
-      type: "link",
-      to: "/integrations",
-      label: "Integrações",
-      icon: Puzzle,
-      requires: "office_admin",
-      description:
-        "Integrações do escritório (Google, Outlook, etc.). Requer “Gestão do escritório”.",
-    },
-    {
-      type: "link",
-      to: "/settings",
-      label: "Configurações",
-      icon: Settings2,
-      requires: "office_admin",
-      description:
-        "Configurações do escritório, equipe e permissões. Requer “Gestão do escritório”.",
-    },
+    section("office", "Escritório"),
+    link("integrations", "/integrations", "Integrações", Puzzle),
+    link("settings", "/settings", "Configurações", Settings2),
 
     // ─── PLATAFORMA B2B ───
     { type: "separator" },
-    {
-      type: "label",
-      label: "Plataforma JurisMind",
-      description:
-        "Visão B2B da JurisMind — gestão de clientes, assinaturas e uso da plataforma. Restrita à equipe interna da JurisMind (permissão “Administração da plataforma”).",
-    },
-    {
-      type: "link",
-      to: "/platform",
-      label: "Visão B2B",
-      icon: Globe2,
-      match: "startsWith",
-      requires: "platform_admin",
-      description:
-        "Painel B2B da JurisMind. Restrito a administradores da plataforma.",
-    },
+    section("platform", "Plataforma JurisMind"),
+    link("platform", "/platform", "Visão B2B", Globe2, "startsWith"),
   ];
 }
 
