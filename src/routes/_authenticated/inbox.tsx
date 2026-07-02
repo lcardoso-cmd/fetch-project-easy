@@ -91,7 +91,7 @@ function InboxPage() {
         </Button>
       </div>
 
-      <div className="grid h-[calc(100vh-14rem)] grid-cols-[320px,1fr] gap-4 rounded-xl border bg-card">
+      <div className="grid h-[calc(100vh-14rem)] grid-cols-[320px,1fr] gap-4 rounded-2xl border bg-card">
         <div className="flex flex-col border-r">
           <div className="flex border-b">
             <TabBtn active={tab === "case"} onClick={() => setTab("case")} icon={<FolderKanban className="h-4 w-4" />}>
