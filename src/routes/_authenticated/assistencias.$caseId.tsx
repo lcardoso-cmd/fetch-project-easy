@@ -143,6 +143,18 @@ function CaseDetailPage() {
     toast.success("Caso atualizado");
   };
 
+  // Bloqueia saída se estiver editando e houver diferenças em relação ao caso persistido.
+  const editDirty =
+    editing &&
+    !!caseData &&
+    (form.title !== (caseData.title ?? "") ||
+      form.case_number !== (caseData.case_number ?? "") ||
+      form.jurisdiction !== (caseData.jurisdiction ?? "") ||
+      form.case_type !== (caseData.case_type ?? "") ||
+      form.client_name !== (caseData.client_name ?? "") ||
+      form.description !== (caseData.description ?? ""));
+  useUnsavedChangesGuard({ when: editDirty });
+
   if (isLoading)
     return <p className="text-muted-foreground">Carregando...</p>;
   if (!caseData)
