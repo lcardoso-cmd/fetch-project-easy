@@ -772,7 +772,21 @@ function ProposalPage() {
           </CardHeader>
           <CardContent>
             {output ? (
-              <RichTextEditor html={output} onChange={setOutput} minHeight={520} />
+              <Tabs defaultValue="editor" className="w-full">
+                <TabsList className="mb-3">
+                  <TabsTrigger value="editor">Editor</TabsTrigger>
+                  <TabsTrigger value="preview">Prévia Word</TabsTrigger>
+                </TabsList>
+                <TabsContent value="editor" className="mt-0">
+                  <RichTextEditor html={output} onChange={setOutput} minHeight={520} />
+                </TabsContent>
+                <TabsContent value="preview" className="mt-0">
+                  <WordPreview
+                    html={output}
+                    title={`Proposta - ${form.client_name || "Cliente"}`}
+                  />
+                </TabsContent>
+              </Tabs>
             ) : (
               <div className="space-y-2">
                 <p className="text-xs text-muted-foreground">
