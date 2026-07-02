@@ -19,6 +19,8 @@ import { z } from "zod";
 import { ProposalVersionsDialog } from "@/components/proposal/proposal-versions-dialog";
 import { ProposalAttachmentsPanel } from "@/components/proposal/proposal-attachments-panel";
 import { ConvertToCasePopover } from "@/components/proposal/convert-to-case-popover";
+import { WordPreview } from "@/components/proposal/word-preview";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useAuth } from "@/hooks/use-auth";
 import { listProposalAttachments, type ExtractedProposalFields } from "@/lib/proposal-attachments.functions";
 import {
