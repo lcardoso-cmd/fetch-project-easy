@@ -77,7 +77,6 @@ function buildNav(
   const labels = labelsForPractice(practice);
   const isLawyer = !practice || practice === "advogado";
 
-  return [
   const link = (
     key: NavKey,
     to: string,
