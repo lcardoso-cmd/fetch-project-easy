@@ -29,6 +29,9 @@ export interface AiMessage {
   citations: AiCitation[] | null;
   model_tier: string | null;
   created_at: string;
+  input_kind: "text" | "voice" | null;
+  audio_path: string | null;
+  audio_duration_ms: number | null;
 }
 
 export const listThreads = createServerFn({ method: "GET" })
