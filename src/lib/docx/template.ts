@@ -655,9 +655,8 @@ function alignMap(a?: BlockAlign): (typeof AlignmentType)[keyof typeof Alignment
  * os estilos nomeados do template.
  */
 export function htmlToDocxChildren(html: string): Paragraph[] {
-  const normalized = String(html || "")
-    .replace(/\r/g, "")
-    .replace(/<br\s*\/?>/gi, "\n");
+  // Preserva <br> como marcador para inlineToTextRuns emitir break: 1.
+  const normalized = String(html || "").replace(/\r/g, "");
   const out: Paragraph[] = [];
   const blockRegex = /<(h1|h2|h3|p|li|div|blockquote)([^>]*)>([\s\S]*?)<\/\1>/gi;
 
@@ -694,7 +693,7 @@ export function htmlToDocxChildren(html: string): Paragraph[] {
     const tag = m[1].toLowerCase();
     const attrs = m[2] || "";
     const inner = m[3];
-    const alignMatch = attrs.match(/text-align:\s*(left|center|right)/i);
+    const alignMatch = attrs.match(/text-align\s*:\s*(left|center|right|justify)/i);
     const align = alignMap(alignMatch?.[1] as BlockAlign | undefined);
     inOrdered = tag === "li" ? isOrderedAt(m.index) : inOrdered;
 
