@@ -13,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Trash2, Loader2, Users, UserCog, KeyRound, ChevronRight } from "lucide-react";
+import { Plus, Trash2, Loader2, Users, UserCog, KeyRound, ChevronRight, Building2 } from "lucide-react";
 import { toast } from "sonner";
 import {
   listTeamMembers,
