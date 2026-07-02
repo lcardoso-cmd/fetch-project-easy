@@ -227,6 +227,15 @@ export const registerDocument = createServerFn({ method: "POST" })
           .from("documents")
           .remove([data.storage_path])
           .catch(() => {});
+        await logAudit(context.supabase, context.userId, {
+          case_id: data.case_id,
+          action: "duplicate_ignored",
+          document_id: byHash.id as string,
+          filename: data.filename,
+          content_hash: data.content_hash,
+          reason: "Hash idêntico ao arquivo já existente",
+          metadata: { existing_filename: byHash.filename },
+        });
         return {
           duplicate: true as const,
           reason: "content_hash" as const,
