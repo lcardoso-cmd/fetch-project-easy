@@ -437,9 +437,13 @@ function ProposalPage() {
   const download = async () => {
     try {
       const titulo = `Proposta - ${form.client_name || "Cliente"}`;
+      const { supabase } = await import("@/integrations/supabase/client");
+      const { data: sess } = await supabase.auth.getSession();
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (sess.session?.access_token) headers.Authorization = `Bearer ${sess.session.access_token}`;
       const res = await fetch("/api/tools/petition", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify({ titulo, html: output }),
       });
       if (!res.ok) throw new Error(await res.text());
