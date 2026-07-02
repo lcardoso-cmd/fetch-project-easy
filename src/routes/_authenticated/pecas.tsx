@@ -210,6 +210,7 @@ function DrafterPage() {
           </CardContent>
         </Card>
       </div>
+      {unsavedDialog}
     </div>
   );
 }
