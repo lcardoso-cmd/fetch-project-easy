@@ -78,12 +78,14 @@ function HireB2bRequestForm() {
     }
   }, [draftKey]);
 
+  // URL prefill (vindo do CTA) sempre vence sobre o rascunho salvo, para
+  // garantir que o contexto completo do parecer chegue inteiro na Descrição.
   const [serviceSlug, setServiceSlug] = useState(
-    savedDraft?.serviceSlug ?? search.service ?? "",
+    search.service ?? savedDraft?.serviceSlug ?? "",
   );
-  const [title, setTitle] = useState(savedDraft?.title ?? search.title ?? "");
+  const [title, setTitle] = useState(search.title ?? savedDraft?.title ?? "");
   const [description, setDescription] = useState(
-    savedDraft?.description ?? search.description ?? "",
+    search.description ?? savedDraft?.description ?? "",
   );
   const [urgency, setUrgency] = useState<"normal" | "alta" | "critica">(
     savedDraft?.urgency ?? "normal",
@@ -98,6 +100,24 @@ function HireB2bRequestForm() {
     () => catalog.find((c) => c.slug === serviceSlug),
     [catalog, serviceSlug],
   );
+
+  // Se o CTA for reaberto com uma descrição nova/mais longa que o rascunho,
+  // reaplica o template para não deixar apenas parte do contexto no campo.
+  const prefillAppliedRef = useRef(false);
+  useEffect(() => {
+    if (prefillAppliedRef.current) return;
+    if (!search.description) return;
+    if (search.description !== description) {
+      setDescription(search.description);
+    }
+    if (search.service && search.service !== serviceSlug) {
+      setServiceSlug(search.service);
+    }
+    if (search.title && search.title !== title) {
+      setTitle(search.title);
+    }
+    prefillAppliedRef.current = true;
+  }, [search.description, search.service, search.title]);
 
   // Persist draft on any change (debounced via microtask via effect deps).
   useEffect(() => {
@@ -125,25 +145,26 @@ function HireB2bRequestForm() {
   useEffect(() => {
     if (noticeShown.current) return;
     if (!catalog.length) return;
-    // Restored draft takes precedence over prefill notice.
+    const hasPrefill = Boolean(search.service && search.description);
+    if (hasPrefill) {
+      const svc = catalog.find((c) => c.slug === search.service);
+      noticeShown.current = true;
+      toast.success("Solicitação pré-preenchida", {
+        description: svc
+          ? `Serviço "${svc.title}" e contexto do parecer já foram preenchidos. Ajuste os detalhes antes de enviar.`
+          : "Serviço e contexto do parecer já foram preenchidos. Ajuste os detalhes antes de enviar.",
+      });
+      return;
+    }
     if (savedDraft && (savedDraft.description || savedDraft.title || savedDraft.serviceSlug)) {
       noticeShown.current = true;
       toast.info("Rascunho restaurado", {
         description:
           "Recuperamos os dados que você havia preenchido nesta solicitação. Arquivos anexados precisam ser selecionados novamente.",
       });
-      return;
     }
-    const hasPrefill = Boolean(search.service && search.description);
-    if (!hasPrefill) return;
-    const svc = catalog.find((c) => c.slug === search.service);
-    noticeShown.current = true;
-    toast.success("Solicitação pré-preenchida", {
-      description: svc
-        ? `Serviço "${svc.title}" e contexto do parecer já foram preenchidos. Ajuste os detalhes antes de enviar.`
-        : "Serviço e contexto do parecer já foram preenchidos. Ajuste os detalhes antes de enviar.",
-    });
   }, [catalog, search.service, search.description, savedDraft]);
+
 
 
 
