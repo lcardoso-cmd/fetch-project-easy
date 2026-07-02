@@ -429,7 +429,7 @@ export function UploadDialog({
             </Button>
           </DialogTrigger>
           <DialogContent
-            className="sm:max-w-lg"
+            className="sm:max-w-2xl"
             onDragOver={(e) => {
               e.preventDefault();
               setDragOver(true);
