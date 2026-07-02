@@ -37,11 +37,14 @@ import {
   listMemberCapabilities,
   setMemberCapabilities,
   listMemberCapabilityAudit,
+  getMyCapabilities,
   CAPABILITY_LABELS,
   CAPABILITY_DESCRIPTIONS,
   type Capability,
 } from "@/lib/capabilities.functions";
 import { Checkbox } from "@/components/ui/checkbox";
+import { ShieldCheck } from "lucide-react";
+
 
 export const Route = createFileRoute("/_authenticated/configuracoes")({
   component: SettingsPage,
