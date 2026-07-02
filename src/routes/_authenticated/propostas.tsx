@@ -863,10 +863,120 @@ function ProposalPage() {
               <CardDescription>Edite livremente antes de baixar.</CardDescription>
             </div>
             {output && (
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 <Button size="sm" variant="outline" onClick={copy}>
                   <Copy className="h-4 w-4 mr-1" /> Copiar
                 </Button>
+                <Popover open={pdfSettingsOpen} onOpenChange={setPdfSettingsOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      title="Configurar página do PDF"
+                    >
+                      <Settings2 className="h-4 w-4 mr-1" />
+                      {pdfFormat} · {pdfOrientation === "portrait" ? "Retrato" : "Paisagem"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent align="end" className="w-80 space-y-4">
+                    <div>
+                      <p className="text-sm font-medium">Configurações do PDF</p>
+                      <p className="text-xs text-muted-foreground">
+                        Ajuste tamanho, orientação e margens antes de baixar.
+                      </p>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <Label className="text-xs">Tamanho</Label>
+                        <Select
+                          value={pdfFormat}
+                          onValueChange={(v) => setPdfFormat(v as "A4" | "Letter")}
+                        >
+                          <SelectTrigger className="h-8">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="A4">A4 (210 × 297 mm)</SelectItem>
+                            <SelectItem value="Letter">Carta (216 × 279 mm)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs">Orientação</Label>
+                        <Select
+                          value={pdfOrientation}
+                          onValueChange={(v) =>
+                            setPdfOrientation(v as "portrait" | "landscape")
+                          }
+                        >
+                          <SelectTrigger className="h-8">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="portrait">Retrato</SelectItem>
+                            <SelectItem value="landscape">Paisagem</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <Label className="text-xs">Margens (mm)</Label>
+                        <button
+                          type="button"
+                          className="text-[11px] text-muted-foreground hover:text-foreground underline"
+                          onClick={() =>
+                            setPdfMargins({ top: 25, right: 25, bottom: 25, left: 25 })
+                          }
+                        >
+                          Redefinir
+                        </button>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        {(["top", "right", "bottom", "left"] as const).map((side) => (
+                          <div key={side} className="space-y-1">
+                            <Label className="text-[11px] capitalize text-muted-foreground">
+                              {side === "top"
+                                ? "Superior"
+                                : side === "right"
+                                  ? "Direita"
+                                  : side === "bottom"
+                                    ? "Inferior"
+                                    : "Esquerda"}
+                            </Label>
+                            <Input
+                              type="number"
+                              min={5}
+                              max={60}
+                              step={1}
+                              value={pdfMargins[side]}
+                              onChange={(e) => {
+                                const n = Number(e.target.value);
+                                setPdfMargins((prev) => ({
+                                  ...prev,
+                                  [side]: Number.isFinite(n)
+                                    ? Math.max(5, Math.min(60, n))
+                                    : prev[side],
+                                }));
+                              }}
+                              className="h-8"
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    <Button
+                      size="sm"
+                      className="w-full"
+                      onClick={() => {
+                        setPdfSettingsOpen(false);
+                        void downloadPdf();
+                      }}
+                    >
+                      <FileText className="h-4 w-4 mr-1" /> Confirmar e baixar PDF
+                    </Button>
+                  </PopoverContent>
+                </Popover>
                 <Button size="sm" variant="outline" onClick={downloadPdf}>
                   <FileText className="h-4 w-4 mr-1" /> Baixar PDF
                 </Button>
