@@ -644,74 +644,27 @@ export function JurisMindChat({
       rec.ondataavailable = (e) => {
         if (e.data.size > 0) audioChunksRef.current.push(e.data);
       };
-      rec.onstop = async () => {
-        cleanupAudioMonitor();
+      rec.onstop = () => {
         const durationMs = startedAtRef.current
           ? Date.now() - startedAtRef.current
           : 0;
         const blob = new Blob(audioChunksRef.current, { type: "audio/webm" });
-        if (blob.size < 500) {
-          const msg = "Nada capturado — segure o botão e fale próximo ao microfone.";
-          setMicError(msg);
-          toast.error(msg);
-          return;
-        }
-        setTranscribing(true);
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 30_000);
-        try {
-          const b64 = await new Promise<string>((resolve, reject) => {
-            const r = new FileReader();
-            r.onerror = () => reject(r.error);
-            r.onload = () => {
-              const s = String(r.result);
-              resolve(s.slice(s.indexOf(",") + 1));
-            };
-            r.readAsDataURL(blob);
-          });
-          const res = await fetch("/api/tools/transcribe", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ audio_base64: b64, format: "webm" }),
-            signal: controller.signal,
-          });
-          let json: { text?: string; error?: string } = {};
-          try {
-            json = (await res.json()) as { text?: string; error?: string };
-          } catch {}
-          if (!res.ok || json.error) {
-            throw new Error(humanizeTranscribeError(res.status, json.error));
-          }
-          const text = (json.text ?? "").trim();
-          if (!text) {
-            const msg = "Não consegui transcrever — tente falar mais claramente.";
-            setMicError(msg);
-            toast.error(msg);
-            return;
-          }
-          // Guarda o áudio para upload junto do envio da mensagem
+        // Preserva áudio para upload junto do envio (mesmo que a transcrição seja parcial).
+        if (blob.size >= 500) {
           pendingAudioRef.current = { blob, durationMs };
-          setInput((prev) => (prev ? prev + " " + text : text));
-          setMicError(null);
-          setTimeout(() => inputRef.current?.focus(), 30);
-        } catch (e) {
-          const isAbort = (e as { name?: string })?.name === "AbortError";
-          const msg = isAbort
-            ? "A transcrição demorou demais. Tente novamente."
-            : e instanceof Error
-              ? e.message
-              : "Erro ao transcrever.";
-          setMicError(msg);
-          toast.error(msg);
-        } finally {
-          clearTimeout(timeout);
-          setTranscribing(false);
         }
+        // Não fecha o AudioContext aqui: o stopRecording já chamou o flush final.
+        setTimeout(() => inputRef.current?.focus(), 30);
       };
       recorderRef.current = rec;
       rec.start();
 
-      // Audio level monitor
+      // Audio level monitor + PCM capture para transcrição parcial
+      baseInputRef.current = input;
+      committedRef.current = "";
+      livePartialRef.current = "";
+      pcmChunksRef.current = [];
+      liveSupportedRef.current = true;
       try {
         const AC =
           window.AudioContext ||
@@ -720,6 +673,7 @@ export function JurisMindChat({
         if (AC) {
           const ctx = new AC();
           audioCtxRef.current = ctx;
+          pcmSampleRateRef.current = ctx.sampleRate;
           const source = ctx.createMediaStreamSource(stream);
           const analyser = ctx.createAnalyser();
           analyser.fftSize = 256;
@@ -748,9 +702,29 @@ export function JurisMindChat({
             rafRef.current = requestAnimationFrame(tick);
           };
           rafRef.current = requestAnimationFrame(tick);
+
+          // PCM processor para transcrição segmentada
+          try {
+            const processor = ctx.createScriptProcessor(4096, 1, 1);
+            processor.onaudioprocess = (ev) => {
+              const ch = ev.inputBuffer.getChannelData(0);
+              pcmChunksRef.current.push(new Float32Array(ch));
+            };
+            source.connect(processor);
+            processor.connect(ctx.destination);
+            processorRef.current = processor;
+            // Dispara flush a cada 3s
+            flushIntervalRef.current = setInterval(() => {
+              void flushSegment(false);
+            }, 3000);
+          } catch {
+            liveSupportedRef.current = false;
+          }
+        } else {
+          liveSupportedRef.current = false;
         }
       } catch {
-        // audio meter is optional
+        liveSupportedRef.current = false;
       }
 
       startedAtRef.current = Date.now();
@@ -761,7 +735,7 @@ export function JurisMindChat({
       autoStopRef.current = setTimeout(() => {
         if (recorderRef.current && recorderRef.current.state === "recording") {
           toast.message("Gravação encerrada aos 60s.");
-          stopRecording();
+          void stopRecording();
         }
       }, MAX_RECORDING_MS);
 
@@ -774,13 +748,44 @@ export function JurisMindChat({
     }
   };
 
-  const stopRecording = () => {
+  const stopRecording = async () => {
     if (!recording) return;
+    setRecording(false);
+    // Para o timer/flush primeiro para não disparar novos segmentos.
+    if (flushIntervalRef.current) {
+      clearInterval(flushIntervalRef.current);
+      flushIntervalRef.current = null;
+    }
+    // Desconecta o processor para congelar o buffer PCM.
+    try {
+      processorRef.current?.disconnect();
+    } catch {}
+    processorRef.current = null;
+
+    // Flush final com timeout (não bloqueia UI por muito tempo).
+    const finalFlush = flushSegment(true);
+    await Promise.race([
+      finalFlush,
+      new Promise<void>((resolve) => setTimeout(resolve, 2500)),
+    ]).catch(() => {});
+
     try {
       recorderRef.current?.stop();
     } catch {}
-    setRecording(false);
+    // cleanupAudioMonitor fecha o AudioContext e libera o mic.
+    cleanupAudioMonitor();
+
+    if (!committedRef.current.trim() && !livePartialRef.current.trim()) {
+      // Nada foi transcrito — mostra dica leve, mas não trata como erro fatal.
+      const msg =
+        "Não consegui transcrever — fale mais próximo do microfone e tente de novo.";
+      setMicError(msg);
+    } else {
+      setMicError(null);
+    }
+    livePartialRef.current = "";
   };
+
 
   useEffect(() => {
     return () => {
