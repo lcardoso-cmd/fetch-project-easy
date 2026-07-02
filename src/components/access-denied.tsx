@@ -21,6 +21,7 @@ export function AccessDenied({ requires, attemptedPath }: Props) {
   const isPlatformScope =
     requires === "platform_admin" || requires === "super_admin";
   const capLabel = requires ? CAPABILITY_LABELS[requires] : null;
+  const [requestOpen, setRequestOpen] = useState(false);
 
   return (
     <div className="mx-auto max-w-xl py-10">
