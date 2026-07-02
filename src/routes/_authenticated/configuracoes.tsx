@@ -37,11 +37,14 @@ import {
   listMemberCapabilities,
   setMemberCapabilities,
   listMemberCapabilityAudit,
+  getMyCapabilities,
   CAPABILITY_LABELS,
   CAPABILITY_DESCRIPTIONS,
   type Capability,
 } from "@/lib/capabilities.functions";
 import { Checkbox } from "@/components/ui/checkbox";
+import { ShieldCheck } from "lucide-react";
+
 
 export const Route = createFileRoute("/_authenticated/configuracoes")({
   component: SettingsPage,
@@ -56,12 +59,19 @@ function SettingsPage() {
   const revokeInvFn = useServerFn(revokeInvitation);
   const updateProfileFn = useServerFn(updateMyProfile);
   const isAdminFn = useServerFn(isCurrentUserAdmin);
+  const myCapsFn = useServerFn(getMyCapabilities);
   const { data: profile } = useProfile();
   const { data: adminInfo } = useQuery({
     queryKey: ["is-admin"],
     queryFn: () => isAdminFn(),
   });
   const isAdmin = adminInfo?.isAdmin ?? false;
+  const { data: myCaps = [] } = useQuery({
+    queryKey: ["my-caps"],
+    queryFn: () => myCapsFn(),
+  });
+  const isPlatformStaff = myCaps.includes("platform_admin") || myCaps.includes("super_admin");
+
 
   const { data: team = [], isLoading } = useQuery({
     queryKey: ["team-members"],
@@ -414,9 +424,33 @@ function SettingsPage() {
           </CardContent>
         </Card>
       )}
+
+      {isPlatformStaff && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <ShieldCheck className="h-5 w-5" /> Capacidades por visão
+            </CardTitle>
+            <CardDescription>
+              Resumo do acesso de JurisMind B2B, admin de escritório e perito, com aplicação de
+              presets em massa.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Link
+              to="/configuracoes/capacidades"
+              className="flex items-center justify-between rounded-lg border p-3 hover:bg-accent/50"
+            >
+              <span className="text-sm">Abrir painel de capacidades</span>
+              <ChevronRight className="h-4 w-4 text-muted-foreground" />
+            </Link>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
+
 
 const EDITABLE_CAPS: Capability[] = [
   "cases",
