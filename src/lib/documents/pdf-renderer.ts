@@ -386,6 +386,18 @@ function paginate(lines: LayoutLine[], usableHeight: number): Page[] {
 // PDF writer — objetos e streams
 // ---------------------------------------------------------------------------
 
+/**
+ * Codifica string em latin1/WinAnsi byte-a-byte. Necessário porque as
+ * fontes Type1 built-in com WinAnsiEncoding esperam bytes latin1 nos
+ * literais de string PDF (`(...)`). UTF-8 quebraria acentos e bullet.
+ * Chars > 255 devem ter sido substituídos por `toWinAnsi` antes.
+ */
+function encodeLatin1(s: string): Uint8Array {
+  const out = new Uint8Array(s.length);
+  for (let i = 0; i < s.length; i++) out[i] = s.charCodeAt(i) & 0xff;
+  return out;
+}
+
 class PdfBuilder {
   private objects: string[] = [];
 
@@ -399,15 +411,14 @@ class PdfBuilder {
   }
 
   serialize(catalogId: number): Uint8Array {
-    const encoder = new TextEncoder();
-    let header = "%PDF-1.4\n%\xC3\xA9\xC3\xA9\xC3\xA9\n";
-    const parts: Uint8Array[] = [encoder.encode(header)];
+    const header = "%PDF-1.4\n%\xC3\xA9\xC3\xA9\xC3\xA9\n";
+    const parts: Uint8Array[] = [encodeLatin1(header)];
     let bytePos = parts[0].length;
     const offsets: number[] = [];
     for (let i = 0; i < this.objects.length; i++) {
       offsets.push(bytePos);
       const entry = `${i + 1} 0 obj\n${this.objects[i]}\nendobj\n`;
-      const bytes = encoder.encode(entry);
+      const bytes = encodeLatin1(entry);
       parts.push(bytes);
       bytePos += bytes.length;
     }
@@ -417,8 +428,7 @@ class PdfBuilder {
       xref += `${off.toString().padStart(10, "0")} 00000 n \n`;
     }
     xref += `trailer\n<< /Size ${this.objects.length + 1} /Root ${catalogId} 0 R >>\nstartxref\n${xrefPos}\n%%EOF`;
-    parts.push(encoder.encode(xref));
-    // Concatena
+    parts.push(encodeLatin1(xref));
     const total = parts.reduce((a, b) => a + b.length, 0);
     const out = new Uint8Array(total);
     let pos = 0;
