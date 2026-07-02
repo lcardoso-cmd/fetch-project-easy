@@ -414,6 +414,9 @@ export function JurisMindChat({
   const livePartialRef = useRef<string>("");
   const [segmentInFlight, setSegmentInFlight] = useState(false);
   const liveSupportedRef = useRef<boolean>(true);
+  const [retryInfo, setRetryInfo] = useState<{ attempt: number; max: number } | null>(null);
+  const consecutiveSegmentFailuresRef = useRef<number>(0);
+
 
   // Seletor de microfone
   const MIC_STORAGE_KEY = "jurismind:mic-device-id";
