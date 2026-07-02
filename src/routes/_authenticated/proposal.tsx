@@ -586,6 +586,14 @@ function ProposalPage() {
         onRestore={restoreVersion}
       />
 
+      <ProposalAttachmentsPanel
+        caseId={activeCaseId}
+        userId={user?.id}
+        onSuggestFields={applyExtractedFields}
+      />
+
+
+
 
 
 
