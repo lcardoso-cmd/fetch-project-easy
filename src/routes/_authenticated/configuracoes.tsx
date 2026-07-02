@@ -36,6 +36,7 @@ import { isCurrentUserAdmin } from "@/lib/oauth-settings.functions";
 import {
   listMemberCapabilities,
   setMemberCapabilities,
+  listMemberCapabilityAudit,
   CAPABILITY_LABELS,
   CAPABILITY_DESCRIPTIONS,
   type Capability,
