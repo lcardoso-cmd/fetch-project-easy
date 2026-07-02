@@ -46,6 +46,18 @@ export interface PdfPageConfig {
   margins?: Partial<PdfPageMargins>;
 }
 
+export interface PdfCoverData {
+  clientName?: string;
+  clientDocument?: string;
+  clientAddress?: string;
+  matter?: string;
+  reference?: string;
+  date?: string;
+}
+export interface PdfWatermark {
+  text: string;
+  opacity?: number;
+}
 export interface RenderPdfInput {
   title: string;
   blocks: DocBlock[];
@@ -56,7 +68,12 @@ export interface RenderPdfInput {
   bare?: boolean;
   /** Configuração de página (tamanho, orientação e margens). */
   page?: PdfPageConfig;
+  /** Se presente, adiciona uma capa como primeira página. */
+  cover?: PdfCoverData | null;
+  /** Se presente, desenha marca d'água diagonal em todas as páginas. */
+  watermark?: PdfWatermark | null;
 }
+
 
 // Dimensões base em pontos (72 pt = 1 in). Landscape troca w/h.
 const PAGE_SIZES_PT: Record<PdfPageFormat, { width: number; height: number }> = {
