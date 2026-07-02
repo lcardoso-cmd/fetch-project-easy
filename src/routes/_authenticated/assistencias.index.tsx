@@ -59,16 +59,16 @@ function CasesPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-foreground">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0 flex-1 basis-full sm:basis-auto">
+          <h1 className="text-2xl font-bold tracking-tight text-foreground break-words sm:text-3xl">
             {isLawyer ? "Casos" : `${profileLabels.entityPlural} e casos`}
           </h1>
           <p className="mt-1 text-muted-foreground">
             Gerencie seus processos, perícias e assistências em um único lugar.
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button variant="outline" onClick={() => navigate({ to: "/assistencias/lote" })}>
             <Upload className="mr-2 h-4 w-4" />
             Upload em lote
@@ -140,11 +140,11 @@ function CasesPage() {
                     </Button>
                   </div>
                   <div className="flex items-center gap-2 flex-wrap">
-                    <Badge variant="secondary" className="text-[10px]">
+                    <Badge variant="secondary" className="text-[10px] shrink-0">
                       {labels.shortBadge}
                     </Badge>
                     {caseItem.client_name && (
-                      <CardDescription className="m-0">
+                      <CardDescription className="m-0 min-w-0 break-words">
                         {labels.clientLabel}: {caseItem.client_name}
                       </CardDescription>
                     )}

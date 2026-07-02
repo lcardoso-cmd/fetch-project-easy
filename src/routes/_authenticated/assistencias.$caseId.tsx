@@ -164,14 +164,14 @@ function CaseDetailPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-start justify-between gap-4">
-        <div className="min-w-0 flex-1">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="min-w-0 flex-1 basis-full sm:basis-auto">
           <Button variant="ghost" size="sm" asChild className="mb-2 -ml-2">
             <Link to="/assistencias">
               <ArrowLeft className="mr-1 h-4 w-4" /> Voltar
             </Link>
           </Button>
-          <h1 className="text-3xl font-bold tracking-tight text-foreground">
+          <h1 className="text-2xl font-bold tracking-tight text-foreground break-words sm:text-3xl">
             {caseData.title}
           </h1>
         </div>
@@ -429,10 +429,10 @@ function CaseDetailPage() {
                 {events.slice(0, 8).map((ev) => (
                   <li
                     key={ev.id}
-                    className="flex items-center justify-between py-2 text-sm"
+                    className="flex items-center justify-between gap-2 py-2 text-sm"
                   >
-                    <span className="truncate">{ev.title}</span>
-                    <span className="ml-2 shrink-0 text-xs text-muted-foreground">
+                    <span className="min-w-0 flex-1 truncate">{ev.title}</span>
+                    <span className="shrink-0 text-xs text-muted-foreground">
                       {new Date(ev.starts_at).toLocaleString("pt-BR", {
                         day: "2-digit",
                         month: "2-digit",
@@ -472,9 +472,10 @@ function CaseDetailPage() {
                 {tasks.slice(0, 8).map((t) => (
                   <li
                     key={t.id}
-                    className="flex items-center gap-2 py-2 text-sm"
+                    className="flex items-start gap-2 py-2 text-sm"
                   >
                     <Checkbox
+                      className="mt-0.5 shrink-0"
                       checked={t.status === "done"}
                       onCheckedChange={async (c) => {
                         await toggleTaskFn({
@@ -486,11 +487,11 @@ function CaseDetailPage() {
                       }}
                     />
                     <span
-                      className={
+                      className={`min-w-0 flex-1 break-words ${
                         t.status === "done"
                           ? "line-through text-muted-foreground"
                           : ""
-                      }
+                      }`}
                     >
                       {t.title}
                     </span>
