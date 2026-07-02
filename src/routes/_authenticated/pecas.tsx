@@ -14,6 +14,7 @@ import { toast } from "sonner";
 import { getCases } from "@/lib/cases.functions";
 import { draftLegalPiece } from "@/lib/generators.functions";
 import { labelsForMatter, type MatterKind } from "@/lib/practice-labels";
+import { useUnsavedChangesGuard } from "@/hooks/use-unsaved-changes-guard";
 
 export const Route = createFileRoute("/_authenticated/pecas")({
   component: DrafterPage,
