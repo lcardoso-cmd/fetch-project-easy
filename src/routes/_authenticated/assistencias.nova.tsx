@@ -829,17 +829,38 @@ function NewCasePage() {
           </CardHeader>
           <CardContent className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2 md:col-span-2">
-              <Label htmlFor="title">Título *</Label>
+              <div className="flex items-center justify-between gap-2">
+                <Label htmlFor="title">Título *</Label>
+                {!titleAuto && buildCaseTitle(matterKind, parties) ? (
+                  <button
+                    type="button"
+                    onClick={() => setTitleAuto(true)}
+                    className="text-xs text-accent hover:underline"
+                  >
+                    Regenerar a partir das partes
+                  </button>
+                ) : null}
+              </div>
               <Input
                 id="title"
                 value={title}
-                onChange={(e) => setTitle(e.target.value)}
+                onChange={(e) => onTitleChange(e.target.value)}
                 onBlur={() => markTouched("title")}
                 required
                 maxLength={200}
                 aria-invalid={showError("title") || undefined}
                 className={errorRing("title")}
+                placeholder={
+                  matterKind === "pericia"
+                    ? "Ex.: Requerida vs Requerente (gerado a partir das partes)"
+                    : "Ex.: Parte assistida vs Parte contrária (gerado a partir das partes)"
+                }
               />
+              <p className="text-xs text-muted-foreground">
+                {titleAuto
+                  ? "O título é gerado automaticamente assim que você classificar a parte assistida/requerida e a parte contrária/requerente."
+                  : "Você está editando o título manualmente."}
+              </p>
               <ErrorMsg k="title" />
             </div>
             <div className="space-y-2">
