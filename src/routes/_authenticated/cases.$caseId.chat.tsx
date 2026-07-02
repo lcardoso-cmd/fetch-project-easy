@@ -76,6 +76,7 @@ function CaseChatFullPage() {
       </div>
       <div className="min-h-0 flex-1 overflow-hidden">
         <JurisMindChat
+          fullscreen
           caseId={caseId}
           caseInfo={{
             title: caseData.title,

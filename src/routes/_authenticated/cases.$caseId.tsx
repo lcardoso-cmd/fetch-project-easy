@@ -183,7 +183,7 @@ function CaseDetailPage() {
             </SheetTrigger>
             <SheetContent
               side="right"
-              className="flex w-full flex-col p-0 sm:max-w-4xl lg:max-w-6xl"
+              className="flex h-svh w-full flex-col p-0 sm:max-w-5xl lg:max-w-[min(96vw,1440px)]"
             >
               <SheetHeader className="border-b p-4">
                 <SheetTitle className="flex items-center gap-2 truncate">
