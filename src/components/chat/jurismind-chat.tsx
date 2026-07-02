@@ -688,12 +688,13 @@ export function JurisMindChat({
       let buffer = "";
       const collectedSteps: ToolStep[] = [];
       let collectedCitations: Citation[] | undefined;
-      let doneInfo: {
+      type DoneInfo = {
         answer?: string;
         citations?: Citation[];
         steps?: ToolStep[];
         thread_id?: string | null;
-      } | null = null;
+      };
+      let doneInfo: DoneInfo | null = null;
       let streamError: string | null = null;
 
       // Parser simples de SSE (event: X\ndata: {...}\n\n)
