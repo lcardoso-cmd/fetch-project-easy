@@ -147,6 +147,7 @@ function buildNav(practice: PracticeType | null | undefined): NavItem[] {
     link("platform", "/plataforma", "Visão B2B", Globe2, "exact"),
     link("platform-customers", "/plataforma/clientes", "Clientes SaaS", Building2, "startsWith"),
     link("platform-users", "/plataforma/usuarios", "Usuários", Users2, "startsWith"),
+    link("platform-requests", "/plataforma/solicitacoes", "Solicitações B2B", Handshake, "startsWith"),
     link("platform-credentials", "/plataforma/credenciais", "Credenciais SaaS", KeyRound, "startsWith"),
     link("platform-audit", "/plataforma/auditoria", "Log de auditoria", ScrollText, "startsWith"),
   ];
