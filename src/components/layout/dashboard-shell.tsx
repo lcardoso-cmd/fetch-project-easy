@@ -52,6 +52,7 @@ import {
   Eye,
   ShieldCheck,
   type LucideIcon,
+  HelpCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { NotificationBell } from "@/components/layout/notification-bell";
