@@ -101,9 +101,17 @@ function buildNav(practice: PracticeType | null | undefined): NavItem[] {
   });
 
   return [
-    // ─── PRINCIPAL ───
-    section("principal", "Principal"),
+    // ─── MEU ESPAÇO ───
+    section("workspace", "Meu Espaço"),
     link("dashboard", "/painel", "Painel", Home, "exact"),
+    link("my-tasks", "/tarefas", "Minhas Tarefas", ClipboardCheck),
+    link("inbox", "/conversas", "Conversas", MessageSquare, "startsWith"),
+    link("calendar", "/agenda", "Agenda", CalendarDays),
+    link("my-files", "/documentos", "Meus Documentos", FileArchive),
+
+    // ─── TRABALHO ───
+    { type: "separator" },
+    section("practice", "Trabalho"),
     link(
       "cases",
       "/assistencias",
@@ -111,10 +119,6 @@ function buildNav(practice: PracticeType | null | undefined): NavItem[] {
       FolderKanban,
       "startsWith",
     ),
-    link("my-tasks", "/tarefas", "Minhas Tarefas", ClipboardCheck),
-    link("inbox", "/conversas", "Conversas", MessageSquare, "startsWith"),
-    link("calendar", "/agenda", "Agenda", CalendarDays),
-    link("my-files", "/documentos", "Meus Documentos", FileArchive),
     link("drafter", "/pecas", isLawyer ? "Peças Jurídicas" : labels.outputLabel, Scale),
     // Evita duplicar "Parecer Técnico" para o assistente técnico, cujo
     // drafter já usa esse mesmo rótulo. Perito e advogado seguem vendo o

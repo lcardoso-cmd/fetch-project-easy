@@ -39,7 +39,12 @@ export type NavKey =
   | "platform-credentials"
   | "platform-audit";
 
-export type NavSectionKey = "principal" | "business" | "office" | "platform";
+export type NavSectionKey =
+  | "workspace"
+  | "practice"
+  | "business"
+  | "office"
+  | "platform";
 
 export type NavEntry = {
   /** Descrição funcional (o que o item faz). */
@@ -49,9 +54,13 @@ export type NavEntry = {
 };
 
 export const NAV_SECTIONS: Record<NavSectionKey, NavEntry> = {
-  principal: {
+  workspace: {
     base:
-      "Trabalho documental do dia-a-dia: painel, casos, tarefas, conversas, agenda, documentos e peças.",
+      "Seu espaço pessoal: painel, tarefas, conversas, agenda e documentos.",
+  },
+  practice: {
+    base:
+      "Trabalho jurídico: casos/assistências, peças e pareceres técnicos.",
   },
   business: {
     base:
