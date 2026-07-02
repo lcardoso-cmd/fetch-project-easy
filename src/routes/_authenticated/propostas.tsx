@@ -288,7 +288,7 @@ function ProposalPage() {
   // Confirmação ao sair quando há alterações não salvas (autosave pendente).
   const hasUnsavedChanges =
     hydrated &&
-    (saving ||
+    (saving || pending ||
       JSON.stringify({ form, output }) !== lastSerializedRef.current);
   useUnsavedChangesGuard({ when: hasUnsavedChanges });
 
