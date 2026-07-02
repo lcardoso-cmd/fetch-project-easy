@@ -106,7 +106,7 @@ function DashboardPage() {
                       )}
                     </div>
                     <Button asChild variant="ghost" size="sm">
-                      <Link to={`/cases/${c.id}`}>Abrir</Link>
+                      <Link to="/assistencias/$caseId" params={{ caseId: c.id }}>Abrir</Link>
                     </Button>
                   </li>
                 ))}
