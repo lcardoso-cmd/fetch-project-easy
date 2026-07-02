@@ -33,6 +33,13 @@ import {
 } from "@/lib/practice-labels";
 import { useProfile } from "@/hooks/use-profile";
 import { isCurrentUserAdmin } from "@/lib/oauth-settings.functions";
+import {
+  listMemberCapabilities,
+  setMemberCapabilities,
+  CAPABILITY_LABELS,
+  type Capability,
+} from "@/lib/capabilities.functions";
+import { Checkbox } from "@/components/ui/checkbox";
 
 export const Route = createFileRoute("/_authenticated/settings")({
   component: SettingsPage,
