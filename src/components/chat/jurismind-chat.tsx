@@ -407,6 +407,9 @@ export function JurisMindChat({
       };
       rec.onstop = async () => {
         cleanupAudioMonitor();
+        const durationMs = startedAtRef.current
+          ? Date.now() - startedAtRef.current
+          : 0;
         const blob = new Blob(audioChunksRef.current, { type: "audio/webm" });
         if (blob.size < 500) {
           const msg = "Nada capturado — segure o botão e fale próximo ao microfone.";
@@ -447,6 +450,8 @@ export function JurisMindChat({
             toast.error(msg);
             return;
           }
+          // Guarda o áudio para upload junto do envio da mensagem
+          pendingAudioRef.current = { blob, durationMs };
           setInput((prev) => (prev ? prev + " " + text : text));
           setMicError(null);
           setTimeout(() => inputRef.current?.focus(), 30);
