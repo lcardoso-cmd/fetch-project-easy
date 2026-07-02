@@ -197,7 +197,153 @@ export const ContextLink = React.forwardRef<HTMLAnchorElement, ContextLinkProps>
       [safe, trigger, onClick, rest],
     );
 
-    // @ts-expect-error — repassamos props tipadas do TanStack Link.
     return <Link ref={ref} {...rest} onClick={handleClick} />;
+  },
+);
+
+// ---------------------------------------------------------------------------
+// Form helpers — mesma união `JurisMindContext` propagada para handlers de
+// formulário (onChange / onSubmit / onBlur / onFocus). O objetivo é que
+// qualquer autor de componente de form receba autocomplete no `context` e
+// erros de compilação se digitar um valor fora da união.
+// ---------------------------------------------------------------------------
+
+/** Payload passado para todo handler de form contextualizado. */
+export interface ContextFormEventMeta {
+  /** Superfície de origem — mesma união usada pelo `JurisMindMark`. */
+  context: JurisMindContext;
+  /** Nome do campo (`event.currentTarget.name`), quando disponível. */
+  name?: string;
+  /** Timestamp ISO para agrupamento de eventos. */
+  at: string;
+}
+
+export type ContextChangeHandler<
+  E extends HTMLElement = HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement,
+> = (event: React.ChangeEvent<E>, meta: ContextFormEventMeta) => void;
+
+export type ContextSubmitHandler = (
+  event: React.FormEvent<HTMLFormElement>,
+  meta: ContextFormEventMeta,
+) => void | Promise<void>;
+
+export type ContextFocusHandler<E extends HTMLElement = HTMLElement> = (
+  event: React.FocusEvent<E>,
+  meta: ContextFormEventMeta,
+) => void;
+
+function metaFor(
+  context: JurisMindContext,
+  target?: { name?: string } | null,
+): ContextFormEventMeta {
+  return {
+    context: safeContext(context),
+    name: target?.name || undefined,
+    at: new Date().toISOString(),
+  };
+}
+
+/**
+ * Cria um `onChange` tipado que injeta `{ context, name, at }` no handler.
+ *
+ * @example
+ * const onChange = createContextChangeHandler(JURISMIND_CONTEXT.auth, (e, meta) => {
+ *   setEmail(e.target.value);
+ *   analytics.track("field_change", meta);
+ * });
+ * <Input name="email" onChange={onChange} />
+ */
+export function createContextChangeHandler<
+  E extends HTMLElement = HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement,
+>(
+  context: JurisMindContext,
+  handler: ContextChangeHandler<E>,
+): (event: React.ChangeEvent<E>) => void {
+  const safe = safeContext(context);
+  return (event) => {
+    handler(event, metaFor(safe, event.currentTarget as { name?: string }));
+  };
+}
+
+/**
+ * Cria um `onSubmit` tipado que injeta `{ context, at }` no handler.
+ *
+ * @example
+ * const onSubmit = createContextSubmitHandler(JURISMIND_CONTEXT.auth, async (e, meta) => {
+ *   e.preventDefault();
+ *   await signIn();
+ *   analytics.track("form_submit", meta);
+ * });
+ */
+export function createContextSubmitHandler(
+  context: JurisMindContext,
+  handler: ContextSubmitHandler,
+): (event: React.FormEvent<HTMLFormElement>) => void | Promise<void> {
+  const safe = safeContext(context);
+  return (event) =>
+    handler(event, metaFor(safe, event.currentTarget as { name?: string }));
+}
+
+/**
+ * Hook que devolve fábricas prontas para o `context` atual — evita repetir a
+ * superfície em cada handler dentro do mesmo componente de formulário.
+ *
+ * @example
+ * const { onChange, onSubmit, onFocus, onBlur, context } =
+ *   useContextFormHandlers(JURISMIND_CONTEXT.auth);
+ * <form onSubmit={onSubmit((e, meta) => { ... })}>
+ *   <input name="email" onChange={onChange((e, meta) => setEmail(e.target.value))} />
+ * </form>
+ */
+export function useContextFormHandlers(context: JurisMindContext) {
+  const safe = safeContext(context);
+  return React.useMemo(
+    () => ({
+      context: safe,
+      onChange: <
+        E extends HTMLElement =
+          | HTMLInputElement
+          | HTMLTextAreaElement
+          | HTMLSelectElement,
+      >(
+        handler: ContextChangeHandler<E>,
+      ) => createContextChangeHandler<E>(safe, handler),
+      onSubmit: (handler: ContextSubmitHandler) =>
+        createContextSubmitHandler(safe, handler),
+      onFocus:
+        <E extends HTMLElement = HTMLElement>(handler: ContextFocusHandler<E>) =>
+        (event: React.FocusEvent<E>) =>
+          handler(event, metaFor(safe, event.currentTarget as { name?: string })),
+      onBlur:
+        <E extends HTMLElement = HTMLElement>(handler: ContextFocusHandler<E>) =>
+        (event: React.FocusEvent<E>) =>
+          handler(event, metaFor(safe, event.currentTarget as { name?: string })),
+    }),
+    [safe],
+  );
+}
+
+/**
+ * `<ContextForm>` — thin wrapper em `<form>` que aceita `context` tipado e
+ * repassa a superfície ao `onSubmit`. Use quando quiser manter o handler
+ * inline sem chamar `createContextSubmitHandler` explicitamente.
+ */
+export interface ContextFormProps
+  extends Omit<React.FormHTMLAttributes<HTMLFormElement>, "onSubmit"> {
+  context: JurisMindContext;
+  onSubmit?: ContextSubmitHandler;
+}
+
+export const ContextForm = React.forwardRef<HTMLFormElement, ContextFormProps>(
+  function ContextForm({ context, onSubmit, ...rest }, ref) {
+    const safe = safeContext(context);
+    const handleSubmit = React.useCallback(
+      (event: React.FormEvent<HTMLFormElement>) => {
+        if (!onSubmit) return;
+        return onSubmit(event, metaFor(safe, event.currentTarget));
+      },
+      [safe, onSubmit],
+    );
+    return <form ref={ref} {...rest} onSubmit={handleSubmit} />;
   },
 );
