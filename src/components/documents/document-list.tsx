@@ -63,6 +63,8 @@ function StatusCell({
   retrying: boolean;
 }) {
   const isError = status.startsWith("error");
+  const isEmpty = status === "empty";
+  const canRetry = isError || isEmpty;
   const map: Record<
     string,
     { icon: typeof Clock; color: string; label: string }
@@ -91,22 +93,31 @@ function StatusCell({
               <p className="text-xs">{status.replace(/^error:\s*/, "")}</p>
             </TooltipContent>
           )}
+          {isEmpty && (
+            <TooltipContent className="max-w-xs">
+              <p className="text-xs">
+                Nenhum texto foi extraído. Tente reindexar ou use "Reprocessar
+                com visão (OCR)".
+              </p>
+            </TooltipContent>
+          )}
         </Tooltip>
       </TooltipProvider>
-      {isError && (
+      {canRetry && (
         <Button
           variant="outline"
           size="sm"
           className="h-6 text-xs"
           onClick={onRetry}
           disabled={retrying}
+          aria-label={isError ? "Reindexar documento" : "Tentar extrair novamente"}
         >
           {retrying ? (
             <Loader2 className="mr-1 h-3 w-3 animate-spin" />
           ) : (
             <RefreshCw className="mr-1 h-3 w-3" />
           )}
-          Tentar novamente
+          {isError ? "Reindexar" : "Tentar novamente"}
         </Button>
       )}
     </div>
