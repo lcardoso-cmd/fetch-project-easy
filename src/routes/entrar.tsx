@@ -47,6 +47,7 @@ function AuthPage() {
   const [fullName, setFullName] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [mode, setMode] = useState<"login" | "signup">("login");
 
   if (user) {
     navigate({ to: "/painel", replace: true });
@@ -142,7 +143,7 @@ function AuthPage() {
             </p>
           </div>
 
-          <Tabs defaultValue="login" className="w-full">
+          <Tabs value={mode} onValueChange={(v) => { setMode(v as "login" | "signup"); setError(null); }} className="w-full">
             <TabsList className="grid w-full grid-cols-2 rounded-2xl">
               <TabsTrigger value="login" className="rounded-xl">Entrar</TabsTrigger>
               <TabsTrigger value="signup" className="rounded-xl">Criar conta</TabsTrigger>
@@ -182,6 +183,16 @@ function AuthPage() {
                   Entrar com Google
                 </Button>
               </form>
+              <p className="mt-4 text-center text-sm text-muted-foreground">
+                Ainda não tem uma conta?{" "}
+                <button
+                  type="button"
+                  onClick={() => { setMode("signup"); setError(null); }}
+                  className="font-medium text-primary underline-offset-4 hover:underline"
+                >
+                  Criar conta
+                </button>
+              </p>
             </TabsContent>
 
             <TabsContent value="signup">
@@ -229,6 +240,16 @@ function AuthPage() {
                   Criar conta com Google
                 </Button>
               </form>
+              <p className="mt-4 text-center text-sm text-muted-foreground">
+                Já tem uma conta?{" "}
+                <button
+                  type="button"
+                  onClick={() => { setMode("login"); setError(null); }}
+                  className="font-medium text-primary underline-offset-4 hover:underline"
+                >
+                  Entrar
+                </button>
+              </p>
             </TabsContent>
           </Tabs>
         </div>
