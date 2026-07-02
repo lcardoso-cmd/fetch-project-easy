@@ -154,16 +154,49 @@ function HireB2bRequestForm() {
       });
       return;
     }
-    if (hasPrefill) {
+    // Feedback quando o usuário chegou pela URL/CTA mas algum campo veio vazio
+    // ou inválido — avisar em vez de silenciar.
+    const cameFromCta = Boolean(
+      search.service || search.title || search.description || search.case_id,
+    );
+    if (cameFromCta) {
+      const missing: string[] = [];
+      if (!search.service?.trim()) missing.push("serviço");
+      if (!search.title?.trim()) missing.push("título");
+      if (!search.description?.trim()) missing.push("descrição");
+
+      const unknownService = Boolean(
+        search.service && !catalog.find((c) => c.slug === search.service),
+      );
+
+      if (unknownService) {
+        noticeShown.current = true;
+        toast.warning("Serviço não reconhecido", {
+          description: `O serviço "${search.service}" não foi encontrado no catálogo B2B atual. Escolha um serviço válido abaixo antes de enviar.`,
+          duration: 8000,
+        });
+        return;
+      }
+
+      if (missing.length > 0) {
+        noticeShown.current = true;
+        toast.warning("Solicitação parcialmente pré-preenchida", {
+          description: `Faltou preencher: ${missing.join(", ")}. Complete os campos destacados antes de enviar.`,
+          duration: 8000,
+        });
+        return;
+      }
+
       const svc = catalog.find((c) => c.slug === search.service);
       noticeShown.current = true;
       toast.success("Solicitação pré-preenchida", {
         description: svc
-          ? `Serviço "${svc.title}" e contexto do parecer já foram preenchidos. Ajuste os detalhes antes de enviar.`
-          : "Serviço e contexto do parecer já foram preenchidos. Ajuste os detalhes antes de enviar.",
+          ? `Serviço "${svc.title}" e contexto já foram preenchidos. Ajuste os detalhes antes de enviar.`
+          : "Serviço e contexto já foram preenchidos. Ajuste os detalhes antes de enviar.",
       });
     }
-  }, [catalog, search.service, search.description, savedDraft]);
+  }, [catalog, search.service, search.title, search.description, search.case_id, savedDraft]);
+
 
 
 
