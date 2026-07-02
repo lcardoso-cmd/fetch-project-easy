@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,13 +8,57 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Handshake, Loader2, Copy, Download, FileText } from "lucide-react";
+import { Handshake, Loader2, Copy, Download, FileText, Check, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { generateProposal } from "@/lib/generators.functions";
 import { getCases } from "@/lib/cases.functions";
 import { useProfile } from "@/hooks/use-profile";
 import { RichTextEditor } from "@/components/chat/rich-text-editor";
 import { z } from "zod";
+
+const DRAFT_KEY = "jurismind:proposal-draft:v1";
+const DRAFT_DEBOUNCE_MS = 800;
+
+type Draft = { form: FormState; output: string; savedAt: number };
+
+function loadDraft(): Draft | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(DRAFT_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Draft;
+    if (!parsed?.form) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function saveDraft(d: Draft) {
+  try {
+    window.localStorage.setItem(DRAFT_KEY, JSON.stringify(d));
+  } catch {
+    // storage cheio / bloqueado — ignora silenciosamente
+  }
+}
+
+function clearDraft() {
+  try {
+    window.localStorage.removeItem(DRAFT_KEY);
+  } catch {
+    // ignora
+  }
+}
+
+function formatSavedAt(ts: number): string {
+  const diff = Math.max(0, Date.now() - ts);
+  if (diff < 5_000) return "agora mesmo";
+  if (diff < 60_000) return `há ${Math.round(diff / 1000)}s`;
+  if (diff < 3_600_000) return `há ${Math.round(diff / 60_000)} min`;
+  const d = new Date(ts);
+  return `às ${d.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })}`;
+}
+
 
 const proposalSchema = z.object({
   client_name: z.string().trim().min(2, "Informe o nome do cliente").max(200),
@@ -99,6 +143,25 @@ function ProposalPage() {
   const [output, setOutput] = useState("");
   const [form, setForm] = useState<FormState>(EMPTY);
   const [errors, setErrors] = useState<FieldErrors>({});
+  const [savedAt, setSavedAt] = useState<number | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [hydrated, setHydrated] = useState(false);
+  const [, forceTick] = useState(0);
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Restaurar rascunho ao montar (client-only).
+  useEffect(() => {
+    const d = loadDraft();
+    if (d) {
+      setForm(d.form);
+      if (d.output) setOutput(d.output);
+      setSavedAt(d.savedAt);
+      toast.success("Rascunho restaurado", {
+        description: `Salvo ${formatSavedAt(d.savedAt)}.`,
+      });
+    }
+    setHydrated(true);
+  }, []);
 
   // Autofill escritório/advogado a partir do profile — só quando ainda vazio.
   useEffect(() => {
@@ -110,6 +173,38 @@ function ProposalPage() {
       firm_phone: f.firm_phone || profile.phone || "",
     }));
   }, [profile]);
+
+  // Autosave com debounce sempre que o form ou o output mudam (após hidratar).
+  useEffect(() => {
+    if (!hydrated) return;
+    setSaving(true);
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(() => {
+      const ts = Date.now();
+      saveDraft({ form, output, savedAt: ts });
+      setSavedAt(ts);
+      setSaving(false);
+    }, DRAFT_DEBOUNCE_MS);
+    return () => {
+      if (saveTimer.current) clearTimeout(saveTimer.current);
+    };
+  }, [form, output, hydrated]);
+
+  // Atualiza o rótulo "salvo há Xs" a cada 20s.
+  useEffect(() => {
+    const id = setInterval(() => forceTick((n) => n + 1), 20_000);
+    return () => clearInterval(id);
+  }, []);
+
+  const discardDraft = () => {
+    clearDraft();
+    setForm(EMPTY);
+    setOutput("");
+    setErrors({});
+    setSavedAt(null);
+    toast.success("Rascunho descartado");
+  };
+
 
   const cases = casesQ.data ?? [];
 
@@ -237,12 +332,33 @@ function ProposalPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold font-heading tracking-tight">Proposta Comercial</h1>
-        <p className="mt-1 text-muted-foreground">
-          Escolha um caso existente para preencher os dados do cliente automaticamente. Campos marcados com <span className="text-destructive">*</span> são obrigatórios.
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="min-w-0">
+          <h1 className="text-3xl font-bold font-heading tracking-tight">Proposta Comercial</h1>
+          <p className="mt-1 text-muted-foreground">
+            Escolha um caso existente para preencher os dados do cliente automaticamente. Campos marcados com <span className="text-destructive">*</span> são obrigatórios.
+          </p>
+        </div>
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          {saving ? (
+            <span className="inline-flex items-center gap-1.5">
+              <Loader2 className="h-3.5 w-3.5 animate-spin" /> Salvando rascunho…
+            </span>
+          ) : savedAt ? (
+            <span className="inline-flex items-center gap-1.5">
+              <Check className="h-3.5 w-3.5 text-emerald-600" /> Rascunho salvo {formatSavedAt(savedAt)}
+            </span>
+          ) : (
+            <span>Alterações são salvas automaticamente</span>
+          )}
+          {savedAt && (
+            <Button size="sm" variant="ghost" onClick={discardDraft} className="h-7 px-2">
+              <Trash2 className="mr-1 h-3.5 w-3.5" /> Descartar
+            </Button>
+          )}
+        </div>
       </div>
+
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
