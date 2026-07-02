@@ -55,25 +55,13 @@ function capitalize(str: string): string {
   return str.charAt(0).toUpperCase() + str.slice(1);
 }
 
-function CaseDataRow({
-  label,
-  value,
-  breakAll = false,
-}: {
-  label: string;
-  value: string;
-  breakAll?: boolean;
-}) {
+function CaseDataRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="grid min-w-0 grid-cols-1 gap-y-0.5 sm:contents">
-      <dt className="min-w-0 break-words text-xs font-medium uppercase tracking-wide text-muted-foreground sm:self-start sm:text-sm sm:normal-case sm:tracking-normal sm:text-foreground sm:pr-2">
+      <dt className="min-w-0 text-xs font-medium uppercase tracking-wide text-muted-foreground [overflow-wrap:anywhere] sm:self-start sm:pr-2 sm:text-sm sm:font-normal sm:normal-case sm:tracking-normal sm:text-foreground">
         {label}
       </dt>
-      <dd
-        className={`min-w-0 text-foreground sm:self-start sm:text-muted-foreground ${
-          breakAll ? "break-all" : "break-words"
-        }`}
-      >
+      <dd className="min-w-0 text-foreground [overflow-wrap:anywhere] sm:self-start sm:text-muted-foreground">
         {value}
       </dd>
     </div>
@@ -270,7 +258,7 @@ function CaseDetailPage() {
                 <CaseDataRow label="Cliente" value={caseData.client_name} />
               )}
               {caseData.case_number && (
-                <CaseDataRow label="Número do processo" value={caseData.case_number} breakAll />
+                <CaseDataRow label="Número do processo" value={caseData.case_number} />
               )}
               {caseData.jurisdiction && (
                 <CaseDataRow label="Vara / Tribunal" value={caseData.jurisdiction} />
