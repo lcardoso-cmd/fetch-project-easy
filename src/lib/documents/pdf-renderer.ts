@@ -1,18 +1,19 @@
 /**
  * Renderer PDF unificado do JurisMind. Consome DocBlock[] + branding e
- * produz um PDF workerd-safe (sem dependências nativas) com:
+ * produz um PDF workerd-safe (JS puro) com:
  *  - US Letter, margens 1" (idêntico ao DOCX)
- *  - Header: nome do escritório à esquerda + label à direita, com borda inferior
- *  - Footer: firma + "Página X de Y", com borda superior
- *  - Wrap por largura real via métricas Helvetica (AFM embutidas)
- *  - Suporte inline a bold/italic/underline/strike
+ *  - Tipografia Carlito (metricamente compatível com Calibri do DOCX)
+ *  - Header/Footer com borda e paginação
+ *  - Wrap por largura real usando métricas da fonte embutida
+ *  - Inline bold/italic/underline/strike
  *  - Alinhamento left/center/right/justify por parágrafo
  *  - Bullets e listas numeradas
  *
- * Este módulo é o único caminho de geração de PDF do app. Qualquer nova
- * superfície que precise exportar PDF deve chamar `renderPdf(...)`.
+ * Este módulo é o único caminho de geração de PDF do app.
  */
 
+import { PDFDocument, StandardFonts, rgb, degrees, type PDFFont, type PDFPage } from "pdf-lib";
+import fontkit from "@pdf-lib/fontkit";
 import type { DocBlock, InlineRun } from "./blocks";
 import {
   COLORS,
@@ -23,10 +24,11 @@ import {
   hexToRgb01,
   type DocBranding,
 } from "./tokens";
-import { charWidthPt, textWidthPt, type PdfFontFace } from "./pdf-fonts";
+import { pickFace, type PdfFontFace } from "./pdf-fonts";
+import { CARLITO_BYTES } from "./fonts/carlito";
 
 // ---------------------------------------------------------------------------
-// Tipos internos
+// Tipos
 // ---------------------------------------------------------------------------
 
 export interface RenderPdfInput {
@@ -39,25 +41,30 @@ export interface RenderPdfInput {
   bare?: boolean;
 }
 
+type Fonts = Record<PdfFontFace, PDFFont>;
+
 type StyledRun = InlineRun & { face: PdfFontFace; sizePt: number };
 
+interface LineSegment {
+  text: string;
+  face: PdfFontFace;
+  sizePt: number;
+  underline?: boolean;
+  strike?: boolean;
+}
+
 interface LayoutLine {
-  /** Runs já quebrados para caber na linha; posição x preservada por run. */
-  segments: { text: string; face: PdfFontFace; sizePt: number; xOffset: number; underline?: boolean; strike?: boolean }[];
+  segments: LineSegment[];
+  /** Largura em pt (sem prefixo). */
   width: number;
   align: "left" | "center" | "right" | "justify";
   sizePt: number;
   indent: number;
-  /** Espaço extra abaixo desta linha (em pontos). */
   spacingAfter: number;
-  /** Prefixo (ex.: "• ", "1. ") — desenhado antes do primeiro segmento. */
   prefix?: string;
   prefixWidth?: number;
-  /** Se true, é a última linha do parágrafo (não distribui espaços em justify). */
   lastOfParagraph: boolean;
-  /** Cor override. Default: ink. */
   color?: string;
-  /** Se true, mantém peso bold no prefixo/todos os runs. */
   bold?: boolean;
 }
 
@@ -65,54 +72,34 @@ interface LayoutLine {
 // Utilidades
 // ---------------------------------------------------------------------------
 
-/** Escape para strings PDF (parênteses e barras). */
-function pdfEscape(s: string): string {
-  return s.replace(/\\/g, "\\\\").replace(/\(/g, "\\(").replace(/\)/g, "\\)");
-}
-
 /**
- * Converte string unicode arbitrária em WinAnsi (latin1 aproximado).
- * Caracteres fora do intervalo viram "?" para não quebrar o PDF.
- * As fontes Type1 built-in usam WinAnsiEncoding.
+ * Substitui caracteres não cobertos pelas fontes embutidas por
+ * equivalentes ASCII. Nosso subset de Carlito cobre Latin-1, Latin
+ * Extended básico e pontuação comum, então isso quase nunca dispara.
  */
-const WIN_ANSI_MAP: Record<string, string> = {
-  "\u2013": "-", "\u2014": "-",
-  "\u2018": "'", "\u2019": "'", "\u201A": ",",
-  "\u201C": '"', "\u201D": '"', "\u201E": '"',
-  "\u2022": "\x95", // bullet
-  "\u2026": "...",
+const FALLBACK: Record<string, string> = {
   "\u00A0": " ",
   "\u25E6": "o",
   "\u2192": "->",
 };
-
-function toWinAnsi(s: string): string {
+function sanitize(s: string): string {
   let out = "";
   for (const ch of s) {
-    const code = ch.charCodeAt(0);
-    if (code < 128) {
-      out += ch;
-      continue;
-    }
-    const mapped = WIN_ANSI_MAP[ch];
-    if (mapped !== undefined) {
-      out += mapped;
-      continue;
-    }
-    if (code <= 255) {
-      out += ch; // WinAnsi cobre 128..255 (com pequenas divergências)
-      continue;
-    }
-    out += "?";
+    const rep = FALLBACK[ch];
+    out += rep !== undefined ? rep : ch;
   }
   return out;
 }
 
-function pickFace(bold?: boolean, italic?: boolean): PdfFontFace {
-  if (bold && italic) return "Helvetica-BoldOblique";
-  if (bold) return "Helvetica-Bold";
-  if (italic) return "Helvetica-Oblique";
-  return "Helvetica";
+function widthOf(font: PDFFont, text: string, size: number): number {
+  if (!text) return 0;
+  try {
+    return font.widthOfTextAtSize(text, size);
+  } catch {
+    // caractere não codificável — substitui por espaço e tenta de novo
+    const cleaned = text.replace(/[^\x00-\xFF\u0100-\u017F\u2000-\u206F\u20AC]/g, " ");
+    return font.widthOfTextAtSize(cleaned, size);
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -122,9 +109,10 @@ function pickFace(bold?: boolean, italic?: boolean): PdfFontFace {
 function layoutRuns(
   runs: StyledRun[],
   maxWidth: number,
-): { lines: { segments: LayoutLine["segments"]; width: number }[] } {
-  const lines: { segments: LayoutLine["segments"]; width: number }[] = [];
-  let current: LayoutLine["segments"] = [];
+  fonts: Fonts,
+): { lines: { segments: LineSegment[]; width: number }[] } {
+  const lines: { segments: LineSegment[]; width: number }[] = [];
+  let current: LineSegment[] = [];
   let currentWidth = 0;
 
   const pushLine = () => {
@@ -139,40 +127,31 @@ function layoutRuns(
       continue;
     }
     if (!run.text) continue;
-    // Tokeniza mantendo espaços como tokens
-    const tokens = run.text.match(/\s+|\S+/g) ?? [];
+    const tokens = sanitize(run.text).match(/\s+|\S+/g) ?? [];
     for (const tok of tokens) {
-      const ansi = toWinAnsi(tok);
-      const w = textWidthPt(ansi, run.face, run.sizePt);
+      const font = fonts[run.face];
+      const w = widthOf(font, tok, run.sizePt);
       const isSpace = /^\s+$/.test(tok);
       if (currentWidth + w > maxWidth && current.length > 0 && !isSpace) {
-        // quebra
-        // remove espaço trailing da linha atual
+        // remove trailing spaces
         while (current.length > 0) {
           const last = current[current.length - 1];
           if (/^\s+$/.test(last.text)) {
-            currentWidth -= textWidthPt(last.text, last.face, last.sizePt);
+            currentWidth -= widthOf(fonts[last.face], last.text, last.sizePt);
             current.pop();
           } else break;
         }
         pushLine();
         if (isSpace) continue;
       }
-      // token único maior que a linha inteira: quebra por caractere
+      // Token maior que a linha: quebra por caractere
       if (w > maxWidth && !isSpace) {
         let buf = "";
         let bufW = 0;
-        for (const ch of ansi) {
-          const cw = charWidthPt(ch, run.face, run.sizePt);
+        for (const ch of tok) {
+          const cw = widthOf(font, ch, run.sizePt);
           if (bufW + cw > maxWidth && buf) {
-            current.push({
-              text: buf,
-              face: run.face,
-              sizePt: run.sizePt,
-              xOffset: currentWidth,
-              underline: run.underline,
-              strike: run.strike,
-            });
+            current.push({ text: buf, face: run.face, sizePt: run.sizePt, underline: run.underline, strike: run.strike });
             currentWidth += bufW;
             pushLine();
             buf = ch;
@@ -183,26 +162,12 @@ function layoutRuns(
           }
         }
         if (buf) {
-          current.push({
-            text: buf,
-            face: run.face,
-            sizePt: run.sizePt,
-            xOffset: currentWidth,
-            underline: run.underline,
-            strike: run.strike,
-          });
+          current.push({ text: buf, face: run.face, sizePt: run.sizePt, underline: run.underline, strike: run.strike });
           currentWidth += bufW;
         }
         continue;
       }
-      current.push({
-        text: ansi,
-        face: run.face,
-        sizePt: run.sizePt,
-        xOffset: currentWidth,
-        underline: run.underline,
-        strike: run.strike,
-      });
+      current.push({ text: tok, face: run.face, sizePt: run.sizePt, underline: run.underline, strike: run.strike });
       currentWidth += w;
     }
   }
@@ -211,51 +176,47 @@ function layoutRuns(
 }
 
 // ---------------------------------------------------------------------------
-// Bloco → Layout Lines
+// Blocos → linhas
 // ---------------------------------------------------------------------------
 
-function styleRunsForBlock(
+function styleForBlock(
   block: Extract<DocBlock, { runs: InlineRun[] }>,
-): { runs: StyledRun[]; sizePt: number; bold: boolean; color: string } {
+): { sizePt: number; bold: boolean; color: string } {
   let sizePt: number = FONT_SIZES_PT.body;
-  let baseBold = false;
+  let bold = false;
   let color: string = COLORS.ink;
   if (block.kind === "heading") {
     if (block.level === 1) {
       sizePt = FONT_SIZES_PT.h1;
-      baseBold = true;
+      bold = true;
     } else if (block.level === 2) {
       sizePt = FONT_SIZES_PT.h2;
-      baseBold = true;
+      bold = true;
       color = COLORS.accent;
     } else {
       sizePt = FONT_SIZES_PT.h3;
-      baseBold = true;
+      bold = true;
       color = COLORS.inkSoft;
     }
   } else if (block.kind === "quote") {
     color = COLORS.quote;
   }
-  const runs: StyledRun[] = block.runs.map((r) => ({
-    ...r,
-    face: pickFace(baseBold || r.bold, r.italic),
-    sizePt,
-  }));
-  return { runs, sizePt, bold: baseBold, color };
+  return { sizePt, bold, color };
 }
 
 function layoutBlocks(
   blocks: DocBlock[],
   contentWidth: number,
   title: string,
+  fonts: Fonts,
 ): LayoutLine[] {
   const lines: LayoutLine[] = [];
 
-  // Título (uma vez, centralizado)
+  // Título centralizado
   const titleRuns: StyledRun[] = [
-    { text: title, face: "Helvetica-Bold", sizePt: FONT_SIZES_PT.title },
+    { text: title, face: "bold", sizePt: FONT_SIZES_PT.title },
   ];
-  const titleLayout = layoutRuns(titleRuns, contentWidth);
+  const titleLayout = layoutRuns(titleRuns, contentWidth, fonts);
   for (let i = 0; i < titleLayout.lines.length; i++) {
     const l = titleLayout.lines[i];
     lines.push({
@@ -271,7 +232,6 @@ function layoutBlocks(
     });
   }
 
-  // Contagem para numeração
   let orderedIndex = 0;
 
   for (const block of blocks) {
@@ -297,19 +257,24 @@ function layoutBlocks(
       indent = 18;
       if (block.ordered) {
         orderedIndex += 1;
-        prefix = `${orderedIndex}. `;
+        prefix = `${orderedIndex}.  `;
       } else {
-        prefix = "\x95  "; // WinAnsi bullet
+        prefix = "•  ";
         orderedIndex = 0;
       }
-      prefixWidth = textWidthPt(prefix, "Helvetica", FONT_SIZES_PT.body);
+      prefixWidth = widthOf(fonts.body, prefix, FONT_SIZES_PT.body);
     } else {
       orderedIndex = 0;
     }
 
-    const { runs, sizePt, bold, color } = styleRunsForBlock(block);
+    const { sizePt, bold, color } = styleForBlock(block);
+    const runs: StyledRun[] = block.runs.map((r) => ({
+      ...r,
+      face: pickFace(bold || r.bold, r.italic),
+      sizePt,
+    }));
     const usable = contentWidth - indent - (prefixWidth ?? 0);
-    const laid = layoutRuns(runs, usable);
+    const laid = layoutRuns(runs, usable, fonts);
 
     const align: LayoutLine["align"] =
       block.align === "center"
@@ -359,116 +324,58 @@ function layoutBlocks(
 // Paginação
 // ---------------------------------------------------------------------------
 
-interface Page {
-  lines: LayoutLine[];
-}
-
-function paginate(lines: LayoutLine[], usableHeight: number): Page[] {
-  const pages: Page[] = [];
+function paginate(lines: LayoutLine[], usableHeight: number): LayoutLine[][] {
+  const pages: LayoutLine[][] = [];
   let current: LayoutLine[] = [];
   let y = 0;
   for (const line of lines) {
     const advance = line.sizePt * SPACING.lineHeight + line.spacingAfter;
     if (y + advance > usableHeight && current.length > 0) {
-      pages.push({ lines: current });
+      pages.push(current);
       current = [];
       y = 0;
     }
     current.push(line);
     y += advance;
   }
-  if (current.length > 0) pages.push({ lines: current });
-  if (pages.length === 0) pages.push({ lines: [] });
+  if (current.length > 0) pages.push(current);
+  if (pages.length === 0) pages.push([]);
   return pages;
 }
 
 // ---------------------------------------------------------------------------
-// PDF writer — objetos e streams
+// Desenho
 // ---------------------------------------------------------------------------
 
-/**
- * Codifica string em latin1/WinAnsi byte-a-byte. Necessário porque as
- * fontes Type1 built-in com WinAnsiEncoding esperam bytes latin1 nos
- * literais de string PDF (`(...)`). UTF-8 quebraria acentos e bullet.
- * Chars > 255 devem ter sido substituídos por `toWinAnsi` antes.
- */
-function encodeLatin1(s: string): Uint8Array {
-  const out = new Uint8Array(s.length);
-  for (let i = 0; i < s.length; i++) out[i] = s.charCodeAt(i) & 0xff;
-  return out;
-}
-
-class PdfBuilder {
-  private objects: string[] = [];
-
-  addObject(body: string): number {
-    this.objects.push(body);
-    return this.objects.length; // 1-indexed
-  }
-
-  setObject(id: number, body: string) {
-    this.objects[id - 1] = body;
-  }
-
-  serialize(catalogId: number): Uint8Array {
-    const header = "%PDF-1.4\n%\xC3\xA9\xC3\xA9\xC3\xA9\n";
-    const parts: Uint8Array[] = [encodeLatin1(header)];
-    let bytePos = parts[0].length;
-    const offsets: number[] = [];
-    for (let i = 0; i < this.objects.length; i++) {
-      offsets.push(bytePos);
-      const entry = `${i + 1} 0 obj\n${this.objects[i]}\nendobj\n`;
-      const bytes = encodeLatin1(entry);
-      parts.push(bytes);
-      bytePos += bytes.length;
-    }
-    const xrefPos = bytePos;
-    let xref = `xref\n0 ${this.objects.length + 1}\n0000000000 65535 f \n`;
-    for (const off of offsets) {
-      xref += `${off.toString().padStart(10, "0")} 00000 n \n`;
-    }
-    xref += `trailer\n<< /Size ${this.objects.length + 1} /Root ${catalogId} 0 R >>\nstartxref\n${xrefPos}\n%%EOF`;
-    parts.push(encodeLatin1(xref));
-    const total = parts.reduce((a, b) => a + b.length, 0);
-    const out = new Uint8Array(total);
-    let pos = 0;
-    for (const p of parts) {
-      out.set(p, pos);
-      pos += p.length;
-    }
-    return out;
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Desenho de linhas em content stream
-// ---------------------------------------------------------------------------
-
-function fontId(face: PdfFontFace): string {
-  switch (face) {
-    case "Helvetica":
-      return "F1";
-    case "Helvetica-Bold":
-      return "F2";
-    case "Helvetica-Oblique":
-      return "F3";
-    case "Helvetica-BoldOblique":
-      return "F4";
+function drawTextSafe(
+  page: PDFPage,
+  text: string,
+  x: number,
+  y: number,
+  font: PDFFont,
+  size: number,
+  color: [number, number, number],
+) {
+  if (!text) return;
+  try {
+    page.drawText(text, { x, y, size, font, color: rgb(color[0], color[1], color[2]) });
+  } catch {
+    const cleaned = text.replace(/[^\x00-\xFF\u0100-\u017F\u2000-\u206F\u20AC]/g, " ");
+    page.drawText(cleaned, { x, y, size, font, color: rgb(color[0], color[1], color[2]) });
   }
 }
 
 function drawLine(
+  page: PDFPage,
   line: LayoutLine,
   cursorY: number,
   contentX: number,
   contentWidth: number,
-  color: string,
-): string {
-  const [r, g, b] = hexToRgb01(line.color ?? color);
-  let stream = "";
-  stream += `${r.toFixed(3)} ${g.toFixed(3)} ${b.toFixed(3)} rg\n`;
+  defaultColor: string,
+  fonts: Fonts,
+) {
+  const color = hexToRgb01(line.color ?? defaultColor);
 
-  // Calcula largura total (com prefixo)
   const totalWidth = (line.prefixWidth ?? 0) + line.width;
   let x0 = contentX + line.indent;
   if (line.align === "center") {
@@ -477,10 +384,9 @@ function drawLine(
     x0 = contentX + contentWidth - totalWidth;
   }
 
-  // Justify: distribui espaço extra em spaces internos (exceto última linha)
+  // Justify — distribui espaço extra em spaces internos (exceto última linha)
   let spaceExtra = 0;
   if (line.align === "justify" && !line.lastOfParagraph) {
-    // Conta espaços em segmentos (não no prefixo)
     let spaces = 0;
     for (const seg of line.segments) {
       for (const ch of seg.text) if (ch === " ") spaces += 1;
@@ -491,171 +397,173 @@ function drawLine(
     }
   }
 
-  // Prefixo
+  // Prefixo (bullet / número)
   if (line.prefix) {
-    stream += `BT\n/${fontId(line.bold ? "Helvetica-Bold" : "Helvetica")} ${line.sizePt} Tf\n`;
-    stream += `1 0 0 1 ${x0.toFixed(2)} ${cursorY.toFixed(2)} Tm\n`;
-    stream += `(${pdfEscape(line.prefix)}) Tj\nET\n`;
+    const font = fonts[line.bold ? "bold" : "body"];
+    drawTextSafe(page, line.prefix, x0, cursorY, font, line.sizePt, color);
     x0 += line.prefixWidth ?? 0;
   }
 
   // Segmentos
   let currentX = x0;
   for (const seg of line.segments) {
-    // Divide o texto em pedaços entre espaços para aplicar spaceExtra
+    const font = fonts[seg.face];
     if (spaceExtra > 0 && seg.text.includes(" ")) {
+      // Desenha pedaço a pedaço para inserir spaceExtra por espaço
       let chunk = "";
       for (const ch of seg.text) {
         if (ch === " ") {
           if (chunk) {
-            const cw = textWidthPt(chunk, seg.face, seg.sizePt);
-            stream += `BT\n/${fontId(seg.face)} ${seg.sizePt} Tf\n1 0 0 1 ${currentX.toFixed(2)} ${cursorY.toFixed(2)} Tm\n(${pdfEscape(chunk)}) Tj\nET\n`;
+            const cw = widthOf(font, chunk, seg.sizePt);
+            drawTextSafe(page, chunk, currentX, cursorY, font, seg.sizePt, color);
             currentX += cw;
             chunk = "";
           }
-          currentX += charWidthPt(" ", seg.face, seg.sizePt) + spaceExtra;
+          currentX += widthOf(font, " ", seg.sizePt) + spaceExtra;
         } else {
           chunk += ch;
         }
       }
       if (chunk) {
-        stream += `BT\n/${fontId(seg.face)} ${seg.sizePt} Tf\n1 0 0 1 ${currentX.toFixed(2)} ${cursorY.toFixed(2)} Tm\n(${pdfEscape(chunk)}) Tj\nET\n`;
-        currentX += textWidthPt(chunk, seg.face, seg.sizePt);
+        const cw = widthOf(font, chunk, seg.sizePt);
+        drawTextSafe(page, chunk, currentX, cursorY, font, seg.sizePt, color);
+        currentX += cw;
       }
     } else {
-      const w = textWidthPt(seg.text, seg.face, seg.sizePt);
-      stream += `BT\n/${fontId(seg.face)} ${seg.sizePt} Tf\n1 0 0 1 ${currentX.toFixed(2)} ${cursorY.toFixed(2)} Tm\n(${pdfEscape(seg.text)}) Tj\nET\n`;
-      // Underline / strike (linha via retângulo)
+      const w = widthOf(font, seg.text, seg.sizePt);
+      drawTextSafe(page, seg.text, currentX, cursorY, font, seg.sizePt, color);
       if (seg.underline || seg.strike) {
         const yLine = seg.underline
           ? cursorY - seg.sizePt * 0.15
           : cursorY + seg.sizePt * 0.28;
-        stream += `${r.toFixed(3)} ${g.toFixed(3)} ${b.toFixed(3)} RG\n`;
-        stream += `${(seg.sizePt * 0.05).toFixed(2)} w\n`;
-        stream += `${currentX.toFixed(2)} ${yLine.toFixed(2)} m ${(currentX + w).toFixed(2)} ${yLine.toFixed(2)} l S\n`;
+        page.drawLine({
+          start: { x: currentX, y: yLine },
+          end: { x: currentX + w, y: yLine },
+          thickness: seg.sizePt * 0.05,
+          color: rgb(color[0], color[1], color[2]),
+        });
       }
       currentX += w;
     }
   }
-  return stream;
 }
 
 function drawHeaderFooter(
+  page: PDFPage,
   branding: DocBranding | null | undefined,
   headerLabel: string | undefined,
   pageIndex: number,
   totalPages: number,
-): string {
-  const firmName = branding?.firmName?.trim() || DEFAULT_BRAND_NAME;
-  const [mr, mg, mb] = hexToRgb01(COLORS.muted);
-  const [ir, ig, ib] = hexToRgb01(COLORS.ink);
-  const [br, bg, bb] = hexToRgb01(COLORS.border);
-  let stream = "";
+  fonts: Fonts,
+) {
+  const firmName = sanitize(branding?.firmName?.trim() || DEFAULT_BRAND_NAME);
+  const muted = hexToRgb01(COLORS.muted);
+  const ink = hexToRgb01(COLORS.ink);
+  const border = hexToRgb01(COLORS.border);
 
-  // ------- Header -------
-  const headerY = PAGE_PT.height - 48; // 48 pt do topo
-  // firm à esquerda (ink, bold)
-  stream += `${ir.toFixed(3)} ${ig.toFixed(3)} ${ib.toFixed(3)} rg\n`;
-  stream += `BT\n/F2 10 Tf\n1 0 0 1 ${PAGE_PT.marginLeft.toFixed(2)} ${headerY.toFixed(2)} Tm\n(${pdfEscape(toWinAnsi(firmName))}) Tj\nET\n`;
-  // label à direita (muted)
+  // Header
+  const headerY = PAGE_PT.height - 48;
+  drawTextSafe(page, firmName, PAGE_PT.marginLeft, headerY, fonts.bold, 10, ink);
   if (headerLabel) {
-    const ansi = toWinAnsi(headerLabel);
-    const w = textWidthPt(ansi, "Helvetica", 10);
+    const label = sanitize(headerLabel);
+    const w = widthOf(fonts.body, label, 10);
     const x = PAGE_PT.width - PAGE_PT.marginRight - w;
-    stream += `${mr.toFixed(3)} ${mg.toFixed(3)} ${mb.toFixed(3)} rg\n`;
-    stream += `BT\n/F1 10 Tf\n1 0 0 1 ${x.toFixed(2)} ${headerY.toFixed(2)} Tm\n(${pdfEscape(ansi)}) Tj\nET\n`;
+    drawTextSafe(page, label, x, headerY, fonts.body, 10, muted);
   }
-  // borda inferior
   const headerBorderY = headerY - 6;
-  stream += `${br.toFixed(3)} ${bg.toFixed(3)} ${bb.toFixed(3)} RG\n0.5 w\n`;
-  stream += `${PAGE_PT.marginLeft} ${headerBorderY.toFixed(2)} m ${(PAGE_PT.width - PAGE_PT.marginRight).toFixed(2)} ${headerBorderY.toFixed(2)} l S\n`;
+  page.drawLine({
+    start: { x: PAGE_PT.marginLeft, y: headerBorderY },
+    end: { x: PAGE_PT.width - PAGE_PT.marginRight, y: headerBorderY },
+    thickness: 0.5,
+    color: rgb(border[0], border[1], border[2]),
+  });
 
-  // ------- Footer -------
+  // Footer
   const footerY = 40;
   const footerBorderY = footerY + 14;
-  stream += `${br.toFixed(3)} ${bg.toFixed(3)} ${bb.toFixed(3)} RG\n0.5 w\n`;
-  stream += `${PAGE_PT.marginLeft} ${footerBorderY.toFixed(2)} m ${(PAGE_PT.width - PAGE_PT.marginRight).toFixed(2)} ${footerBorderY.toFixed(2)} l S\n`;
-  const footerLeft = [firmName, branding?.taxId, branding?.website]
-    .filter(Boolean)
-    .join(" · ");
-  stream += `${mr.toFixed(3)} ${mg.toFixed(3)} ${mb.toFixed(3)} rg\n`;
-  stream += `BT\n/F1 9 Tf\n1 0 0 1 ${PAGE_PT.marginLeft.toFixed(2)} ${footerY.toFixed(2)} Tm\n(${pdfEscape(toWinAnsi(footerLeft))}) Tj\nET\n`;
+  page.drawLine({
+    start: { x: PAGE_PT.marginLeft, y: footerBorderY },
+    end: { x: PAGE_PT.width - PAGE_PT.marginRight, y: footerBorderY },
+    thickness: 0.5,
+    color: rgb(border[0], border[1], border[2]),
+  });
+  const footerLeft = sanitize(
+    [firmName, branding?.taxId, branding?.website].filter(Boolean).join(" · "),
+  );
+  drawTextSafe(page, footerLeft, PAGE_PT.marginLeft, footerY, fonts.body, 9, muted);
   const pageText = `Página ${pageIndex} de ${totalPages}`;
-  const pw = textWidthPt(pageText, "Helvetica", 9);
+  const pw = widthOf(fonts.body, pageText, 9);
   const px = PAGE_PT.width - PAGE_PT.marginRight - pw;
-  stream += `BT\n/F1 9 Tf\n1 0 0 1 ${px.toFixed(2)} ${footerY.toFixed(2)} Tm\n(${pdfEscape(pageText)}) Tj\nET\n`;
-
-  return stream;
+  drawTextSafe(page, pageText, px, footerY, fonts.body, 9, muted);
+  void degrees; // silence unused import guard
 }
 
 // ---------------------------------------------------------------------------
 // Entry point
 // ---------------------------------------------------------------------------
 
-export function renderPdf(input: RenderPdfInput): Uint8Array {
+/**
+ * Renderiza um PDF a partir do AST unificado. Retorna Promise<Uint8Array>
+ * — a API é assíncrona porque o pdf-lib embute fontes de forma async.
+ */
+export async function renderPdf(input: RenderPdfInput): Promise<Uint8Array> {
   const { title, blocks, branding, headerLabel, bare } = input;
   const contentWidth = PAGE_PT.width - PAGE_PT.marginLeft - PAGE_PT.marginRight;
   const contentX = PAGE_PT.marginLeft;
 
-  // Area vertical útil para o corpo (descontando header/footer)
-  const headerReserved = bare ? 0 : 72; // 1"
+  const doc = await PDFDocument.create();
+  doc.registerFontkit(fontkit);
+
+  let fonts: Fonts;
+  try {
+    fonts = {
+      body: await doc.embedFont(CARLITO_BYTES.regular(), { subset: true }),
+      bold: await doc.embedFont(CARLITO_BYTES.bold(), { subset: true }),
+      italic: await doc.embedFont(CARLITO_BYTES.italic(), { subset: true }),
+      boldItalic: await doc.embedFont(CARLITO_BYTES.boldItalic(), { subset: true }),
+    };
+  } catch {
+    // Fallback improvável: fontes built-in
+    fonts = {
+      body: await doc.embedFont(StandardFonts.Helvetica),
+      bold: await doc.embedFont(StandardFonts.HelveticaBold),
+      italic: await doc.embedFont(StandardFonts.HelveticaOblique),
+      boldItalic: await doc.embedFont(StandardFonts.HelveticaBoldOblique),
+    };
+  }
+
+  const headerReserved = bare ? 0 : 72;
   const footerReserved = bare ? 0 : 60;
   const usableHeight =
     PAGE_PT.height - PAGE_PT.marginTop - PAGE_PT.marginBottom - headerReserved - footerReserved;
   const topY = PAGE_PT.height - PAGE_PT.marginTop - headerReserved;
 
-  const lines = layoutBlocks(blocks, contentWidth, title);
+  const lines = layoutBlocks(blocks, contentWidth, title, fonts);
   const pages = paginate(lines, usableHeight);
-
-  const builder = new PdfBuilder();
-  const catalogId = builder.addObject(""); // preencher depois
-  const pagesId = builder.addObject(""); // preencher depois
-
-  // Fontes
-  const fontF1 = builder.addObject(
-    "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>",
-  );
-  const fontF2 = builder.addObject(
-    "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>",
-  );
-  const fontF3 = builder.addObject(
-    "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Oblique /Encoding /WinAnsiEncoding >>",
-  );
-  const fontF4 = builder.addObject(
-    "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-BoldOblique /Encoding /WinAnsiEncoding >>",
-  );
-
-  const resources = `<< /Font << /F1 ${fontF1} 0 R /F2 ${fontF2} 0 R /F3 ${fontF3} 0 R /F4 ${fontF4} 0 R >> >>`;
-
-  const pageIds: number[] = [];
   const totalPages = pages.length;
+
   for (let i = 0; i < pages.length; i++) {
-    const page = pages[i];
-    let stream = "";
+    const page = doc.addPage([PAGE_PT.width, PAGE_PT.height]);
     if (!bare) {
-      stream += drawHeaderFooter(branding, headerLabel, i + 1, totalPages);
+      drawHeaderFooter(page, branding, headerLabel, i + 1, totalPages, fonts);
     }
     let cursorY = topY;
-    for (const line of page.lines) {
+    for (const line of pages[i]) {
       cursorY -= line.sizePt * SPACING.lineHeight;
-      stream += drawLine(line, cursorY, contentX, contentWidth, COLORS.ink);
+      drawLine(page, line, cursorY, contentX, contentWidth, COLORS.ink, fonts);
       cursorY -= line.spacingAfter;
     }
-    const bytes = encodeLatin1(stream);
-    const contentId = builder.addObject(
-      `<< /Length ${bytes.length} >>\nstream\n${stream}\nendstream`,
-    );
-    const pageId = builder.addObject(
-      `<< /Type /Page /Parent ${pagesId} 0 R /MediaBox [0 0 ${PAGE_PT.width} ${PAGE_PT.height}] /Resources ${resources} /Contents ${contentId} 0 R >>`,
-    );
-    pageIds.push(pageId);
   }
 
-  builder.setObject(catalogId, `<< /Type /Catalog /Pages ${pagesId} 0 R >>`);
-  builder.setObject(
-    pagesId,
-    `<< /Type /Pages /Kids [${pageIds.map((id) => `${id} 0 R`).join(" ")}] /Count ${pageIds.length} >>`,
-  );
-
-  return builder.serialize(catalogId);
+  doc.setTitle(title);
+  const bytes = await doc.save({ useObjectStreams: true });
+  return bytes;
 }
+
+/** @deprecated compat — chamadores devem migrar para `await renderPdf(...)`. */
+export function renderPdfSync(): never {
+  throw new Error("renderPdf agora é assíncrono — use `await renderPdf(...)`.");
+}
+
+// Silencia lint por import não usado no fallback
+void StandardFonts;
