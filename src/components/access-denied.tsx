@@ -78,15 +78,22 @@ export function AccessDenied({ requires, attemptedPath }: Props) {
             </Link>
           </Button>
           {!isPlatformScope ? (
-            <Button asChild variant="outline">
-              <a href="mailto:?subject=Solicitação de acesso no JurisMind&body=Olá, preciso de acesso à área bloqueada no JurisMind. Poderia liberar a permissão correspondente em Configurações → Equipe e permissões?">
-                <Mail className="mr-2 h-4 w-4" />
-                Solicitar por e-mail
-              </a>
+            <Button variant="outline" onClick={() => setRequestOpen(true)}>
+              <Mail className="mr-2 h-4 w-4" />
+              Solicitar por e-mail
             </Button>
           ) : null}
         </div>
       </div>
+
+      {!isPlatformScope ? (
+        <RequestAccessDialog
+          open={requestOpen}
+          onOpenChange={setRequestOpen}
+          requires={requires}
+          attemptedPath={attemptedPath}
+        />
+      ) : null}
     </div>
   );
 }
