@@ -29,6 +29,7 @@ export type NavKey =
   | "proposal"
   | "monitoring"
   | "marketing"
+  | "hire-b2b"
   // Escritório
   | "integrations"
   | "settings"
@@ -37,6 +38,7 @@ export type NavKey =
   | "platform-customers"
   | "platform-users"
   | "platform-credentials"
+  | "platform-requests"
   | "platform-audit";
 
 export type NavSectionKey =
