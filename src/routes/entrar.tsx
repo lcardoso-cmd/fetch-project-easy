@@ -97,7 +97,8 @@ function AuthPage() {
       toast.success("Login realizado", {
         description: "Bem-vindo(a) de volta ao B2B | JurisMind AI.",
       });
-      navigate({ to: "/painel", replace: true });
+      goPostLogin();
+
     } catch (err) {
       const message = err instanceof Error ? err.message : "Erro ao entrar";
       setError(message);
