@@ -1,4 +1,7 @@
 import { useEffect, useRef, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
+import { getFirmProfile } from "@/lib/firm-profile.functions";
 
 /**
  * WordPreview — página em formato US Letter que espelha o template DOCX
@@ -16,6 +19,20 @@ const PAGE_W = 816;
 const PAGE_H = 1056;
 
 export function WordPreview({ html, title, headerLabel = "Proposta comercial" }: WordPreviewProps) {
+  const getFirmFn = useServerFn(getFirmProfile);
+  const { data: firm } = useQuery({
+    queryKey: ["firm-profile"],
+    queryFn: () => getFirmFn(),
+    staleTime: 60_000,
+  });
+  const brandName = firm?.firm_name?.trim() || firm?.full_name?.trim() || "B2B | JurisMind AI";
+  const footerLeft = [
+    firm?.firm_name?.trim() || "Documento gerado por B2B | JurisMind AI",
+    firm?.tax_id?.trim(),
+    firm?.firm_website?.trim(),
+  ]
+    .filter(Boolean)
+    .join(" · ");
   const shellRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
 
