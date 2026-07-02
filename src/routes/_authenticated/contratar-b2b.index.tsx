@@ -91,10 +91,11 @@ function HireB2bIndex() {
     queryKey: ["b2b-catalog"],
     queryFn: () => catalogFn(),
   });
-  const { data: mine = [] } = useQuery({
+  const { data: mineData } = useQuery({
     queryKey: ["b2b-my-requests"],
-    queryFn: () => mineFn(),
+    queryFn: () => mineFn({ data: { limit: 50, offset: 0 } }),
   });
+  const mine = mineData?.items ?? [];
 
   // Debounce local input into URL search param
   const [qLocal, setQLocal] = useState(q);
