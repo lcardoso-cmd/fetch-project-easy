@@ -74,7 +74,7 @@ export const askWithRag = createServerFn({ method: "POST" })
     const { data: caseRow } = await context.supabase
       .from("cases")
       .select(
-        "id, title, case_number, jurisdiction, case_type, matter_kind, client_name, client_document, description, summary, status, parties, represented_party",
+        "id, title, case_number, jurisdiction, case_type, matter_kind, client_name, description, summary, status, parties, represented_party",
       )
       .eq("id", data.case_id)
       .eq("user_id", context.userId)
@@ -108,15 +108,22 @@ export const askWithRag = createServerFn({ method: "POST" })
     if (!qEmb) throw new Error("Falha ao gerar embedding");
 
     const activeDocIds = activeDocs.map((d) => d.id);
+    const rpcArgs: {
+      query_embedding: string;
+      filter_user_id: string;
+      filter_case_id: string;
+      filter_doc_ids?: string[];
+      match_count: number;
+    } = {
+      query_embedding: qEmb as unknown as string,
+      filter_user_id: context.userId,
+      filter_case_id: data.case_id,
+      match_count: 24,
+    };
+    if (activeDocIds.length > 0) rpcArgs.filter_doc_ids = activeDocIds;
     const { data: matches, error } = await context.supabase.rpc(
       "match_chunks_scoped",
-      {
-        query_embedding: qEmb as unknown as string,
-        filter_user_id: context.userId,
-        filter_case_id: data.case_id,
-        filter_doc_ids: activeDocIds.length > 0 ? activeDocIds : null,
-        match_count: 24,
-      },
+      rpcArgs,
     );
     if (error) throw error;
 
@@ -327,7 +334,7 @@ export const askWithRag = createServerFn({ method: "POST" })
       caseRow.jurisdiction && `JURISDIÇÃO: ${caseRow.jurisdiction}`,
       caseRow.case_type && `TIPO: ${caseRow.case_type}`,
       caseRow.matter_kind && `NATUREZA: ${caseRow.matter_kind}`,
-      caseRow.client_name && `CLIENTE: ${caseRow.client_name}${caseRow.client_document ? ` (${caseRow.client_document})` : ""}`,
+      caseRow.client_name && `CLIENTE: ${caseRow.client_name}`,
       rep?.name && `PARTE REPRESENTADA: ${rep.name}${rep.role ? ` (${rep.role})` : ""}`,
       caseRow.status && `STATUS: ${caseRow.status}`,
       caseRow.description && `DESCRIÇÃO: ${caseRow.description}`,
