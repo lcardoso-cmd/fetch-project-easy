@@ -297,6 +297,34 @@ function ProposalPage() {
     }
   };
 
+  const [clearing, setClearing] = useState(false);
+  const [clearOpen, setClearOpen] = useState(false);
+  const clearAll = async () => {
+    setClearing(true);
+    try {
+      // Backend: apaga versões e rascunho para o escopo atual.
+      await deleteAllVersionsFn({ data: { case_id: activeCaseId } });
+      await deleteDraftFn({ data: { case_id: activeCaseId } });
+      // Estado local
+      setForm(EMPTY);
+      setOutput("");
+      setErrors({});
+      setSavedAt(null);
+      lastSerializedRef.current = "";
+      // Rascunho legado no navegador
+      if (typeof window !== "undefined") {
+        try { window.localStorage.removeItem(LEGACY_DRAFT_KEY); } catch { /* ignora */ }
+      }
+      qc.invalidateQueries({ queryKey: ["proposal-versions", activeCaseId ?? "none"] });
+      toast.success("Histórico e rascunho apagados");
+      setClearOpen(false);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Falha ao limpar");
+    } finally {
+      setClearing(false);
+    }
+  };
+
   const cases = casesQ.data ?? [];
 
   const onSelectCase = (id: string) => {
