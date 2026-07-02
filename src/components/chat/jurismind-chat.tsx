@@ -1366,14 +1366,26 @@ export function JurisMindChat({
                 className="min-h-[42px] resize-none"
                 disabled={busy}
               />
-              <Button
-                onClick={() => void send()}
-                disabled={busy || (!input.trim() && images.length === 0)}
-                size="icon"
-                className="h-10 w-10 shrink-0"
-              >
-                <Send className="h-4 w-4" />
-              </Button>
+              {busy ? (
+                <Button
+                  onClick={stopStreaming}
+                  size="icon"
+                  variant="secondary"
+                  className="h-10 w-10 shrink-0"
+                  title="Parar geração"
+                >
+                  <Square className="h-4 w-4" />
+                </Button>
+              ) : (
+                <Button
+                  onClick={() => void send()}
+                  disabled={!input.trim() && images.length === 0}
+                  size="icon"
+                  className="h-10 w-10 shrink-0"
+                >
+                  <Send className="h-4 w-4" />
+                </Button>
+              )}
             </div>
           </div>
         </div>
