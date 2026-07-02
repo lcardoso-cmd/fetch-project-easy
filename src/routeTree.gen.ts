@@ -44,6 +44,7 @@ import { Route as AuthenticatedCasesCaseIdRouteImport } from './routes/_authenti
 import { Route as AuthenticatedPlatformUsersIndexRouteImport } from './routes/_authenticated/platform.users.index'
 import { Route as AuthenticatedPlatformCustomersIndexRouteImport } from './routes/_authenticated/platform.customers.index'
 import { Route as AuthenticatedPlatformCredentialsIndexRouteImport } from './routes/_authenticated/platform.credentials.index'
+import { Route as AuthenticatedPlatformAuditIndexRouteImport } from './routes/_authenticated/platform.audit.index'
 import { Route as ApiPublicOutlookCallbackRouteImport } from './routes/api/public/outlook/callback'
 import { Route as ApiPublicGoogleCallbackRouteImport } from './routes/api/public/google/callback'
 import { Route as AuthenticatedPlatformCustomersIdRouteImport } from './routes/_authenticated/platform.customers.$id'
@@ -233,6 +234,12 @@ const AuthenticatedPlatformCredentialsIndexRoute =
     path: '/platform/credentials/',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedPlatformAuditIndexRoute =
+  AuthenticatedPlatformAuditIndexRouteImport.update({
+    id: '/platform/audit/',
+    path: '/platform/audit/',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const ApiPublicOutlookCallbackRoute =
   ApiPublicOutlookCallbackRouteImport.update({
     id: '/api/public/outlook/callback',
@@ -293,6 +300,7 @@ export interface FileRoutesByFullPath {
   '/platform/customers/$id': typeof AuthenticatedPlatformCustomersIdRoute
   '/api/public/google/callback': typeof ApiPublicGoogleCallbackRoute
   '/api/public/outlook/callback': typeof ApiPublicOutlookCallbackRoute
+  '/platform/audit/': typeof AuthenticatedPlatformAuditIndexRoute
   '/platform/credentials/': typeof AuthenticatedPlatformCredentialsIndexRoute
   '/platform/customers/': typeof AuthenticatedPlatformCustomersIndexRoute
   '/platform/users/': typeof AuthenticatedPlatformUsersIndexRoute
@@ -332,6 +340,7 @@ export interface FileRoutesByTo {
   '/platform/customers/$id': typeof AuthenticatedPlatformCustomersIdRoute
   '/api/public/google/callback': typeof ApiPublicGoogleCallbackRoute
   '/api/public/outlook/callback': typeof ApiPublicOutlookCallbackRoute
+  '/platform/audit': typeof AuthenticatedPlatformAuditIndexRoute
   '/platform/credentials': typeof AuthenticatedPlatformCredentialsIndexRoute
   '/platform/customers': typeof AuthenticatedPlatformCustomersIndexRoute
   '/platform/users': typeof AuthenticatedPlatformUsersIndexRoute
@@ -374,6 +383,7 @@ export interface FileRoutesById {
   '/_authenticated/platform/customers/$id': typeof AuthenticatedPlatformCustomersIdRoute
   '/api/public/google/callback': typeof ApiPublicGoogleCallbackRoute
   '/api/public/outlook/callback': typeof ApiPublicOutlookCallbackRoute
+  '/_authenticated/platform/audit/': typeof AuthenticatedPlatformAuditIndexRoute
   '/_authenticated/platform/credentials/': typeof AuthenticatedPlatformCredentialsIndexRoute
   '/_authenticated/platform/customers/': typeof AuthenticatedPlatformCustomersIndexRoute
   '/_authenticated/platform/users/': typeof AuthenticatedPlatformUsersIndexRoute
@@ -416,6 +426,7 @@ export interface FileRouteTypes {
     | '/platform/customers/$id'
     | '/api/public/google/callback'
     | '/api/public/outlook/callback'
+    | '/platform/audit/'
     | '/platform/credentials/'
     | '/platform/customers/'
     | '/platform/users/'
@@ -455,6 +466,7 @@ export interface FileRouteTypes {
     | '/platform/customers/$id'
     | '/api/public/google/callback'
     | '/api/public/outlook/callback'
+    | '/platform/audit'
     | '/platform/credentials'
     | '/platform/customers'
     | '/platform/users'
@@ -496,6 +508,7 @@ export interface FileRouteTypes {
     | '/_authenticated/platform/customers/$id'
     | '/api/public/google/callback'
     | '/api/public/outlook/callback'
+    | '/_authenticated/platform/audit/'
     | '/_authenticated/platform/credentials/'
     | '/_authenticated/platform/customers/'
     | '/_authenticated/platform/users/'
@@ -762,6 +775,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedPlatformCredentialsIndexRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/platform/audit/': {
+      id: '/_authenticated/platform/audit/'
+      path: '/platform/audit'
+      fullPath: '/platform/audit/'
+      preLoaderRoute: typeof AuthenticatedPlatformAuditIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/api/public/outlook/callback': {
       id: '/api/public/outlook/callback'
       path: '/api/public/outlook/callback'
@@ -858,6 +878,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRouteWithChildren
   AuthenticatedPlatformIndexRoute: typeof AuthenticatedPlatformIndexRoute
   AuthenticatedPlatformCustomersIdRoute: typeof AuthenticatedPlatformCustomersIdRoute
+  AuthenticatedPlatformAuditIndexRoute: typeof AuthenticatedPlatformAuditIndexRoute
   AuthenticatedPlatformCredentialsIndexRoute: typeof AuthenticatedPlatformCredentialsIndexRoute
   AuthenticatedPlatformCustomersIndexRoute: typeof AuthenticatedPlatformCustomersIndexRoute
   AuthenticatedPlatformUsersIndexRoute: typeof AuthenticatedPlatformUsersIndexRoute
@@ -882,6 +903,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedSettingsRoute: AuthenticatedSettingsRouteWithChildren,
   AuthenticatedPlatformIndexRoute: AuthenticatedPlatformIndexRoute,
   AuthenticatedPlatformCustomersIdRoute: AuthenticatedPlatformCustomersIdRoute,
+  AuthenticatedPlatformAuditIndexRoute: AuthenticatedPlatformAuditIndexRoute,
   AuthenticatedPlatformCredentialsIndexRoute:
     AuthenticatedPlatformCredentialsIndexRoute,
   AuthenticatedPlatformCustomersIndexRoute:
