@@ -58,6 +58,8 @@ function PhaseIcon({ phase }: { phase: UploadPhase }) {
     return <AlertCircle className="h-4 w-4 text-destructive" />;
   if (phase === "duplicate")
     return <AlertCircle className="h-4 w-4 text-amber-600" />;
+  if (phase === "cancelled")
+    return <X className="h-4 w-4 text-muted-foreground" />;
   return <Loader2 className="h-4 w-4 animate-spin text-accent" />;
 }
 
@@ -65,10 +67,12 @@ export function UploadProgressList({
   items,
   onRetry,
   onRemove,
+  onCancel,
 }: {
   items: UploadItem[];
   onRetry?: (id: string) => void;
   onRemove?: (id: string) => void;
+  onCancel?: (id: string) => void;
 }) {
   if (items.length === 0) return null;
   return (
