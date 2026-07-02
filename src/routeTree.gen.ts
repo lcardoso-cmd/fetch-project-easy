@@ -57,6 +57,7 @@ import { Route as ApiToolsTableRouteImport } from './routes/api/tools/table'
 import { Route as ApiToolsPresentationRouteImport } from './routes/api/tools/presentation'
 import { Route as ApiToolsPetitionRouteImport } from './routes/api/tools/petition'
 import { Route as ApiToolsPdfRouteImport } from './routes/api/tools/pdf'
+import { Route as ApiChatStreamRouteImport } from './routes/api/chat/stream'
 import { Route as AuthenticatedSettingsOauthRouteImport } from './routes/_authenticated/settings.oauth'
 import { Route as AuthenticatedSettingsFirmRouteImport } from './routes/_authenticated/settings.firm'
 import { Route as AuthenticatedContratarB2bSolicitarRouteImport } from './routes/_authenticated/contratar-b2b.solicitar'
@@ -339,6 +340,11 @@ const ApiToolsPdfRoute = ApiToolsPdfRouteImport.update({
   path: '/api/tools/pdf',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiChatStreamRoute = ApiChatStreamRouteImport.update({
+  id: '/api/chat/stream',
+  path: '/api/chat/stream',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedSettingsOauthRoute =
   AuthenticatedSettingsOauthRouteImport.update({
     id: '/oauth',
@@ -563,6 +569,7 @@ export interface FileRoutesByFullPath {
   '/contratar-b2b/solicitar': typeof AuthenticatedContratarB2bSolicitarRoute
   '/settings/firm': typeof AuthenticatedSettingsFirmRoute
   '/settings/oauth': typeof AuthenticatedSettingsOauthRoute
+  '/api/chat/stream': typeof ApiChatStreamRoute
   '/api/tools/pdf': typeof ApiToolsPdfRoute
   '/api/tools/petition': typeof ApiToolsPetitionRoute
   '/api/tools/presentation': typeof ApiToolsPresentationRoute
@@ -639,6 +646,7 @@ export interface FileRoutesByTo {
   '/contratar-b2b/solicitar': typeof AuthenticatedContratarB2bSolicitarRoute
   '/settings/firm': typeof AuthenticatedSettingsFirmRoute
   '/settings/oauth': typeof AuthenticatedSettingsOauthRoute
+  '/api/chat/stream': typeof ApiChatStreamRoute
   '/api/tools/pdf': typeof ApiToolsPdfRoute
   '/api/tools/petition': typeof ApiToolsPetitionRoute
   '/api/tools/presentation': typeof ApiToolsPresentationRoute
@@ -719,6 +727,7 @@ export interface FileRoutesById {
   '/_authenticated/contratar-b2b/solicitar': typeof AuthenticatedContratarB2bSolicitarRoute
   '/_authenticated/settings/firm': typeof AuthenticatedSettingsFirmRoute
   '/_authenticated/settings/oauth': typeof AuthenticatedSettingsOauthRoute
+  '/api/chat/stream': typeof ApiChatStreamRoute
   '/api/tools/pdf': typeof ApiToolsPdfRoute
   '/api/tools/petition': typeof ApiToolsPetitionRoute
   '/api/tools/presentation': typeof ApiToolsPresentationRoute
@@ -799,6 +808,7 @@ export interface FileRouteTypes {
     | '/contratar-b2b/solicitar'
     | '/settings/firm'
     | '/settings/oauth'
+    | '/api/chat/stream'
     | '/api/tools/pdf'
     | '/api/tools/petition'
     | '/api/tools/presentation'
@@ -875,6 +885,7 @@ export interface FileRouteTypes {
     | '/contratar-b2b/solicitar'
     | '/settings/firm'
     | '/settings/oauth'
+    | '/api/chat/stream'
     | '/api/tools/pdf'
     | '/api/tools/petition'
     | '/api/tools/presentation'
@@ -954,6 +965,7 @@ export interface FileRouteTypes {
     | '/_authenticated/contratar-b2b/solicitar'
     | '/_authenticated/settings/firm'
     | '/_authenticated/settings/oauth'
+    | '/api/chat/stream'
     | '/api/tools/pdf'
     | '/api/tools/petition'
     | '/api/tools/presentation'
@@ -989,6 +1001,7 @@ export interface RootRouteChildren {
   SemPermissaoRoute: typeof SemPermissaoRoute
   ConviteTokenRoute: typeof ConviteTokenRoute
   InviteTokenRoute: typeof InviteTokenRoute
+  ApiChatStreamRoute: typeof ApiChatStreamRoute
   ApiToolsPdfRoute: typeof ApiToolsPdfRoute
   ApiToolsPetitionRoute: typeof ApiToolsPetitionRoute
   ApiToolsPresentationRoute: typeof ApiToolsPresentationRoute
@@ -1334,6 +1347,13 @@ declare module '@tanstack/react-router' {
       path: '/api/tools/pdf'
       fullPath: '/api/tools/pdf'
       preLoaderRoute: typeof ApiToolsPdfRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/chat/stream': {
+      id: '/api/chat/stream'
+      path: '/api/chat/stream'
+      fullPath: '/api/chat/stream'
+      preLoaderRoute: typeof ApiChatStreamRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/settings/oauth': {
@@ -1768,6 +1788,7 @@ const rootRouteChildren: RootRouteChildren = {
   SemPermissaoRoute: SemPermissaoRoute,
   ConviteTokenRoute: ConviteTokenRoute,
   InviteTokenRoute: InviteTokenRoute,
+  ApiChatStreamRoute: ApiChatStreamRoute,
   ApiToolsPdfRoute: ApiToolsPdfRoute,
   ApiToolsPetitionRoute: ApiToolsPetitionRoute,
   ApiToolsPresentationRoute: ApiToolsPresentationRoute,

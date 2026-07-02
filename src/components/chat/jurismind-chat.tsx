@@ -3,7 +3,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { Link } from "@tanstack/react-router";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { askWithRag } from "@/lib/chat.functions";
+
 import { getThreadMessages } from "@/lib/threads.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -238,7 +238,7 @@ export function JurisMindChat({
   threadId?: string | null;
   onThreadCreated?: (id: string) => void;
 }) {
-  const askFn = useServerFn(askWithRag);
+  // askFn removido: agora usamos SSE em /api/chat/stream (streaming token-a-token)
   const getMessagesFn = useServerFn(getThreadMessages);
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
@@ -604,6 +604,8 @@ export function JurisMindChat({
       });
   }, [readyDocs, search, dateRange]);
 
+  const abortRef = useRef<AbortController | null>(null);
+
   const send = async (overridePrompt?: string) => {
     const q = (overridePrompt ?? input).trim();
     if ((!q && images.length === 0) || busy) return;
@@ -615,17 +617,58 @@ export function JurisMindChat({
       content: q || "(imagens enviadas)",
       images: sentImages,
     };
-    const next = [...messages, userMsg];
+    // Placeholder do assistant que vai sendo preenchido pelos tokens
+    const assistantIdx = messages.length + 1;
+    const next: Msg[] = [
+      ...messages,
+      userMsg,
+      { role: "assistant", content: "" },
+    ];
     setMessages(next);
     setBusy(true);
+
+    const history = messages.slice(-8).map((m) => ({
+      role: m.role,
+      content: m.content,
+    }));
+    const selected = Array.from(selectedDocIds);
+
+    const patchAssistant = (patch: Partial<Msg>) => {
+      setMessages((prev) => {
+        const copy = prev.slice();
+        const cur = copy[assistantIdx];
+        if (!cur || cur.role !== "assistant") return prev;
+        copy[assistantIdx] = { ...cur, ...patch };
+        return copy;
+      });
+    };
+    const appendToken = (t: string) => {
+      setMessages((prev) => {
+        const copy = prev.slice();
+        const cur = copy[assistantIdx];
+        if (!cur || cur.role !== "assistant") return prev;
+        copy[assistantIdx] = { ...cur, content: cur.content + t };
+        return copy;
+      });
+    };
+
     try {
-      const history = messages.slice(-8).map((m) => ({
-        role: m.role,
-        content: m.content,
-      }));
-      const selected = Array.from(selectedDocIds);
-      const res = await askFn({
-        data: {
+      const { supabase } = await import("@/integrations/supabase/client");
+      const { data: sess } = await supabase.auth.getSession();
+      const token = sess.session?.access_token;
+      if (!token) throw new Error("Sessão expirada. Faça login novamente.");
+
+      const controller = new AbortController();
+      abortRef.current = controller;
+
+      const res = await fetch("/api/chat/stream", {
+        method: "POST",
+        signal: controller.signal,
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
           case_id: caseId,
           question: q || "Analise as imagens enviadas.",
           history,
@@ -633,27 +676,111 @@ export function JurisMindChat({
           images: sentImages.length ? sentImages : undefined,
           model_tier: modelTier,
           thread_id: threadId ?? undefined,
-        },
+        }),
       });
-      if (res.thread_id && res.thread_id !== threadId) {
-        onThreadCreated?.(res.thread_id);
+      if (!res.ok || !res.body) {
+        const txt = await res.text().catch(() => "");
+        throw new Error(txt || `HTTP ${res.status}`);
       }
-      setMessages([
-        ...next,
-        {
-          role: "assistant",
-          content: res.answer,
-          citations: res.citations,
-          steps: res.steps,
-        },
-      ]);
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      const collectedSteps: ToolStep[] = [];
+      let collectedCitations: Citation[] | undefined;
+      type DoneInfo = {
+        answer?: string;
+        citations?: Citation[];
+        steps?: ToolStep[];
+        thread_id?: string | null;
+      };
+      let doneInfo: DoneInfo | null = null;
+      let streamError: string | null = null;
+
+      // Parser simples de SSE (event: X\ndata: {...}\n\n)
+      const handleEvent = (event: string, dataStr: string) => {
+        let payload: unknown;
+        try {
+          payload = JSON.parse(dataStr);
+        } catch {
+          return;
+        }
+        if (event === "token") {
+          const t = (payload as { text?: string }).text;
+          if (t) appendToken(t);
+        } else if (event === "citations") {
+          const c = (payload as { citations?: Citation[] }).citations;
+          if (c) {
+            collectedCitations = c;
+            patchAssistant({ citations: c });
+          }
+        } else if (event === "tool_start") {
+          // opcional: pode-se refletir "chamando ferramenta X" no UI
+        } else if (event === "tool_result") {
+          const p = payload as { name?: string; result?: unknown };
+          if (p.name) {
+            collectedSteps.push({
+              name: p.name,
+              args_json: "{}",
+              result_json: JSON.stringify(p.result ?? null),
+            });
+            patchAssistant({ steps: collectedSteps.slice() });
+          }
+        } else if (event === "done") {
+          doneInfo = payload as typeof doneInfo;
+        } else if (event === "error") {
+          streamError = (payload as { message?: string }).message ?? "Erro no stream.";
+        }
+      };
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        let sep: number;
+        while ((sep = buffer.indexOf("\n\n")) !== -1) {
+          const raw = buffer.slice(0, sep);
+          buffer = buffer.slice(sep + 2);
+          let eventName = "message";
+          const dataLines: string[] = [];
+          for (const line of raw.split("\n")) {
+            if (line.startsWith(":")) continue;
+            if (line.startsWith("event:")) eventName = line.slice(6).trim();
+            else if (line.startsWith("data:")) dataLines.push(line.slice(5).trim());
+          }
+          if (dataLines.length > 0) handleEvent(eventName, dataLines.join("\n"));
+        }
+      }
+
+      if (streamError) throw new Error(streamError);
+
+      const finalDone = doneInfo as DoneInfo | null;
+      if (finalDone) {
+        patchAssistant({
+          content: finalDone.answer ?? "",
+          citations: finalDone.citations ?? collectedCitations,
+          steps: finalDone.steps ?? collectedSteps,
+        });
+        if (finalDone.thread_id && finalDone.thread_id !== threadId) {
+          onThreadCreated?.(finalDone.thread_id);
+        }
+      }
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
-      setMessages([...next, { role: "assistant", content: `Erro: ${msg}` }]);
+      const aborted =
+        e instanceof DOMException && e.name === "AbortError"
+          ? "Geração cancelada."
+          : `Erro: ${msg}`;
+      patchAssistant({ content: aborted });
     } finally {
+      abortRef.current = null;
       setBusy(false);
       setTimeout(() => inputRef.current?.focus(), 50);
     }
+  };
+
+  const stopStreaming = () => {
+    abortRef.current?.abort();
   };
 
   // Drag & drop and paste of images anywhere in the chat area
@@ -1239,14 +1366,26 @@ export function JurisMindChat({
                 className="min-h-[42px] resize-none"
                 disabled={busy}
               />
-              <Button
-                onClick={() => void send()}
-                disabled={busy || (!input.trim() && images.length === 0)}
-                size="icon"
-                className="h-10 w-10 shrink-0"
-              >
-                <Send className="h-4 w-4" />
-              </Button>
+              {busy ? (
+                <Button
+                  onClick={stopStreaming}
+                  size="icon"
+                  variant="secondary"
+                  className="h-10 w-10 shrink-0"
+                  title="Parar geração"
+                >
+                  <Square className="h-4 w-4" />
+                </Button>
+              ) : (
+                <Button
+                  onClick={() => void send()}
+                  disabled={!input.trim() && images.length === 0}
+                  size="icon"
+                  className="h-10 w-10 shrink-0"
+                >
+                  <Send className="h-4 w-4" />
+                </Button>
+              )}
             </div>
           </div>
         </div>
