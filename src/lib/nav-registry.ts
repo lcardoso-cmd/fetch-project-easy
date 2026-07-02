@@ -144,6 +144,10 @@ export const NAV_ENTRIES: Record<NavKey, NavEntry> = {
     base: "Credenciais OAuth do SaaS (Google, Outlook) usadas por todos os clientes.",
     requires: "super_admin",
   },
+  "platform-requests": {
+    base: "Solicitações de serviço enviadas pelos escritórios à B2B.",
+    requires: "platform_admin",
+  },
   "platform-audit": {
     base: "Log de ações administrativas da B2B.",
     requires: "platform_admin",
