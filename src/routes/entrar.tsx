@@ -75,6 +75,30 @@ function AuthPage() {
   const [pendingEmail, setPendingEmail] = useState<string | null>(null);
   const [resendCooldown, setResendCooldown] = useState(0);
   const [isResending, setIsResending] = useState(false);
+  const [forgotOpen, setForgotOpen] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState("");
+  const [isSendingReset, setIsSendingReset] = useState(false);
+
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!forgotEmail) return;
+    setIsSendingReset(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(forgotEmail, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      if (error) throw error;
+      toast.success("Email enviado", {
+        description: `Se houver conta para ${forgotEmail}, você receberá o link em instantes.`,
+      });
+      setForgotOpen(false);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Falha ao enviar email";
+      toast.error("Não foi possível enviar", { description: message });
+    } finally {
+      setIsSendingReset(false);
+    }
+  };
 
   // Timer para o cooldown do botão de reenviar confirmação.
   useEffect(() => {
