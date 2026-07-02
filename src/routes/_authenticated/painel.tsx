@@ -1,18 +1,27 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { useEffect } from "react";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
+import { z } from "zod";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { FolderKanban, FileText, CalendarClock } from "lucide-react";
+import { FolderKanban, FileText, CalendarClock, RotateCcw } from "lucide-react";
 import { JurisMindMark } from "@/components/brand/jurismind-mark";
 import { getCases } from "@/lib/cases.functions";
 import { listAllDocuments } from "@/lib/documents.functions";
 import { listEvents } from "@/lib/events.functions";
 import { Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
+import { useCapabilities } from "@/hooks/use-capabilities";
+import { requiredCapabilityForPath } from "@/lib/route-capabilities";
+
+const RETURN_STORAGE_KEY = "jm.accessReturn";
 
 export const Route = createFileRoute("/_authenticated/painel")({
+  validateSearch: (s) =>
+    z.object({ next: z.string().optional() }).parse(s),
   component: DashboardPage,
 });
+
 
 function DashboardPage() {
   const getCasesFn = useServerFn(getCases);
