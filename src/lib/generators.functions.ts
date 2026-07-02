@@ -29,7 +29,7 @@ const ProposalSchema = z.object({
 });
 
 export const generateProposal = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireCapability("commercial")])
   .inputValidator((input: unknown) => ProposalSchema.parse(input))
   .handler(async ({ data }) => {
     const counterpartyFilled = Boolean(
@@ -256,7 +256,7 @@ const MarketingSchema = z.object({
 });
 
 export const generateMarketing = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireCapability("marketing")])
   .inputValidator((input: unknown) => MarketingSchema.parse(input))
   .handler(async ({ data }) => {
     const formatGuide: Record<string, string> = {
@@ -327,7 +327,7 @@ const PIECE_GUIDE: Record<string, string> = {
 };
 
 export const draftLegalPiece = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireCapability("expert_opinion")])
   .inputValidator((input: unknown) => PieceSchema.parse(input))
   .handler(async ({ data, context }) => {
     const { embedTexts } = await import("./ai.server");
