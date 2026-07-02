@@ -121,6 +121,10 @@ function ProposalPage() {
     return parts.join(" · ");
   }, [form.client_name, form.client_document, form.client_city_state]);
 
+  const previewHtml = useMemo(() => buildPreviewHtml(form), [form]);
+
+
+
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
