@@ -54,6 +54,8 @@ import {
 } from "@/lib/cases.functions";
 import { listTeamMembers, createTeamMember } from "@/lib/team.functions";
 import { indexDocument } from "@/lib/rag.functions";
+import { createUploadSignedUrl } from "@/lib/documents.functions";
+import { Progress } from "@/components/ui/progress";
 
 export const Route = createFileRoute("/_authenticated/assistencias/nova")({
   component: NewCasePage,
@@ -108,6 +110,7 @@ function NewCasePage() {
   const extractFn = useServerFn(extractCaseDataFromDocument);
   const attachFn = useServerFn(attachDocumentToCase);
   const indexFn = useServerFn(indexDocument);
+  const signUploadFn = useServerFn(createUploadSignedUrl);
   const listTeamFn = useServerFn(listTeamMembers);
   const createTeamFn = useServerFn(createTeamMember);
 
@@ -149,6 +152,10 @@ function NewCasePage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploaded, setUploaded] = useState<UploadedDoc | null>(null);
   const [extracting, setExtracting] = useState(false);
+  const [uploadPhase, setUploadPhase] = useState<
+    "idle" | "uploading" | "extracting" | "done"
+  >("idle");
+  const [uploadPct, setUploadPct] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -287,14 +294,38 @@ function NewCasePage() {
 
   const handleFile = async (file: File) => {
     if (!user) return;
+    if (file.size > 20 * 1024 * 1024) {
+      toast.error("Arquivo excede 20 MB");
+      return;
+    }
     setExtracting(true);
+    setUploadPhase("uploading");
+    setUploadPct(0);
     try {
-      const safeName = file.name.replace(/[^\w.\-]+/g, "_");
-      const path = `${user.id}/_intake/${Date.now()}-${safeName}`;
-      const { error: upErr } = await supabase.storage
-        .from("documents")
-        .upload(path, file, { upsert: false, contentType: file.type });
-      if (upErr) throw upErr;
+      // 1. Signed URL para upload direto (com progresso real)
+      const { signedUrl, path } = await signUploadFn({
+        data: { filename: file.name },
+      });
+
+      // 2. PUT via XHR para exibir % em tempo real
+      await new Promise<void>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open("PUT", signedUrl);
+        xhr.setRequestHeader(
+          "Content-Type",
+          file.type || "application/octet-stream",
+        );
+        xhr.upload.onprogress = (e) => {
+          if (e.lengthComputable) setUploadPct((e.loaded / e.total) * 100);
+        };
+        xhr.onload = () =>
+          xhr.status >= 200 && xhr.status < 300
+            ? resolve()
+            : reject(new Error(`Upload falhou (HTTP ${xhr.status})`));
+        xhr.onerror = () => reject(new Error("Erro de rede durante upload"));
+        xhr.send(file);
+      });
+      setUploadPct(100);
 
       const meta: UploadedDoc = {
         storage_path: path,
@@ -304,6 +335,8 @@ function NewCasePage() {
       };
       setUploaded(meta);
 
+      // 3. Extração
+      setUploadPhase("extracting");
       const res = await extractFn({ data: { ...meta, matter_kind: matterKind } });
       applyExtracted(res.extracted);
       const missingRaw = res.missing ?? [];
@@ -323,9 +356,11 @@ function NewCasePage() {
           description: w.message,
         }),
       );
+      setUploadPhase("done");
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       toast.error(`Falha: ${msg}`);
+      setUploadPhase("idle");
     } finally {
       setExtracting(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
@@ -642,10 +677,25 @@ function NewCasePage() {
                 className="flex flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed border-border bg-muted/30 p-8 text-center"
               >
                 {extracting ? (
-                  <>
-                    <Loader2 className="h-8 w-8 animate-spin text-accent" />
-                    <p className="text-sm font-medium">Lendo documento e extraindo dados...</p>
-                  </>
+                  <div className="w-full max-w-sm space-y-3">
+                    <div className="flex items-center justify-center gap-2">
+                      <Loader2 className="h-5 w-5 animate-spin text-accent" />
+                      <p className="text-sm font-medium">
+                        {uploadPhase === "uploading"
+                          ? `Enviando arquivo… ${Math.round(uploadPct)}%`
+                          : "Lendo documento e extraindo dados…"}
+                      </p>
+                    </div>
+                    <Progress
+                      value={uploadPhase === "uploading" ? uploadPct : 100}
+                      className="h-2"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      {uploadPhase === "uploading"
+                        ? "Não feche esta janela até o upload terminar."
+                        : "Extração pode levar alguns segundos para documentos grandes."}
+                    </p>
+                  </div>
                 ) : (
                   <>
                     <UploadCloud className="h-8 w-8 text-muted-foreground" />

@@ -604,6 +604,7 @@ export type Database = {
       documents: {
         Row: {
           case_id: string
+          content_hash: string | null
           created_at: string
           extracted_text: string | null
           file_size: number | null
@@ -617,6 +618,7 @@ export type Database = {
         }
         Insert: {
           case_id: string
+          content_hash?: string | null
           created_at?: string
           extracted_text?: string | null
           file_size?: number | null
@@ -630,6 +632,7 @@ export type Database = {
         }
         Update: {
           case_id?: string
+          content_hash?: string | null
           created_at?: string
           extracted_text?: string | null
           file_size?: number | null
