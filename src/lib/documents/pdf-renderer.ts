@@ -217,9 +217,9 @@ function layoutRuns(
 function styleRunsForBlock(
   block: Extract<DocBlock, { runs: InlineRun[] }>,
 ): { runs: StyledRun[]; sizePt: number; bold: boolean; color: string } {
-  let sizePt = FONT_SIZES_PT.body;
+  let sizePt: number = FONT_SIZES_PT.body;
   let baseBold = false;
-  let color = COLORS.ink;
+  let color: string = COLORS.ink;
   if (block.kind === "heading") {
     if (block.level === 1) {
       sizePt = FONT_SIZES_PT.h1;
