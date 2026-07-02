@@ -192,3 +192,150 @@ function ExpertOpinionPage() {
     </div>
   );
 }
+
+function formatBytes(n: number | null) {
+  if (!n) return "";
+  if (n < 1024) return `${n} B`;
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+  return `${(n / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function eventIcon(kind: B2bServiceRequestEvent["kind"]) {
+  if (kind === "status_change") return <CircleDot className="h-3.5 w-3.5" />;
+  if (kind === "attachment") return <Paperclip className="h-3.5 w-3.5" />;
+  if (kind === "note_public" || kind === "note_internal")
+    return <MessageSquare className="h-3.5 w-3.5" />;
+  if (kind === "created") return <FileText className="h-3.5 w-3.5" />;
+  return <Clock className="h-3.5 w-3.5" />;
+}
+
+function eventLabel(ev: B2bServiceRequestEvent): string {
+  if (ev.kind === "status_change") {
+    const from = ev.payload.from as B2bRequestStatus | undefined;
+    const to = ev.payload.to as B2bRequestStatus | undefined;
+    return `Status: ${from ? B2B_REQUEST_STATUS_LABEL[from] : "—"} → ${
+      to ? B2B_REQUEST_STATUS_LABEL[to] : "—"
+    }`;
+  }
+  if (ev.kind === "attachment")
+    return `Anexo enviado: ${ev.payload.file_name ?? "arquivo"}`;
+  if (ev.kind === "note_public") return ev.payload.text ?? "Comentário";
+  if (ev.kind === "note_internal")
+    return `[Interno] ${ev.payload.text ?? "Nota interna"}`;
+  if (ev.kind === "created") return "Solicitação criada";
+  return ev.kind;
+}
+
+function RequestPanel({ requestId }: { requestId: string }) {
+  const getReq = useServerFn(getB2bRequest);
+  const getAttUrl = useServerFn(getB2bAttachmentUrl);
+  const { data, isLoading } = useQuery({
+    queryKey: ["b2b-request", requestId],
+    queryFn: () => getReq({ data: { id: requestId } }),
+  });
+
+  if (isLoading || !data) {
+    return (
+      <p className="text-sm text-muted-foreground py-2">Carregando detalhes…</p>
+    );
+  }
+
+  const { request, events, attachments } = data;
+  const visibleAtt = attachments.filter((a) => a.visibility === "client");
+  const visibleEvents = events.filter((e) => e.kind !== "note_internal");
+
+  async function openAttachment(id: string) {
+    try {
+      const { url } = await getAttUrl({ data: { id } });
+      window.open(url, "_blank", "noopener");
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  return (
+    <div className="space-y-4 pt-2">
+      <div className="rounded-md border bg-muted/30 p-3">
+        <p className="text-xs font-medium text-muted-foreground mb-1">
+          Descrição
+        </p>
+        <p className="text-sm whitespace-pre-wrap line-clamp-6">
+          {request.description}
+        </p>
+      </div>
+
+      <div>
+        <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-1.5">
+          <Paperclip className="h-3.5 w-3.5" /> Anexos ({visibleAtt.length})
+        </p>
+        {visibleAtt.length === 0 ? (
+          <p className="text-xs text-muted-foreground">Nenhum anexo.</p>
+        ) : (
+          <ul className="space-y-1.5">
+            {visibleAtt.map((a) => (
+              <li
+                key={a.id}
+                className="flex items-center justify-between gap-2 rounded-md border p-2 text-sm"
+              >
+                <div className="min-w-0 flex-1">
+                  <p className="truncate">{a.file_name}</p>
+                  <p className="text-[11px] text-muted-foreground">
+                    {formatBytes(a.size_bytes)} ·{" "}
+                    {new Date(a.created_at).toLocaleDateString("pt-BR")}
+                  </p>
+                </div>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => openAttachment(a.id)}
+                >
+                  <Download className="h-4 w-4" />
+                </Button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+      <div>
+        <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-1.5">
+          <Clock className="h-3.5 w-3.5" /> Histórico ({visibleEvents.length})
+        </p>
+        {visibleEvents.length === 0 ? (
+          <p className="text-xs text-muted-foreground">Sem eventos.</p>
+        ) : (
+          <ol className="relative border-l pl-4 space-y-3">
+            {visibleEvents.map((ev) => (
+              <li key={ev.id} className="relative">
+                <span className="absolute -left-[21px] top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-background border text-muted-foreground">
+                  {eventIcon(ev.kind)}
+                </span>
+                <p className="text-sm">{eventLabel(ev)}</p>
+                <p className="text-[11px] text-muted-foreground">
+                  {new Date(ev.created_at).toLocaleString("pt-BR", {
+                    day: "2-digit",
+                    month: "short",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </p>
+              </li>
+            ))}
+          </ol>
+        )}
+      </div>
+
+      <div className="pt-1">
+        <Button asChild size="sm" variant="outline">
+          <Link
+            to="/contratar-b2b/$requestId"
+            params={{ requestId: request.id }}
+          >
+            Abrir solicitação completa
+            <ExternalLink className="ml-2 h-3.5 w-3.5" />
+          </Link>
+        </Button>
+      </div>
+    </div>
+  );
+}
