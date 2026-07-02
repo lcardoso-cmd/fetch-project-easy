@@ -110,6 +110,7 @@ function NewCasePage() {
   const extractFn = useServerFn(extractCaseDataFromDocument);
   const attachFn = useServerFn(attachDocumentToCase);
   const indexFn = useServerFn(indexDocument);
+  const signUploadFn = useServerFn(createUploadSignedUrl);
   const listTeamFn = useServerFn(listTeamMembers);
   const createTeamFn = useServerFn(createTeamMember);
 
