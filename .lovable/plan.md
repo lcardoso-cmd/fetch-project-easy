@@ -1,61 +1,50 @@
-# Template DOCX profissional e consistente
+# Pré-visualização Word no editor de proposta
 
-Hoje temos três geradores de `.docx` (proposta, petição, resumo) e cada um redefine fontes, títulos e margens à mão. O resultado varia — títulos com tamanhos diferentes, sem estilos nomeados, sem cabeçalho/rodapé, tabelas sem borda padronizada. A ideia é centralizar tudo em **um único template** e fazer os três exports consumirem-no.
+Hoje o card **Resultado** só mostra o `RichTextEditor`. A ideia é adicionar um **toggle** no topo do card com dois modos: **Editor** (como hoje) e **Prévia Word** — uma página no formato do `.docx` exportado, com os mesmos estilos do template, para você conferir o resultado antes de baixar.
 
-## O que será criado
+## Escopo
 
-**`src/lib/docx/template.ts`** — módulo único (server-safe) exportando:
+- Mudança 100% presentacional em `src/routes/_authenticated/proposal.tsx` + 1 componente novo.
+- Nenhuma alteração no template `.docx`, na rota `/api/tools/petition`, no schema ou nos server functions.
+- Vale só para o card de resultado da proposta (que é onde há edição rica). Petição/resumo ficam de fora.
 
-- `createStyledDocument({ title, subtitle?, children, meta? })` — devolve um `Document` do `docx` já configurado com estilos, cabeçalho, rodapé e margens.
-- `htmlToDocxChildren(html)` — converte HTML do editor (h1/h2/h3, p, ul/ol, li, strong/em/u, alinhamento inline) em `Paragraph[]` respeitando os estilos nomeados do template. Substitui os parsers duplicados de `petition.ts` e `export.functions.ts`.
-- `plainTextToDocxChildren(text)` — mantém o comportamento atual do "resumo" (seções TÍTULO:) usando os mesmos estilos.
-- Helpers de tabela (`styledTable(rows)`) com bordas cinza `#CCCCCC`, cabeçalho com fundo `#0F172A`/texto branco, padding e `WidthType.DXA`.
-- `TEMPLATE_COLORS`, `TEMPLATE_FONTS` para reuso.
+## O que aparece na prévia
 
-### Especificação do template
+Um "papel" no formato **US Letter (8,5" × 11")**, escala responsiva ao container, com:
 
-- **Página**: US Letter (12240 × 15840 DXA), margens 1" (1440 DXA).
-- **Fonte padrão**: Calibri 11pt (size 22) — universal e legível.
-- **Estilos nomeados** (sobrescrevendo built-ins para funcionar no Word/Google Docs):
-  - `Title` — Calibri 24pt bold, cor `#0F172A`, espaçamento 240 antes / 120 depois, alinhado à esquerda.
-  - `Subtitle` — Calibri 13pt, cor `#475569`, itálico opcional.
-  - `Heading1` — Calibri 16pt bold, cor `#0F172A`, `outlineLevel: 0`, borda inferior fina `#0F172A`, espaço 320/160.
-  - `Heading2` — Calibri 13pt bold, cor `#1E3A8A`, `outlineLevel: 1`, 240/120.
-  - `Heading3` — Calibri 11pt bold uppercase, cor `#334155`, `outlineLevel: 2`.
-  - `Normal` — Calibri 11pt, line spacing 1.35, espaço depois 120.
-  - `Quote` — itálico, indent esquerdo 360, cor `#475569`, borda esquerda 4pt `#0F172A`.
-- **Listas**: numbering config com `bullets` (LevelFormat.BULLET, "•", indent 720/hanging 360) e `numbers` (DECIMAL) — nunca `•` manual.
-- **Cabeçalho** (opcional via `meta.header`): logo textual "B2B | JurisMind AI" à esquerda, `meta.header` à direita usando tab stop RIGHT/MAX.
-- **Rodapé**: "Documento gerado por B2B | JurisMind AI" à esquerda, "Página X de Y" à direita (`PageNumber.CURRENT` / `TOTAL_PAGES`), fonte 9pt cor `#64748B`, borda superior fina.
-- **Meta do arquivo**: `creator`, `title`, `description` preenchidos a partir de `meta`.
+- Sombra e borda sutis simulando página.
+- Margens brancas de **1 polegada** (idêntico ao template).
+- **Cabeçalho**: "B2B | JurisMind AI" à esquerda, "Proposta comercial" à direita, linha inferior cinza claro — igual ao header do docx.
+- **Corpo** renderizando o HTML do editor, mas com CSS espelhando os estilos nomeados:
+  - Fonte Calibri (fallback: Carlito/Arial), 11pt, line-height 1.35, cor `#0F172A`.
+  - `h1` → 16pt bold com borda inferior fina (Heading1).
+  - `h2` → 13pt bold cor `#1E3A8A` (Heading2).
+  - `h3` → 11pt bold uppercase cor `#334155` (Heading3).
+  - `ul`/`ol`/`li`, `blockquote` e alinhamento inline com os mesmos deslocamentos.
+- **Título** no topo: "Proposta - {cliente}" no estilo Title (24pt bold).
+- **Rodapé**: "Documento gerado por B2B | JurisMind AI" à esquerda, "Página 1" à direita (rótulo estático — o número real vem do Word).
+- Aviso pequeno abaixo: "Prévia aproximada. A paginação real é gerada pelo Word."
 
-## Migração dos exports existentes
+Zoom automático: a página tem largura fixa 816px (8,5" × 96dpi) e é reduzida por `transform: scale(...)` conforme o container, sem quebrar o layout do formulário ao lado.
 
-1. **`src/routes/api/tools/petition.ts`** — trocar montagem manual por:
-   ```ts
-   const doc = createStyledDocument({
-     title: titulo,
-     children: html ? htmlToDocxChildren(html) : plainTextToDocxChildren(conteudo),
-     meta: { header: "Petição", creator: "B2B | JurisMind AI" },
-   });
-   ```
-   Mantém a rota, o content-type e o filename atuais.
+## UI
 
-2. **`src/lib/export.functions.ts`** → `exportSummaryDocx` passa a usar `plainTextToDocxChildren` + `createStyledDocument` com `meta.header: "Resumo do caso"`. Comportamento de seções TÍTULO: preservado, agora com estilos nomeados.
+Dentro do `CardHeader` do "Resultado":
 
-3. **`src/routes/_authenticated/proposal.tsx`** — o botão "Baixar .docx" continua chamando `/api/tools/petition` (nenhuma mudança no cliente); passa `titulo: "Proposta - <cliente>"` para virar cabeçalho.
+```
+[ Editor | Prévia Word ]     [ Copiar ] [ Baixar PDF ] [ Baixar .docx ]
+```
 
-## O que **não** muda
+Um `Tabs` do shadcn (ou `ToggleGroup`) controla o modo. Em **Editor**, o `RichTextEditor` atual. Em **Prévia Word**, o novo componente `WordPreview` recebendo `html={output}` e `title={"Proposta - " + form.client_name}`. Trocar de aba não altera o HTML.
 
-- Nenhuma mudança de UI, rotas, RLS ou schema.
-- `html2pdf` (exportação PDF do proposal) continua igual — está fora do escopo do template `.docx`.
-- Assinaturas dos server functions/rotas inalteradas — só o conteúdo do arquivo final fica mais bonito e consistente.
+## Arquivos
 
-## Detalhes técnicos
+- **Novo:** `src/components/proposal/word-preview.tsx` — componente puramente visual (page, header, footer, área de conteúdo com classe `.word-doc`).
+- **Novo:** `src/styles/word-preview.css` (ou bloco `<style>` local) — CSS espelhando os tokens de `src/lib/docx/template.ts` (`TEMPLATE_COLORS`, tamanhos de heading, indent das listas).
+- **Editado:** `src/routes/_authenticated/proposal.tsx` — importar Tabs + `WordPreview`, envolver o bloco `output ? <RichTextEditor.../>` num `Tabs`.
 
-- Módulo fica em `src/lib/docx/` (client-safe path) e é importado dinamicamente dentro dos handlers para não pesar bundle SSR.
-- Usa apenas APIs que rodam no Cloudflare Worker (nada de `fs`/`sharp`). `docx` já é compatível.
-- Segue as regras do skill de DOCX: `WidthType.DXA` em tabelas, `ShadingType.CLEAR`, `LevelFormat.BULLET`, `PageBreak` dentro de `Paragraph`, IDs de estilo exatos (`Heading1`, etc.), `outlineLevel` para TOC futura.
-- Sem dependência nova (`docx` já instalado).
+## Fora de escopo (posso adicionar depois se quiser)
 
-Se quiser, depois desse template posso adicionar: logo em imagem no cabeçalho, marca d'água "RASCUNHO" para versões não finalizadas, e uma variação "carta" com bloco de destinatário — mas fora do escopo desta entrega.
+- Paginação real (quebras em 11" com cálculo de altura por página). Requer medição via ResizeObserver + iteração — mais frágil e caro.
+- Numeração dinâmica "Página X de Y".
+- Marca d'água "RASCUNHO" para versões não salvas.

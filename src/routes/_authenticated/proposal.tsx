@@ -19,6 +19,8 @@ import { z } from "zod";
 import { ProposalVersionsDialog } from "@/components/proposal/proposal-versions-dialog";
 import { ProposalAttachmentsPanel } from "@/components/proposal/proposal-attachments-panel";
 import { ConvertToCasePopover } from "@/components/proposal/convert-to-case-popover";
+import { WordPreview } from "@/components/proposal/word-preview";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useAuth } from "@/hooks/use-auth";
 import { listProposalAttachments, type ExtractedProposalFields } from "@/lib/proposal-attachments.functions";
 import {
@@ -770,7 +772,21 @@ function ProposalPage() {
           </CardHeader>
           <CardContent>
             {output ? (
-              <RichTextEditor html={output} onChange={setOutput} minHeight={520} />
+              <Tabs defaultValue="editor" className="w-full">
+                <TabsList className="mb-3">
+                  <TabsTrigger value="editor">Editor</TabsTrigger>
+                  <TabsTrigger value="preview">Prévia Word</TabsTrigger>
+                </TabsList>
+                <TabsContent value="editor" className="mt-0">
+                  <RichTextEditor html={output} onChange={setOutput} minHeight={520} />
+                </TabsContent>
+                <TabsContent value="preview" className="mt-0">
+                  <WordPreview
+                    html={output}
+                    title={`Proposta - ${form.client_name || "Cliente"}`}
+                  />
+                </TabsContent>
+              </Tabs>
             ) : (
               <div className="space-y-2">
                 <p className="text-xs text-muted-foreground">
