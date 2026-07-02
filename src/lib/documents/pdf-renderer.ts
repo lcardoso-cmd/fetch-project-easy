@@ -517,7 +517,7 @@ export async function renderPdf(input: RenderPdfInput): Promise<Uint8Array> {
   let fonts: Fonts;
   try {
     fonts = {
-      body: await doc.embedFont(CARLITO_BYTES.body(), { subset: true }),
+      body: await doc.embedFont(CARLITO_BYTES.regular(), { subset: true }),
       bold: await doc.embedFont(CARLITO_BYTES.bold(), { subset: true }),
       italic: await doc.embedFont(CARLITO_BYTES.italic(), { subset: true }),
       boldItalic: await doc.embedFont(CARLITO_BYTES.boldItalic(), { subset: true }),
