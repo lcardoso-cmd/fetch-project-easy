@@ -57,6 +57,7 @@ import { listTeamMembers, createTeamMember } from "@/lib/team.functions";
 import { indexDocument } from "@/lib/rag.functions";
 import { createUploadSignedUrl } from "@/lib/documents.functions";
 import { Progress } from "@/components/ui/progress";
+import { useUnsavedChangesGuard } from "@/hooks/use-unsaved-changes-guard";
 
 export const Route = createFileRoute("/_authenticated/assistencias/nova")({
   component: NewCasePage,
