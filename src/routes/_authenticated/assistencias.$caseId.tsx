@@ -266,7 +266,7 @@ function CaseDetailPage() {
           <CardContent>
             <ul className="space-y-1">
               {(caseData.parties as Array<{ role: string; name: string; relation?: string | null }>).map((party, i) => (
-                <li key={i} className="text-sm text-muted-foreground">
+                <li key={i} className="text-sm text-muted-foreground break-words">
                   <span className="font-medium text-foreground">
                     {capitalize(party.role)}:
                   </span>{" "}
