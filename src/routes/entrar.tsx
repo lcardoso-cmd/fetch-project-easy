@@ -74,15 +74,18 @@ function AuthPage() {
   };
 
   return (
-    <div className="relative flex min-h-screen flex-col items-center justify-center bg-background px-4">
-      <div className="absolute left-4 top-4">
+    <div className="relative flex min-h-screen flex-col bg-background">
+      <header className="w-full px-4 pt-4 sm:absolute sm:left-4 sm:top-4 sm:z-10 sm:w-auto sm:p-0">
         <Button variant="ghost" size="sm" asChild>
           <Link to="/">
             <ArrowLeft className="mr-2 h-4 w-4" />
             Voltar à página inicial
           </Link>
         </Button>
-      </div>
+      </header>
+
+      <div className="flex flex-1 flex-col items-center justify-center px-4 py-8">
+
 
       <div className="w-full max-w-md space-y-6">
         <div className="text-center">
@@ -179,6 +182,8 @@ function AuthPage() {
           </TabsContent>
         </Tabs>
       </div>
+      </div>
     </div>
   );
 }
+
