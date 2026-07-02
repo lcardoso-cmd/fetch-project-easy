@@ -472,9 +472,10 @@ function CaseDetailPage() {
                 {tasks.slice(0, 8).map((t) => (
                   <li
                     key={t.id}
-                    className="flex items-center gap-2 py-2 text-sm"
+                    className="flex items-start gap-2 py-2 text-sm"
                   >
                     <Checkbox
+                      className="mt-0.5 shrink-0"
                       checked={t.status === "done"}
                       onCheckedChange={async (c) => {
                         await toggleTaskFn({
@@ -486,11 +487,11 @@ function CaseDetailPage() {
                       }}
                     />
                     <span
-                      className={
+                      className={`min-w-0 flex-1 break-words ${
                         t.status === "done"
                           ? "line-through text-muted-foreground"
                           : ""
-                      }
+                      }`}
                     >
                       {t.title}
                     </span>
