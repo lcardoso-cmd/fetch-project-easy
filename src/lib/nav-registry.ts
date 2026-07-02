@@ -113,6 +113,10 @@ export const NAV_ENTRIES: Record<NavKey, NavEntry> = {
     requires: "marketing",
   },
 
+  "hire-b2b": {
+    base: "Contrate assistência técnica, auditoria de cálculos, pareceres e finanças forense direto da B2B Consulting.",
+  },
+
   // Escritório
   integrations: {
     base: "Integrações do escritório (Google, Outlook, etc.).",
