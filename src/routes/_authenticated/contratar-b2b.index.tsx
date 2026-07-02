@@ -1,6 +1,9 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
+import { zodValidator, fallback } from "@tanstack/zod-adapter";
+import { z } from "zod";
+import { useEffect, useMemo, useState } from "react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
@@ -12,20 +15,41 @@ import {
   ShieldCheck,
   Briefcase,
   ArrowRight,
+  Search,
+  X,
   type LucideIcon,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   listB2bCatalog,
   listMyB2bRequests,
+  B2B_REQUEST_STATUSES,
   B2B_REQUEST_STATUS_LABEL,
   type B2bRequestStatus,
 } from "@/lib/b2b-services.functions";
 
+const STATUS_FILTER_VALUES = ["todos", ...B2B_REQUEST_STATUSES] as const;
+type StatusFilter = (typeof STATUS_FILTER_VALUES)[number];
+
+const searchSchema = z.object({
+  q: fallback(z.string(), "").default(""),
+  status: fallback(z.enum(STATUS_FILTER_VALUES), "todos").default("todos"),
+});
+type SearchParams = z.infer<typeof searchSchema>;
+
 export const Route = createFileRoute("/_authenticated/contratar-b2b/")({
+  validateSearch: zodValidator(searchSchema),
   component: HireB2bIndex,
 });
 
@@ -49,9 +73,19 @@ const STATUS_COLOR: Record<B2bRequestStatus, string> = {
   concluido: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300",
 };
 
+function normalize(s: string) {
+  return s
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .toLowerCase()
+    .trim();
+}
+
 function HireB2bIndex() {
   const catalogFn = useServerFn(listB2bCatalog);
   const mineFn = useServerFn(listMyB2bRequests);
+  const { q, status } = Route.useSearch();
+  const navigate = useNavigate({ from: Route.fullPath });
 
   const { data: catalog = [] } = useQuery({
     queryKey: ["b2b-catalog"],
@@ -61,6 +95,41 @@ function HireB2bIndex() {
     queryKey: ["b2b-my-requests"],
     queryFn: () => mineFn(),
   });
+
+  // Debounce local input into URL search param
+  const [qLocal, setQLocal] = useState(q);
+  useEffect(() => {
+    setQLocal(q);
+  }, [q]);
+  useEffect(() => {
+    if (qLocal === q) return;
+    const t = setTimeout(() => {
+      navigate({
+        search: (prev: SearchParams) => ({ ...prev, q: qLocal }),
+        replace: true,
+      });
+    }, 150);
+    return () => clearTimeout(t);
+  }, [qLocal, q, navigate]);
+
+  const filtered = useMemo(() => {
+    const nq = normalize(qLocal);
+    return mine.filter((r) => {
+      if (status !== "todos" && r.status !== status) return false;
+      if (nq && !normalize(r.title).includes(nq)) return false;
+      return true;
+    });
+  }, [mine, qLocal, status]);
+
+  const hasFilter = status !== "todos" || qLocal.trim() !== "";
+
+  const clearFilters = () => {
+    setQLocal("");
+    navigate({
+      search: (prev: SearchParams) => ({ ...prev, q: "", status: "todos" as const }),
+      replace: true,
+    });
+  };
 
   return (
     <div className="space-y-8">
@@ -128,15 +197,81 @@ function HireB2bIndex() {
           </p>
         </div>
 
+        {mine.length > 0 && (
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <div className="relative flex-1">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={qLocal}
+                onChange={(e) => setQLocal(e.target.value)}
+                placeholder="Buscar por título…"
+                className="pl-9"
+                aria-label="Buscar solicitações por título"
+              />
+            </div>
+            <Select
+              value={status}
+              onValueChange={(v) =>
+                navigate({
+                  search: (prev: SearchParams) => ({
+                    ...prev,
+                    status: v as (typeof STATUS_FILTER_VALUES)[number],
+                  }),
+                  replace: true,
+                })
+              }
+            >
+              <SelectTrigger className="sm:w-56" aria-label="Filtrar por status">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todos">Todos os status</SelectItem>
+                {B2B_REQUEST_STATUSES.map((s) => (
+                  <SelectItem key={s} value={s}>
+                    {B2B_REQUEST_STATUS_LABEL[s]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {hasFilter && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={clearFilters}
+                className="sm:w-auto"
+              >
+                <X className="mr-1 h-4 w-4" />
+                Limpar
+              </Button>
+            )}
+          </div>
+        )}
+
+        {mine.length > 0 && (
+          <div className="text-xs text-muted-foreground" role="status" aria-live="polite">
+            Exibindo {filtered.length} de {mine.length}{" "}
+            {mine.length === 1 ? "solicitação" : "solicitações"}
+          </div>
+        )}
+
         {mine.length === 0 ? (
           <Card>
             <CardContent className="p-8 text-center text-sm text-muted-foreground">
               Você ainda não abriu solicitações. Escolha um serviço acima para começar.
             </CardContent>
           </Card>
+        ) : filtered.length === 0 ? (
+          <Card>
+            <CardContent className="p-8 text-center text-sm text-muted-foreground space-y-3">
+              <p>Nenhuma solicitação corresponde aos filtros aplicados.</p>
+              <Button variant="outline" size="sm" onClick={clearFilters}>
+                Limpar filtros
+              </Button>
+            </CardContent>
+          </Card>
         ) : (
           <div className="grid gap-3">
-            {mine.map((r) => (
+            {filtered.map((r) => (
               <Card key={r.id} className="hover:border-primary/50 transition-colors">
                 <Link
                   to="/contratar-b2b/$requestId"
