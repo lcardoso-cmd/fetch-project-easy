@@ -127,49 +127,86 @@ function ExpertOpinionPage() {
         </CardContent>
       </Card>
 
-      {parecerRequests.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Minhas solicitações de Parecer Técnico</CardTitle>
-            <CardDescription>
-              Acompanhe status, anexos e histórico das solicitações enviadas à B2B.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Accordion type="multiple" className="w-full">
-              {parecerRequests.map((r) => (
-                <AccordionItem key={r.id} value={r.id}>
-                  <AccordionTrigger className="hover:no-underline">
-                    <div className="flex items-center gap-3 w-full pr-2 min-w-0">
-                      <div className="min-w-0 flex-1 text-left">
-                        <p className="font-medium truncate">{r.title}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {new Date(r.created_at).toLocaleDateString("pt-BR", {
-                            day: "2-digit",
-                            month: "short",
-                            year: "numeric",
-                          })}
-                        </p>
-                      </div>
-                      <Badge variant={statusVariant(r.status)}>
-                        {B2B_REQUEST_STATUS_LABEL[r.status]}
-                      </Badge>
-                    </div>
-                  </AccordionTrigger>
-                  <AccordionContent>
-                    <RequestPanel requestId={r.id} />
-                  </AccordionContent>
-                </AccordionItem>
-              ))}
-            </Accordion>
-            <div className="pt-3 flex gap-2">
-              <Button asChild variant="ghost" size="sm">
-                <Link to="/contratar-b2b">Ver catálogo B2B</Link>
-              </Button>
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Minhas solicitações de Parecer Técnico</CardTitle>
+          <CardDescription>
+            Acompanhe status, anexos e histórico das solicitações enviadas à B2B.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {isPending ? (
+            <div className="space-y-2" aria-hidden="true">
+              <Skeleton className="h-12 w-full" />
+              <Skeleton className="h-12 w-full" />
+              <Skeleton className="h-12 w-3/4" />
             </div>
-          </CardContent>
-        </Card>
-      )}
+          ) : parecerRequests.length === 0 ? (
+            <div
+              role="status"
+              className="flex flex-col items-center text-center py-10 px-4 gap-3"
+            >
+              <div className="rounded-full bg-muted p-3">
+                <Inbox className="h-8 w-8 text-muted-foreground" aria-hidden="true" />
+              </div>
+              <div className="space-y-1">
+                <p className="font-medium">Nenhuma solicitação encontrada</p>
+                <p className="text-sm text-muted-foreground max-w-md">
+                  Você ainda não abriu solicitações de Parecer Técnico com a B2B
+                  Consulting. Crie uma agora para receber orçamento e acompanhar o
+                  andamento por aqui.
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2 justify-center pt-2">
+                <Button asChild size="sm">
+                  <Link to="/contratar-b2b/solicitar" search={PARECER_PREFILL}>
+                    Solicitar Parecer Técnico
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Link>
+                </Button>
+                <Button asChild variant="ghost" size="sm">
+                  <Link to="/contratar-b2b">Ver catálogo B2B</Link>
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <>
+              <Accordion type="multiple" className="w-full">
+                {parecerRequests.map((r) => (
+                  <AccordionItem key={r.id} value={r.id}>
+                    <AccordionTrigger className="hover:no-underline">
+                      <div className="flex items-center gap-3 w-full pr-2 min-w-0">
+                        <div className="min-w-0 flex-1 text-left">
+                          <p className="font-medium truncate">{r.title}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {new Date(r.created_at).toLocaleDateString("pt-BR", {
+                              day: "2-digit",
+                              month: "short",
+                              year: "numeric",
+                            })}
+                          </p>
+                        </div>
+                        <Badge variant={statusVariant(r.status)}>
+                          {B2B_REQUEST_STATUS_LABEL[r.status]}
+                        </Badge>
+                      </div>
+                    </AccordionTrigger>
+                    <AccordionContent>
+                      <RequestPanel requestId={r.id} />
+                    </AccordionContent>
+                  </AccordionItem>
+                ))}
+              </Accordion>
+              <div className="pt-3 flex gap-2">
+                <Button asChild variant="ghost" size="sm">
+                  <Link to="/contratar-b2b">Ver catálogo B2B</Link>
+                </Button>
+              </div>
+            </>
+          )}
+        </CardContent>
+      </Card>
+
 
 
 
