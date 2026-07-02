@@ -177,11 +177,12 @@ function AuthPage() {
         });
         goPostLogin();
       } else {
-
+        setPendingEmail(email);
         toast.success("Confirme seu email", {
           description: "Enviamos um link de confirmação para " + email + ".",
         });
       }
+
     } catch (err) {
       const message = err instanceof Error ? err.message : "Erro ao criar conta";
       setError(message);
