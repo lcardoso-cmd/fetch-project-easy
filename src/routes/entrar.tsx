@@ -125,10 +125,11 @@ function AuthPage() {
       // Se a confirmação de email estiver ativa, não haverá sessão ainda.
       if (data.session) {
         toast.success("Conta criada", {
-          description: "Redirecionando para o painel...",
+          description: "Redirecionando...",
         });
-        navigate({ to: "/painel", replace: true });
+        goPostLogin();
       } else {
+
         toast.success("Confirme seu email", {
           description: "Enviamos um link de confirmação para " + email + ".",
         });
