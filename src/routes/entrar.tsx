@@ -433,6 +433,42 @@ function AuthPage() {
           </Tabs>
         </div>
       </div>
+
+      <Dialog open={forgotOpen} onOpenChange={setForgotOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <IconBox icon={KeyRound} size="xs" />
+              Redefinir senha
+            </DialogTitle>
+            <DialogDescription>
+              Informe o email da sua conta. Enviaremos um link para você criar uma nova senha.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleForgotPassword} className="space-y-4">
+            <div className="space-y-2">
+              <FieldLabel htmlFor="forgotEmail" icon={Mail}>Email</FieldLabel>
+              <Input
+                id="forgotEmail"
+                type="email"
+                placeholder="seu@email.com"
+                value={forgotEmail}
+                onChange={(e) => setForgotEmail(e.target.value)}
+                required
+                autoFocus
+              />
+            </div>
+            <DialogFooter className="gap-2 sm:gap-2">
+              <Button type="button" variant="ghost" onClick={() => setForgotOpen(false)}>
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={isSendingReset || !forgotEmail}>
+                {isSendingReset ? "Enviando..." : "Enviar link"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
