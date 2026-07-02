@@ -388,7 +388,11 @@ export function JurisMindChat({
   const fileRef = useRef<HTMLInputElement>(null);
   const endRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
-
+  const micButtonRef = useRef<HTMLButtonElement>(null);
+  const micErrorRef = useRef<HTMLDivElement>(null);
+  const [srStatus, setSrStatus] = useState<string>("");
+  const prevMicErrorRef = useRef<string | null>(null);
+  const prevTranscribingRef = useRef<boolean>(false);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -399,6 +403,48 @@ export function JurisMindChat({
   useEffect(() => {
     inputRef.current?.focus();
   }, []);
+
+  // Compose a screen-reader status string from recording/transcription state.
+  useEffect(() => {
+    let msg = "";
+    if (recording) {
+      if (micSilent) {
+        msg = "Gravando. Microfone silencioso, verifique o dispositivo.";
+      } else if (segmentInFlight) {
+        msg = "Gravando. Transcrevendo em tempo real.";
+      } else {
+        msg = "Gravando.";
+      }
+    } else if (transcribing) {
+      msg = "Transcrevendo áudio, aguarde.";
+    } else if (prevTranscribingRef.current) {
+      msg = "Transcrição concluída.";
+      const t = setTimeout(() => setSrStatus(""), 2000);
+      prevTranscribingRef.current = false;
+      setSrStatus(msg);
+      return () => clearTimeout(t);
+    }
+    prevTranscribingRef.current = transcribing;
+    setSrStatus(msg);
+  }, [recording, transcribing, micSilent, segmentInFlight]);
+
+  // Move focus to the mic error banner when it appears; return focus to the
+  // mic button when it is dismissed.
+  useEffect(() => {
+    const prev = prevMicErrorRef.current;
+    if (micError && !prev) {
+      // Defer to next tick so the element exists in the DOM.
+      const id = window.setTimeout(() => {
+        micErrorRef.current?.focus({ preventScroll: false });
+      }, 0);
+      prevMicErrorRef.current = micError;
+      return () => window.clearTimeout(id);
+    }
+    if (!micError && prev) {
+      micButtonRef.current?.focus({ preventScroll: true });
+    }
+    prevMicErrorRef.current = micError;
+  }, [micError]);
 
   // ---------- Enumeração de microfones ----------
   const refreshMics = async () => {
@@ -446,6 +492,11 @@ export function JurisMindChat({
       else localStorage.removeItem(MIC_STORAGE_KEY);
     } catch {}
     setMicPickerOpen(false);
+    const label = deviceId
+      ? mics.find((d) => d.deviceId === deviceId)?.label || "dispositivo selecionado"
+      : "padrão do sistema";
+    setSrStatus(`Microfone alterado para ${label}.`);
+    window.setTimeout(() => setSrStatus((s) => (s.startsWith("Microfone alterado") ? "" : s)), 2000);
   };
 
   useEffect(() => {
@@ -1657,10 +1708,22 @@ export function JurisMindChat({
                 ))}
               </div>
             )}
+            {/* Screen-reader live regions — silent visually, announce state changes. */}
+            <div
+              role="status"
+              aria-live="polite"
+              aria-atomic="true"
+              className="sr-only"
+            >
+              {srStatus}
+            </div>
+            <div role="alert" aria-live="assertive" className="sr-only">
+              {micError ?? ""}
+            </div>
             {(recording || transcribing || micError) && (
               <div
-                aria-live="polite"
                 className="mb-2 flex flex-wrap items-center gap-2 text-xs"
+                aria-hidden={micError ? undefined : true}
               >
                 {recording && (
                   <div className="flex items-center gap-2 rounded-full border border-destructive/40 bg-destructive/10 px-2.5 py-1 text-destructive">
@@ -1695,19 +1758,39 @@ export function JurisMindChat({
                   </div>
                 )}
                 {!recording && !transcribing && micError && (
-                  <div className="flex flex-1 items-center gap-2 rounded-md border border-destructive/40 bg-destructive/5 px-2.5 py-1.5 text-destructive">
-                    <AlertCircle className="h-3.5 w-3.5 shrink-0" />
-                    <span className="flex-1">{micError}</span>
+                  <div
+                    ref={micErrorRef}
+                    role="alert"
+                    tabIndex={-1}
+                    aria-labelledby="mic-error-msg"
+                    onKeyDown={(e) => {
+                      if (e.key === "Escape") {
+                        e.preventDefault();
+                        setMicError(null);
+                      }
+                    }}
+                    className="flex flex-1 items-center gap-2 rounded-md border border-destructive/40 bg-destructive/5 px-2.5 py-1.5 text-destructive outline-none focus-visible:ring-2 focus-visible:ring-destructive/50"
+                  >
+                    <AlertCircle className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                    <span id="mic-error-msg" className="flex-1">
+                      {micError}
+                    </span>
                     <button
                       type="button"
-                      onClick={() => setMicPickerOpen(true)}
+                      onClick={() => {
+                        setMicError(null);
+                        setMicPickerOpen(true);
+                      }}
                       className="rounded px-1.5 py-0.5 text-xs font-medium hover:bg-destructive/10"
                     >
                       Trocar microfone
                     </button>
                     <button
                       type="button"
-                      onClick={() => void startRecording()}
+                      onClick={() => {
+                        setMicError(null);
+                        void startRecording();
+                      }}
                       className="rounded px-1.5 py-0.5 text-xs font-medium hover:bg-destructive/10"
                     >
                       Tentar novamente
@@ -1715,10 +1798,10 @@ export function JurisMindChat({
                     <button
                       type="button"
                       onClick={() => setMicError(null)}
-                      aria-label="Fechar"
+                      aria-label="Fechar aviso do microfone"
                       className="rounded p-0.5 hover:bg-destructive/10"
                     >
-                      <X className="h-3 w-3" />
+                      <X className="h-3 w-3" aria-hidden="true" />
                     </button>
                   </div>
                 )}
@@ -1748,6 +1831,7 @@ export function JurisMindChat({
                 <ImagePlus className="h-4 w-4" />
               </Button>
               <Button
+                ref={micButtonRef}
                 type="button"
                 size="icon"
                 variant={recording ? "destructive" : "outline"}
@@ -1800,7 +1884,7 @@ export function JurisMindChat({
                     <Settings2 className="h-4 w-4" />
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent align="end" className="w-72 p-3">
+                <PopoverContent align="end" className="w-72 p-3" aria-label="Selecionar microfone">
                   <div className="mb-2 flex items-center justify-between">
                     <div className="text-sm font-medium">Microfone</div>
                     <button
@@ -1825,6 +1909,7 @@ export function JurisMindChat({
                         variant="secondary"
                         onClick={() => void unlockMicLabels()}
                         disabled={unlockingLabels}
+                        aria-busy={unlockingLabels}
                         className="h-7 w-full"
                       >
                         {unlockingLabels ? (

@@ -1,67 +1,73 @@
 ## Objetivo
 
-Permitir escolher qual microfone é usado pelo chat de voz, com destaque quando ocorrer falha (`NotReadableError`, silêncio persistente, permissão negada em um dispositivo específico), e reutilizar o mesmo dispositivo em gravações futuras.
+Garantir que leitores de tela anunciem corretamente as mudanças de estado do microfone (iniciar/parar gravação, transcrição parcial, silêncio detectado, transcrição concluída, erros) e que o foco vá para o banner de erro do microfone quando ele surgir, permitindo ação imediata via teclado.
 
 ## Escopo
 
-Alterações restritas a `src/components/chat/jurismind-chat.tsx` (frontend). Nenhuma mudança de backend/servidor.
+Alterações restritas a `src/components/chat/jurismind-chat.tsx` (UI/apresentação). Sem mudanças em lógica de gravação, transporte SSE ou persistência.
 
-## Comportamento
+## Mudanças
 
-1. **Enumeração**
-   - Ao montar o componente e ao clicar no seletor, chamar `navigator.mediaDevices.enumerateDevices()` e filtrar `kind === "audioinput"`.
-   - Se os `label`s estiverem vazios (permissão nunca concedida), mostrar apenas "Microfone padrão" e um botão "Autorizar para listar dispositivos" que faz um `getUserMedia({audio:true})` curto só para liberar os labels e depois re-enumera.
-   - Ouvir `navigator.mediaDevices.ondevicechange` para atualizar a lista quando um mic é conectado/desconectado.
+### 1. Separar regiões live por severidade
+Hoje há um único wrapper `aria-live="polite"` envolvendo REC, "Transcrevendo…", aviso de silêncio e o card de erro. Isso mistura status transitórios com erros, e o Radix Popover (mic picker) dentro dele quebra o anúncio.
 
-2. **Persistência**
-   - Guardar o `deviceId` escolhido em `localStorage` (`jurismind:mic-device-id`) e num `state` (`selectedMicId`).
-   - Se o `deviceId` salvo não existir mais na lista, cair para `default` e limpar o storage.
+- Criar duas regiões vivas dedicadas, fora do fluxo visual quando necessário:
+  - **`statusRegion`** (`role="status"`, `aria-live="polite"`, `aria-atomic="true"`): compõe uma única frase textual a partir do estado atual (ex.: "Gravando há 12 segundos", "Microfone silencioso", "Transcrevendo em tempo real", "Transcrição concluída"). Fica `sr-only` (visualmente escondida, mas acessível), enquanto os chips coloridos existentes seguem sendo visuais.
+  - **`alertRegion`** (`role="alert"`, `aria-live="assertive"`): recebe `micError` quando muda. Também `sr-only` para não duplicar leitura do banner visível.
 
-3. **Uso na gravação**
-   - `startRecording` passa `{ audio: selectedMicId ? { deviceId: { exact: selectedMicId } } : true }` para `getUserMedia`.
-   - Em `OverconstrainedError`, fazer fallback automático para `{ audio: true }`, mostrar toast leve ("Dispositivo indisponível — usando padrão") e limpar `selectedMicId`.
+- O chip visual de REC recebe `aria-hidden="true"` (informação redundante com a região de status) e o cronômetro continua no botão via `aria-label` já existente.
 
-4. **UI**
-   - Novo `Popover` acionado por um botão discreto (ícone `Settings2` ou `ChevronDown`) posicionado ao lado do botão de microfone existente na barra do composer. Não aumentar a altura da barra.
-   - Conteúdo do popover:
-     - Título "Microfone".
-     - Lista de opções com `RadioGroup`: cada item mostra o `label` do dispositivo (ou "Microfone {n}" quando vazio); o item ativo recebe check.
-     - Botão "Atualizar lista" (re-enumera).
-     - Rodapé com o `deviceId` atual em fonte mono truncada (útil para debug) — opcional, discreto.
-   - No banner de erro existente (`micError`), adicionar um botão secundário "Trocar microfone" que abre o mesmo popover.
-   - Desabilitar a troca enquanto `recording === true` (mostrar dica: "Pare a gravação para trocar").
+- A frase de status é regenerada apenas quando o estado muda (não a cada tick do cronômetro) para não spammar o leitor: usar buckets ("Gravando", "Gravando, microfone silencioso", "Transcrevendo em tempo real", "Transcrição concluída", "Ocioso") memorizados via `useMemo`/`useEffect`.
 
-5. **Acessibilidade**
-   - `aria-label` no botão do seletor: "Escolher microfone".
-   - Popover fecha ao selecionar; foco retorna ao botão do mic.
+### 2. Gerenciamento de foco no banner de erro
+Quando `micError` passa de `null` para uma mensagem:
+
+- Renderizar o container do erro com `role="alertdialog"` leve: `role="alert"`, `tabIndex={-1}` e `ref` para chamar `.focus({ preventScroll: false })` num `useEffect` disparado pela transição de `micError`.
+- Adicionar `aria-labelledby` apontando para o texto da mensagem e `aria-describedby` para as ações (Trocar microfone / Tentar novamente).
+- Ao fechar o banner (botão X, retomar gravação, escolher outro mic), devolver foco ao botão de microfone (`micButtonRef`) para não perder contexto do teclado.
+- Tecla `Escape` dentro do banner chama o mesmo handler de fechar.
+
+### 3. Rotular o botão de microfone dinamicamente
+O `aria-label` atual só descreve a ação; adicionar `aria-describedby` apontando para a região de status quando `recording || transcribing`, para que o leitor associe o botão ao estado. Também adicionar `aria-live` implícito via atualização do `aria-label` já existente (mantém-se).
+
+### 4. Popover de seleção de microfone
+- O `PopoverContent` recebe `aria-label="Selecionar microfone"` (já é dialog via Radix, mas sem título visível).
+- Ao trocar de microfone, anunciar via `statusRegion` (ex.: "Microfone alterado para Realtek Audio").
+- Botão "Autorizar" ganha `aria-busy={unlockingLabels}`.
+
+### 5. Composição do texto de status (regras)
+
+```text
+idle                      → "" (região vazia)
+recording                 → "Gravando. {mm}:{ss}"
+recording + micSilent     → "Gravando. Microfone silencioso, verifique o dispositivo."
+recording + segmentInFlight → "Gravando. Transcrevendo em tempo real."
+transcribing (final)      → "Transcrevendo áudio, aguarde."
+transição transcribing→idle com texto novo → "Transcrição concluída."
+mic trocado               → "Microfone selecionado: {label}."
+```
+
+Reset após ~2s para "Transcrição concluída" e trocas de microfone, para não permanecer estático.
 
 ## Detalhes técnicos
 
-- Novos estados/refs em `jurismind-chat.tsx`:
-  - `const [mics, setMics] = useState<MediaDeviceInfo[]>([])`
-  - `const [selectedMicId, setSelectedMicId] = useState<string | null>(...)` inicializado do `localStorage`.
-  - `const [micPickerOpen, setMicPickerOpen] = useState(false)`
-  - `const [micLabelsUnlocked, setMicLabelsUnlocked] = useState(false)`
-- Helper `refreshMics()` isolado, chamado em `useEffect` inicial, no `ondevicechange`, ao abrir o popover e após o `getUserMedia` de qualquer gravação (onde os labels ficam disponíveis).
-- Ajuste em `startRecording`:
-  ```ts
-  const constraints: MediaStreamConstraints = {
-    audio: selectedMicId ? { deviceId: { exact: selectedMicId } } : true,
-  };
-  try { stream = await navigator.mediaDevices.getUserMedia(constraints); }
-  catch (e) {
-    if ((e as DOMException).name === "OverconstrainedError" && selectedMicId) {
-      setSelectedMicId(null); localStorage.removeItem("jurismind:mic-device-id");
-      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      toast.message("Microfone selecionado indisponível — usando o padrão.");
-    } else { throw e; }
-  }
-  ```
-- Cleanup: garantir que qualquer stream aberto para "desbloquear labels" seja imediatamente parado (`stream.getTracks().forEach(t => t.stop())`).
-- Sem novas dependências; `Popover`, `RadioGroup`, `Button` já existem no projeto.
+- Novos refs: `micErrorRef` (HTMLDivElement), `micButtonRef` (HTMLButtonElement).
+- Novo estado: `srStatus: string` atualizado via `useEffect([recording, transcribing, micSilent, segmentInFlight, selectedMicId])`.
+- Usar `useEffect` separado que observa `micError` e, na transição `null → string`, foca `micErrorRef.current`; na transição `string → null`, restaura foco em `micButtonRef.current` se este ainda estiver montado e visível.
+- Regiões `sr-only` usam a classe utilitária já presente no projeto (Tailwind `sr-only`).
+- Não alterar comportamento em telas sem leitor de tela: nenhum layout muda; apenas ARIA e foco.
 
 ## Fora de escopo
 
-- Seleção de dispositivo de saída (alto-falantes) — o chat não reproduz áudio próprio.
-- Testes de latência/ganho por dispositivo.
-- Persistência por-usuário no backend (só `localStorage`).
+- Mudanças em SSE de transcrição, no encoder WAV, no gateway ou no banco.
+- Refactor do banner visual do microfone (permanece com mesma aparência).
+- Ajustes de acessibilidade em outras áreas do chat (histórico, composer, uploads) — podem ser feitas em plano separado.
+
+## Verificação
+
+- Typecheck do arquivo alterado.
+- Snapshot manual via Playwright: forçar `micError` (bloqueando `getUserMedia`), confirmar que:
+  1. O foco vai para o banner.
+  2. `role="alert"` está presente com a mensagem.
+  3. Fechar devolve foco ao botão de microfone.
+- Inspecionar DOM: garantir presença de duas regiões `sr-only` com `role="status"` e `role="alert"`.
