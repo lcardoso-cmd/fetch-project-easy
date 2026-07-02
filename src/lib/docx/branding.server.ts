@@ -18,7 +18,9 @@ export interface Branding {
   };
 }
 
-function pickImageType(contentType: string | null, path: string): Branding["logo"]["type"] | null {
+type LogoImageType = "png" | "jpg" | "gif" | "bmp";
+
+function pickImageType(contentType: string | null, path: string): LogoImageType | null {
   const ext = (path.split(".").pop() ?? "").toLowerCase();
   const mime = (contentType ?? "").toLowerCase();
   if (mime.includes("png") || ext === "png") return "png";
