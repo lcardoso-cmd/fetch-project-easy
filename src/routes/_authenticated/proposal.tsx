@@ -117,7 +117,9 @@ function ProposalPage() {
   const upsertDraftFn = useServerFn(upsertProposalDraft);
   const createVersionFn = useServerFn(createProposalVersion);
   const { data: profile } = useProfile();
+  const { user } = useAuth();
   const qc = useQueryClient();
+  const listAttachmentsFn = useServerFn(listProposalAttachments);
   const casesQ = useQuery({
     queryKey: ["cases", "list-for-proposal"],
     queryFn: () => getCasesFn(),
