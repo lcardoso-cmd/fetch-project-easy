@@ -441,6 +441,7 @@ function MemberCapabilities({ userId }: { userId: string }) {
     onSuccess: () => {
       toast.success("Permissões atualizadas");
       qc.invalidateQueries({ queryKey: ["member-caps", userId] });
+      qc.invalidateQueries({ queryKey: ["member-caps-audit", userId] });
     },
     onError: (e: Error) => toast.error(e.message || "Falha ao salvar"),
   });
