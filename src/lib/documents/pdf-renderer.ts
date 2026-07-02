@@ -31,6 +31,21 @@ import { CARLITO_BYTES } from "./fonts/carlito";
 // Tipos
 // ---------------------------------------------------------------------------
 
+export type PdfPageFormat = "A4" | "Letter";
+export type PdfPageOrientation = "portrait" | "landscape";
+export interface PdfPageMargins {
+  /** Margens em pontos (72 pt = 1 in ≈ 25,4 mm). */
+  top: number;
+  right: number;
+  bottom: number;
+  left: number;
+}
+export interface PdfPageConfig {
+  format?: PdfPageFormat;
+  orientation?: PdfPageOrientation;
+  margins?: Partial<PdfPageMargins>;
+}
+
 export interface RenderPdfInput {
   title: string;
   blocks: DocBlock[];
@@ -39,7 +54,39 @@ export interface RenderPdfInput {
   headerLabel?: string;
   /** Se true, oculta cabeçalho e rodapé. */
   bare?: boolean;
+  /** Configuração de página (tamanho, orientação e margens). */
+  page?: PdfPageConfig;
 }
+
+// Dimensões base em pontos (72 pt = 1 in). Landscape troca w/h.
+const PAGE_SIZES_PT: Record<PdfPageFormat, { width: number; height: number }> = {
+  Letter: { width: 612, height: 792 }, // 8.5 x 11 in
+  A4: { width: 595.28, height: 841.89 }, // 210 x 297 mm
+};
+
+function resolvePageLayout(cfg?: PdfPageConfig) {
+  const format: PdfPageFormat = cfg?.format ?? "Letter";
+  const orientation: PdfPageOrientation = cfg?.orientation ?? "portrait";
+  const base = PAGE_SIZES_PT[format];
+  const width = orientation === "landscape" ? base.height : base.width;
+  const height = orientation === "landscape" ? base.width : base.height;
+  const m = cfg?.margins ?? {};
+  const clamp = (v: number | undefined, fallback: number) => {
+    if (typeof v !== "number" || !Number.isFinite(v)) return fallback;
+    // limite: entre 18pt (~0,25in) e 40% da menor dimensão
+    const max = Math.min(width, height) * 0.4;
+    return Math.max(18, Math.min(max, v));
+  };
+  return {
+    width,
+    height,
+    marginTop: clamp(m.top, 72),
+    marginRight: clamp(m.right, 72),
+    marginBottom: clamp(m.bottom, 72),
+    marginLeft: clamp(m.left, 72),
+  };
+}
+
 
 type Fonts = Record<PdfFontFace, PDFFont>;
 
