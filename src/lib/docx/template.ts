@@ -848,11 +848,21 @@ export function plainTextToDocxChildren(text: string): Paragraph[] {
   const out: Paragraph[] = [];
   const lines = String(text || "").split(/\r?\n/);
   let buffer: string[] = [];
+  let hasEmittedContent = false;
+  let sectionCount = 0;
 
   const flushParagraph = () => {
     const joined = buffer.join(" ").trim();
     buffer = [];
-    if (joined) out.push(new Paragraph({ children: [new TextRun(joined)] }));
+    if (joined) {
+      out.push(
+        new Paragraph({
+          alignment: AlignmentType.JUSTIFIED,
+          children: [new TextRun(joined)],
+        }),
+      );
+      hasEmittedContent = true;
+    }
   };
 
   for (const raw of lines) {
@@ -864,9 +874,17 @@ export function plainTextToDocxChildren(text: string): Paragraph[] {
     const m = line.match(/^([A-ZÁÉÍÓÚÂÊÔÃÕÇ0-9 ,\-]{3,}?):\s*(.*)$/);
     if (m && m[1] === m[1].toUpperCase()) {
       flushParagraph();
+      sectionCount += 1;
       out.push(
-        new Paragraph({ heading: HeadingLevel.HEADING_2, children: [new TextRun(m[1].trim())] }),
+        new Paragraph({
+          heading: HeadingLevel.HEADING_2,
+          keepNext: true,
+          // Quebra de página a cada nova seção, exceto a primeira
+          pageBreakBefore: hasEmittedContent && sectionCount > 1,
+          children: [new TextRun(m[1].trim())],
+        }),
       );
+      hasEmittedContent = true;
       if (m[2]) buffer.push(m[2]);
     } else {
       buffer.push(line);
