@@ -1196,8 +1196,25 @@ export function JurisMindChat({
                 variant={recording ? "destructive" : "outline"}
                 onClick={() => (recording ? stopRecording() : void startRecording())}
                 disabled={busy || transcribing}
-                title={recording ? "Parar gravação" : "Ditar mensagem"}
-                className="h-10 w-10 shrink-0"
+                aria-pressed={recording}
+                aria-label={
+                  transcribing
+                    ? "Transcrevendo áudio"
+                    : recording
+                      ? `Parar gravação (${formatRecordingTime(recordingMs)})`
+                      : "Iniciar gravação de voz"
+                }
+                title={
+                  transcribing
+                    ? "Transcrevendo…"
+                    : recording
+                      ? `Parar gravação (${formatRecordingTime(recordingMs)})`
+                      : "Ditar mensagem"
+                }
+                className={cn(
+                  "h-10 w-10 shrink-0",
+                  recording && "animate-pulse",
+                )}
               >
                 {transcribing ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
