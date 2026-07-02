@@ -18,6 +18,7 @@ export type UploadPhase =
   | "indexing"
   | "done"
   | "duplicate"
+  | "cancelled"
   | "error";
 
 export interface UploadItem {
@@ -38,6 +39,7 @@ const PHASE_LABEL: Record<UploadPhase, string> = {
   indexing: "Indexando para busca…",
   done: "Pronto",
   duplicate: "Duplicado — ignorado",
+  cancelled: "Cancelado",
   error: "Falhou",
 };
 
