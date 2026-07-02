@@ -556,9 +556,10 @@ function drawHeaderFooter(
  * — a API é assíncrona porque o pdf-lib embute fontes de forma async.
  */
 export async function renderPdf(input: RenderPdfInput): Promise<Uint8Array> {
-  const { title, blocks, branding, headerLabel, bare } = input;
-  const contentWidth = PAGE_PT.width - PAGE_PT.marginLeft - PAGE_PT.marginRight;
-  const contentX = PAGE_PT.marginLeft;
+  const { title, blocks, branding, headerLabel, bare, page: pageCfg } = input;
+  const layout = resolvePageLayout(pageCfg);
+  const contentWidth = layout.width - layout.marginLeft - layout.marginRight;
+  const contentX = layout.marginLeft;
 
   const doc = await PDFDocument.create();
   doc.registerFontkit(fontkit);
@@ -584,17 +585,17 @@ export async function renderPdf(input: RenderPdfInput): Promise<Uint8Array> {
   const headerReserved = bare ? 0 : 72;
   const footerReserved = bare ? 0 : 60;
   const usableHeight =
-    PAGE_PT.height - PAGE_PT.marginTop - PAGE_PT.marginBottom - headerReserved - footerReserved;
-  const topY = PAGE_PT.height - PAGE_PT.marginTop - headerReserved;
+    layout.height - layout.marginTop - layout.marginBottom - headerReserved - footerReserved;
+  const topY = layout.height - layout.marginTop - headerReserved;
 
   const lines = layoutBlocks(blocks, contentWidth, title, fonts);
   const pages = paginate(lines, usableHeight);
   const totalPages = pages.length;
 
   for (let i = 0; i < pages.length; i++) {
-    const page = doc.addPage([PAGE_PT.width, PAGE_PT.height]);
+    const page = doc.addPage([layout.width, layout.height]);
     if (!bare) {
-      drawHeaderFooter(page, branding, headerLabel, i + 1, totalPages, fonts);
+      drawHeaderFooter(page, branding, headerLabel, i + 1, totalPages, fonts, layout);
     }
     let cursorY = topY;
     for (const line of pages[i]) {
@@ -608,6 +609,7 @@ export async function renderPdf(input: RenderPdfInput): Promise<Uint8Array> {
   const bytes = await doc.save({ useObjectStreams: true });
   return bytes;
 }
+
 
 /** @deprecated compat — chamadores devem migrar para `await renderPdf(...)`. */
 export function renderPdfSync(): never {
