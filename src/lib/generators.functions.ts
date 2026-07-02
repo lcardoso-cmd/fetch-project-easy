@@ -4,11 +4,16 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { chatComplete } from "./ai.server";
 
 const ProposalSchema = z.object({
-  client_name: z.string().trim().min(1).max(200),
+  client_name: z.string().trim().max(200).optional().default(""),
   client_document: z.string().trim().max(50).optional().default(""),
   client_address: z.string().trim().max(300).optional().default(""),
   client_city_state: z.string().trim().max(150).optional().default(""),
-  matter: z.string().trim().min(1).max(2000),
+  counterparty_name: z.string().trim().max(200).optional().default(""),
+  counterparty_document: z.string().trim().max(50).optional().default(""),
+  counterparty_address: z.string().trim().max(300).optional().default(""),
+  counterparty_city_state: z.string().trim().max(150).optional().default(""),
+  counterparty_lawyer: z.string().trim().max(200).optional().default(""),
+  matter: z.string().trim().max(2000).optional().default(""),
   scope: z.string().trim().max(2000).optional().default(""),
   fees: z.string().trim().max(500).optional().default(""),
   success_fee: z.string().trim().max(100).optional().default(""),
@@ -27,12 +32,17 @@ export const generateProposal = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => ProposalSchema.parse(input))
   .handler(async ({ data }) => {
-    const system = `Você é um advogado sênior brasileiro especialista em redigir propostas comerciais de serviços jurídicos. Use linguagem ${data.tone}, estrutura clara em Markdown, com cabeçalhos: Apresentação, Objeto, Escopo de Serviços, Honorários, Prazo, Condições Gerais, Aceite. Português do Brasil.
+    const system = `Você é um advogado sênior brasileiro especialista em redigir propostas comerciais de serviços jurídicos. Use linguagem ${data.tone}, estrutura clara com as seções: Apresentação, Objeto, Escopo de Serviços, Honorários, Prazo, Condições Gerais, Aceite. Português do Brasil.
+
+FORMATO DE SAÍDA (OBRIGATÓRIO):
+- Produza HTML semântico puro. Use apenas as tags: <h1>, <h2>, <h3>, <p>, <ul>, <ol>, <li>, <strong>, <em>, <br>. Pode usar style="text-align:center|right" em <h1>/<p> quando fizer sentido.
+- NÃO use Markdown, NÃO use crases, NÃO use "#", NÃO use "**", NÃO use "---". Nada de blocos de código.
+- Comece por <h1 style="text-align:center">PROPOSTA DE PRESTAÇÃO DE SERVIÇOS JURÍDICOS</h1>.
 
 REGRAS DE PREENCHIMENTO:
-- Use SEMPRE os dados fornecidos abaixo — não deixe placeholders como "[Nome do Escritório]", "[Endereço]", "[definir percentual]" etc. quando o dado estiver informado.
-- Quando um dado NÃO for informado, OMITA a linha/parágrafo correspondente por completo (não escreva colchetes vazios, não escreva "a definir" nem "não informado").
-- Não invente CNPJ, endereços, telefones ou valores que não tenham sido fornecidos.`;
+- Use SEMPRE os dados fornecidos — nunca deixe placeholders como "[Nome do Escritório]", "[Endereço]", "[definir percentual]".
+- Quando um dado NÃO for informado, OMITA a linha/parágrafo/seção correspondente por completo. Não escreva colchetes vazios, nem "a definir", nem "não informado".
+- Não invente CNPJ, endereços, telefones, valores, nomes ou datas.`;
     const line = (label: string, value: string) => (value ? `- ${label}: ${value}` : `- ${label}: (não informado — omitir do texto)`);
     const user = `Gere uma proposta comercial usando exatamente os dados abaixo:
 
@@ -41,6 +51,13 @@ ${line("Cliente", data.client_name)}
 ${line("CPF/CNPJ", data.client_document)}
 ${line("Endereço", data.client_address)}
 ${line("Cidade/Estado", data.client_city_state)}
+
+DADOS DA CONTRAPARTE
+${line("Contraparte", data.counterparty_name)}
+${line("CPF/CNPJ da contraparte", data.counterparty_document)}
+${line("Endereço da contraparte", data.counterparty_address)}
+${line("Cidade/Estado da contraparte", data.counterparty_city_state)}
+${line("Advogado da contraparte", data.counterparty_lawyer)}
 
 OBJETO E ESCOPO
 ${line("Matéria/Caso", data.matter)}
@@ -58,7 +75,9 @@ ${line("Endereço do escritório", data.firm_address)}
 ${line("Telefone", data.firm_phone)}
 ${line("E-mail", data.firm_email)}
 ${line("Advogado responsável", data.lawyer_name)}
-${line("Cargo/Título", data.lawyer_title)}`;
+${line("Cargo/Título", data.lawyer_title)}
+
+Retorne apenas o HTML da proposta, sem comentários adicionais.`;
     const r = await chatComplete(
       [
         { role: "system", content: system },
@@ -66,7 +85,18 @@ ${line("Cargo/Título", data.lawyer_title)}`;
       ],
       { model: "google/gemini-2.5-flash", temperature: 0.5 },
     );
-    return { content: r.content };
+    // Garante que a saída seja HTML: se o modelo insistir em Markdown, converte o básico.
+    let html = r.content.trim();
+    // Remove eventuais cercas ```html
+    html = html.replace(/^```(?:html)?\s*/i, "").replace(/```\s*$/i, "").trim();
+    if (!/<\w+[^>]*>/.test(html)) {
+      // Fallback minimalista: transforma parágrafos em <p>.
+      html = html
+        .split(/\n{2,}/)
+        .map((p) => `<p>${p.replace(/\n/g, "<br>")}</p>`)
+        .join("");
+    }
+    return { content: html };
   });
 
 const MarketingSchema = z.object({
