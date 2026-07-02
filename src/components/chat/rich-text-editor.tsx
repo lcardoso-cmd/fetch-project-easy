@@ -19,7 +19,14 @@ interface Props {
   html: string;
   onChange: (html: string) => void;
   minHeight?: number;
+  /**
+   * Classe aplicada ao contentEditable. Permite trocar a tipografia padrão
+   * (prose/serif) por variantes como `word-doc` para casar com o template
+   * do .docx exportado.
+   */
+  contentClassName?: string;
 }
+
 
 /** Remove tags perigosas e atributos indesejados de um HTML colado. */
 function sanitizePastedHtml(raw: string): string {
