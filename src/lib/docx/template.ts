@@ -546,19 +546,49 @@ type InlineRun = {
   bold?: boolean;
   italics?: boolean;
   underline?: boolean;
+  strike?: boolean;
+  /** Marca uma quebra de linha (será convertida em TextRun com break: 1). */
+  lineBreak?: boolean;
 };
 
+function styleFlags(attrs: string): {
+  bold?: boolean;
+  italics?: boolean;
+  underline?: boolean;
+  strike?: boolean;
+} {
+  const style = /style\s*=\s*"([^"]*)"|style\s*=\s*'([^']*)'/i.exec(attrs);
+  const s = ((style?.[1] ?? style?.[2]) ?? "").toLowerCase();
+  const out: {
+    bold?: boolean;
+    italics?: boolean;
+    underline?: boolean;
+    strike?: boolean;
+  } = {};
+  if (/font-weight\s*:\s*(bold|[6-9]00)/.test(s)) out.bold = true;
+  if (/font-style\s*:\s*italic/.test(s)) out.italics = true;
+  if (/text-decoration[^;]*underline/.test(s)) out.underline = true;
+  if (/text-decoration[^;]*line-through/.test(s)) out.strike = true;
+  return out;
+}
+
 /**
- * Extrai runs inline preservando <strong>/<b>, <em>/<i>, <u>.
- * Ignora demais tags (mantém texto).
+ * Extrai runs inline preservando <strong>/<b>, <em>/<i>, <u>, <s>/<strike>/<del>,
+ * <br>, e <span style="font-weight/font-style/text-decoration">.
+ * Demais tags: ignora estrutura mas mantém o texto.
  */
 function parseInline(html: string): InlineRun[] {
   const runs: InlineRun[] = [];
-  const stack: { bold?: boolean; italics?: boolean; underline?: boolean }[] = [{}];
-  const tagRegex = /<\/?([a-zA-Z0-9]+)[^>]*>|([^<]+)/g;
+  const stack: {
+    bold?: boolean;
+    italics?: boolean;
+    underline?: boolean;
+    strike?: boolean;
+  }[] = [{}];
+  const tagRegex = /<\/?([a-zA-Z0-9]+)([^>]*)\/?>|([^<]+)/g;
   let m: RegExpExecArray | null;
   while ((m = tagRegex.exec(html)) !== null) {
-    const [full, tag, text] = m;
+    const [full, tag, attrs, text] = m;
     if (text) {
       const decoded = decodeEntities(text);
       if (decoded) runs.push({ ...stack[stack.length - 1], text: decoded });
@@ -567,6 +597,10 @@ function parseInline(html: string): InlineRun[] {
     const isClose = full.startsWith("</");
     const t = (tag ?? "").toLowerCase();
     const current = stack[stack.length - 1];
+    if (t === "br") {
+      runs.push({ text: "", lineBreak: true });
+      continue;
+    }
     if (t === "strong" || t === "b") {
       if (isClose) stack.pop();
       else stack.push({ ...current, bold: true });
@@ -576,33 +610,44 @@ function parseInline(html: string): InlineRun[] {
     } else if (t === "u") {
       if (isClose) stack.pop();
       else stack.push({ ...current, underline: true });
+    } else if (t === "s" || t === "strike" || t === "del") {
+      if (isClose) stack.pop();
+      else stack.push({ ...current, strike: true });
+    } else if (t === "span" || t === "font") {
+      if (isClose) stack.pop();
+      else stack.push({ ...current, ...styleFlags(attrs ?? "") });
     }
     // demais tags: ignora (texto interno já cai no ramo `text`)
   }
-  return runs.filter((r) => r.text.length > 0);
+  return runs.filter((r) => r.text.length > 0 || r.lineBreak);
 }
 
 function inlineToTextRuns(html: string): TextRun[] {
   const runs = parseInline(html);
   if (runs.length === 0) return [new TextRun("")];
-  return runs.map(
-    (r) =>
-      new TextRun({
-        text: r.text,
-        bold: r.bold,
-        italics: r.italics,
-        underline: r.underline ? {} : undefined,
-      }),
-  );
+  return runs.map((r) => {
+    if (r.lineBreak) {
+      return new TextRun({ text: "", break: 1 });
+    }
+    return new TextRun({
+      text: r.text,
+      bold: r.bold,
+      italics: r.italics,
+      underline: r.underline ? {} : undefined,
+      strike: r.strike || undefined,
+    });
+  });
 }
 
-type BlockAlign = "left" | "center" | "right";
+type BlockAlign = "left" | "center" | "right" | "justify";
 function alignMap(a?: BlockAlign): (typeof AlignmentType)[keyof typeof AlignmentType] | undefined {
   if (a === "center") return AlignmentType.CENTER;
   if (a === "right") return AlignmentType.RIGHT;
   if (a === "left") return AlignmentType.LEFT;
+  if (a === "justify") return AlignmentType.JUSTIFIED;
   return undefined;
 }
+
 
 /**
  * Converte HTML do editor (h1/h2/h3, p, ul/ol, li, br, strong/em/u,
@@ -610,9 +655,8 @@ function alignMap(a?: BlockAlign): (typeof AlignmentType)[keyof typeof Alignment
  * os estilos nomeados do template.
  */
 export function htmlToDocxChildren(html: string): Paragraph[] {
-  const normalized = String(html || "")
-    .replace(/\r/g, "")
-    .replace(/<br\s*\/?>/gi, "\n");
+  // Preserva <br> como marcador para inlineToTextRuns emitir break: 1.
+  const normalized = String(html || "").replace(/\r/g, "");
   const out: Paragraph[] = [];
   const blockRegex = /<(h1|h2|h3|p|li|div|blockquote)([^>]*)>([\s\S]*?)<\/\1>/gi;
 
@@ -649,7 +693,7 @@ export function htmlToDocxChildren(html: string): Paragraph[] {
     const tag = m[1].toLowerCase();
     const attrs = m[2] || "";
     const inner = m[3];
-    const alignMatch = attrs.match(/text-align:\s*(left|center|right)/i);
+    const alignMatch = attrs.match(/text-align\s*:\s*(left|center|right|justify)/i);
     const align = alignMap(alignMatch?.[1] as BlockAlign | undefined);
     inOrdered = tag === "li" ? isOrderedAt(m.index) : inOrdered;
 

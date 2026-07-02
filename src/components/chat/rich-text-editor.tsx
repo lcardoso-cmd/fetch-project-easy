@@ -21,20 +21,72 @@ interface Props {
   minHeight?: number;
 }
 
+/** Remove tags perigosas e atributos indesejados de um HTML colado. */
+function sanitizePastedHtml(raw: string): string {
+  if (!raw) return "";
+  let s = raw;
+  // remove blocos perigosos por completo (com conteúdo)
+  s = s.replace(/<(script|style|iframe|object|embed|link|meta)[^>]*>[\s\S]*?<\/\1>/gi, "");
+  s = s.replace(/<(script|style|iframe|object|embed|link|meta)[^>]*\/?>/gi, "");
+  // strip on* handlers e class/id
+  s = s.replace(/\s(on[a-z]+|class|id)\s*=\s*"[^"]*"/gi, "");
+  s = s.replace(/\s(on[a-z]+|class|id)\s*=\s*'[^']*'/gi, "");
+  // strip href javascript:
+  s = s.replace(/\shref\s*=\s*"javascript:[^"]*"/gi, "");
+  return s;
+}
+
 export function RichTextEditor({ html, onChange, minHeight = 360 }: Props) {
   const ref = useRef<HTMLDivElement>(null);
+  const lastEmittedRef = useRef<string>(html);
 
+  // Sync externo: quando `html` prop muda por fora (IA gerou, restaurou versão,
+  // rascunho carregou), refletir no contentEditable. Ignora se a mudança veio do
+  // próprio editor (evita reset de cursor a cada tecla).
   useEffect(() => {
-    if (ref.current && ref.current.innerHTML !== html) {
-      ref.current.innerHTML = html;
+    const el = ref.current;
+    if (!el) return;
+    if (html === lastEmittedRef.current) return;
+    if (el.innerHTML === html) {
+      lastEmittedRef.current = html;
+      return;
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    el.innerHTML = html || "";
+    lastEmittedRef.current = html;
+  }, [html]);
+
+  const emit = () => {
+    if (!ref.current) return;
+    const current = ref.current.innerHTML;
+    lastEmittedRef.current = current;
+    onChange(current);
+  };
 
   const exec = (cmd: string, value?: string) => {
-    document.execCommand(cmd, false, value);
-    if (ref.current) onChange(ref.current.innerHTML);
     ref.current?.focus();
+    document.execCommand(cmd, false, value);
+    emit();
+  };
+
+  const handlePaste = (e: React.ClipboardEvent<HTMLDivElement>) => {
+    const cd = e.clipboardData;
+    if (!cd) return;
+    const asHtml = cd.getData("text/html");
+    const asText = cd.getData("text/plain");
+    if (asHtml) {
+      e.preventDefault();
+      const clean = sanitizePastedHtml(asHtml);
+      document.execCommand("insertHTML", false, clean);
+      emit();
+    } else if (asText) {
+      e.preventDefault();
+      const paragraphs = asText
+        .split(/\n{2,}/)
+        .map((p) => `<p>${p.replace(/\n/g, "<br>").replace(/</g, "&lt;")}</p>`)
+        .join("");
+      document.execCommand("insertHTML", false, paragraphs);
+      emit();
+    }
   };
 
   const ToolBtn = ({
@@ -110,8 +162,12 @@ export function RichTextEditor({ html, onChange, minHeight = 360 }: Props) {
       <div
         ref={ref}
         contentEditable
+        role="textbox"
+        aria-multiline="true"
+        aria-label="Editor de proposta"
         suppressContentEditableWarning
-        onInput={(e) => onChange((e.target as HTMLDivElement).innerHTML)}
+        onInput={emit}
+        onPaste={handlePaste}
         className="prose prose-sm max-w-none p-4 font-serif leading-relaxed text-foreground focus:outline-none"
         style={{ minHeight }}
       />
