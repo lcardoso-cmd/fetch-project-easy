@@ -260,12 +260,12 @@ function CaseDetailPage() {
 
       {/* Dados do caso — quadro branco */}
       {(caseData.client_name || caseData.case_number || caseData.jurisdiction || caseData.case_type) && (
-        <Card>
+        <Card className="min-w-0 overflow-hidden">
           <CardHeader>
             <CardTitle className="text-lg">Dados do caso</CardTitle>
           </CardHeader>
-          <CardContent>
-            <dl className="grid grid-cols-1 gap-x-4 gap-y-3 text-sm sm:grid-cols-[minmax(9rem,max-content)_minmax(0,1fr)] sm:gap-y-2">
+          <CardContent className="min-w-0">
+            <dl className="grid min-w-0 grid-cols-1 gap-x-4 gap-y-3 text-sm sm:grid-cols-[minmax(9rem,max-content)_minmax(0,1fr)] sm:gap-y-2">
               {caseData.client_name && (
                 <CaseDataRow label="Cliente" value={caseData.client_name} />
               )}
