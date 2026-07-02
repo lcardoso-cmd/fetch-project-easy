@@ -54,6 +54,8 @@ import {
 } from "@/lib/cases.functions";
 import { listTeamMembers, createTeamMember } from "@/lib/team.functions";
 import { indexDocument } from "@/lib/rag.functions";
+import { createUploadSignedUrl } from "@/lib/documents.functions";
+import { Progress } from "@/components/ui/progress";
 
 export const Route = createFileRoute("/_authenticated/assistencias/nova")({
   component: NewCasePage,
