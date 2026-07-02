@@ -149,6 +149,28 @@ function ProposalPage() {
 
   const activeCaseId = form.case_id && form.case_id !== NO_CASE ? form.case_id : null;
 
+  // Anexos de proposta (só para o rascunho corrente / caso vinculado)
+  const attachmentsQ = useQuery({
+    queryKey: ["proposal-attachments", activeCaseId ?? "none"],
+    queryFn: () => listAttachmentsFn({ data: { case_id: activeCaseId } }),
+  });
+  const attachmentIds = (attachmentsQ.data ?? []).map((a) => a.id);
+
+  /** Merge não-destrutivo: só preenche campos vazios. */
+  const applyExtractedFields = (fields: ExtractedProposalFields) => {
+    setForm((f) => ({
+      ...f,
+      client_name: f.client_name || fields.client_name || "",
+      client_document: f.client_document || fields.client_document || "",
+      client_city_state: f.client_city_state || fields.client_city_state || "",
+      counterparty_name: f.counterparty_name || fields.counterparty_name || "",
+      counterparty_document: f.counterparty_document || fields.counterparty_document || "",
+      matter: f.matter || fields.matter || "",
+      scope: f.scope || fields.scope || "",
+    }));
+  };
+
+
   // Hidratar: buscar draft do backend para o caso atual (ou "sem caso"). Migra localStorage legado.
   useEffect(() => {
     let cancelled = false;
