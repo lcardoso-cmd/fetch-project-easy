@@ -525,10 +525,25 @@ function ProposalPage() {
       const { data: sess } = await supabase.auth.getSession();
       const headers: Record<string, string> = { "Content-Type": "application/json" };
       if (sess.session?.access_token) headers.Authorization = `Bearer ${sess.session.access_token}`;
+      // Converte mm -> pt (1 mm ≈ 2,8346 pt)
+      const mmToPt = (mm: number) => Math.round(mm * 2.83464567);
       const res = await fetch("/api/tools/pdf", {
         method: "POST",
         headers,
-        body: JSON.stringify({ titulo, html: output }),
+        body: JSON.stringify({
+          titulo,
+          html: output,
+          page: {
+            format: pdfFormat,
+            orientation: pdfOrientation,
+            margins: {
+              top: mmToPt(pdfMargins.top),
+              right: mmToPt(pdfMargins.right),
+              bottom: mmToPt(pdfMargins.bottom),
+              left: mmToPt(pdfMargins.left),
+            },
+          },
+        }),
       });
       if (!res.ok) throw new Error(await res.text());
       const blob = await res.blob();
