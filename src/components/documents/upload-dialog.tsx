@@ -556,7 +556,7 @@ export function UploadDialog({
                   disabled={busy || files.length === 0}
                 >
                   {busy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Iniciar upload
+                  Confirmar e registrar
                 </Button>
               ) : (
                 <Button
