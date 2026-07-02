@@ -703,9 +703,9 @@ export function ProposalVersionsDialog({
                                   Restaurar
                                 </Button>
                               </div>
-                              <ScrollArea
-                                className="h-[40vh]"
-                                viewportRef={idx === 0 ? scrollARef : scrollBRef}
+                              <div
+                                ref={idx === 0 ? scrollARef : scrollBRef}
+                                className="h-[40vh] overflow-y-auto"
                               >
                                 <div
                                   className="proposal-preview p-4 text-sm leading-relaxed"
@@ -713,7 +713,7 @@ export function ProposalVersionsDialog({
                                     __html: v.output || "<p><em>Sem conteúdo.</em></p>",
                                   }}
                                 />
-                              </ScrollArea>
+                              </div>
                             </div>
                           ))}
                         </div>
