@@ -143,7 +143,7 @@ function AuthPage() {
             </p>
           </div>
 
-          <Tabs defaultValue="login" className="w-full">
+          <Tabs value={mode} onValueChange={(v) => { setMode(v as "login" | "signup"); setError(null); }} className="w-full">
             <TabsList className="grid w-full grid-cols-2 rounded-2xl">
               <TabsTrigger value="login" className="rounded-xl">Entrar</TabsTrigger>
               <TabsTrigger value="signup" className="rounded-xl">Criar conta</TabsTrigger>
