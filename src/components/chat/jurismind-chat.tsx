@@ -301,11 +301,18 @@ export function JurisMindChat({
         if (cancelled) return;
         setMessages(
           rows.map((r) => ({
+            id: r.id,
             role: r.role,
             content: r.content,
             images: r.images ?? undefined,
             citations: (r.citations as unknown as Citation[]) ?? undefined,
             steps: (r.tool_steps as unknown as ToolStep[]) ?? undefined,
+            input_kind: (r.input_kind ?? undefined) as
+              | "text"
+              | "voice"
+              | undefined,
+            audio_path: r.audio_path ?? undefined,
+            audio_duration_ms: r.audio_duration_ms ?? undefined,
           })),
         );
       } catch (e) {
