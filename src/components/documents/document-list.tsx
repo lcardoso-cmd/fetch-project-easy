@@ -286,6 +286,32 @@ export function DocumentList({
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1">
+                          {(d.processing_status.startsWith("error") ||
+                            d.processing_status === "empty") && (
+                            <TooltipProvider delayDuration={150}>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 text-muted-foreground hover:text-primary"
+                                    disabled={retryingId === d.id}
+                                    onClick={() => onRetry(d.id)}
+                                    aria-label={`Reindexar ${d.filename}`}
+                                  >
+                                    {retryingId === d.id ? (
+                                      <Loader2 className="h-4 w-4 animate-spin" />
+                                    ) : (
+                                      <RefreshCw className="h-4 w-4" />
+                                    )}
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p className="text-xs">Solicitar reindexação</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          )}
                           <TooltipProvider delayDuration={150}>
                             <Tooltip>
                               <TooltipTrigger asChild>
