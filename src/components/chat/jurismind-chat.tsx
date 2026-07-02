@@ -235,6 +235,108 @@ export function JurisMindChat({
     inputRef.current?.focus();
   }, []);
 
+  // Carregar histórico ao trocar de thread
+  useEffect(() => {
+    if (!threadId) {
+      setMessages([]);
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      try {
+        const rows = await getMessagesFn({ data: { thread_id: threadId } });
+        if (cancelled) return;
+        setMessages(
+          rows.map((r) => ({
+            role: r.role,
+            content: r.content,
+            images: r.images ?? undefined,
+            citations: (r.citations as unknown as Citation[]) ?? undefined,
+            steps: (r.tool_steps as unknown as ToolStep[]) ?? undefined,
+          })),
+        );
+      } catch (e) {
+        toast.error(
+          e instanceof Error ? e.message : "Erro ao carregar conversa",
+        );
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [threadId, getMessagesFn]);
+
+  // Gravação de voz -> transcrição via /api/tools/transcribe
+  const startRecording = async () => {
+    if (recording || transcribing) return;
+    if (!navigator.mediaDevices?.getUserMedia) {
+      toast.error("Seu navegador não suporta gravação de áudio.");
+      return;
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mime = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
+        ? "audio/webm;codecs=opus"
+        : "audio/webm";
+      const rec = new MediaRecorder(stream, { mimeType: mime });
+      audioChunksRef.current = [];
+      rec.ondataavailable = (e) => {
+        if (e.data.size > 0) audioChunksRef.current.push(e.data);
+      };
+      rec.onstop = async () => {
+        stream.getTracks().forEach((t) => t.stop());
+        const blob = new Blob(audioChunksRef.current, { type: "audio/webm" });
+        if (blob.size < 500) {
+          toast.error("Áudio muito curto.");
+          return;
+        }
+        setTranscribing(true);
+        try {
+          const b64 = await new Promise<string>((resolve, reject) => {
+            const r = new FileReader();
+            r.onerror = () => reject(r.error);
+            r.onload = () => {
+              const s = String(r.result);
+              resolve(s.slice(s.indexOf(",") + 1));
+            };
+            r.readAsDataURL(blob);
+          });
+          const res = await fetch("/api/tools/transcribe", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ audio_base64: b64, format: "webm" }),
+          });
+          const json = (await res.json()) as { text?: string; error?: string };
+          if (!res.ok || json.error) throw new Error(json.error ?? "falha");
+          const text = (json.text ?? "").trim();
+          if (!text) {
+            toast.error("Não consegui transcrever o áudio.");
+            return;
+          }
+          setInput((prev) => (prev ? prev + " " + text : text));
+          setTimeout(() => inputRef.current?.focus(), 30);
+        } catch (e) {
+          toast.error(e instanceof Error ? e.message : "Erro ao transcrever");
+        } finally {
+          setTranscribing(false);
+        }
+      };
+      recorderRef.current = rec;
+      rec.start();
+      setRecording(true);
+    } catch (e) {
+      toast.error(
+        e instanceof Error ? e.message : "Não foi possível acessar o microfone",
+      );
+    }
+  };
+  const stopRecording = () => {
+    if (!recording) return;
+    recorderRef.current?.stop();
+    setRecording(false);
+  };
+
+
   const readFilesAsImages = async (files: File[]) => {
     const list: string[] = [];
     for (const f of files.slice(0, 6 - images.length)) {
