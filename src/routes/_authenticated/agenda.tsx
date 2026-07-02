@@ -53,7 +53,7 @@ const calendarSearchSchema = z.object({
   detail: z.string().optional(),
 });
 
-export const Route = createFileRoute("/_authenticated/calendar")({
+export const Route = createFileRoute("/_authenticated/agenda")({
   validateSearch: calendarSearchSchema,
   component: CalendarPage,
 });

@@ -66,7 +66,7 @@ const proposalSchema = z.object({
 
 type FieldErrors = Partial<Record<keyof z.infer<typeof proposalSchema>, string>>;
 
-export const Route = createFileRoute("/_authenticated/proposal")({
+export const Route = createFileRoute("/_authenticated/propostas")({
   component: ProposalPage,
 });
 

@@ -32,7 +32,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 
-export const Route = createFileRoute("/_authenticated/settings/firm")({
+export const Route = createFileRoute("/_authenticated/configuracoes/escritorio")({
   component: FirmSettingsPage,
 });
 

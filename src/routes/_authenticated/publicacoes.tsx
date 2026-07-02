@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { FileSearch } from "lucide-react";
 
-export const Route = createFileRoute("/_authenticated/monitoring")({
+export const Route = createFileRoute("/_authenticated/publicacoes")({
   component: MonitoringPage,
 });
 

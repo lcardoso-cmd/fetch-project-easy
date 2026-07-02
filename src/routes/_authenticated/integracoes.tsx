@@ -21,7 +21,7 @@ const searchSchema = z.object({
   msg: z.string().optional(),
 });
 
-export const Route = createFileRoute("/_authenticated/integrations")({
+export const Route = createFileRoute("/_authenticated/integracoes")({
   validateSearch: searchSchema,
   component: IntegrationsPage,
 });

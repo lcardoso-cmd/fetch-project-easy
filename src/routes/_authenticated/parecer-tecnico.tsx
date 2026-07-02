@@ -18,7 +18,7 @@ const assertExpert = createServerFn({ method: "GET" })
     return { ok: true };
   });
 
-export const Route = createFileRoute("/_authenticated/expert-opinion")({
+export const Route = createFileRoute("/_authenticated/parecer-tecnico")({
   beforeLoad: async () => {
     try {
       await assertExpert();

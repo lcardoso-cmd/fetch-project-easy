@@ -15,7 +15,7 @@ import {
   type MatterKind,
 } from "@/lib/practice-labels";
 
-export const Route = createFileRoute("/_authenticated/cases/")({
+export const Route = createFileRoute("/_authenticated/assistencias/")({
   component: CasesPage,
 });
 

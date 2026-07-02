@@ -15,7 +15,7 @@ import { getCases } from "@/lib/cases.functions";
 import { draftLegalPiece } from "@/lib/generators.functions";
 import { labelsForMatter, type MatterKind } from "@/lib/practice-labels";
 
-export const Route = createFileRoute("/_authenticated/drafter")({
+export const Route = createFileRoute("/_authenticated/pecas")({
   component: DrafterPage,
 });
 

@@ -24,7 +24,7 @@ import {
 } from "@/lib/practice-labels";
 import { useProfile } from "@/hooks/use-profile";
 
-export const Route = createFileRoute("/_authenticated/onboarding")({
+export const Route = createFileRoute("/_authenticated/boas-vindas")({
   component: OnboardingPage,
 });
 

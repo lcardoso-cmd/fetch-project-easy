@@ -27,7 +27,7 @@ import {
 } from "@/lib/cases.functions";
 import { indexDocument } from "@/lib/rag.functions";
 
-export const Route = createFileRoute("/_authenticated/cases/bulk")({
+export const Route = createFileRoute("/_authenticated/assistencias/lote")({
   component: BulkUploadPage,
 });
 

@@ -13,7 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { AtSign, CheckCheck, ClipboardList, FolderOpen, Inbox } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export const Route = createFileRoute("/_authenticated/notifications")({
+export const Route = createFileRoute("/_authenticated/notificacoes")({
   component: NotificationsPage,
 });
 

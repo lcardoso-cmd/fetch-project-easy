@@ -10,7 +10,7 @@ import { listEvents } from "@/lib/events.functions";
 import { Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 
-export const Route = createFileRoute("/_authenticated/dashboard")({
+export const Route = createFileRoute("/_authenticated/painel")({
   component: DashboardPage,
 });
 

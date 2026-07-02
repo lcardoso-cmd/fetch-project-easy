@@ -7,7 +7,7 @@ import { Building2, Users, CreditCard, Activity, ArrowRight } from "lucide-react
 import { getPlatformKpis } from "@/lib/platform.functions";
 import { getMyCapabilities } from "@/lib/capabilities.functions";
 
-export const Route = createFileRoute("/_authenticated/platform/")({
+export const Route = createFileRoute("/_authenticated/plataforma/")({
   beforeLoad: async () => {
     try {
       const caps = await getMyCapabilities();

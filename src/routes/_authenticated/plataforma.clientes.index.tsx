@@ -10,7 +10,7 @@ import { Search, ArrowLeft } from "lucide-react";
 import { listCustomerAccounts } from "@/lib/platform.functions";
 import { getMyCapabilities } from "@/lib/capabilities.functions";
 
-export const Route = createFileRoute("/_authenticated/platform/customers/")({
+export const Route = createFileRoute("/_authenticated/plataforma/clientes/")({
   beforeLoad: async () => {
     try {
       const caps = await getMyCapabilities();

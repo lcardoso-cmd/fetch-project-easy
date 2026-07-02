@@ -20,7 +20,7 @@ import {
   type Capability,
 } from "@/lib/capabilities.functions";
 
-export const Route = createFileRoute("/_authenticated/platform/users/")({
+export const Route = createFileRoute("/_authenticated/plataforma/usuarios/")({
   beforeLoad: async () => {
     try {
       const caps = await getMyCapabilities();

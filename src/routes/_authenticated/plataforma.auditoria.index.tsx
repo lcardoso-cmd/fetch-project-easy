@@ -6,7 +6,7 @@ import { ArrowLeft } from "lucide-react";
 import { listPlatformAudit } from "@/lib/platform.functions";
 import { getMyCapabilities } from "@/lib/capabilities.functions";
 
-export const Route = createFileRoute("/_authenticated/platform/audit/")({
+export const Route = createFileRoute("/_authenticated/plataforma/auditoria/")({
   beforeLoad: async () => {
     try {
       const caps = await getMyCapabilities();

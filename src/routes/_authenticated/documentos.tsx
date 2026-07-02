@@ -11,7 +11,7 @@ import { getCases } from "@/lib/cases.functions";
 import { FileText, Search, Download } from "lucide-react";
 import { toast } from "sonner";
 
-export const Route = createFileRoute("/_authenticated/my-files")({
+export const Route = createFileRoute("/_authenticated/documentos")({
   component: MyFilesPage,
 });
 

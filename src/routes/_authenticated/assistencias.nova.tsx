@@ -55,7 +55,7 @@ import {
 import { listTeamMembers, createTeamMember } from "@/lib/team.functions";
 import { indexDocument } from "@/lib/rag.functions";
 
-export const Route = createFileRoute("/_authenticated/cases/new")({
+export const Route = createFileRoute("/_authenticated/assistencias/nova")({
   component: NewCasePage,
 });
 

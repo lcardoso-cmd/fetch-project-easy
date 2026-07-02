@@ -42,7 +42,7 @@ import {
 } from "@/lib/capabilities.functions";
 import { Checkbox } from "@/components/ui/checkbox";
 
-export const Route = createFileRoute("/_authenticated/settings")({
+export const Route = createFileRoute("/_authenticated/configuracoes")({
   component: SettingsPage,
 });
 

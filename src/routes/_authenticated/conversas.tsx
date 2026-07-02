@@ -20,7 +20,7 @@ import { FolderKanban, MessageSquare, Plus, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
 
-export const Route = createFileRoute("/_authenticated/inbox")({
+export const Route = createFileRoute("/_authenticated/conversas")({
   component: InboxPage,
 });
 

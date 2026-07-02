@@ -41,7 +41,7 @@ import { getCases } from "@/lib/cases.functions";
 import { listTeamMembers } from "@/lib/team.functions";
 import { AddTaskDialog } from "@/components/tasks/add-task-dialog";
 
-export const Route = createFileRoute("/_authenticated/my-tasks")({
+export const Route = createFileRoute("/_authenticated/tarefas")({
   component: MyTasksPage,
 });
 
