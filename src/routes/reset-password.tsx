@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { IconBox } from "@/components/ui/icon-box";
-import { JurisMindMark } from "@/components/brand/jurismind-mark";
+import { JurisMindMark, JURISMIND_CONTEXT } from "@/components/brand/jurismind-mark";
 import { ArrowLeft, Lock, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 

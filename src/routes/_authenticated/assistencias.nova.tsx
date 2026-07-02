@@ -34,7 +34,7 @@ import {
   CheckCircle2,
   AlertTriangle,
 } from "lucide-react";
-import { JurisMindMark } from "@/components/brand/jurismind-mark";
+import { JurisMindMark, JURISMIND_CONTEXT } from "@/components/brand/jurismind-mark";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";

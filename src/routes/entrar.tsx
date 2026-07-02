@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { JurisMindMark } from "@/components/brand/jurismind-mark";
+import { JurisMindMark, JURISMIND_CONTEXT } from "@/components/brand/jurismind-mark";
 import { IconBox } from "@/components/ui/icon-box";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";

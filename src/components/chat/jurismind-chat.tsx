@@ -56,7 +56,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { JurisMindMark } from "@/components/brand/jurismind-mark";
+import { JurisMindMark, JURISMIND_CONTEXT } from "@/components/brand/jurismind-mark";
 import {
   blobToBase64,
   concatFloat32,

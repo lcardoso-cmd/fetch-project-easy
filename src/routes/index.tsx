@@ -19,7 +19,7 @@ import {
   Workflow,
   FileCheck2,
 } from "lucide-react";
-import { JurisMindMark } from "@/components/brand/jurismind-mark";
+import { JurisMindMark, JURISMIND_CONTEXT } from "@/components/brand/jurismind-mark";
 import { useAuth } from "@/hooks/use-auth";
 
 export const Route = createFileRoute("/")({

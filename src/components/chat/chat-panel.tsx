@@ -5,7 +5,7 @@ import { stripMarkdown } from "@/lib/strip-markdown";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Loader2, Send, FileText, AlertCircle } from "lucide-react";
-import { JurisMindMark } from "@/components/brand/jurismind-mark";
+import { JurisMindMark, JURISMIND_CONTEXT } from "@/components/brand/jurismind-mark";
 
 interface Citation {
   document_id: string;

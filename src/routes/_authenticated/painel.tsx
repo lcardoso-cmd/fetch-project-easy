@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { z } from "zod";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { FolderKanban, FileText, CalendarClock, RotateCcw } from "lucide-react";
-import { JurisMindMark } from "@/components/brand/jurismind-mark";
+import { JurisMindMark, JURISMIND_CONTEXT } from "@/components/brand/jurismind-mark";
 import { getCases } from "@/lib/cases.functions";
 import { listAllDocuments } from "@/lib/documents.functions";
 import { listEvents } from "@/lib/events.functions";
