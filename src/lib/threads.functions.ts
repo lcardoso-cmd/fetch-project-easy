@@ -116,5 +116,5 @@ export const getThreadMessages = createServerFn({ method: "GET" })
       .eq("user_id", context.userId)
       .order("created_at", { ascending: true });
     if (error) throw error;
-    return (rows ?? []) as AiMessage[];
+    return (rows ?? []) as unknown as AiMessage[];
   });
