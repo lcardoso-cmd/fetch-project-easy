@@ -49,6 +49,7 @@ import { Route as AuthenticatedAssistenciasRouteImport } from './routes/_authent
 import { Route as AuthenticatedAgendaRouteImport } from './routes/_authenticated/agenda'
 import { Route as AuthenticatedPlatformIndexRouteImport } from './routes/_authenticated/platform.index'
 import { Route as AuthenticatedPlataformaIndexRouteImport } from './routes/_authenticated/plataforma.index'
+import { Route as AuthenticatedContratarB2bIndexRouteImport } from './routes/_authenticated/contratar-b2b.index'
 import { Route as AuthenticatedCasesIndexRouteImport } from './routes/_authenticated/cases.index'
 import { Route as AuthenticatedAssistenciasIndexRouteImport } from './routes/_authenticated/assistencias.index'
 import { Route as ApiToolsTranscribeRouteImport } from './routes/api/tools/transcribe'
@@ -58,6 +59,8 @@ import { Route as ApiToolsPetitionRouteImport } from './routes/api/tools/petitio
 import { Route as ApiToolsPdfRouteImport } from './routes/api/tools/pdf'
 import { Route as AuthenticatedSettingsOauthRouteImport } from './routes/_authenticated/settings.oauth'
 import { Route as AuthenticatedSettingsFirmRouteImport } from './routes/_authenticated/settings.firm'
+import { Route as AuthenticatedContratarB2bSolicitarRouteImport } from './routes/_authenticated/contratar-b2b.solicitar'
+import { Route as AuthenticatedContratarB2bRequestIdRouteImport } from './routes/_authenticated/contratar-b2b.$requestId'
 import { Route as AuthenticatedConfiguracoesOauthRouteImport } from './routes/_authenticated/configuracoes.oauth'
 import { Route as AuthenticatedConfiguracoesEscritorioRouteImport } from './routes/_authenticated/configuracoes.escritorio'
 import { Route as AuthenticatedCasesNewRouteImport } from './routes/_authenticated/cases.new'
@@ -71,6 +74,7 @@ import { Route as AuthenticatedPlatformCustomersIndexRouteImport } from './route
 import { Route as AuthenticatedPlatformCredentialsIndexRouteImport } from './routes/_authenticated/platform.credentials.index'
 import { Route as AuthenticatedPlatformAuditIndexRouteImport } from './routes/_authenticated/platform.audit.index'
 import { Route as AuthenticatedPlataformaUsuariosIndexRouteImport } from './routes/_authenticated/plataforma.usuarios.index'
+import { Route as AuthenticatedPlataformaSolicitacoesIndexRouteImport } from './routes/_authenticated/plataforma.solicitacoes.index'
 import { Route as AuthenticatedPlataformaCredenciaisIndexRouteImport } from './routes/_authenticated/plataforma.credenciais.index'
 import { Route as AuthenticatedPlataformaClientesIndexRouteImport } from './routes/_authenticated/plataforma.clientes.index'
 import { Route as AuthenticatedPlataformaAuditoriaIndexRouteImport } from './routes/_authenticated/plataforma.auditoria.index'
@@ -291,6 +295,12 @@ const AuthenticatedPlataformaIndexRoute =
     path: '/plataforma/',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedContratarB2bIndexRoute =
+  AuthenticatedContratarB2bIndexRouteImport.update({
+    id: '/contratar-b2b/',
+    path: '/contratar-b2b/',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedCasesIndexRoute = AuthenticatedCasesIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -338,6 +348,18 @@ const AuthenticatedSettingsFirmRoute =
     id: '/firm',
     path: '/firm',
     getParentRoute: () => AuthenticatedSettingsRoute,
+  } as any)
+const AuthenticatedContratarB2bSolicitarRoute =
+  AuthenticatedContratarB2bSolicitarRouteImport.update({
+    id: '/contratar-b2b/solicitar',
+    path: '/contratar-b2b/solicitar',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedContratarB2bRequestIdRoute =
+  AuthenticatedContratarB2bRequestIdRouteImport.update({
+    id: '/contratar-b2b/$requestId',
+    path: '/contratar-b2b/$requestId',
+    getParentRoute: () => AuthenticatedRoute,
   } as any)
 const AuthenticatedConfiguracoesOauthRoute =
   AuthenticatedConfiguracoesOauthRouteImport.update({
@@ -413,6 +435,12 @@ const AuthenticatedPlataformaUsuariosIndexRoute =
   AuthenticatedPlataformaUsuariosIndexRouteImport.update({
     id: '/plataforma/usuarios/',
     path: '/plataforma/usuarios/',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedPlataformaSolicitacoesIndexRoute =
+  AuthenticatedPlataformaSolicitacoesIndexRouteImport.update({
+    id: '/plataforma/solicitacoes/',
+    path: '/plataforma/solicitacoes/',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
 const AuthenticatedPlataformaCredenciaisIndexRoute =
@@ -515,6 +543,8 @@ export interface FileRoutesByFullPath {
   '/cases/new': typeof AuthenticatedCasesNewRoute
   '/configuracoes/escritorio': typeof AuthenticatedConfiguracoesEscritorioRoute
   '/configuracoes/oauth': typeof AuthenticatedConfiguracoesOauthRoute
+  '/contratar-b2b/$requestId': typeof AuthenticatedContratarB2bRequestIdRoute
+  '/contratar-b2b/solicitar': typeof AuthenticatedContratarB2bSolicitarRoute
   '/settings/firm': typeof AuthenticatedSettingsFirmRoute
   '/settings/oauth': typeof AuthenticatedSettingsOauthRoute
   '/api/tools/pdf': typeof ApiToolsPdfRoute
@@ -524,6 +554,7 @@ export interface FileRoutesByFullPath {
   '/api/tools/transcribe': typeof ApiToolsTranscribeRoute
   '/assistencias/': typeof AuthenticatedAssistenciasIndexRoute
   '/cases/': typeof AuthenticatedCasesIndexRoute
+  '/contratar-b2b/': typeof AuthenticatedContratarB2bIndexRoute
   '/plataforma/': typeof AuthenticatedPlataformaIndexRoute
   '/platform/': typeof AuthenticatedPlatformIndexRoute
   '/assistencias/$caseId/chat': typeof AuthenticatedAssistenciasCaseIdChatRoute
@@ -535,6 +566,7 @@ export interface FileRoutesByFullPath {
   '/plataforma/auditoria/': typeof AuthenticatedPlataformaAuditoriaIndexRoute
   '/plataforma/clientes/': typeof AuthenticatedPlataformaClientesIndexRoute
   '/plataforma/credenciais/': typeof AuthenticatedPlataformaCredenciaisIndexRoute
+  '/plataforma/solicitacoes/': typeof AuthenticatedPlataformaSolicitacoesIndexRoute
   '/plataforma/usuarios/': typeof AuthenticatedPlataformaUsuariosIndexRoute
   '/platform/audit/': typeof AuthenticatedPlatformAuditIndexRoute
   '/platform/credentials/': typeof AuthenticatedPlatformCredentialsIndexRoute
@@ -585,6 +617,8 @@ export interface FileRoutesByTo {
   '/cases/new': typeof AuthenticatedCasesNewRoute
   '/configuracoes/escritorio': typeof AuthenticatedConfiguracoesEscritorioRoute
   '/configuracoes/oauth': typeof AuthenticatedConfiguracoesOauthRoute
+  '/contratar-b2b/$requestId': typeof AuthenticatedContratarB2bRequestIdRoute
+  '/contratar-b2b/solicitar': typeof AuthenticatedContratarB2bSolicitarRoute
   '/settings/firm': typeof AuthenticatedSettingsFirmRoute
   '/settings/oauth': typeof AuthenticatedSettingsOauthRoute
   '/api/tools/pdf': typeof ApiToolsPdfRoute
@@ -594,6 +628,7 @@ export interface FileRoutesByTo {
   '/api/tools/transcribe': typeof ApiToolsTranscribeRoute
   '/assistencias': typeof AuthenticatedAssistenciasIndexRoute
   '/cases': typeof AuthenticatedCasesIndexRoute
+  '/contratar-b2b': typeof AuthenticatedContratarB2bIndexRoute
   '/plataforma': typeof AuthenticatedPlataformaIndexRoute
   '/platform': typeof AuthenticatedPlatformIndexRoute
   '/assistencias/$caseId/chat': typeof AuthenticatedAssistenciasCaseIdChatRoute
@@ -605,6 +640,7 @@ export interface FileRoutesByTo {
   '/plataforma/auditoria': typeof AuthenticatedPlataformaAuditoriaIndexRoute
   '/plataforma/clientes': typeof AuthenticatedPlataformaClientesIndexRoute
   '/plataforma/credenciais': typeof AuthenticatedPlataformaCredenciaisIndexRoute
+  '/plataforma/solicitacoes': typeof AuthenticatedPlataformaSolicitacoesIndexRoute
   '/plataforma/usuarios': typeof AuthenticatedPlataformaUsuariosIndexRoute
   '/platform/audit': typeof AuthenticatedPlatformAuditIndexRoute
   '/platform/credentials': typeof AuthenticatedPlatformCredentialsIndexRoute
@@ -659,6 +695,8 @@ export interface FileRoutesById {
   '/_authenticated/cases/new': typeof AuthenticatedCasesNewRoute
   '/_authenticated/configuracoes/escritorio': typeof AuthenticatedConfiguracoesEscritorioRoute
   '/_authenticated/configuracoes/oauth': typeof AuthenticatedConfiguracoesOauthRoute
+  '/_authenticated/contratar-b2b/$requestId': typeof AuthenticatedContratarB2bRequestIdRoute
+  '/_authenticated/contratar-b2b/solicitar': typeof AuthenticatedContratarB2bSolicitarRoute
   '/_authenticated/settings/firm': typeof AuthenticatedSettingsFirmRoute
   '/_authenticated/settings/oauth': typeof AuthenticatedSettingsOauthRoute
   '/api/tools/pdf': typeof ApiToolsPdfRoute
@@ -668,6 +706,7 @@ export interface FileRoutesById {
   '/api/tools/transcribe': typeof ApiToolsTranscribeRoute
   '/_authenticated/assistencias/': typeof AuthenticatedAssistenciasIndexRoute
   '/_authenticated/cases/': typeof AuthenticatedCasesIndexRoute
+  '/_authenticated/contratar-b2b/': typeof AuthenticatedContratarB2bIndexRoute
   '/_authenticated/plataforma/': typeof AuthenticatedPlataformaIndexRoute
   '/_authenticated/platform/': typeof AuthenticatedPlatformIndexRoute
   '/_authenticated/assistencias/$caseId/chat': typeof AuthenticatedAssistenciasCaseIdChatRoute
@@ -679,6 +718,7 @@ export interface FileRoutesById {
   '/_authenticated/plataforma/auditoria/': typeof AuthenticatedPlataformaAuditoriaIndexRoute
   '/_authenticated/plataforma/clientes/': typeof AuthenticatedPlataformaClientesIndexRoute
   '/_authenticated/plataforma/credenciais/': typeof AuthenticatedPlataformaCredenciaisIndexRoute
+  '/_authenticated/plataforma/solicitacoes/': typeof AuthenticatedPlataformaSolicitacoesIndexRoute
   '/_authenticated/plataforma/usuarios/': typeof AuthenticatedPlataformaUsuariosIndexRoute
   '/_authenticated/platform/audit/': typeof AuthenticatedPlatformAuditIndexRoute
   '/_authenticated/platform/credentials/': typeof AuthenticatedPlatformCredentialsIndexRoute
@@ -733,6 +773,8 @@ export interface FileRouteTypes {
     | '/cases/new'
     | '/configuracoes/escritorio'
     | '/configuracoes/oauth'
+    | '/contratar-b2b/$requestId'
+    | '/contratar-b2b/solicitar'
     | '/settings/firm'
     | '/settings/oauth'
     | '/api/tools/pdf'
@@ -742,6 +784,7 @@ export interface FileRouteTypes {
     | '/api/tools/transcribe'
     | '/assistencias/'
     | '/cases/'
+    | '/contratar-b2b/'
     | '/plataforma/'
     | '/platform/'
     | '/assistencias/$caseId/chat'
@@ -753,6 +796,7 @@ export interface FileRouteTypes {
     | '/plataforma/auditoria/'
     | '/plataforma/clientes/'
     | '/plataforma/credenciais/'
+    | '/plataforma/solicitacoes/'
     | '/plataforma/usuarios/'
     | '/platform/audit/'
     | '/platform/credentials/'
@@ -803,6 +847,8 @@ export interface FileRouteTypes {
     | '/cases/new'
     | '/configuracoes/escritorio'
     | '/configuracoes/oauth'
+    | '/contratar-b2b/$requestId'
+    | '/contratar-b2b/solicitar'
     | '/settings/firm'
     | '/settings/oauth'
     | '/api/tools/pdf'
@@ -812,6 +858,7 @@ export interface FileRouteTypes {
     | '/api/tools/transcribe'
     | '/assistencias'
     | '/cases'
+    | '/contratar-b2b'
     | '/plataforma'
     | '/platform'
     | '/assistencias/$caseId/chat'
@@ -823,6 +870,7 @@ export interface FileRouteTypes {
     | '/plataforma/auditoria'
     | '/plataforma/clientes'
     | '/plataforma/credenciais'
+    | '/plataforma/solicitacoes'
     | '/plataforma/usuarios'
     | '/platform/audit'
     | '/platform/credentials'
@@ -876,6 +924,8 @@ export interface FileRouteTypes {
     | '/_authenticated/cases/new'
     | '/_authenticated/configuracoes/escritorio'
     | '/_authenticated/configuracoes/oauth'
+    | '/_authenticated/contratar-b2b/$requestId'
+    | '/_authenticated/contratar-b2b/solicitar'
     | '/_authenticated/settings/firm'
     | '/_authenticated/settings/oauth'
     | '/api/tools/pdf'
@@ -885,6 +935,7 @@ export interface FileRouteTypes {
     | '/api/tools/transcribe'
     | '/_authenticated/assistencias/'
     | '/_authenticated/cases/'
+    | '/_authenticated/contratar-b2b/'
     | '/_authenticated/plataforma/'
     | '/_authenticated/platform/'
     | '/_authenticated/assistencias/$caseId/chat'
@@ -896,6 +947,7 @@ export interface FileRouteTypes {
     | '/_authenticated/plataforma/auditoria/'
     | '/_authenticated/plataforma/clientes/'
     | '/_authenticated/plataforma/credenciais/'
+    | '/_authenticated/plataforma/solicitacoes/'
     | '/_authenticated/plataforma/usuarios/'
     | '/_authenticated/platform/audit/'
     | '/_authenticated/platform/credentials/'
@@ -1202,6 +1254,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedPlataformaIndexRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/contratar-b2b/': {
+      id: '/_authenticated/contratar-b2b/'
+      path: '/contratar-b2b'
+      fullPath: '/contratar-b2b/'
+      preLoaderRoute: typeof AuthenticatedContratarB2bIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/cases/': {
       id: '/_authenticated/cases/'
       path: '/'
@@ -1264,6 +1323,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/settings/firm'
       preLoaderRoute: typeof AuthenticatedSettingsFirmRouteImport
       parentRoute: typeof AuthenticatedSettingsRoute
+    }
+    '/_authenticated/contratar-b2b/solicitar': {
+      id: '/_authenticated/contratar-b2b/solicitar'
+      path: '/contratar-b2b/solicitar'
+      fullPath: '/contratar-b2b/solicitar'
+      preLoaderRoute: typeof AuthenticatedContratarB2bSolicitarRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/contratar-b2b/$requestId': {
+      id: '/_authenticated/contratar-b2b/$requestId'
+      path: '/contratar-b2b/$requestId'
+      fullPath: '/contratar-b2b/$requestId'
+      preLoaderRoute: typeof AuthenticatedContratarB2bRequestIdRouteImport
+      parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/configuracoes/oauth': {
       id: '/_authenticated/configuracoes/oauth'
@@ -1354,6 +1427,13 @@ declare module '@tanstack/react-router' {
       path: '/plataforma/usuarios'
       fullPath: '/plataforma/usuarios/'
       preLoaderRoute: typeof AuthenticatedPlataformaUsuariosIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/plataforma/solicitacoes/': {
+      id: '/_authenticated/plataforma/solicitacoes/'
+      path: '/plataforma/solicitacoes'
+      fullPath: '/plataforma/solicitacoes/'
+      preLoaderRoute: typeof AuthenticatedPlataformaSolicitacoesIndexRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/plataforma/credenciais/': {
@@ -1553,6 +1633,9 @@ interface AuthenticatedRouteChildren {
   AuthenticatedPublicacoesRoute: typeof AuthenticatedPublicacoesRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRouteWithChildren
   AuthenticatedTarefasRoute: typeof AuthenticatedTarefasRoute
+  AuthenticatedContratarB2bRequestIdRoute: typeof AuthenticatedContratarB2bRequestIdRoute
+  AuthenticatedContratarB2bSolicitarRoute: typeof AuthenticatedContratarB2bSolicitarRoute
+  AuthenticatedContratarB2bIndexRoute: typeof AuthenticatedContratarB2bIndexRoute
   AuthenticatedPlataformaIndexRoute: typeof AuthenticatedPlataformaIndexRoute
   AuthenticatedPlatformIndexRoute: typeof AuthenticatedPlatformIndexRoute
   AuthenticatedPlataformaClientesIdRoute: typeof AuthenticatedPlataformaClientesIdRoute
@@ -1560,6 +1643,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedPlataformaAuditoriaIndexRoute: typeof AuthenticatedPlataformaAuditoriaIndexRoute
   AuthenticatedPlataformaClientesIndexRoute: typeof AuthenticatedPlataformaClientesIndexRoute
   AuthenticatedPlataformaCredenciaisIndexRoute: typeof AuthenticatedPlataformaCredenciaisIndexRoute
+  AuthenticatedPlataformaSolicitacoesIndexRoute: typeof AuthenticatedPlataformaSolicitacoesIndexRoute
   AuthenticatedPlataformaUsuariosIndexRoute: typeof AuthenticatedPlataformaUsuariosIndexRoute
   AuthenticatedPlatformAuditIndexRoute: typeof AuthenticatedPlatformAuditIndexRoute
   AuthenticatedPlatformCredentialsIndexRoute: typeof AuthenticatedPlatformCredentialsIndexRoute
@@ -1599,6 +1683,11 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedPublicacoesRoute: AuthenticatedPublicacoesRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRouteWithChildren,
   AuthenticatedTarefasRoute: AuthenticatedTarefasRoute,
+  AuthenticatedContratarB2bRequestIdRoute:
+    AuthenticatedContratarB2bRequestIdRoute,
+  AuthenticatedContratarB2bSolicitarRoute:
+    AuthenticatedContratarB2bSolicitarRoute,
+  AuthenticatedContratarB2bIndexRoute: AuthenticatedContratarB2bIndexRoute,
   AuthenticatedPlataformaIndexRoute: AuthenticatedPlataformaIndexRoute,
   AuthenticatedPlatformIndexRoute: AuthenticatedPlatformIndexRoute,
   AuthenticatedPlataformaClientesIdRoute:
@@ -1610,6 +1699,8 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
     AuthenticatedPlataformaClientesIndexRoute,
   AuthenticatedPlataformaCredenciaisIndexRoute:
     AuthenticatedPlataformaCredenciaisIndexRoute,
+  AuthenticatedPlataformaSolicitacoesIndexRoute:
+    AuthenticatedPlataformaSolicitacoesIndexRoute,
   AuthenticatedPlataformaUsuariosIndexRoute:
     AuthenticatedPlataformaUsuariosIndexRoute,
   AuthenticatedPlatformAuditIndexRoute: AuthenticatedPlatformAuditIndexRoute,

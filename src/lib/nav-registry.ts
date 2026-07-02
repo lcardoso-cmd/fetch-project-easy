@@ -29,6 +29,7 @@ export type NavKey =
   | "proposal"
   | "monitoring"
   | "marketing"
+  | "hire-b2b"
   // Escritório
   | "integrations"
   | "settings"
@@ -37,6 +38,7 @@ export type NavKey =
   | "platform-customers"
   | "platform-users"
   | "platform-credentials"
+  | "platform-requests"
   | "platform-audit";
 
 export type NavSectionKey =
@@ -111,6 +113,10 @@ export const NAV_ENTRIES: Record<NavKey, NavEntry> = {
     requires: "marketing",
   },
 
+  "hire-b2b": {
+    base: "Contrate assistência técnica, auditoria de cálculos, pareceres e finanças forense direto da B2B Consulting.",
+  },
+
   // Escritório
   integrations: {
     base: "Integrações do escritório (Google, Outlook, etc.).",
@@ -137,6 +143,10 @@ export const NAV_ENTRIES: Record<NavKey, NavEntry> = {
   "platform-credentials": {
     base: "Credenciais OAuth do SaaS (Google, Outlook) usadas por todos os clientes.",
     requires: "super_admin",
+  },
+  "platform-requests": {
+    base: "Solicitações de serviço enviadas pelos escritórios à B2B.",
+    requires: "platform_admin",
   },
   "platform-audit": {
     base: "Log de ações administrativas da B2B.",
