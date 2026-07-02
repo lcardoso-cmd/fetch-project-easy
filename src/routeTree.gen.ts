@@ -49,6 +49,7 @@ import { Route as AuthenticatedAssistenciasRouteImport } from './routes/_authent
 import { Route as AuthenticatedAgendaRouteImport } from './routes/_authenticated/agenda'
 import { Route as AuthenticatedPlatformIndexRouteImport } from './routes/_authenticated/platform.index'
 import { Route as AuthenticatedPlataformaIndexRouteImport } from './routes/_authenticated/plataforma.index'
+import { Route as AuthenticatedContratarB2bIndexRouteImport } from './routes/_authenticated/contratar-b2b.index'
 import { Route as AuthenticatedCasesIndexRouteImport } from './routes/_authenticated/cases.index'
 import { Route as AuthenticatedAssistenciasIndexRouteImport } from './routes/_authenticated/assistencias.index'
 import { Route as ApiToolsTranscribeRouteImport } from './routes/api/tools/transcribe'
@@ -291,6 +292,12 @@ const AuthenticatedPlataformaIndexRoute =
     path: '/plataforma/',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedContratarB2bIndexRoute =
+  AuthenticatedContratarB2bIndexRouteImport.update({
+    id: '/contratar-b2b/',
+    path: '/contratar-b2b/',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedCasesIndexRoute = AuthenticatedCasesIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -524,6 +531,7 @@ export interface FileRoutesByFullPath {
   '/api/tools/transcribe': typeof ApiToolsTranscribeRoute
   '/assistencias/': typeof AuthenticatedAssistenciasIndexRoute
   '/cases/': typeof AuthenticatedCasesIndexRoute
+  '/contratar-b2b/': typeof AuthenticatedContratarB2bIndexRoute
   '/plataforma/': typeof AuthenticatedPlataformaIndexRoute
   '/platform/': typeof AuthenticatedPlatformIndexRoute
   '/assistencias/$caseId/chat': typeof AuthenticatedAssistenciasCaseIdChatRoute
@@ -594,6 +602,7 @@ export interface FileRoutesByTo {
   '/api/tools/transcribe': typeof ApiToolsTranscribeRoute
   '/assistencias': typeof AuthenticatedAssistenciasIndexRoute
   '/cases': typeof AuthenticatedCasesIndexRoute
+  '/contratar-b2b': typeof AuthenticatedContratarB2bIndexRoute
   '/plataforma': typeof AuthenticatedPlataformaIndexRoute
   '/platform': typeof AuthenticatedPlatformIndexRoute
   '/assistencias/$caseId/chat': typeof AuthenticatedAssistenciasCaseIdChatRoute
@@ -668,6 +677,7 @@ export interface FileRoutesById {
   '/api/tools/transcribe': typeof ApiToolsTranscribeRoute
   '/_authenticated/assistencias/': typeof AuthenticatedAssistenciasIndexRoute
   '/_authenticated/cases/': typeof AuthenticatedCasesIndexRoute
+  '/_authenticated/contratar-b2b/': typeof AuthenticatedContratarB2bIndexRoute
   '/_authenticated/plataforma/': typeof AuthenticatedPlataformaIndexRoute
   '/_authenticated/platform/': typeof AuthenticatedPlatformIndexRoute
   '/_authenticated/assistencias/$caseId/chat': typeof AuthenticatedAssistenciasCaseIdChatRoute
@@ -742,6 +752,7 @@ export interface FileRouteTypes {
     | '/api/tools/transcribe'
     | '/assistencias/'
     | '/cases/'
+    | '/contratar-b2b/'
     | '/plataforma/'
     | '/platform/'
     | '/assistencias/$caseId/chat'
@@ -812,6 +823,7 @@ export interface FileRouteTypes {
     | '/api/tools/transcribe'
     | '/assistencias'
     | '/cases'
+    | '/contratar-b2b'
     | '/plataforma'
     | '/platform'
     | '/assistencias/$caseId/chat'
@@ -885,6 +897,7 @@ export interface FileRouteTypes {
     | '/api/tools/transcribe'
     | '/_authenticated/assistencias/'
     | '/_authenticated/cases/'
+    | '/_authenticated/contratar-b2b/'
     | '/_authenticated/plataforma/'
     | '/_authenticated/platform/'
     | '/_authenticated/assistencias/$caseId/chat'
@@ -1200,6 +1213,13 @@ declare module '@tanstack/react-router' {
       path: '/plataforma'
       fullPath: '/plataforma/'
       preLoaderRoute: typeof AuthenticatedPlataformaIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/contratar-b2b/': {
+      id: '/_authenticated/contratar-b2b/'
+      path: '/contratar-b2b'
+      fullPath: '/contratar-b2b/'
+      preLoaderRoute: typeof AuthenticatedContratarB2bIndexRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/cases/': {
@@ -1553,6 +1573,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedPublicacoesRoute: typeof AuthenticatedPublicacoesRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRouteWithChildren
   AuthenticatedTarefasRoute: typeof AuthenticatedTarefasRoute
+  AuthenticatedContratarB2bIndexRoute: typeof AuthenticatedContratarB2bIndexRoute
   AuthenticatedPlataformaIndexRoute: typeof AuthenticatedPlataformaIndexRoute
   AuthenticatedPlatformIndexRoute: typeof AuthenticatedPlatformIndexRoute
   AuthenticatedPlataformaClientesIdRoute: typeof AuthenticatedPlataformaClientesIdRoute
@@ -1599,6 +1620,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedPublicacoesRoute: AuthenticatedPublicacoesRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRouteWithChildren,
   AuthenticatedTarefasRoute: AuthenticatedTarefasRoute,
+  AuthenticatedContratarB2bIndexRoute: AuthenticatedContratarB2bIndexRoute,
   AuthenticatedPlataformaIndexRoute: AuthenticatedPlataformaIndexRoute,
   AuthenticatedPlatformIndexRoute: AuthenticatedPlatformIndexRoute,
   AuthenticatedPlataformaClientesIdRoute:
