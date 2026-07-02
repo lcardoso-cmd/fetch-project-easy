@@ -754,14 +754,15 @@ export function JurisMindChat({
 
       if (streamError) throw new Error(streamError);
 
-      if (doneInfo) {
+      const finalDone = doneInfo as DoneInfo | null;
+      if (finalDone) {
         patchAssistant({
-          content: doneInfo.answer ?? "",
-          citations: doneInfo.citations ?? collectedCitations,
-          steps: doneInfo.steps ?? collectedSteps,
+          content: finalDone.answer ?? "",
+          citations: finalDone.citations ?? collectedCitations,
+          steps: finalDone.steps ?? collectedSteps,
         });
-        if (doneInfo.thread_id && doneInfo.thread_id !== threadId) {
-          onThreadCreated?.(doneInfo.thread_id);
+        if (finalDone.thread_id && finalDone.thread_id !== threadId) {
+          onThreadCreated?.(finalDone.thread_id);
         }
       }
     } catch (e) {
