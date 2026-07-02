@@ -59,12 +59,7 @@ function ExpertOpinionPage() {
         </p>
       </div>
 
-        </h1>
-        <p className="mt-1 text-muted-foreground">
-          Área dedicada a peritos para elaborar e exportar pareceres técnicos com o padrão de
-          formatação do escritório.
-        </p>
-      </div>
+
 
       <Card className="border-primary/40 bg-primary/5">
         <CardHeader>
