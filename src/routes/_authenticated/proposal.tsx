@@ -260,11 +260,42 @@ function ProposalPage() {
       } = form;
       const r = await gen({ data: payload });
       setOutput(r.content);
+      // Snapshot automático da versão gerada
+      const label = `Gerada — ${form.client_name || "Cliente"}`;
+      addVersion<FormState>({ label, origin: "auto-generate", form, output: r.content });
+      setVersionsRefresh((n) => n + 1);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Falha ao gerar");
     } finally {
       setLoading(false);
     }
+  };
+
+  const saveVersionManually = () => {
+    if (!output && !form.client_name && !form.matter) {
+      toast.error("Nada para salvar ainda.");
+      return;
+    }
+    const label = `Versão — ${form.client_name || "sem cliente"} (${new Date().toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })})`;
+    addVersion<FormState>({ label, origin: "manual", form, output });
+    setVersionsRefresh((n) => n + 1);
+    toast.success("Versão salva no histórico");
+  };
+
+  const restoreVersion = (v: { form: FormState; output: string }) => {
+    // Preserva o rascunho atual como backup antes de sobrescrever
+    if (output || form.client_name || form.matter) {
+      addVersion<FormState>({
+        label: `Backup antes de restaurar (${new Date().toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })})`,
+        origin: "auto-restore",
+        form,
+        output,
+      });
+    }
+    setForm(v.form);
+    setOutput(v.output);
+    setErrors({});
+    setVersionsRefresh((n) => n + 1);
   };
 
   const copy = async () => {
