@@ -205,9 +205,10 @@ export function UploadDialog({
     const isAbort = (e: unknown) =>
       signal.aborted || (e instanceof DOMException && e.name === "AbortError");
     try {
-      // 1. Hash
+      // 1. Hash — reaproveita o cálculo feito na prévia se disponível.
       patchItem(itemId, { phase: "hashing", pct: 0 });
-      const contentHash = await hashFile(file);
+      const cached = precomputedHashesRef.current.get(fileKey(file));
+      const contentHash = cached ?? (await hashFile(file));
       if (signal.aborted) throw new DOMException("cancel", "AbortError");
 
       // 2. URL assinada
