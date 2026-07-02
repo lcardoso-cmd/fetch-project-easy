@@ -17,6 +17,10 @@ import { useProfile } from "@/hooks/use-profile";
 import { RichTextEditor } from "@/components/chat/rich-text-editor";
 import { z } from "zod";
 import { ProposalVersionsDialog } from "@/components/proposal/proposal-versions-dialog";
+import { ProposalAttachmentsPanel } from "@/components/proposal/proposal-attachments-panel";
+import { ConvertToCasePopover } from "@/components/proposal/convert-to-case-popover";
+import { useAuth } from "@/hooks/use-auth";
+import { listProposalAttachments, type ExtractedProposalFields } from "@/lib/proposal-attachments.functions";
 import {
   getProposalDraft,
   upsertProposalDraft,
@@ -113,7 +117,9 @@ function ProposalPage() {
   const upsertDraftFn = useServerFn(upsertProposalDraft);
   const createVersionFn = useServerFn(createProposalVersion);
   const { data: profile } = useProfile();
+  const { user } = useAuth();
   const qc = useQueryClient();
+  const listAttachmentsFn = useServerFn(listProposalAttachments);
   const casesQ = useQuery({
     queryKey: ["cases", "list-for-proposal"],
     queryFn: () => getCasesFn(),
@@ -142,6 +148,28 @@ function ProposalPage() {
   const lastSerializedRef = useRef<string>("");
 
   const activeCaseId = form.case_id && form.case_id !== NO_CASE ? form.case_id : null;
+
+  // Anexos de proposta (só para o rascunho corrente / caso vinculado)
+  const attachmentsQ = useQuery({
+    queryKey: ["proposal-attachments", activeCaseId ?? "none"],
+    queryFn: () => listAttachmentsFn({ data: { case_id: activeCaseId } }),
+  });
+  const attachmentIds = (attachmentsQ.data ?? []).map((a) => a.id);
+
+  /** Merge não-destrutivo: só preenche campos vazios. */
+  const applyExtractedFields = (fields: ExtractedProposalFields) => {
+    setForm((f) => ({
+      ...f,
+      client_name: f.client_name || fields.client_name || "",
+      client_document: f.client_document || fields.client_document || "",
+      client_city_state: f.client_city_state || fields.client_city_state || "",
+      counterparty_name: f.counterparty_name || fields.counterparty_name || "",
+      counterparty_document: f.counterparty_document || fields.counterparty_document || "",
+      matter: f.matter || fields.matter || "",
+      scope: f.scope || fields.scope || "",
+    }));
+  };
+
 
   // Hidratar: buscar draft do backend para o caso atual (ou "sem caso"). Migra localStorage legado.
   useEffect(() => {
@@ -531,6 +559,21 @@ function ProposalPage() {
           <Button size="sm" variant="outline" onClick={() => setVersionsOpen(true)} className="h-7 px-2">
             <History className="mr-1 h-3.5 w-3.5" /> Histórico
           </Button>
+          <ConvertToCasePopover
+            disabled={!!activeCaseId}
+            attachmentIds={attachmentIds}
+            fromCaseId={activeCaseId}
+            defaults={{
+              title: form.matter || `Proposta — ${form.client_name || "Cliente"}`,
+              client_name: form.client_name || "",
+              description: form.scope || "",
+              case_type: "",
+              jurisdiction: "",
+            }}
+            onConverted={(newCaseId) => {
+              setForm((f) => ({ ...f, case_id: newCaseId }));
+            }}
+          />
         </div>
       </div>
 
@@ -542,6 +585,14 @@ function ProposalPage() {
         currentOutput={output}
         onRestore={restoreVersion}
       />
+
+      <ProposalAttachmentsPanel
+        caseId={activeCaseId}
+        userId={user?.id}
+        onSuggestFields={applyExtractedFields}
+      />
+
+
 
 
 

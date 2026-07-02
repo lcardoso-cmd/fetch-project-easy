@@ -160,7 +160,7 @@ const FromDocSchema = z.object({
   matter_kind: MatterKindEnum.optional().default("processo"),
 });
 
-async function extractTextFromBlob(blob: Blob, filename: string, fileType: string) {
+export async function extractTextFromBlob(blob: Blob, filename: string, fileType: string) {
   const lower = filename.toLowerCase();
   if (fileType === "application/pdf" || lower.endsWith(".pdf")) {
     const { extractText, getDocumentProxy } = await import("unpdf");
