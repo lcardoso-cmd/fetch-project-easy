@@ -5,6 +5,7 @@ import { useAuth } from "@/hooks/use-auth";
 import {
   createUploadSignedUrl,
   deleteDocument,
+  discardUploadedObject,
   registerDocument,
 } from "@/lib/documents.functions";
 import { indexDocument } from "@/lib/rag.functions";
@@ -30,7 +31,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { FilePlus2, FolderInput, Loader2, UploadCloud } from "lucide-react";
+import { FilePlus2, FolderInput, Loader2, StopCircle, UploadCloud } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   UploadProgressList,
@@ -81,8 +82,13 @@ function putWithProgress(
   signedUrl: string,
   file: File,
   onProgress: (pct: number) => void,
+  signal?: AbortSignal,
 ): Promise<void> {
   return new Promise((resolve, reject) => {
+    if (signal?.aborted) {
+      reject(new DOMException("Upload cancelado", "AbortError"));
+      return;
+    }
     const xhr = new XMLHttpRequest();
     xhr.open("PUT", signedUrl);
     xhr.setRequestHeader(
@@ -97,6 +103,12 @@ function putWithProgress(
       else reject(new Error(`Upload falhou (HTTP ${xhr.status})`));
     };
     xhr.onerror = () => reject(new Error("Erro de rede durante upload"));
+    xhr.onabort = () => reject(new DOMException("Upload cancelado", "AbortError"));
+    const onAbort = () => {
+      try { xhr.abort(); } catch { /* ignore */ }
+    };
+    signal?.addEventListener("abort", onAbort, { once: true });
+    xhr.onloadend = () => signal?.removeEventListener("abort", onAbort);
     xhr.send(file);
   });
 }
@@ -115,6 +127,11 @@ export function UploadDialog({
   const signFn = useServerFn(createUploadSignedUrl);
   const indexFn = useServerFn(indexDocument);
   const deleteFn = useServerFn(deleteDocument);
+  const discardFn = useServerFn(discardUploadedObject);
+  // Controllers por item — permitem abortar hash/upload em andamento.
+  const abortersRef = useRef<Map<string, AbortController>>(new Map());
+  // Flag para interromper o loop da fila sem depender do estado React.
+  const cancelAllRef = useRef(false);
 
   const [open, setOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
@@ -130,6 +147,10 @@ export function UploadDialog({
 
   useEffect(() => {
     if (!open) {
+      // Aborta tudo que estiver em voo ao fechar o diálogo.
+      abortersRef.current.forEach((c) => c.abort());
+      abortersRef.current.clear();
+      cancelAllRef.current = false;
       setFiles([]);
       setItems([]);
       setDragOver(false);
@@ -172,21 +193,33 @@ export function UploadDialog({
 
   const uploadOne = async (file: File, itemId: string) => {
     if (!user) return;
+    const controller = new AbortController();
+    abortersRef.current.set(itemId, controller);
+    const { signal } = controller;
+    let uploadedPath: string | null = null;
+    const isAbort = (e: unknown) =>
+      signal.aborted || (e instanceof DOMException && e.name === "AbortError");
     try {
       // 1. Hash
       patchItem(itemId, { phase: "hashing", pct: 0 });
       const contentHash = await hashFile(file);
+      if (signal.aborted) throw new DOMException("cancel", "AbortError");
 
       // 2. URL assinada
       const { signedUrl, path } = await signFn({
         data: { case_id: caseId, filename: file.name },
       });
+      if (signal.aborted) throw new DOMException("cancel", "AbortError");
 
-      // 3. Upload com progresso
+      // 3. Upload com progresso (abortável)
       patchItem(itemId, { phase: "uploading", pct: 0 });
-      await putWithProgress(signedUrl, file, (pct) =>
-        patchItem(itemId, { pct }),
+      await putWithProgress(
+        signedUrl,
+        file,
+        (pct) => patchItem(itemId, { pct }),
+        signal,
       );
+      uploadedPath = path;
 
       // 4. Registrar (server checa duplicatas)
       patchItem(itemId, { phase: "registering", pct: 100 });
@@ -202,7 +235,7 @@ export function UploadDialog({
       });
 
       if ("duplicate" in res && res.duplicate) {
-        // Se for por nome, oferecer substituir; se por hash, avisar.
+        uploadedPath = null; // o servidor já removeu o objeto duplicado
         if (res.reason === "filename") {
           const existing = existingDocuments.find(
             (d) => d.id === res.existing_id,
@@ -222,6 +255,7 @@ export function UploadDialog({
       }
 
       const doc = res.document as { id: string };
+      uploadedPath = null; // objeto agora pertence a um registro persistido
       await queryClient.invalidateQueries({ queryKey: ["documents", caseId] });
 
       // 5. Indexar
@@ -244,10 +278,19 @@ export function UploadDialog({
         await queryClient.invalidateQueries({ queryKey: ["documents", caseId] });
       }
     } catch (e) {
-      patchItem(itemId, {
-        phase: "error",
-        message: e instanceof Error ? e.message : String(e),
-      });
+      if (isAbort(e)) {
+        patchItem(itemId, { phase: "cancelled", message: "Envio cancelado" });
+        if (uploadedPath) {
+          discardFn({ data: { storage_path: uploadedPath } }).catch(() => {});
+        }
+      } else {
+        patchItem(itemId, {
+          phase: "error",
+          message: e instanceof Error ? e.message : String(e),
+        });
+      }
+    } finally {
+      abortersRef.current.delete(itemId);
     }
   };
 
@@ -271,13 +314,42 @@ export function UploadDialog({
     );
     setFiles([]);
     setBusy(true);
+    cancelAllRef.current = false;
     try {
       for (const { file, itemId } of queue) {
+        if (cancelAllRef.current) {
+          patchItem(itemId, { phase: "cancelled", message: "Envio cancelado" });
+          continue;
+        }
         await uploadOne(file, itemId);
       }
     } finally {
+      cancelAllRef.current = false;
       setBusy(false);
     }
+  };
+
+  const cancelItem = (id: string) => {
+    const controller = abortersRef.current.get(id);
+    if (controller) {
+      controller.abort();
+    } else {
+      // Item ainda estava só na fila — marca direto como cancelado.
+      patchItem(id, { phase: "cancelled", message: "Envio cancelado" });
+    }
+  };
+
+  const cancelAll = () => {
+    cancelAllRef.current = true;
+    abortersRef.current.forEach((c) => c.abort());
+    setItems((prev) =>
+      prev.map((it) =>
+        it.phase === "queued"
+          ? { ...it, phase: "cancelled" as const, message: "Envio cancelado" }
+          : it,
+      ),
+    );
+    toast.info("Cancelando envios…");
   };
 
   const retryItem = async (id: string) => {
@@ -320,7 +392,18 @@ export function UploadDialog({
 
   const allDone =
     items.length > 0 &&
-    items.every((x) => x.phase === "done" || x.phase === "duplicate" || x.phase === "error");
+    items.every(
+      (x) =>
+        x.phase === "done" ||
+        x.phase === "duplicate" ||
+        x.phase === "error" ||
+        x.phase === "cancelled",
+    );
+  const hasInFlight = items.some((x) =>
+    ["queued", "hashing", "uploading", "registering", "indexing"].includes(
+      x.phase,
+    ),
+  );
 
   return (
     <>
@@ -415,11 +498,26 @@ export function UploadDialog({
 
             {items.length > 0 && (
               <div className="space-y-2">
-                <p className="text-sm font-medium">Progresso:</p>
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-sm font-medium">Progresso:</p>
+                  {hasInFlight && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={cancelAll}
+                      className="h-7 text-xs text-muted-foreground hover:text-destructive"
+                    >
+                      <StopCircle className="mr-1 h-3.5 w-3.5" />
+                      Cancelar todos
+                    </Button>
+                  )}
+                </div>
                 <UploadProgressList
                   items={items}
                   onRemove={removeItem}
                   onRetry={retryItem}
+                  onCancel={cancelItem}
                 />
               </div>
             )}

@@ -122,6 +122,27 @@ export const createUploadSignedUrl = createServerFn({ method: "POST" })
     };
   });
 
+/**
+ * Remove um objeto órfão do Storage — usado quando o cliente cancela o upload
+ * após o PUT ter sido concluído mas antes de registrar o documento no banco.
+ * Restringido ao prefixo do próprio usuário para evitar acesso cruzado.
+ */
+export const discardUploadedObject = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((i: unknown) =>
+    z.object({ storage_path: z.string().min(1) }).parse(i),
+  )
+  .handler(async ({ data, context }) => {
+    if (!data.storage_path.startsWith(`${context.userId}/`)) {
+      throw new Error("Caminho inválido");
+    }
+    await context.supabase.storage
+      .from("documents")
+      .remove([data.storage_path])
+      .catch(() => {});
+    return { ok: true as const };
+  });
+
 export type RegisterDuplicate = {
   duplicate: true;
   reason: "filename" | "content_hash";

@@ -18,6 +18,7 @@ export type UploadPhase =
   | "indexing"
   | "done"
   | "duplicate"
+  | "cancelled"
   | "error";
 
 export interface UploadItem {
@@ -38,6 +39,7 @@ const PHASE_LABEL: Record<UploadPhase, string> = {
   indexing: "Indexando para busca…",
   done: "Pronto",
   duplicate: "Duplicado — ignorado",
+  cancelled: "Cancelado",
   error: "Falhou",
 };
 
@@ -56,6 +58,8 @@ function PhaseIcon({ phase }: { phase: UploadPhase }) {
     return <AlertCircle className="h-4 w-4 text-destructive" />;
   if (phase === "duplicate")
     return <AlertCircle className="h-4 w-4 text-amber-600" />;
+  if (phase === "cancelled")
+    return <X className="h-4 w-4 text-muted-foreground" />;
   return <Loader2 className="h-4 w-4 animate-spin text-accent" />;
 }
 
@@ -63,10 +67,12 @@ export function UploadProgressList({
   items,
   onRetry,
   onRemove,
+  onCancel,
 }: {
   items: UploadItem[];
   onRetry?: (id: string) => void;
   onRemove?: (id: string) => void;
+  onCancel?: (id: string) => void;
 }) {
   if (items.length === 0) return null;
   return (
@@ -74,6 +80,9 @@ export function UploadProgressList({
       {items.map((it) => {
         const isDone = it.phase === "done" || it.phase === "duplicate";
         const isError = it.phase === "error";
+        const isCancelled = it.phase === "cancelled";
+        const isFinal = isDone || isError || isCancelled;
+        const canCancel = !isFinal && it.phase !== "registering" && it.phase !== "indexing";
         const displayPct = isDone ? 100 : it.pct;
         return (
           <li
@@ -82,6 +91,7 @@ export function UploadProgressList({
               "rounded-lg border bg-card p-3",
               isError && "border-destructive/50 bg-destructive/5",
               it.phase === "duplicate" && "border-amber-500/40 bg-amber-50/40",
+              isCancelled && "border-muted-foreground/30 bg-muted/30 opacity-80",
             )}
           >
             <div className="flex items-start gap-2">
@@ -108,17 +118,30 @@ export function UploadProgressList({
                       ? ` (${it.chunks} trechos)`
                       : ""}
                   </span>
-                  {!isDone && !isError && (
+                  {!isFinal && (
                     <span className="ml-auto text-xs tabular-nums text-muted-foreground">
                       {Math.round(displayPct)}%
                     </span>
                   )}
                 </div>
-                {!isDone && !isError && (
+                {!isFinal && (
                   <Progress value={displayPct} className="mt-2 h-1.5" />
                 )}
               </div>
               <div className="flex shrink-0 items-center gap-1">
+                {canCancel && onCancel && (
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="ghost"
+                    className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                    onClick={() => onCancel(it.id)}
+                    title="Cancelar envio"
+                    aria-label={`Cancelar envio de ${it.filename}`}
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </Button>
+                )}
                 {isError && onRetry && (
                   <Button
                     type="button"
@@ -131,7 +154,7 @@ export function UploadProgressList({
                     <RefreshCw className="h-3.5 w-3.5" />
                   </Button>
                 )}
-                {onRemove && (isDone || isError) && (
+                {onRemove && isFinal && (
                   <Button
                     type="button"
                     size="icon"
