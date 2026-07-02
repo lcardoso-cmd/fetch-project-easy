@@ -78,14 +78,14 @@ function HireB2bRequestForm() {
     }
   }, [draftKey]);
 
-  // URL prefill (vindo do CTA) sempre vence sobre o rascunho salvo, para
-  // garantir que o contexto completo do parecer chegue inteiro na Descrição.
+  // Rascunho salvo tem prioridade — preserva o que o usuário editou ao voltar
+  // e reenviar. URL prefill (vindo do CTA) só preenche campos vazios.
   const [serviceSlug, setServiceSlug] = useState(
-    search.service ?? savedDraft?.serviceSlug ?? "",
+    savedDraft?.serviceSlug || search.service || "",
   );
-  const [title, setTitle] = useState(search.title ?? savedDraft?.title ?? "");
+  const [title, setTitle] = useState(savedDraft?.title || search.title || "");
   const [description, setDescription] = useState(
-    search.description ?? savedDraft?.description ?? "",
+    savedDraft?.description || search.description || "",
   );
   const [urgency, setUrgency] = useState<"normal" | "alta" | "critica">(
     savedDraft?.urgency ?? "normal",
@@ -101,23 +101,15 @@ function HireB2bRequestForm() {
     [catalog, serviceSlug],
   );
 
-  // Se o CTA for reaberto com uma descrição nova/mais longa que o rascunho,
-  // reaplica o template para não deixar apenas parte do contexto no campo.
-  const prefillAppliedRef = useRef(false);
-  useEffect(() => {
-    if (prefillAppliedRef.current) return;
-    if (!search.description) return;
-    if (search.description !== description) {
-      setDescription(search.description);
-    }
-    if (search.service && search.service !== serviceSlug) {
-      setServiceSlug(search.service);
-    }
-    if (search.title && search.title !== title) {
-      setTitle(search.title);
-    }
-    prefillAppliedRef.current = true;
-  }, [search.description, search.service, search.title]);
+  // Ação manual para reaplicar o template do CTA (contexto do parecer),
+  // caso o usuário queira descartar o rascunho e voltar ao pré-preenchido.
+  const applyPrefillFromUrl = () => {
+    if (search.service) setServiceSlug(search.service);
+    if (search.title) setTitle(search.title);
+    if (search.description) setDescription(search.description);
+    toast.success("Template do parecer reaplicado");
+  };
+
 
   // Persist draft on any change (debounced via microtask via effect deps).
   useEffect(() => {
