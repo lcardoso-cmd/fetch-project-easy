@@ -123,6 +123,199 @@ export type Database = {
         }
         Relationships: []
       }
+      app_settings: {
+        Row: {
+          key: string
+          updated_at: string
+          value: Json
+        }
+        Insert: {
+          key: string
+          updated_at?: string
+          value: Json
+        }
+        Update: {
+          key?: string
+          updated_at?: string
+          value?: Json
+        }
+        Relationships: []
+      }
+      b2b_service_catalog: {
+        Row: {
+          active: boolean
+          created_at: string
+          description: string
+          icon: string
+          slug: string
+          sort_order: number
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          description: string
+          icon?: string
+          slug: string
+          sort_order?: number
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          description?: string
+          icon?: string
+          slug?: string
+          sort_order?: number
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      b2b_service_request_attachments: {
+        Row: {
+          created_at: string
+          file_name: string
+          id: string
+          mime_type: string | null
+          request_id: string
+          size_bytes: number | null
+          storage_path: string
+          uploaded_by_user_id: string
+          visibility: Database["public"]["Enums"]["b2b_attachment_visibility"]
+        }
+        Insert: {
+          created_at?: string
+          file_name: string
+          id?: string
+          mime_type?: string | null
+          request_id: string
+          size_bytes?: number | null
+          storage_path: string
+          uploaded_by_user_id: string
+          visibility?: Database["public"]["Enums"]["b2b_attachment_visibility"]
+        }
+        Update: {
+          created_at?: string
+          file_name?: string
+          id?: string
+          mime_type?: string | null
+          request_id?: string
+          size_bytes?: number | null
+          storage_path?: string
+          uploaded_by_user_id?: string
+          visibility?: Database["public"]["Enums"]["b2b_attachment_visibility"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "b2b_service_request_attachments_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "b2b_service_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      b2b_service_request_events: {
+        Row: {
+          author_user_id: string | null
+          created_at: string
+          id: string
+          kind: Database["public"]["Enums"]["b2b_event_kind"]
+          payload: Json
+          request_id: string
+        }
+        Insert: {
+          author_user_id?: string | null
+          created_at?: string
+          id?: string
+          kind: Database["public"]["Enums"]["b2b_event_kind"]
+          payload?: Json
+          request_id: string
+        }
+        Update: {
+          author_user_id?: string | null
+          created_at?: string
+          id?: string
+          kind?: Database["public"]["Enums"]["b2b_event_kind"]
+          payload?: Json
+          request_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "b2b_service_request_events_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "b2b_service_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      b2b_service_requests: {
+        Row: {
+          case_id: string | null
+          contact_email: string
+          contact_phone: string | null
+          created_at: string
+          description: string
+          desired_deadline: string | null
+          id: string
+          requester_user_id: string
+          service_slug: string
+          status: Database["public"]["Enums"]["b2b_request_status"]
+          title: string
+          updated_at: string
+          urgency: Database["public"]["Enums"]["b2b_request_urgency"]
+        }
+        Insert: {
+          case_id?: string | null
+          contact_email: string
+          contact_phone?: string | null
+          created_at?: string
+          description: string
+          desired_deadline?: string | null
+          id?: string
+          requester_user_id: string
+          service_slug: string
+          status?: Database["public"]["Enums"]["b2b_request_status"]
+          title: string
+          updated_at?: string
+          urgency?: Database["public"]["Enums"]["b2b_request_urgency"]
+        }
+        Update: {
+          case_id?: string | null
+          contact_email?: string
+          contact_phone?: string | null
+          created_at?: string
+          description?: string
+          desired_deadline?: string | null
+          id?: string
+          requester_user_id?: string
+          service_slug?: string
+          status?: Database["public"]["Enums"]["b2b_request_status"]
+          title?: string
+          updated_at?: string
+          urgency?: Database["public"]["Enums"]["b2b_request_urgency"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "b2b_service_requests_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "b2b_service_requests_service_slug_fkey"
+            columns: ["service_slug"]
+            isOneToOne: false
+            referencedRelation: "b2b_service_catalog"
+            referencedColumns: ["slug"]
+          },
+        ]
+      }
       case_quesitos: {
         Row: {
           answer: string | null
@@ -1290,6 +1483,21 @@ export type Database = {
         | "platform_admin"
         | "super_admin"
       app_role: "admin" | "user"
+      b2b_attachment_visibility: "client" | "internal"
+      b2b_event_kind:
+        | "status_change"
+        | "note_public"
+        | "note_internal"
+        | "attachment"
+        | "created"
+      b2b_request_status:
+        | "novo"
+        | "em_analise"
+        | "proposta_enviada"
+        | "aceita"
+        | "recusada"
+        | "cancelada"
+      b2b_request_urgency: "normal" | "alta" | "critica"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1427,6 +1635,23 @@ export const Constants = {
         "super_admin",
       ],
       app_role: ["admin", "user"],
+      b2b_attachment_visibility: ["client", "internal"],
+      b2b_event_kind: [
+        "status_change",
+        "note_public",
+        "note_internal",
+        "attachment",
+        "created",
+      ],
+      b2b_request_status: [
+        "novo",
+        "em_analise",
+        "proposta_enviada",
+        "aceita",
+        "recusada",
+        "cancelada",
+      ],
+      b2b_request_urgency: ["normal", "alta", "critica"],
     },
   },
 } as const
