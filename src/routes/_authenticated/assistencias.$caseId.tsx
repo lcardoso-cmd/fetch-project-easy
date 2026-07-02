@@ -278,16 +278,34 @@ function CaseDetailPage() {
             <CardTitle className="text-lg">Partes Envolvidas</CardTitle>
           </CardHeader>
           <CardContent>
-            <ul className="space-y-1">
-              {(caseData.parties as Array<{ role: string; name: string; relation?: string | null }>).map((party, i) => (
-                <li key={i} className="text-sm text-muted-foreground break-words">
-                  <span className="font-medium text-foreground">
-                    {capitalize(party.role)}:
-                  </span>{" "}
-                  {party.name}
-                  {party.relation ? ` (${capitalize(party.relation)})` : ""}
-                </li>
-              ))}
+            <ul className="space-y-1.5">
+              {(caseData.parties as Array<{ role: string; name: string; relation?: string | null }>).map((party, i) => {
+                const roleLabel = `${capitalize(party.role)}:`;
+                const detail = party.relation ? `${party.name} (${capitalize(party.relation)})` : party.name;
+                return (
+                  <li key={i} className="flex min-w-0 items-baseline gap-2 text-sm text-muted-foreground">
+                    <span className="shrink-0 font-medium text-foreground">{roleLabel}</span>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span
+                          className="min-w-0 flex-1 truncate cursor-help"
+                          tabIndex={0}
+                          aria-label={detail}
+                        >
+                          {detail}
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent
+                        side="top"
+                        align="start"
+                        className="max-w-[min(90vw,28rem)] break-words whitespace-normal"
+                      >
+                        {detail}
+                      </TooltipContent>
+                    </Tooltip>
+                  </li>
+                );
+              })}
             </ul>
           </CardContent>
         </Card>
