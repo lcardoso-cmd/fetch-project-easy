@@ -105,7 +105,7 @@ function HireB2bIndex() {
     if (qLocal === q) return;
     const t = setTimeout(() => {
       navigate({
-        search: (prev) => ({ ...prev, q: qLocal }),
+        search: (prev: SearchParams) => ({ ...prev, q: qLocal }),
         replace: true,
       });
     }, 150);
@@ -126,7 +126,7 @@ function HireB2bIndex() {
   const clearFilters = () => {
     setQLocal("");
     navigate({
-      search: (prev) => ({ ...prev, q: "", status: "todos" as const }),
+      search: (prev: SearchParams) => ({ ...prev, q: "", status: "todos" as const }),
       replace: true,
     });
   };
@@ -213,7 +213,7 @@ function HireB2bIndex() {
               value={status}
               onValueChange={(v) =>
                 navigate({
-                  search: (prev) => ({
+                  search: (prev: SearchParams) => ({
                     ...prev,
                     status: v as (typeof STATUS_FILTER_VALUES)[number],
                   }),
