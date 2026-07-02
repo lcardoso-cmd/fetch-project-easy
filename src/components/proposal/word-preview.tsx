@@ -76,7 +76,17 @@ export function WordPreview({ html, title, headerLabel = "Proposta comercial" }:
         >
           {/* Cabeçalho */}
           <div className="word-page__header">
-            <span className="word-page__brand">B2B | JurisMind AI</span>
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              {firm?.logo_url && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={firm.logo_url}
+                  alt=""
+                  style={{ maxHeight: 40, maxWidth: 160, objectFit: "contain" }}
+                />
+              )}
+              <span className="word-page__brand">{brandName}</span>
+            </div>
             <span className="word-page__header-label">{headerLabel}</span>
           </div>
 
@@ -91,7 +101,7 @@ export function WordPreview({ html, title, headerLabel = "Proposta comercial" }:
 
           {/* Rodapé */}
           <div className="word-page__footer">
-            <span>Documento gerado por B2B | JurisMind AI</span>
+            <span>{footerLeft}</span>
             <span>Página 1</span>
           </div>
         </div>
