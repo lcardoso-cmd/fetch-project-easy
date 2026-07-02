@@ -52,6 +52,7 @@ import {
   Eye,
   ShieldCheck,
   type LucideIcon,
+  HelpCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { NotificationBell } from "@/components/layout/notification-bell";
@@ -408,6 +409,20 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                 </div>
               </div>
             )}
+            <Button
+              asChild
+              variant="ghost"
+              size={collapsed ? "icon" : "sm"}
+              className={cn(
+                "text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground",
+                collapsed ? "h-9 w-9 mx-auto" : "w-full justify-start gap-2",
+              )}
+            >
+              <Link to="/ajuda/permissoes" aria-label="Como liberar permissões">
+                <HelpCircle className="h-4 w-4" />
+                {!collapsed && "Como liberar"}
+              </Link>
+            </Button>
             <Button
               variant="ghost"
               size={collapsed ? "icon" : "sm"}

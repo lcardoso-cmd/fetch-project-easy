@@ -69,6 +69,7 @@ import { Route as AuthenticatedCasesCaseIdRouteImport } from './routes/_authenti
 import { Route as AuthenticatedAssistenciasNovaRouteImport } from './routes/_authenticated/assistencias.nova'
 import { Route as AuthenticatedAssistenciasLoteRouteImport } from './routes/_authenticated/assistencias.lote'
 import { Route as AuthenticatedAssistenciasCaseIdRouteImport } from './routes/_authenticated/assistencias.$caseId'
+import { Route as AuthenticatedAjudaPermissoesRouteImport } from './routes/_authenticated/ajuda.permissoes'
 import { Route as AuthenticatedPlatformUsersIndexRouteImport } from './routes/_authenticated/platform.users.index'
 import { Route as AuthenticatedPlatformCustomersIndexRouteImport } from './routes/_authenticated/platform.customers.index'
 import { Route as AuthenticatedPlatformCredentialsIndexRouteImport } from './routes/_authenticated/platform.credentials.index'
@@ -407,6 +408,12 @@ const AuthenticatedAssistenciasCaseIdRoute =
     path: '/$caseId',
     getParentRoute: () => AuthenticatedAssistenciasRoute,
   } as any)
+const AuthenticatedAjudaPermissoesRoute =
+  AuthenticatedAjudaPermissoesRouteImport.update({
+    id: '/ajuda/permissoes',
+    path: '/ajuda/permissoes',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedPlatformUsersIndexRoute =
   AuthenticatedPlatformUsersIndexRouteImport.update({
     id: '/platform/users/',
@@ -535,6 +542,7 @@ export interface FileRoutesByFullPath {
   '/tarefas': typeof AuthenticatedTarefasRoute
   '/convite/$token': typeof ConviteTokenRoute
   '/invite/$token': typeof InviteTokenRoute
+  '/ajuda/permissoes': typeof AuthenticatedAjudaPermissoesRoute
   '/assistencias/$caseId': typeof AuthenticatedAssistenciasCaseIdRouteWithChildren
   '/assistencias/lote': typeof AuthenticatedAssistenciasLoteRoute
   '/assistencias/nova': typeof AuthenticatedAssistenciasNovaRoute
@@ -609,6 +617,7 @@ export interface FileRoutesByTo {
   '/tarefas': typeof AuthenticatedTarefasRoute
   '/convite/$token': typeof ConviteTokenRoute
   '/invite/$token': typeof InviteTokenRoute
+  '/ajuda/permissoes': typeof AuthenticatedAjudaPermissoesRoute
   '/assistencias/$caseId': typeof AuthenticatedAssistenciasCaseIdRouteWithChildren
   '/assistencias/lote': typeof AuthenticatedAssistenciasLoteRoute
   '/assistencias/nova': typeof AuthenticatedAssistenciasNovaRoute
@@ -687,6 +696,7 @@ export interface FileRoutesById {
   '/_authenticated/tarefas': typeof AuthenticatedTarefasRoute
   '/convite/$token': typeof ConviteTokenRoute
   '/invite/$token': typeof InviteTokenRoute
+  '/_authenticated/ajuda/permissoes': typeof AuthenticatedAjudaPermissoesRoute
   '/_authenticated/assistencias/$caseId': typeof AuthenticatedAssistenciasCaseIdRouteWithChildren
   '/_authenticated/assistencias/lote': typeof AuthenticatedAssistenciasLoteRoute
   '/_authenticated/assistencias/nova': typeof AuthenticatedAssistenciasNovaRoute
@@ -765,6 +775,7 @@ export interface FileRouteTypes {
     | '/tarefas'
     | '/convite/$token'
     | '/invite/$token'
+    | '/ajuda/permissoes'
     | '/assistencias/$caseId'
     | '/assistencias/lote'
     | '/assistencias/nova'
@@ -839,6 +850,7 @@ export interface FileRouteTypes {
     | '/tarefas'
     | '/convite/$token'
     | '/invite/$token'
+    | '/ajuda/permissoes'
     | '/assistencias/$caseId'
     | '/assistencias/lote'
     | '/assistencias/nova'
@@ -916,6 +928,7 @@ export interface FileRouteTypes {
     | '/_authenticated/tarefas'
     | '/convite/$token'
     | '/invite/$token'
+    | '/_authenticated/ajuda/permissoes'
     | '/_authenticated/assistencias/$caseId'
     | '/_authenticated/assistencias/lote'
     | '/_authenticated/assistencias/nova'
@@ -1394,6 +1407,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAssistenciasCaseIdRouteImport
       parentRoute: typeof AuthenticatedAssistenciasRoute
     }
+    '/_authenticated/ajuda/permissoes': {
+      id: '/_authenticated/ajuda/permissoes'
+      path: '/ajuda/permissoes'
+      fullPath: '/ajuda/permissoes'
+      preLoaderRoute: typeof AuthenticatedAjudaPermissoesRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/platform/users/': {
       id: '/_authenticated/platform/users/'
       path: '/platform/users'
@@ -1633,6 +1653,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedPublicacoesRoute: typeof AuthenticatedPublicacoesRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRouteWithChildren
   AuthenticatedTarefasRoute: typeof AuthenticatedTarefasRoute
+  AuthenticatedAjudaPermissoesRoute: typeof AuthenticatedAjudaPermissoesRoute
   AuthenticatedContratarB2bRequestIdRoute: typeof AuthenticatedContratarB2bRequestIdRoute
   AuthenticatedContratarB2bSolicitarRoute: typeof AuthenticatedContratarB2bSolicitarRoute
   AuthenticatedContratarB2bIndexRoute: typeof AuthenticatedContratarB2bIndexRoute
@@ -1683,6 +1704,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedPublicacoesRoute: AuthenticatedPublicacoesRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRouteWithChildren,
   AuthenticatedTarefasRoute: AuthenticatedTarefasRoute,
+  AuthenticatedAjudaPermissoesRoute: AuthenticatedAjudaPermissoesRoute,
   AuthenticatedContratarB2bRequestIdRoute:
     AuthenticatedContratarB2bRequestIdRoute,
   AuthenticatedContratarB2bSolicitarRoute:
