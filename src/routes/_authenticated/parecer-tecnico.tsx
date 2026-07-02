@@ -19,7 +19,9 @@ import {
   MessageSquare,
   FileText,
   CircleDot,
+  Inbox,
 } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 import { createServerFn, useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
@@ -66,17 +68,23 @@ function statusVariant(
   return "secondary";
 }
 
-
+const PARECER_PREFILL = {
+  service: "parecer-tecnico",
+  title: "Parecer Técnico - contratação B2B",
+  description:
+    "Necessito de parecer técnico elaborado pela B2B Consulting para instruir processo em que o escritório não dispõe de perito próprio.\n\n=== 1. Objetivo ===\n[Descreva em 1-2 frases a pergunta técnica central a ser respondida pelo parecer.]\n\n=== 2. Escopo ===\n- Área do parecer (econômica, contábil, financeira, de engenharia, contratual): \n- Natureza da demanda (cível, trabalhista, tributária, societária, regulatória): \n- Pontos que DEVEM ser analisados: \n- Pontos que estão FORA do escopo: \n\n=== 3. Prazo ===\n- Data-limite desejada para entrega: \n- Prazo judicial vinculado (se houver): \n- Urgência (normal / prioritária / crítica): \n\n=== 4. Contexto do caso ===\n- Partes envolvidas: \n- Fase processual: \n- Quesitos preliminares: \n- Documentos disponíveis (anexar abaixo): \n\n=== 5. Observações adicionais ===\n[Informações extras, restrições de sigilo, contatos preferenciais.]",
+} as const;
 
 function ExpertOpinionPage() {
   const listMy = useServerFn(listMyB2bRequests);
-  const { data: requests = [] } = useQuery({
+  const { data: requests, isPending } = useQuery({
     queryKey: ["b2b-my-requests"],
     queryFn: () => listMy(),
   });
-  const parecerRequests = requests
+  const parecerRequests = (requests ?? [])
     .filter((r) => r.service_slug === "parecer-tecnico")
     .slice(0, 5);
+
 
   return (
     <div className="space-y-6 max-w-4xl">
@@ -108,14 +116,9 @@ function ExpertOpinionPage() {
           <Button asChild>
             <Link
               to="/contratar-b2b/solicitar"
-              search={{
-                service: "parecer-tecnico",
-                title: "Parecer Técnico - contratação B2B",
-                description:
-                  "Necessito de parecer técnico elaborado pela B2B Consulting para instruir processo em que o escritório não dispõe de perito próprio.\n\n=== 1. Objetivo ===\n[Descreva em 1-2 frases a pergunta técnica central a ser respondida pelo parecer.]\n\n=== 2. Escopo ===\n- Área do parecer (econômica, contábil, financeira, de engenharia, contratual): \n- Natureza da demanda (cível, trabalhista, tributária, societária, regulatória): \n- Pontos que DEVEM ser analisados: \n- Pontos que estão FORA do escopo: \n\n=== 3. Prazo ===\n- Data-limite desejada para entrega: \n- Prazo judicial vinculado (se houver): \n- Urgência (normal / prioritária / crítica): \n\n=== 4. Contexto do caso ===\n- Partes envolvidas: \n- Fase processual: \n- Quesitos preliminares: \n- Documentos disponíveis (anexar abaixo): \n\n=== 5. Observações adicionais ===\n[Informações extras, restrições de sigilo, contatos preferenciais.]",
-
-              }}
+              search={PARECER_PREFILL}
             >
+
               Contratar Parecer Técnico com a B2B
               <ArrowRight className="ml-2 h-4 w-4" />
             </Link>
@@ -124,49 +127,86 @@ function ExpertOpinionPage() {
         </CardContent>
       </Card>
 
-      {parecerRequests.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Minhas solicitações de Parecer Técnico</CardTitle>
-            <CardDescription>
-              Acompanhe status, anexos e histórico das solicitações enviadas à B2B.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Accordion type="multiple" className="w-full">
-              {parecerRequests.map((r) => (
-                <AccordionItem key={r.id} value={r.id}>
-                  <AccordionTrigger className="hover:no-underline">
-                    <div className="flex items-center gap-3 w-full pr-2 min-w-0">
-                      <div className="min-w-0 flex-1 text-left">
-                        <p className="font-medium truncate">{r.title}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {new Date(r.created_at).toLocaleDateString("pt-BR", {
-                            day: "2-digit",
-                            month: "short",
-                            year: "numeric",
-                          })}
-                        </p>
-                      </div>
-                      <Badge variant={statusVariant(r.status)}>
-                        {B2B_REQUEST_STATUS_LABEL[r.status]}
-                      </Badge>
-                    </div>
-                  </AccordionTrigger>
-                  <AccordionContent>
-                    <RequestPanel requestId={r.id} />
-                  </AccordionContent>
-                </AccordionItem>
-              ))}
-            </Accordion>
-            <div className="pt-3 flex gap-2">
-              <Button asChild variant="ghost" size="sm">
-                <Link to="/contratar-b2b">Ver catálogo B2B</Link>
-              </Button>
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Minhas solicitações de Parecer Técnico</CardTitle>
+          <CardDescription>
+            Acompanhe status, anexos e histórico das solicitações enviadas à B2B.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {isPending ? (
+            <div className="space-y-2" aria-hidden="true">
+              <Skeleton className="h-12 w-full" />
+              <Skeleton className="h-12 w-full" />
+              <Skeleton className="h-12 w-3/4" />
             </div>
-          </CardContent>
-        </Card>
-      )}
+          ) : parecerRequests.length === 0 ? (
+            <div
+              role="status"
+              className="flex flex-col items-center text-center py-10 px-4 gap-3"
+            >
+              <div className="rounded-full bg-muted p-3">
+                <Inbox className="h-8 w-8 text-muted-foreground" aria-hidden="true" />
+              </div>
+              <div className="space-y-1">
+                <p className="font-medium">Nenhuma solicitação encontrada</p>
+                <p className="text-sm text-muted-foreground max-w-md">
+                  Você ainda não abriu solicitações de Parecer Técnico com a B2B
+                  Consulting. Crie uma agora para receber orçamento e acompanhar o
+                  andamento por aqui.
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2 justify-center pt-2">
+                <Button asChild size="sm">
+                  <Link to="/contratar-b2b/solicitar" search={PARECER_PREFILL}>
+                    Solicitar Parecer Técnico
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Link>
+                </Button>
+                <Button asChild variant="ghost" size="sm">
+                  <Link to="/contratar-b2b">Ver catálogo B2B</Link>
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <>
+              <Accordion type="multiple" className="w-full">
+                {parecerRequests.map((r) => (
+                  <AccordionItem key={r.id} value={r.id}>
+                    <AccordionTrigger className="hover:no-underline">
+                      <div className="flex items-center gap-3 w-full pr-2 min-w-0">
+                        <div className="min-w-0 flex-1 text-left">
+                          <p className="font-medium truncate">{r.title}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {new Date(r.created_at).toLocaleDateString("pt-BR", {
+                              day: "2-digit",
+                              month: "short",
+                              year: "numeric",
+                            })}
+                          </p>
+                        </div>
+                        <Badge variant={statusVariant(r.status)}>
+                          {B2B_REQUEST_STATUS_LABEL[r.status]}
+                        </Badge>
+                      </div>
+                    </AccordionTrigger>
+                    <AccordionContent>
+                      <RequestPanel requestId={r.id} />
+                    </AccordionContent>
+                  </AccordionItem>
+                ))}
+              </Accordion>
+              <div className="pt-3 flex gap-2">
+                <Button asChild variant="ghost" size="sm">
+                  <Link to="/contratar-b2b">Ver catálogo B2B</Link>
+                </Button>
+              </div>
+            </>
+          )}
+        </CardContent>
+      </Card>
+
 
 
 
