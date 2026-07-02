@@ -420,7 +420,8 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
               aria-label="Ir para o Dashboard"
               className="group flex items-center gap-2 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             >
-              <JurisMindMark size={32} context="sidebar" interactive />
+              <JurisMindMark size={32} context="header" interactive />
+
               <span className="font-heading text-lg font-bold">B2B | JurisMind AI</span>
             </Link>
             <div className="flex items-center gap-1">
