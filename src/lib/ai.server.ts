@@ -143,3 +143,124 @@ export function chunkText(text: string, targetChars = 1800, overlap = 200): stri
   }
   return chunks;
 }
+
+function u8ToBase64(bytes: Uint8Array): string {
+  let bin = "";
+  const chunk = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunk) {
+    bin += String.fromCharCode(...bytes.subarray(i, i + chunk));
+  }
+  // btoa disponível no runtime Workers/Node 20+
+  return btoa(bin);
+}
+
+/**
+ * OCR / transcrição multimodal de um PDF (inclusive escaneado) via Gemini.
+ * Retorna o texto completo transcrito, preservando estrutura básica.
+ */
+export async function visionExtractPdf(pdfBytes: Uint8Array, filename: string): Promise<string> {
+  // Limite defensivo (~20MB); a API do gateway tem um teto de payload.
+  const MAX = 18 * 1024 * 1024;
+  if (pdfBytes.byteLength > MAX) {
+    throw new Error(
+      `PDF muito grande para visão (${(pdfBytes.byteLength / 1024 / 1024).toFixed(1)}MB). Limite: 18MB.`,
+    );
+  }
+  const b64 = u8ToBase64(pdfBytes);
+  const dataUrl = `data:application/pdf;base64,${b64}`;
+
+  const messages: ChatMessage[] = [
+    {
+      role: "system",
+      content:
+        "Você é um OCR jurídico de altíssima precisão. Transcreva integralmente o conteúdo do PDF, página a página, preservando cabeçalhos, títulos, tabelas (em markdown) e assinaturas. Não resuma, não omita e não adicione comentários.",
+    },
+    {
+      role: "user",
+      content: [
+        {
+          type: "file",
+          file: { filename, file_data: dataUrl },
+        },
+        {
+          type: "text",
+          text: `Transcreva TODO o conteúdo do arquivo "${filename}". Use "--- Página N ---" como separador entre páginas.`,
+        },
+      ],
+    },
+  ];
+
+  const r = await chatComplete(messages, {
+    model: "google/gemini-2.5-flash",
+    temperature: 0,
+  });
+  return r.content ?? "";
+}
+
+/** Reescreve a pergunta do usuário em N variações + termos-chave para melhorar recall no RAG. */
+export async function rewriteQuery(
+  query: string,
+  n = 3,
+): Promise<{ queries: string[]; keywords: string[] }> {
+  try {
+    const r = await chatComplete(
+      [
+        {
+          role: "system",
+          content:
+            "Você reformula perguntas jurídicas para busca em documentos processuais. Responda SOMENTE em JSON válido.",
+        },
+        {
+          role: "user",
+          content: `Pergunta original: """${query}"""\n\nGere ${n} reformulações curtas e diretas (parafraseando com sinônimos jurídicos) e uma lista de palavras-chave (nomes, números de processo, artigos de lei, datas, valores). Formato: {"queries": ["...","..."], "keywords": ["..."]}`,
+        },
+      ],
+      { model: "google/gemini-2.5-flash-lite", temperature: 0.2 },
+    );
+    const jsonStr = r.content.match(/\{[\s\S]*\}/)?.[0] ?? "{}";
+    const parsed = JSON.parse(jsonStr) as { queries?: string[]; keywords?: string[] };
+    return {
+      queries: [query, ...(parsed.queries ?? [])].slice(0, n + 1),
+      keywords: parsed.keywords ?? [],
+    };
+  } catch {
+    return { queries: [query], keywords: [] };
+  }
+}
+
+/** Reordena trechos por relevância à pergunta usando um modelo leve. */
+export async function rerankChunks(
+  query: string,
+  candidates: { id: string; content: string }[],
+  topK = 8,
+): Promise<string[]> {
+  if (candidates.length <= topK) return candidates.map((c) => c.id);
+  try {
+    const list = candidates
+      .map((c, i) => `[${i}] ${c.content.slice(0, 400).replace(/\s+/g, " ")}`)
+      .join("\n\n");
+    const r = await chatComplete(
+      [
+        {
+          role: "system",
+          content:
+            "Você é um reranker. Dada uma pergunta e trechos numerados, retorne SOMENTE um array JSON com os índices dos trechos mais relevantes, ordenados do mais para o menos relevante.",
+        },
+        {
+          role: "user",
+          content: `Pergunta: """${query}"""\n\nTrechos:\n${list}\n\nRetorne apenas os ${topK} melhores índices como JSON, ex: [3,1,7,0,...]`,
+        },
+      ],
+      { model: "google/gemini-2.5-flash-lite", temperature: 0 },
+    );
+    const arr = JSON.parse(r.content.match(/\[[\s\S]*\]/)?.[0] ?? "[]") as number[];
+    const ids = arr
+      .filter((i) => Number.isInteger(i) && i >= 0 && i < candidates.length)
+      .slice(0, topK)
+      .map((i) => candidates[i].id);
+    if (ids.length === 0) return candidates.slice(0, topK).map((c) => c.id);
+    return ids;
+  } catch {
+    return candidates.slice(0, topK).map((c) => c.id);
+  }
+}
