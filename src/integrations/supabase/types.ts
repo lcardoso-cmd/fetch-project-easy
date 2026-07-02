@@ -769,6 +769,62 @@ export type Database = {
         }
         Relationships: []
       }
+      proposal_attachments: {
+        Row: {
+          case_id: string | null
+          created_at: string
+          extracted_fields: Json | null
+          extracted_text: string | null
+          extraction_error: string | null
+          extraction_status: string
+          file_size: number
+          file_type: string
+          filename: string
+          id: string
+          storage_path: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          case_id?: string | null
+          created_at?: string
+          extracted_fields?: Json | null
+          extracted_text?: string | null
+          extraction_error?: string | null
+          extraction_status?: string
+          file_size?: number
+          file_type?: string
+          filename: string
+          id?: string
+          storage_path: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          case_id?: string | null
+          created_at?: string
+          extracted_fields?: Json | null
+          extracted_text?: string | null
+          extraction_error?: string | null
+          extraction_status?: string
+          file_size?: number
+          file_type?: string
+          filename?: string
+          id?: string
+          storage_path?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "proposal_attachments_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       proposal_drafts: {
         Row: {
           case_id: string | null
