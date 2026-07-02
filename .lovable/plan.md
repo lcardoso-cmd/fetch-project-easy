@@ -1,73 +1,59 @@
 ## Objetivo
 
-Garantir que leitores de tela anunciem corretamente as mudanças de estado do microfone (iniciar/parar gravação, transcrição parcial, silêncio detectado, transcrição concluída, erros) e que o foco vá para o banner de erro do microfone quando ele surgir, permitindo ação imediata via teclado.
+Quando um segmento de transcrição falhar por causa transitória (rede caindo, 429 rate-limit, 5xx do gateway), o chat tenta novamente sozinho com backoff exponencial e teto de tentativas — sem exigir clique manual em "Tentar novamente".
 
 ## Escopo
 
-Alterações restritas a `src/components/chat/jurismind-chat.tsx` (UI/apresentação). Sem mudanças em lógica de gravação, transporte SSE ou persistência.
+Somente `src/components/chat/jurismind-chat.tsx`. Nenhuma mudança de backend, banco ou UI de outras telas.
 
-## Mudanças
+## Comportamento
 
-### 1. Separar regiões live por severidade
-Hoje há um único wrapper `aria-live="polite"` envolvendo REC, "Transcrevendo…", aviso de silêncio e o card de erro. Isso mistura status transitórios com erros, e o Radix Popover (mic picker) dentro dele quebra o anúncio.
+**Erros que disparam retry automático** (transitórios):
+- Falha de rede (`fetch` rejeita, sem `res.status`)
+- HTTP 429 (rate-limit)
+- HTTP 408 / 425 / 500 / 502 / 503 / 504
+- Timeout do próprio segmento (novo, ver abaixo)
 
-- Criar duas regiões vivas dedicadas, fora do fluxo visual quando necessário:
-  - **`statusRegion`** (`role="status"`, `aria-live="polite"`, `aria-atomic="true"`): compõe uma única frase textual a partir do estado atual (ex.: "Gravando há 12 segundos", "Microfone silencioso", "Transcrevendo em tempo real", "Transcrição concluída"). Fica `sr-only` (visualmente escondida, mas acessível), enquanto os chips coloridos existentes seguem sendo visuais.
-  - **`alertRegion`** (`role="alert"`, `aria-live="assertive"`): recebe `micError` quando muda. Também `sr-only` para não duplicar leitura do banner visível.
+**Erros que NÃO disparam retry** (mostram banner imediato como hoje):
+- 401 / 403 (sessão)
+- 402 (créditos)
+- 413 (áudio grande)
+- 400 (payload inválido)
+- `AbortError` por cancelamento explícito do usuário (parar gravação, novo segmento)
 
-- O chip visual de REC recebe `aria-hidden="true"` (informação redundante com a região de status) e o cronômetro continua no botão via `aria-label` já existente.
+**Política de backoff**:
+- Máx. 3 tentativas por segmento
+- Delays: 500 ms → 1200 ms → 2500 ms (com jitter ±20%)
+- Respeita `Retry-After` do servidor quando presente (usa o maior entre header e delay calculado)
+- Cada tentativa cria novo `AbortController`; um `abort` externo (usuário parou / novo segmento) interrompe imediatamente e não conta como falha para retry
 
-- A frase de status é regenerada apenas quando o estado muda (não a cada tick do cronômetro) para não spammar o leitor: usar buckets ("Gravando", "Gravando, microfone silencioso", "Transcrevendo em tempo real", "Transcrição concluída", "Ocioso") memorizados via `useMemo`/`useEffect`.
+**Segmentos parciais (durante gravação)**:
+- Retry silencioso em background (não mostra toast/banner nas tentativas intermediárias)
+- Se todas falharem, apenas incrementa um contador interno; só marca `micError` se **2 segmentos consecutivos** esgotarem retries (evita banner por soluço momentâneo)
 
-### 2. Gerenciamento de foco no banner de erro
-Quando `micError` passa de `null` para uma mensagem:
+**Segmento final (`final=true`, ao parar)**:
+- Retry visível: mostra pequeno indicador "Reprocessando… (tentativa 2/3)" na mesma área de status
+- Se esgotar, mantém banner atual com "Tentar novamente" manual como fallback
 
-- Renderizar o container do erro com `role="alertdialog"` leve: `role="alert"`, `tabIndex={-1}` e `ref` para chamar `.focus({ preventScroll: false })` num `useEffect` disparado pela transição de `micError`.
-- Adicionar `aria-labelledby` apontando para o texto da mensagem e `aria-describedby` para as ações (Trocar microfone / Tentar novamente).
-- Ao fechar o banner (botão X, retomar gravação, escolher outro mic), devolver foco ao botão de microfone (`micButtonRef`) para não perder contexto do teclado.
-- Tecla `Escape` dentro do banner chama o mesmo handler de fechar.
+**Cancelamento pelo usuário**:
+- Botão "Cancelar" existente e parar gravação abortam a cadeia de retries em curso
+- Um novo segmento também aborta retries pendentes do anterior
 
-### 3. Rotular o botão de microfone dinamicamente
-O `aria-label` atual só descreve a ação; adicionar `aria-describedby` apontando para a região de status quando `recording || transcribing`, para que o leitor associe o botão ao estado. Também adicionar `aria-live` implícito via atualização do `aria-label` já existente (mantém-se).
+## Implementação técnica
 
-### 4. Popover de seleção de microfone
-- O `PopoverContent` recebe `aria-label="Selecionar microfone"` (já é dialog via Radix, mas sem título visível).
-- Ao trocar de microfone, anunciar via `statusRegion` (ex.: "Microfone alterado para Realtek Audio").
-- Botão "Autorizar" ganha `aria-busy={unlockingLabels}`.
+1. Novo helper `fetchTranscribeWithRetry(body, { signal, final, onAttempt })` dentro do componente:
+   - encapsula o `fetch` + parse SSE hoje inline em `flushSegment`
+   - loop `for (let attempt = 1; attempt <= 3; attempt++)`
+   - classifica erro via helper `isRetryableTranscribeError(status | error)`
+   - `await sleepWithAbort(delay, signal)` entre tentativas
+2. Refatorar `flushSegment` para delegar rede/parse ao helper e manter apenas a lógica de partial/committed.
+3. Novo estado `retryInfo: { attempt: number; max: number } | null` para o indicador visível no flush final. Renderizar dentro do bloco de status existente (linhas ~1750), sem novos componentes.
+4. Ref `consecutiveSegmentFailuresRef` para a regra de 2-strikes em parciais.
+5. Constantes no topo do módulo: `TRANSCRIBE_MAX_ATTEMPTS = 3`, `TRANSCRIBE_BACKOFF_MS = [500, 1200, 2500]`, `SEGMENT_TIMEOUT_MS = 15000`.
+6. Timeout por tentativa: `AbortController` interno + `setTimeout` que aborta; combinado com o signal externo via helper simples.
 
-### 5. Composição do texto de status (regras)
+## Fora do escopo
 
-```text
-idle                      → "" (região vazia)
-recording                 → "Gravando. {mm}:{ss}"
-recording + micSilent     → "Gravando. Microfone silencioso, verifique o dispositivo."
-recording + segmentInFlight → "Gravando. Transcrevendo em tempo real."
-transcribing (final)      → "Transcrevendo áudio, aguarde."
-transição transcribing→idle com texto novo → "Transcrição concluída."
-mic trocado               → "Microfone selecionado: {label}."
-```
-
-Reset após ~2s para "Transcrição concluída" e trocas de microfone, para não permanecer estático.
-
-## Detalhes técnicos
-
-- Novos refs: `micErrorRef` (HTMLDivElement), `micButtonRef` (HTMLButtonElement).
-- Novo estado: `srStatus: string` atualizado via `useEffect([recording, transcribing, micSilent, segmentInFlight, selectedMicId])`.
-- Usar `useEffect` separado que observa `micError` e, na transição `null → string`, foca `micErrorRef.current`; na transição `string → null`, restaura foco em `micButtonRef.current` se este ainda estiver montado e visível.
-- Regiões `sr-only` usam a classe utilitária já presente no projeto (Tailwind `sr-only`).
-- Não alterar comportamento em telas sem leitor de tela: nenhum layout muda; apenas ARIA e foco.
-
-## Fora de escopo
-
-- Mudanças em SSE de transcrição, no encoder WAV, no gateway ou no banco.
-- Refactor do banner visual do microfone (permanece com mesma aparência).
-- Ajustes de acessibilidade em outras áreas do chat (histórico, composer, uploads) — podem ser feitas em plano separado.
-
-## Verificação
-
-- Typecheck do arquivo alterado.
-- Snapshot manual via Playwright: forçar `micError` (bloqueando `getUserMedia`), confirmar que:
-  1. O foco vai para o banner.
-  2. `role="alert"` está presente com a mensagem.
-  3. Fechar devolve foco ao botão de microfone.
-- Inspecionar DOM: garantir presença de duas regiões `sr-only` com `role="status"` e `role="alert"`.
+- Retry no endpoint SSE do chat (`/api/chat/stream`) — só transcrição.
+- Persistência de tentativas.
+- Retry para erros de permissão de mic (não é transcrição).

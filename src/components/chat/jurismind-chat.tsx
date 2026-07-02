@@ -124,6 +124,51 @@ type ModelTier = "fast" | "balanced" | "max";
 
 type QuickAction = { label: string; prompt: string };
 
+// --- Retentativa automática da transcrição ---
+const TRANSCRIBE_MAX_ATTEMPTS = 3;
+const TRANSCRIBE_BACKOFF_MS = [500, 1200, 2500];
+const SEGMENT_TIMEOUT_MS = 15_000;
+const RETRYABLE_TRANSCRIBE_STATUSES = new Set([408, 425, 429, 500, 502, 503, 504]);
+
+function isRetryableTranscribeStatus(status: number): boolean {
+  return RETRYABLE_TRANSCRIBE_STATUSES.has(status);
+}
+
+function computeBackoffDelay(attempt: number, retryAfterMs?: number): number {
+  const base =
+    TRANSCRIBE_BACKOFF_MS[Math.min(attempt - 1, TRANSCRIBE_BACKOFF_MS.length - 1)] ??
+    2500;
+  const jitter = base * (0.8 + Math.random() * 0.4);
+  return Math.max(jitter, retryAfterMs ?? 0);
+}
+
+function parseRetryAfterMs(header: string | null): number | undefined {
+  if (!header) return undefined;
+  const sec = Number(header);
+  if (Number.isFinite(sec)) return Math.max(0, sec * 1000);
+  const dateMs = Date.parse(header);
+  if (!Number.isNaN(dateMs)) return Math.max(0, dateMs - Date.now());
+  return undefined;
+}
+
+function sleepWithAbort(ms: number, signal: AbortSignal): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (signal.aborted) return reject(new DOMException("Aborted", "AbortError"));
+    const t = setTimeout(() => {
+      signal.removeEventListener("abort", onAbort);
+      resolve();
+    }, ms);
+    const onAbort = () => {
+      clearTimeout(t);
+      signal.removeEventListener("abort", onAbort);
+      reject(new DOMException("Aborted", "AbortError"));
+    };
+    signal.addEventListener("abort", onAbort, { once: true });
+  });
+}
+
+
+
 const PRIMARY_ACTIONS: QuickAction[] = [
   {
     label: "Resumo do caso",
@@ -369,6 +414,9 @@ export function JurisMindChat({
   const livePartialRef = useRef<string>("");
   const [segmentInFlight, setSegmentInFlight] = useState(false);
   const liveSupportedRef = useRef<boolean>(true);
+  const [retryInfo, setRetryInfo] = useState<{ attempt: number; max: number } | null>(null);
+  const consecutiveSegmentFailuresRef = useRef<number>(0);
+
 
   // Seletor de microfone
   const MIC_STORAGE_KEY = "jurismind:mic-device-id";
@@ -618,7 +666,99 @@ export function JurisMindChat({
     syncLiveInput();
   };
 
-  // Envia um segmento WAV e consome o SSE, atualizando partial/committed.
+  // Executa uma única tentativa de transcrição de segmento.
+  // Retorna { ok, text } em sucesso, ou lança { retryable, status?, retryAfterMs?, cause } em falha.
+  const runTranscribeAttempt = async (
+    b64: string,
+    outerSignal: AbortSignal,
+    onDelta: (text: string) => void,
+  ): Promise<string> => {
+    const timeoutCtrl = new AbortController();
+    const timer = setTimeout(() => timeoutCtrl.abort(), SEGMENT_TIMEOUT_MS);
+    const onOuterAbort = () => timeoutCtrl.abort();
+    outerSignal.addEventListener("abort", onOuterAbort, { once: true });
+
+    let segmentText = "";
+    try {
+      const res = await fetch("/api/tools/transcribe-stream", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ audio_base64: b64, format: "wav" }),
+        signal: timeoutCtrl.signal,
+      });
+      if (!res.ok || !res.body) {
+        const retryAfterMs = parseRetryAfterMs(res.headers.get("retry-after"));
+        const err = new Error(`transcribe_http_${res.status}`) as Error & {
+          status?: number;
+          retryable?: boolean;
+          retryAfterMs?: number;
+        };
+        err.status = res.status;
+        err.retryable = isRetryableTranscribeStatus(res.status);
+        err.retryAfterMs = retryAfterMs;
+        throw err;
+      }
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        let idx;
+        while ((idx = buffer.indexOf("\n\n")) >= 0) {
+          const raw = buffer.slice(0, idx);
+          buffer = buffer.slice(idx + 2);
+          const line = raw
+            .split("\n")
+            .filter((l) => l.startsWith("data:"))
+            .map((l) => l.slice(5).trim())
+            .join("");
+          if (!line || line === "[DONE]") continue;
+          try {
+            const evt = JSON.parse(line) as {
+              type?: string;
+              delta?: string;
+              text?: string;
+            };
+            if (evt.type === "transcript.text.delta" && evt.delta) {
+              segmentText += evt.delta;
+              onDelta(segmentText);
+            } else if (evt.type === "transcript.text.done") {
+              segmentText = evt.text ?? segmentText;
+            }
+          } catch {
+            // ignore
+          }
+        }
+      }
+      return segmentText;
+    } catch (e) {
+      // Distinguir aborto externo vs. timeout interno
+      if ((e as { name?: string })?.name === "AbortError") {
+        if (outerSignal.aborted) {
+          // cancelamento explícito — não retry
+          throw e;
+        }
+        // timeout interno — retryable
+        const err = new Error("transcribe_timeout") as Error & {
+          retryable?: boolean;
+        };
+        err.retryable = true;
+        throw err;
+      }
+      // erro de rede (TypeError do fetch) — retryable
+      if (!(e as { status?: number })?.status) {
+        (e as { retryable?: boolean }).retryable = true;
+      }
+      throw e;
+    } finally {
+      clearTimeout(timer);
+      outerSignal.removeEventListener("abort", onOuterAbort);
+    }
+  };
+
+  // Envia um segmento WAV com retentativa automática (backoff).
   const flushSegment = async (final: boolean): Promise<void> => {
     const srcRate = pcmSampleRateRef.current;
     const chunks = pcmChunksRef.current;
@@ -647,78 +787,70 @@ export function JurisMindChat({
     const ctrl = new AbortController();
     activeSegCtrlRef.current = ctrl;
     setSegmentInFlight(true);
-    let segmentText = "";
+
+    let lastText = "";
+    let lastError: (Error & { status?: number; retryable?: boolean; retryAfterMs?: number }) | null = null;
+
     try {
-      const res = await fetch("/api/tools/transcribe-stream", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ audio_base64: b64, format: "wav" }),
-        signal: ctrl.signal,
-      });
-      if (!res.ok || !res.body) {
-        if (res.status === 402) {
-          toast.error("Créditos de IA esgotados.");
-        } else if (res.status === 429) {
-          // silencioso — próximo segmento tenta de novo
-        } else if (final) {
-          toast.error(humanizeTranscribeError(res.status));
+      for (let attempt = 1; attempt <= TRANSCRIBE_MAX_ATTEMPTS; attempt++) {
+        if (attempt > 1 && final) {
+          setRetryInfo({ attempt, max: TRANSCRIBE_MAX_ATTEMPTS });
         }
-        return;
-      }
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = "";
-      while (true) {
-        const { value, done } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-        let idx;
-        while ((idx = buffer.indexOf("\n\n")) >= 0) {
-          const raw = buffer.slice(0, idx);
-          buffer = buffer.slice(idx + 2);
-          const line = raw
-            .split("\n")
-            .filter((l) => l.startsWith("data:"))
-            .map((l) => l.slice(5).trim())
-            .join("");
-          if (!line || line === "[DONE]") continue;
+        try {
+          const text = await runTranscribeAttempt(b64, ctrl.signal, (t) => {
+            lastText = t;
+            setPartial(t);
+          });
+          lastText = text || lastText;
+          appendCommitted(lastText);
+          consecutiveSegmentFailuresRef.current = 0;
+          lastError = null;
+          return;
+        } catch (e) {
+          const err = e as Error & { name?: string; status?: number; retryable?: boolean; retryAfterMs?: number };
+          if (err?.name === "AbortError" && ctrl.signal.aborted) {
+            // Cancelado externamente (novo segmento, parar, cancelar) — não retry, não erro.
+            return;
+          }
+          lastError = err;
+          const canRetry = err.retryable === true && attempt < TRANSCRIBE_MAX_ATTEMPTS;
+          if (!canRetry) break;
+          const delay = computeBackoffDelay(attempt, err.retryAfterMs);
           try {
-            const evt = JSON.parse(line) as {
-              type?: string;
-              delta?: string;
-              text?: string;
-            };
-            if (evt.type === "transcript.text.delta" && evt.delta) {
-              segmentText += evt.delta;
-              setPartial(segmentText);
-            } else if (evt.type === "transcript.text.done") {
-              segmentText = evt.text ?? segmentText;
-            }
+            await sleepWithAbort(delay, ctrl.signal);
           } catch {
-            // ignore
+            return; // aborted durante o sleep
           }
         }
       }
-      appendCommitted(segmentText);
-    } catch (e) {
-      const name = (e as { name?: string })?.name;
-      if (name === "AbortError") {
-        // segmento cancelado — preserva o que já veio como parcial (ficará como committed no próximo done, ou descartado ao parar)
-        if (segmentText && final) appendCommitted(segmentText);
-        return;
-      }
-      if (final) {
-        toast.error(
-          e instanceof Error ? e.message : "Erro ao transcrever segmento.",
-        );
+
+      // Esgotou tentativas ou erro não-retryable.
+      if (lastError) {
+        const status = lastError.status;
+        if (status === 402) {
+          toast.error("Créditos de IA esgotados.");
+        } else if (final) {
+          toast.error(humanizeTranscribeError(status ?? 0, lastError.message));
+        } else {
+          // Falha silenciosa em segmento parcial — só sinaliza depois de 2 seguidos.
+          consecutiveSegmentFailuresRef.current += 1;
+          if (consecutiveSegmentFailuresRef.current >= 2) {
+            setMicError(
+              "Instabilidade na transcrição — verifique a conexão. Continuarei tentando.",
+            );
+          }
+        }
       }
     } finally {
+      setRetryInfo(null);
       if (activeSegCtrlRef.current === ctrl) {
         activeSegCtrlRef.current = null;
         setSegmentInFlight(false);
       }
     }
   };
+
+
 
 
   const humanizeMicError = (e: unknown): string => {
@@ -752,6 +884,9 @@ export function JurisMindChat({
   const startRecording = async () => {
     if (recording || transcribing) return;
     setMicError(null);
+    consecutiveSegmentFailuresRef.current = 0;
+    setRetryInfo(null);
+
     if (!navigator.mediaDevices?.getUserMedia) {
       const msg = "Seu navegador não suporta gravação de áudio.";
       setMicError(msg);
@@ -1751,12 +1886,15 @@ export function JurisMindChat({
                   <div className="flex items-center gap-2 rounded-full border bg-muted px-2.5 py-1 text-muted-foreground">
                     <Loader2 className="h-3 w-3 animate-spin" />
                     <span>
-                      {transcribing
-                        ? "Transcrevendo…"
-                        : "Transcrevendo em tempo real…"}
+                      {retryInfo
+                        ? `Reprocessando… (tentativa ${retryInfo.attempt}/${retryInfo.max})`
+                        : transcribing
+                          ? "Transcrevendo…"
+                          : "Transcrevendo em tempo real…"}
                     </span>
                   </div>
                 )}
+
                 {!recording && !transcribing && micError && (
                   <div
                     ref={micErrorRef}
