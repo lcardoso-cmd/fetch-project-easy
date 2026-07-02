@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 const UploadSchema = z.object({
   case_id: z.string().uuid(),
@@ -10,7 +11,48 @@ const UploadSchema = z.object({
   storage_path: z.string().min(1),
   extracted_text: z.string().optional(),
   content_hash: z.string().max(128).optional(),
+  replaces_document_id: z.string().uuid().optional(),
+  reason: z.string().max(500).optional(),
 });
+
+type AuditAction =
+  | "uploaded"
+  | "imported"
+  | "replaced"
+  | "duplicate_ignored"
+  | "discarded"
+  | "deleted";
+
+async function logAudit(
+  supabase: SupabaseClient,
+  userId: string,
+  entry: {
+    case_id: string;
+    action: AuditAction;
+    document_id?: string | null;
+    filename?: string | null;
+    content_hash?: string | null;
+    reason?: string | null;
+    metadata?: Record<string, unknown>;
+  },
+) {
+  await supabase
+    .from("document_audit_events")
+    .insert({
+      case_id: entry.case_id,
+      user_id: userId,
+      action: entry.action,
+      document_id: entry.document_id ?? null,
+      filename: entry.filename ?? null,
+      content_hash: entry.content_hash ?? null,
+      reason: entry.reason ?? null,
+      metadata: entry.metadata ?? {},
+    })
+    // Auditoria não deve falhar a operação principal se algo der errado.
+    .then((r) => {
+      if (r.error) console.warn("[audit] falha ao registrar", r.error.message);
+    });
+}
 
 export const listDocuments = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
