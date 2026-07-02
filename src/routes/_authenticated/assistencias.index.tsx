@@ -140,11 +140,11 @@ function CasesPage() {
                     </Button>
                   </div>
                   <div className="flex items-center gap-2 flex-wrap">
-                    <Badge variant="secondary" className="text-[10px]">
+                    <Badge variant="secondary" className="text-[10px] shrink-0">
                       {labels.shortBadge}
                     </Badge>
                     {caseItem.client_name && (
-                      <CardDescription className="m-0">
+                      <CardDescription className="m-0 min-w-0 break-words">
                         {labels.clientLabel}: {caseItem.client_name}
                       </CardDescription>
                     )}
