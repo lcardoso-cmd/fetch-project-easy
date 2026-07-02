@@ -21,7 +21,7 @@ export const Route = createFileRoute("/")({
 
 const features = [
   {
-    icon: BrainCircuit,
+    icon: MessageSquare,
     title: "Chat com seus documentos",
     description:
       "Pergunte sobre processos, laudos, quesitos ou contratos. O JurisMind AI busca trechos relevantes e responde citando as fontes.",
