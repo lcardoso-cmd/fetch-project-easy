@@ -100,7 +100,7 @@ function CasesPage() {
       {isLoading ? (
         <p className="text-muted-foreground">Carregando...</p>
       ) : filtered.length === 0 ? (
-        <div className="rounded-xl border bg-card p-8 text-center shadow-sm">
+        <div className="rounded-2xl border bg-card p-8 text-center shadow-sm">
           <p className="text-muted-foreground">
             {cases.length === 0
               ? "Nenhum caso cadastrado ainda."

@@ -100,7 +100,7 @@ function AuthPage() {
           </TabsList>
 
           <TabsContent value="login">
-            <form onSubmit={handleLogin} className="space-y-4 rounded-xl border bg-card p-6 shadow-sm">
+            <form onSubmit={handleLogin} className="space-y-4 rounded-2xl border bg-card p-6 shadow-sm">
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
                 <Input
@@ -134,7 +134,7 @@ function AuthPage() {
           </TabsContent>
 
           <TabsContent value="signup">
-            <form onSubmit={handleSignup} className="space-y-4 rounded-xl border bg-card p-6 shadow-sm">
+            <form onSubmit={handleSignup} className="space-y-4 rounded-2xl border bg-card p-6 shadow-sm">
               <div className="space-y-2">
                 <Label htmlFor="fullName">Nome completo</Label>
                 <Input

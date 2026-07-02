@@ -104,7 +104,7 @@ function NotificationsPage() {
       </div>
 
       <div className="grid flex-1 grid-cols-1 gap-4 overflow-hidden md:grid-cols-[360px_1fr]">
-        <div className="overflow-y-auto rounded-lg border bg-card">
+        <div className="overflow-y-auto rounded-2xl border bg-card">
           {filtered.length === 0 ? (
             <div className="flex h-full flex-col items-center justify-center gap-2 p-8 text-center text-sm text-muted-foreground">
               <Inbox className="h-8 w-8" />
@@ -155,7 +155,7 @@ function NotificationsPage() {
           )}
         </div>
 
-        <div className="overflow-y-auto rounded-lg border bg-card p-6">
+        <div className="overflow-y-auto rounded-2xl border bg-card p-6">
           {!selected ? (
             <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
               Selecione uma notificação
