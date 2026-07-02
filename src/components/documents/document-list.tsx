@@ -34,6 +34,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { UploadDialog } from "./upload-dialog";
+import { DocumentAuditDialog } from "./document-audit-dialog";
 
 export interface DocItem {
   id: string;
