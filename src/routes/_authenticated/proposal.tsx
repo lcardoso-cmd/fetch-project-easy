@@ -17,6 +17,10 @@ import { useProfile } from "@/hooks/use-profile";
 import { RichTextEditor } from "@/components/chat/rich-text-editor";
 import { z } from "zod";
 import { ProposalVersionsDialog } from "@/components/proposal/proposal-versions-dialog";
+import { ProposalAttachmentsPanel } from "@/components/proposal/proposal-attachments-panel";
+import { ConvertToCasePopover } from "@/components/proposal/convert-to-case-popover";
+import { useAuth } from "@/hooks/use-auth";
+import { listProposalAttachments, type ExtractedProposalFields } from "@/lib/proposal-attachments.functions";
 import {
   getProposalDraft,
   upsertProposalDraft,
