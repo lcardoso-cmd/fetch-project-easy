@@ -23,14 +23,38 @@ export type NotificationItem =
       case_id: string | null;
       due_date: string | null;
       status: string;
+    }
+  | {
+      /**
+       * Evento em um pedido B2B do próprio usuário: conclusão do pedido
+       * ou novo anexo público publicado pelo time B2B.
+       */
+      kind: "b2b_event";
+      id: string; // b2b_service_request_events.id
+      created_at: string;
+      read: boolean;
+      event_kind: "status_change" | "attachment";
+      request_id: string;
+      request_title: string;
+      /** Rótulo curto exibido no dropdown. */
+      summary: string;
+      /** Detalhe complementar (título do anexo, novo status, etc.). */
+      detail: string;
     };
+
+/**
+ * Chave de sessionStorage para o carimbo "última visita ao sino".
+ * Eventos B2B mais antigos que esse timestamp são exibidos como lidos.
+ * Persistir no cliente evita criar coluna nova só para leitura de badges.
+ */
+export const B2B_NOTIF_READ_KEY = "b2b-notif-last-seen-at";
 
 export const listNotifications = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
 
-    const [mentionsRes, tasksRes] = await Promise.all([
+    const [mentionsRes, tasksRes, myRequestsRes] = await Promise.all([
       context.supabase
         .from("message_mentions")
         .select("id, message_id, conversation_id, read_at, created_at")
@@ -45,10 +69,17 @@ export const listNotifications = createServerFn({ method: "GET" })
         .gte("created_at", since)
         .order("created_at", { ascending: false })
         .limit(30),
+      // Pedidos B2B abertos pelo usuário. Precisamos do id + título para
+      // filtrar os eventos relevantes (status → concluído / anexo público).
+      context.supabase
+        .from("b2b_service_requests")
+        .select("id, title")
+        .eq("requester_user_id", context.userId),
     ]);
 
     if (mentionsRes.error) throw mentionsRes.error;
     if (tasksRes.error) throw tasksRes.error;
+    if (myRequestsRes.error) throw myRequestsRes.error;
 
     const mentions = mentionsRes.data ?? [];
     const messageIds = mentions.map((m) => m.message_id);
@@ -113,10 +144,69 @@ export const listNotifications = createServerFn({ method: "GET" })
         status: t.status,
       });
     }
+
+    // ---- B2B: conclusão de pedido + novos anexos públicos ----
+    const myRequests = myRequestsRes.data ?? [];
+    if (myRequests.length > 0) {
+      const requestIds = myRequests.map((r) => r.id);
+      const titleById = new Map(myRequests.map((r) => [r.id, r.title as string]));
+      const { data: events } = await context.supabase
+        .from("b2b_service_request_events")
+        .select("id, request_id, author_user_id, kind, payload, created_at")
+        .in("request_id", requestIds)
+        .in("kind", ["status_change", "attachment"])
+        .gte("created_at", since)
+        .order("created_at", { ascending: false })
+        .limit(60);
+
+      for (const ev of events ?? []) {
+        // Ignora eventos gerados pelo próprio usuário
+        if (ev.author_user_id === context.userId) continue;
+        const payload = (ev.payload ?? {}) as {
+          from?: string;
+          to?: string;
+          file_name?: string;
+          visibility?: string;
+        };
+        const title = titleById.get(ev.request_id) ?? "Pedido B2B";
+
+        if (ev.kind === "status_change") {
+          // Só notifica quando muda para "concluido" (o que o usuário pediu).
+          if (payload.to !== "concluido") continue;
+          items.push({
+            kind: "b2b_event",
+            id: ev.id,
+            created_at: ev.created_at,
+            read: false,
+            event_kind: "status_change",
+            request_id: ev.request_id,
+            request_title: title,
+            summary: "Pedido B2B concluído",
+            detail: title,
+          });
+        } else if (ev.kind === "attachment") {
+          // Anexos internos não devem chegar ao cliente.
+          if (payload.visibility === "internal") continue;
+          items.push({
+            kind: "b2b_event",
+            id: ev.id,
+            created_at: ev.created_at,
+            read: false,
+            event_kind: "attachment",
+            request_id: ev.request_id,
+            request_title: title,
+            summary: "Novo anexo no seu pedido B2B",
+            detail: payload.file_name ?? title,
+          });
+        }
+      }
+    }
+
     items.sort((a, b) => (a.created_at < b.created_at ? 1 : -1));
     const unread = items.filter((i) => !i.read).length;
     return { items, unread };
   });
+
 
 export const markMentionRead = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
