@@ -373,8 +373,14 @@ function ProposalPage() {
                 <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Escritório / Advogado</p>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <Label>Nome do escritório</Label>
-                    <Input value={form.firm_name} onChange={(e) => setForm({ ...form, firm_name: e.target.value })} />
+                    <Label>Nome do escritório <span className="text-destructive">*</span></Label>
+                    <Input
+                      value={form.firm_name}
+                      onChange={(e) => setForm({ ...form, firm_name: e.target.value })}
+                      aria-invalid={!!errors.firm_name}
+                      className={errors.firm_name ? "border-destructive" : ""}
+                    />
+                    {errors.firm_name && <p className="mt-1 text-xs text-destructive">{errors.firm_name}</p>}
                   </div>
                   <div>
                     <Label>Áreas de atuação</Label>
