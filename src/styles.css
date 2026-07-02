@@ -54,10 +54,28 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+
+  /* Marca JurisMind — tokens fixos (não invertem com o tema).
+   * Usados pelo componente <JurisMindMark /> para desenhar o quadrado
+   * via CSS ao invés de embutir a cor no PNG. Mantenha em sincronia com
+   * os assets brain-glyph-* (glyphs transparentes). */
+  --color-brand-navy: var(--brand-navy);
+  --color-brand-on-navy: var(--brand-on-navy);
+  --color-brand-surface: var(--brand-surface);
+  --color-brand-on-surface: var(--brand-on-surface);
 }
+
 
 :root {
   --radius: 0.5rem;
+
+  /* Cores fixas da marca — idênticas em light/dark. */
+  --brand-navy: oklch(0.143 0.13 278);       /* #000038 */
+  --brand-on-navy: oklch(1 0 0);             /* glyph branco sobre navy */
+  --brand-surface: oklch(1 0 0);             /* quadrado branco */
+  --brand-on-surface: oklch(0.143 0.13 278); /* glyph navy sobre branco */
+
+
 
   /* B2B Consulting — deep navy #000038, cyan #00FFFF, white */
   --background: oklch(0.985 0.003 250);
