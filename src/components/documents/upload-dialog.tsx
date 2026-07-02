@@ -392,7 +392,18 @@ export function UploadDialog({
 
   const allDone =
     items.length > 0 &&
-    items.every((x) => x.phase === "done" || x.phase === "duplicate" || x.phase === "error");
+    items.every(
+      (x) =>
+        x.phase === "done" ||
+        x.phase === "duplicate" ||
+        x.phase === "error" ||
+        x.phase === "cancelled",
+    );
+  const hasInFlight = items.some((x) =>
+    ["queued", "hashing", "uploading", "registering", "indexing"].includes(
+      x.phase,
+    ),
+  );
 
   return (
     <>
