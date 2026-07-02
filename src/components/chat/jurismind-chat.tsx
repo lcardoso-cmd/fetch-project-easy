@@ -1781,6 +1781,111 @@ export function JurisMindChat({
                   <Mic className="h-4 w-4" />
                 )}
               </Button>
+              <Popover open={micPickerOpen} onOpenChange={setMicPickerOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="outline"
+                    disabled={recording || transcribing}
+                    aria-label="Escolher microfone"
+                    title={
+                      recording
+                        ? "Pare a gravação para trocar o microfone"
+                        : "Escolher microfone"
+                    }
+                    className="h-10 w-10 shrink-0"
+                    onClick={() => void refreshMics()}
+                  >
+                    <Settings2 className="h-4 w-4" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent align="end" className="w-72 p-3">
+                  <div className="mb-2 flex items-center justify-between">
+                    <div className="text-sm font-medium">Microfone</div>
+                    <button
+                      type="button"
+                      onClick={() => void refreshMics()}
+                      className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs text-muted-foreground hover:bg-muted"
+                      title="Atualizar lista"
+                    >
+                      <RefreshCw className="h-3 w-3" />
+                      Atualizar
+                    </button>
+                  </div>
+                  {!micLabelsUnlocked && mics.every((d) => !d.label) && (
+                    <div className="mb-2 rounded-md border bg-muted/40 p-2 text-xs text-muted-foreground">
+                      <p className="mb-2">
+                        Autorize o acesso ao microfone para ver os nomes dos
+                        dispositivos.
+                      </p>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => void unlockMicLabels()}
+                        disabled={unlockingLabels}
+                        className="h-7 w-full"
+                      >
+                        {unlockingLabels ? (
+                          <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                        ) : null}
+                        Autorizar
+                      </Button>
+                    </div>
+                  )}
+                  <RadioGroup
+                    value={selectedMicId ?? "__default__"}
+                    onValueChange={(v) =>
+                      chooseMic(v === "__default__" ? null : v)
+                    }
+                    className="max-h-64 space-y-1 overflow-y-auto"
+                  >
+                    <div className="flex items-center gap-2 rounded-md px-2 py-1.5 hover:bg-muted/50">
+                      <RadioGroupItem value="__default__" id="mic-default" />
+                      <Label
+                        htmlFor="mic-default"
+                        className="flex-1 cursor-pointer text-sm font-normal"
+                      >
+                        Padrão do sistema
+                      </Label>
+                    </div>
+                    {mics.length === 0 && (
+                      <p className="px-2 py-1 text-xs text-muted-foreground">
+                        Nenhum microfone detectado.
+                      </p>
+                    )}
+                    {mics.map((d, idx) => {
+                      const id = `mic-${d.deviceId || idx}`;
+                      const label =
+                        d.label ||
+                        (d.deviceId === "default"
+                          ? "Microfone padrão"
+                          : `Microfone ${idx + 1}`);
+                      return (
+                        <div
+                          key={d.deviceId || idx}
+                          className="flex items-center gap-2 rounded-md px-2 py-1.5 hover:bg-muted/50"
+                        >
+                          <RadioGroupItem value={d.deviceId} id={id} />
+                          <Label
+                            htmlFor={id}
+                            className="flex-1 cursor-pointer truncate text-sm font-normal"
+                            title={label}
+                          >
+                            {label}
+                          </Label>
+                        </div>
+                      );
+                    })}
+                  </RadioGroup>
+                  {recording && (
+                    <p className="mt-2 text-[11px] text-muted-foreground">
+                      Pare a gravação para trocar o microfone.
+                    </p>
+                  )}
+                </PopoverContent>
+              </Popover>
               <Textarea
                 ref={inputRef}
                 value={input}
