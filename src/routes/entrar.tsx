@@ -6,11 +6,12 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { JurisMindMark } from "@/components/brand/jurismind-mark";
 import { IconBox } from "@/components/ui/icon-box";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable";
 import { useNavigate } from "@tanstack/react-router";
-import { ArrowLeft, Mail, Lock, User, LogIn, UserPlus } from "lucide-react";
+import { ArrowLeft, Mail, Lock, User, LogIn, UserPlus, MailCheck } from "lucide-react";
+
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
