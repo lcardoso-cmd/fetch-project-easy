@@ -17,6 +17,7 @@ const AskSchema = z.object({
     .max(20)
     .optional(),
   model_tier: z.enum(["fast", "balanced", "max"]).optional(),
+  thread_id: z.string().uuid().optional(),
 });
 
 interface Citation {
@@ -581,14 +582,64 @@ INSTRUÇÕES:
       maxSteps: 6,
     });
 
+    const toolSteps: ToolStep[] = steps.map((s) => ({
+      name: s.name,
+      args_json: JSON.stringify(s.args),
+      result_json: JSON.stringify(s.result),
+    }));
+
+    // Persistência opcional na thread
+    let persistedThreadId: string | null = null;
+    if (data.thread_id) {
+      persistedThreadId = data.thread_id;
+      try {
+        // grava user + assistant
+        await context.supabase.from("ai_chat_messages").insert([
+          {
+            thread_id: data.thread_id,
+            user_id: context.userId,
+            role: "user",
+            content: data.question,
+            images: data.images ?? null,
+            model_tier: tier,
+          },
+          {
+            thread_id: data.thread_id,
+            user_id: context.userId,
+            role: "assistant",
+            content,
+            tool_steps: toolSteps as unknown as import("@/integrations/supabase/types").Json,
+            citations: citations.map((c) => ({
+              filename: c.filename,
+              similarity: c.similarity,
+            })) as unknown as import("@/integrations/supabase/types").Json,
+            model_tier: tier,
+          },
+        ]);
+
+        // auto-título se ainda for "Nova conversa"
+        const { data: th } = await context.supabase
+          .from("ai_chat_threads")
+          .select("title")
+          .eq("id", data.thread_id)
+          .single();
+        if (th && (th.title === "Nova conversa" || !th.title)) {
+          const title = data.question.replace(/\s+/g, " ").trim().slice(0, 80);
+          await context.supabase
+            .from("ai_chat_threads")
+            .update({ title })
+            .eq("id", data.thread_id);
+        }
+      } catch {
+        // não falha a resposta se a persistência der problema
+      }
+    }
+
     return {
       answer: content,
       citations,
-      steps: steps.map((s) => ({
-        name: s.name,
-        args_json: JSON.stringify(s.args),
-        result_json: JSON.stringify(s.result),
-      })) as ToolStep[],
+      steps: toolSteps,
+      thread_id: persistedThreadId,
     };
   });
 

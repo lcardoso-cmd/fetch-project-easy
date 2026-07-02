@@ -4,6 +4,7 @@ import { Link } from "@tanstack/react-router";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { askWithRag } from "@/lib/chat.functions";
+import { getThreadMessages } from "@/lib/threads.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -36,9 +37,11 @@ import {
   ImagePlus,
   Loader2,
   Maximize2,
+  Mic,
   Search,
   Send,
   Sparkles,
+  Square,
   X,
 } from "lucide-react";
 import type { DocItem } from "@/components/documents/document-list";
@@ -49,6 +52,7 @@ import {
   TableCard,
 } from "@/components/chat/artifact-cards";
 import { toast } from "sonner";
+
 
 interface Citation {
   document_id: string;
@@ -186,6 +190,8 @@ export function JurisMindChat({
   onSelectAll,
   onDeselectAll,
   fullscreen = false,
+  threadId,
+  onThreadCreated,
 }: {
   caseId: string;
   caseInfo: CaseSummary;
@@ -195,14 +201,21 @@ export function JurisMindChat({
   onSelectAll: () => void;
   onDeselectAll: () => void;
   fullscreen?: boolean;
+  threadId?: string | null;
+  onThreadCreated?: (id: string) => void;
 }) {
   const askFn = useServerFn(askWithRag);
+  const getMessagesFn = useServerFn(getThreadMessages);
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [search, setSearch] = useState("");
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const [images, setImages] = useState<string[]>([]);
+  const [recording, setRecording] = useState(false);
+  const [transcribing, setTranscribing] = useState(false);
+  const recorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
   const [modelTier, setModelTier] = useState<ModelTier>(() => {
     if (typeof window === "undefined") return "fast";
     return (localStorage.getItem("jurismind:model") as ModelTier) || "fast";
@@ -210,6 +223,7 @@ export function JurisMindChat({
   const fileRef = useRef<HTMLInputElement>(null);
   const endRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -220,6 +234,108 @@ export function JurisMindChat({
   useEffect(() => {
     inputRef.current?.focus();
   }, []);
+
+  // Carregar histórico ao trocar de thread
+  useEffect(() => {
+    if (!threadId) {
+      setMessages([]);
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      try {
+        const rows = await getMessagesFn({ data: { thread_id: threadId } });
+        if (cancelled) return;
+        setMessages(
+          rows.map((r) => ({
+            role: r.role,
+            content: r.content,
+            images: r.images ?? undefined,
+            citations: (r.citations as unknown as Citation[]) ?? undefined,
+            steps: (r.tool_steps as unknown as ToolStep[]) ?? undefined,
+          })),
+        );
+      } catch (e) {
+        toast.error(
+          e instanceof Error ? e.message : "Erro ao carregar conversa",
+        );
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [threadId, getMessagesFn]);
+
+  // Gravação de voz -> transcrição via /api/tools/transcribe
+  const startRecording = async () => {
+    if (recording || transcribing) return;
+    if (!navigator.mediaDevices?.getUserMedia) {
+      toast.error("Seu navegador não suporta gravação de áudio.");
+      return;
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mime = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
+        ? "audio/webm;codecs=opus"
+        : "audio/webm";
+      const rec = new MediaRecorder(stream, { mimeType: mime });
+      audioChunksRef.current = [];
+      rec.ondataavailable = (e) => {
+        if (e.data.size > 0) audioChunksRef.current.push(e.data);
+      };
+      rec.onstop = async () => {
+        stream.getTracks().forEach((t) => t.stop());
+        const blob = new Blob(audioChunksRef.current, { type: "audio/webm" });
+        if (blob.size < 500) {
+          toast.error("Áudio muito curto.");
+          return;
+        }
+        setTranscribing(true);
+        try {
+          const b64 = await new Promise<string>((resolve, reject) => {
+            const r = new FileReader();
+            r.onerror = () => reject(r.error);
+            r.onload = () => {
+              const s = String(r.result);
+              resolve(s.slice(s.indexOf(",") + 1));
+            };
+            r.readAsDataURL(blob);
+          });
+          const res = await fetch("/api/tools/transcribe", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ audio_base64: b64, format: "webm" }),
+          });
+          const json = (await res.json()) as { text?: string; error?: string };
+          if (!res.ok || json.error) throw new Error(json.error ?? "falha");
+          const text = (json.text ?? "").trim();
+          if (!text) {
+            toast.error("Não consegui transcrever o áudio.");
+            return;
+          }
+          setInput((prev) => (prev ? prev + " " + text : text));
+          setTimeout(() => inputRef.current?.focus(), 30);
+        } catch (e) {
+          toast.error(e instanceof Error ? e.message : "Erro ao transcrever");
+        } finally {
+          setTranscribing(false);
+        }
+      };
+      recorderRef.current = rec;
+      rec.start();
+      setRecording(true);
+    } catch (e) {
+      toast.error(
+        e instanceof Error ? e.message : "Não foi possível acessar o microfone",
+      );
+    }
+  };
+  const stopRecording = () => {
+    if (!recording) return;
+    recorderRef.current?.stop();
+    setRecording(false);
+  };
+
 
   const readFilesAsImages = async (files: File[]) => {
     const list: string[] = [];
@@ -310,8 +426,12 @@ export function JurisMindChat({
           selected_doc_ids: selected.length ? selected : undefined,
           images: sentImages.length ? sentImages : undefined,
           model_tier: modelTier,
+          thread_id: threadId ?? undefined,
         },
       });
+      if (res.thread_id && res.thread_id !== threadId) {
+        onThreadCreated?.(res.thread_id);
+      }
       setMessages([
         ...next,
         {
@@ -774,6 +894,23 @@ export function JurisMindChat({
                 className="h-10 w-10 shrink-0"
               >
                 <ImagePlus className="h-4 w-4" />
+              </Button>
+              <Button
+                type="button"
+                size="icon"
+                variant={recording ? "destructive" : "outline"}
+                onClick={() => (recording ? stopRecording() : void startRecording())}
+                disabled={busy || transcribing}
+                title={recording ? "Parar gravação" : "Ditar mensagem"}
+                className="h-10 w-10 shrink-0"
+              >
+                {transcribing ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : recording ? (
+                  <Square className="h-4 w-4" />
+                ) : (
+                  <Mic className="h-4 w-4" />
+                )}
               </Button>
               <Textarea
                 ref={inputRef}
