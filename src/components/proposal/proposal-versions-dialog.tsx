@@ -439,6 +439,23 @@ export function ProposalVersionsDialog({
                   </SelectContent>
                 </Select>
 
+                <Select value={client} onValueChange={setClient} disabled={uniqueClients.length === 0}>
+                  <SelectTrigger
+                    className="h-8 w-auto max-w-[180px] gap-1 text-xs"
+                    title="Filtrar por cliente"
+                  >
+                    <SelectValue placeholder="Cliente" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos os clientes</SelectItem>
+                    {uniqueClients.map((c) => (
+                      <SelectItem key={c.key} value={c.key}>
+                        {c.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
                 <Select value={sortBy} onValueChange={(v) => setSortBy(v as "newest" | "oldest" | "label")}>
                   <SelectTrigger className="h-8 w-auto text-xs">
                     <SelectValue />
