@@ -19,7 +19,7 @@ import {
   COLORS,
   DEFAULT_BRAND_NAME,
   FONT_SIZES_PT,
-  PAGE_PT,
+  
   SPACING,
   hexToRgb01,
   type DocBranding,
