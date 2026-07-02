@@ -37,6 +37,7 @@ import {
   listMemberCapabilities,
   setMemberCapabilities,
   CAPABILITY_LABELS,
+  CAPABILITY_DESCRIPTIONS,
   type Capability,
 } from "@/lib/capabilities.functions";
 import { Checkbox } from "@/components/ui/checkbox";
