@@ -152,6 +152,10 @@ function NewCasePage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploaded, setUploaded] = useState<UploadedDoc | null>(null);
   const [extracting, setExtracting] = useState(false);
+  const [uploadPhase, setUploadPhase] = useState<
+    "idle" | "uploading" | "extracting" | "done"
+  >("idle");
+  const [uploadPct, setUploadPct] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
