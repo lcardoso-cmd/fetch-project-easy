@@ -80,7 +80,7 @@ export async function loadBrandingForUser(userId: string): Promise<Branding | nu
 /** Lê dimensões básicas de PNG/JPG. Retorna null se não conseguir. */
 function readImageSize(
   buf: Uint8Array,
-  type: Branding["logo"]["type"],
+  type: LogoImageType,
 ): { width: number; height: number } | null {
   try {
     if (type === "png" && buf.length > 24) {
