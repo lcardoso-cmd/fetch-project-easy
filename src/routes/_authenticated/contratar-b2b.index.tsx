@@ -40,11 +40,13 @@ import {
 } from "@/lib/b2b-services.functions";
 
 const STATUS_FILTER_VALUES = ["todos", ...B2B_REQUEST_STATUSES] as const;
+type StatusFilter = (typeof STATUS_FILTER_VALUES)[number];
 
 const searchSchema = z.object({
   q: fallback(z.string(), "").default(""),
   status: fallback(z.enum(STATUS_FILTER_VALUES), "todos").default("todos"),
 });
+type SearchParams = z.infer<typeof searchSchema>;
 
 export const Route = createFileRoute("/_authenticated/contratar-b2b/")({
   validateSearch: zodValidator(searchSchema),
