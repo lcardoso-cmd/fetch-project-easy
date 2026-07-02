@@ -60,9 +60,14 @@ function AuthPage() {
     try {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
+      toast.success("Login realizado", {
+        description: "Bem-vindo(a) de volta ao B2B | JurisMind AI.",
+      });
       navigate({ to: "/painel", replace: true });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Erro ao entrar");
+      const message = err instanceof Error ? err.message : "Erro ao entrar";
+      setError(message);
+      toast.error("Não foi possível entrar", { description: message });
     } finally {
       setIsLoading(false);
     }
@@ -73,15 +78,30 @@ function AuthPage() {
     setError(null);
     setIsLoading(true);
     try {
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
-        options: { data: { full_name: fullName } },
+        options: {
+          data: { full_name: fullName },
+          emailRedirectTo: window.location.origin,
+        },
       });
       if (error) throw error;
-      navigate({ to: "/painel", replace: true });
+      // Se a confirmação de email estiver ativa, não haverá sessão ainda.
+      if (data.session) {
+        toast.success("Conta criada", {
+          description: "Redirecionando para o painel...",
+        });
+        navigate({ to: "/painel", replace: true });
+      } else {
+        toast.success("Confirme seu email", {
+          description: "Enviamos um link de confirmação para " + email + ".",
+        });
+      }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Erro ao criar conta");
+      const message = err instanceof Error ? err.message : "Erro ao criar conta";
+      setError(message);
+      toast.error("Não foi possível criar a conta", { description: message });
     } finally {
       setIsLoading(false);
     }
