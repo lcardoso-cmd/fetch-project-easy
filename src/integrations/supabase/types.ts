@@ -1497,6 +1497,7 @@ export type Database = {
         | "aceita"
         | "recusada"
         | "cancelada"
+        | "concluido"
       b2b_request_urgency: "normal" | "alta" | "critica"
     }
     CompositeTypes: {
@@ -1650,6 +1651,7 @@ export const Constants = {
         "aceita",
         "recusada",
         "cancelada",
+        "concluido",
       ],
       b2b_request_urgency: ["normal", "alta", "critica"],
     },
