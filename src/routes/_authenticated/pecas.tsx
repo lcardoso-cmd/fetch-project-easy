@@ -66,6 +66,11 @@ function DrafterPage() {
   const matterKind = (selectedCase?.matter_kind as MatterKind | undefined) ?? "processo";
   const labels = labelsForMatter(matterKind);
 
+  // Protege contra perda do documento gerado (não é persistido) ou de instruções digitadas.
+  useUnsavedChangesGuard({
+    when: !loading && (output.trim().length > 0 || instructions.trim().length > 0),
+  });
+
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!caseId) {
