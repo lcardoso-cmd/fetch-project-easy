@@ -27,6 +27,7 @@ import {
   BrainCircuit,
   CheckCircle,
   Clock,
+  Eye,
   FileText,
   Loader2,
   RefreshCw,
@@ -130,6 +131,7 @@ export function DocumentList({
   const deleteFn = useServerFn(deleteDocument);
   const indexFn = useServerFn(indexDocument);
   const [retryingId, setRetryingId] = useState<string | null>(null);
+  const [visionId, setVisionId] = useState<string | null>(null);
 
   const onRetry = async (id: string) => {
     setRetryingId(id);
@@ -140,6 +142,27 @@ export function DocumentList({
       toast.error(e instanceof Error ? e.message : String(e));
     } finally {
       setRetryingId(null);
+      await queryClient.invalidateQueries({ queryKey: ["documents", caseId] });
+    }
+  };
+
+  const onVision = async (id: string, name: string) => {
+    if (
+      !confirm(
+        `Reprocessar "${name}" usando visão (OCR multimodal)?\n\nRecomendado para PDFs escaneados ou com pouco texto extraível. Pode levar alguns segundos e consumir mais créditos.`,
+      )
+    )
+      return;
+    setVisionId(id);
+    try {
+      const res = await indexFn({ data: { document_id: id, force_vision: true } });
+      toast.success(
+        `Visão concluída: ${res.chunks ?? 0} trechos (${res.vision_chunks ?? 0} de visão)`,
+      );
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : String(e));
+    } finally {
+      setVisionId(null);
       await queryClient.invalidateQueries({ queryKey: ["documents", caseId] });
     }
   };
@@ -247,14 +270,38 @@ export function DocumentList({
                         />
                       </TableCell>
                       <TableCell>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                          onClick={() => onDelete(d.id, d.filename)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        <div className="flex items-center gap-1">
+                          <TooltipProvider delayDuration={150}>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 text-muted-foreground hover:text-primary"
+                                  disabled={visionId === d.id}
+                                  onClick={() => onVision(d.id, d.filename)}
+                                >
+                                  {visionId === d.id ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                  ) : (
+                                    <Eye className="h-4 w-4" />
+                                  )}
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p className="text-xs">Reprocessar com visão (OCR)</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                            onClick={() => onDelete(d.id, d.filename)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   );

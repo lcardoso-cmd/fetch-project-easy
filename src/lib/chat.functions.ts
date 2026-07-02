@@ -67,7 +67,7 @@ export const askWithRag = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((i: unknown) => AskSchema.parse(i))
   .handler(async ({ data, context }) => {
-    const { embedTexts, chatWithTools } = await import("./ai.server");
+    const { embedTexts, chatWithTools, rewriteQuery, rerankChunks } = await import("./ai.server");
     type ToolDef = import("./ai.server").ToolDef;
 
     // 0. Metadados do caso (contexto injetado no prompt)
@@ -103,37 +103,126 @@ export const askWithRag = createServerFn({ method: "POST" })
         (!selectedSet || selectedSet.has(d.id)),
     );
 
-    // 1. Embedding + busca semântica JÁ FILTRADA no banco pelo caso e docs selecionados
-    const [qEmb] = await embedTexts([data.question]);
-    if (!qEmb) throw new Error("Falha ao gerar embedding");
+    // 1. Query rewrite (multi-query) — só em balanced/max para não pesar no fast
+    const tier = data.model_tier ?? "fast";
+    const useAdvancedRetrieval = tier !== "fast";
+
+    let queries: string[] = [data.question];
+    if (useAdvancedRetrieval) {
+      const rw = await rewriteQuery(data.question, 2);
+      queries = rw.queries;
+    }
+
+    // 2. Embeddings de todas as variações em uma chamada
+    const embs = await embedTexts(queries);
+    if (!embs || embs.length === 0) throw new Error("Falha ao gerar embedding");
 
     const activeDocIds = activeDocs.map((d) => d.id);
-    const rpcArgs: {
-      query_embedding: string;
-      filter_user_id: string;
-      filter_case_id: string;
-      filter_doc_ids?: string[];
-      match_count: number;
-    } = {
-      query_embedding: qEmb as unknown as string,
-      filter_user_id: context.userId,
-      filter_case_id: data.case_id,
-      match_count: 24,
-    };
-    if (activeDocIds.length > 0) rpcArgs.filter_doc_ids = activeDocIds;
-    const { data: matches, error } = await context.supabase.rpc(
-      "match_chunks_scoped",
-      rpcArgs,
-    );
-    if (error) throw error;
 
-    const rows = (matches ?? []) as Array<{
+    // 3. Busca híbrida (vetor + full-text pt-br via RRF) para cada query, agregando por RRF
+    type HybridRow = {
+      id: string;
       document_id: string;
+      case_id: string;
       content: string;
-      similarity: number;
-    }>;
+      source_kind: string;
+      vector_similarity: number;
+      fts_rank: number;
+      score: number;
+    };
 
-    const docIds = Array.from(new Set(rows.map((m) => m.document_id)));
+    const aggregated = new Map<string, { row: HybridRow; score: number; rankSum: number }>();
+    const perQueryLimit = useAdvancedRetrieval ? 20 : 24;
+
+    for (let qi = 0; qi < queries.length; qi++) {
+      const q = queries[qi];
+      const emb = embs[qi];
+      if (!emb) continue;
+
+      const args: {
+        query_embedding: string;
+        query_text: string;
+        filter_user_id: string;
+        filter_case_id: string;
+        filter_doc_ids?: string[];
+        match_count: number;
+      } = {
+        query_embedding: emb as unknown as string,
+        query_text: q,
+        filter_user_id: context.userId,
+        filter_case_id: data.case_id,
+        match_count: perQueryLimit,
+      };
+      if (activeDocIds.length > 0) args.filter_doc_ids = activeDocIds;
+
+      const { data: hits, error: hErr } = await context.supabase.rpc(
+        "hybrid_search_chunks",
+        args,
+      );
+      if (hErr) {
+        // Fallback à busca antiga se a RPC nova não existir
+        const { data: fb } = await context.supabase.rpc("match_chunks_scoped", {
+          query_embedding: emb as unknown as string,
+          filter_user_id: context.userId,
+          filter_case_id: data.case_id,
+          filter_doc_ids: activeDocIds.length > 0 ? activeDocIds : undefined,
+          match_count: perQueryLimit,
+        } as never);
+        (fb ?? []).forEach((r: { id?: string; document_id: string; content: string; similarity: number }, idx: number) => {
+          const key = r.id ?? `${r.document_id}:${r.content.slice(0, 40)}`;
+          const rrf = 1 / (60 + idx + 1);
+          const cur = aggregated.get(key);
+          if (cur) cur.score += rrf;
+          else
+            aggregated.set(key, {
+              row: {
+                id: key,
+                document_id: r.document_id,
+                case_id: data.case_id,
+                content: r.content,
+                source_kind: "text",
+                vector_similarity: r.similarity,
+                fts_rank: 0,
+                score: rrf,
+              },
+              score: rrf,
+              rankSum: idx + 1,
+            });
+        });
+        continue;
+      }
+
+      (hits ?? []).forEach((r: HybridRow, idx: number) => {
+        const rrf = 1 / (60 + idx + 1);
+        const cur = aggregated.get(r.id);
+        if (cur) {
+          cur.score += rrf;
+          cur.rankSum += idx + 1;
+        } else {
+          aggregated.set(r.id, { row: r, score: rrf, rankSum: idx + 1 });
+        }
+      });
+    }
+
+    let ranked = Array.from(aggregated.values())
+      .sort((a, b) => b.score - a.score)
+      .map((x) => x.row);
+
+    // 4. Rerank leve com LLM (apenas balanced/max)
+    if (useAdvancedRetrieval && ranked.length > 8) {
+      const topN = ranked.slice(0, 24);
+      const chosenIds = await rerankChunks(
+        data.question,
+        topN.map((r) => ({ id: r.id, content: r.content })),
+        10,
+      );
+      const idIndex = new Map(topN.map((r) => [r.id, r]));
+      ranked = chosenIds.map((id) => idIndex.get(id)!).filter(Boolean);
+    } else {
+      ranked = ranked.slice(0, 12);
+    }
+
+    const docIds = Array.from(new Set(ranked.map((m) => m.document_id)));
     const { data: docs } = await context.supabase
       .from("documents")
       .select("id, filename")
@@ -143,19 +232,19 @@ export const askWithRag = createServerFn({ method: "POST" })
       );
     const nameById = new Map((docs ?? []).map((d) => [d.id, d.filename]));
 
-    const citations: Citation[] = rows.map((m) => ({
+    const citations: Citation[] = ranked.map((m) => ({
       document_id: m.document_id,
       filename: nameById.get(m.document_id) ?? "documento",
       snippet: m.content.slice(0, 400),
-      similarity: m.similarity,
+      similarity: m.vector_similarity ?? 0,
     }));
 
-    const contextBlock = rows.length
-      ? rows
-          .map(
-            (m, idx) =>
-              `[${idx + 1}] (${nameById.get(m.document_id) ?? "doc"})\n${m.content}`,
-          )
+    const contextBlock = ranked.length
+      ? ranked
+          .map((m, idx) => {
+            const tag = m.source_kind === "vision" ? " · visão" : "";
+            return `[${idx + 1}] (${nameById.get(m.document_id) ?? "doc"}${tag})\n${m.content}`;
+          })
           .join("\n\n---\n\n")
       : "(Nenhum trecho relevante encontrado nos documentos indexados. Se a pergunta depender dos autos, avise o usuário e sugira selecionar/enviar mais documentos.)";
 
@@ -486,7 +575,6 @@ INSTRUÇÕES:
       return { error: `Tool desconhecida: ${name}` };
     };
 
-    const tier = data.model_tier ?? "fast";
     const { content, steps } = await chatWithTools(messages, tools, executor, {
       model: MODEL_MAP[tier],
       temperature: 0.2,
