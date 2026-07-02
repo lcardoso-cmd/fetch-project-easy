@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Handshake, Loader2, Copy, Download } from "lucide-react";
+import { Handshake, Loader2, Copy, Download, FileText } from "lucide-react";
 import { toast } from "sonner";
 import { generateProposal } from "@/lib/generators.functions";
 import { getCases } from "@/lib/cases.functions";
@@ -181,6 +181,35 @@ function ProposalPage() {
     }
   };
 
+  const downloadPdf = async () => {
+    try {
+      const filenameBase = `proposta-${(form.client_name || "cliente").replace(/\s+/g, "-").toLowerCase()}`;
+      const container = document.createElement("div");
+      container.className = "proposal-preview";
+      container.style.cssText =
+        "padding:24mm 20mm;width:210mm;box-sizing:border-box;background:#fff;color:#0f172a;font-family:Inter,system-ui,sans-serif;font-size:11pt;line-height:1.55;";
+      container.innerHTML = output;
+      document.body.appendChild(container);
+      try {
+        const html2pdf = (await import("html2pdf.js")).default;
+        await html2pdf()
+          .set({
+            margin: 0,
+            filename: `${filenameBase}.pdf`,
+            image: { type: "jpeg", quality: 0.98 },
+            html2canvas: { scale: 2, useCORS: true, backgroundColor: "#ffffff" },
+            jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+          } as never)
+          .from(container)
+          .save();
+      } finally {
+        container.remove();
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Falha ao gerar PDF");
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -348,6 +377,9 @@ function ProposalPage() {
               <div className="flex gap-2">
                 <Button size="sm" variant="outline" onClick={copy}>
                   <Copy className="h-4 w-4 mr-1" /> Copiar
+                </Button>
+                <Button size="sm" variant="outline" onClick={downloadPdf}>
+                  <FileText className="h-4 w-4 mr-1" /> Baixar PDF
                 </Button>
                 <Button size="sm" onClick={download}>
                   <Download className="h-4 w-4 mr-1" /> Baixar .docx
