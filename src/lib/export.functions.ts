@@ -46,19 +46,22 @@ function splitSections(text: string): { heading: string; body: string }[] {
 export const exportSummaryDocx = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((i: unknown) => Input.parse(i))
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
     const { Packer } = await import("docx");
     const { createStyledDocument, plainTextToDocxChildren } = await import(
       "@/lib/docx/template"
     );
+    const { loadBrandingForUser } = await import("@/lib/docx/branding.server");
+    const branding = await loadBrandingForUser(context.userId);
 
     const doc = createStyledDocument({
       title: data.title,
       children: plainTextToDocxChildren(data.content),
       meta: {
         header: "Resumo do caso",
-        creator: "B2B | JurisMind AI",
+        creator: branding?.firmName || "B2B | JurisMind AI",
         description: data.title,
+        branding,
       },
     });
 
