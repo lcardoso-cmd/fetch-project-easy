@@ -1045,6 +1045,7 @@ function ProposalPage() {
           </CardContent>
         </Card>
       </div>
+      {unsavedDialog}
     </div>
   );
 }
