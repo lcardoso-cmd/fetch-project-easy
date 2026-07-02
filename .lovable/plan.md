@@ -1,140 +1,82 @@
 ## Objetivo
 
-Criar dentro do JurisMind uma área onde qualquer escritório pode **contratar a B2B Consulting** para serviços técnicos (parecer técnico, assistência técnica pericial, auditoria de cálculo, administração contratual, forense, etc.) diretamente do sistema — sem sair para e-mail/WhatsApp.
+Três melhorias no fluxo de Propostas:
 
-O fluxo escolhido combina **catálogo + solicitação + acompanhamento no sistema + notificação por e-mail** (não é marketplace com pagamento online — pricing continua sob proposta, como no seu modelo atual).
-
----
-
-## Experiência do usuário (escritório)
-
-Novo item de sidebar em **Meu Espaço**: **"Contratar B2B"** (ícone Briefcase, visível a todos os perfis).
-
-### 1. Catálogo (`/contratar-b2b`)
-Landing interna com:
-- Hero curto: "Reforço técnico especializado — direto no seu caso."
-- Grid de **categorias de serviço** (cards com ícone + descrição curta + "Solicitar"):
-  1. **Assistência Técnica em Processos** — perícia econômico-contábil-financeira e de engenharia, quesitos, laudos e contra-laudos.
-  2. **Auditoria e Revisão de Cálculos Judiciais** — refazimento de execuções, liquidações, atualização monetária.
-  3. **Parecer Técnico** — pareceres econômicos, contábeis, financeiros ou de engenharia.
-  4. **Administração Contratual & Claims** — pleitos, disruption, litigation support, dispute boards.
-  5. **Finanças Corporativas & Forense** — valuation, apuração de haveres, contabilidade forense, due diligence.
-  6. **Estratégia & Investigações** — investigações corporativas, compliance, FCPA, governança.
-- Rodapé com credenciais B2B (USD 5B em disputas, 60+ arbitragens, CAM-CCBC/ICC) — reforço institucional.
-
-### 2. Formulário de solicitação (`/contratar-b2b/solicitar?service=...`)
-Sheet/página com campos:
-- Serviço (pré-selecionado da categoria clicada, editável)
-- Vincular caso existente (opcional — dropdown de casos do usuário)
-- Título curto da demanda
-- Descrição detalhada (rich text)
-- Urgência (Normal / Alta / Crítica)
-- Prazo desejado (data)
-- Anexos (reaproveita bucket `documents` — múltiplos arquivos)
-- Contato preferencial (e-mail preenchido do perfil, telefone editável)
-
-Envia → cria registro em `b2b_service_requests` com `status = 'novo'` e dispara e-mail para B2B.
-
-### 3. "Minhas solicitações" (aba na mesma tela)
-Lista das solicitações do próprio usuário com badge de status (Novo / Em análise / Proposta enviada / Aceita / Recusada / Cancelada), última atualização e link para detalhes. Na tela de detalhes: timeline de status, notas visíveis ao cliente da B2B, anexos da proposta enviada, botão "Aceitar proposta" / "Recusar".
+1. **Comparar duas versões quaisquer** do histórico lado a lado (não só versão × atual).
+2. **Buscar/filtrar** o histórico por cliente/rótulo e por intervalo de datas.
+3. **PDF com a mesma tipografia do DOCX**: mesma família (Calibri), tamanhos, negrito/itálico/sublinhado, alinhamentos e espaçamentos idênticos.
 
 ---
 
-## Experiência B2B (Plataforma JurisMind — super_admin)
+## 1. Comparação lado a lado (duas versões)
 
-Nova aba em `/plataforma` → **"Solicitações B2B"** (`/plataforma/solicitacoes`):
-- Lista global de todas as solicitações (filtros por status, serviço, urgência, escritório).
-- Detalhe da solicitação: dados do escritório/usuário solicitante, descrição, anexos, timeline.
-- Ações: mudar status, adicionar **nota interna** (invisível ao cliente), adicionar **nota pública** (visível ao cliente), anexar proposta comercial (arquivo), marcar "Proposta enviada" (dispara e-mail ao solicitante).
-- Métrica no KPI dashboard: solicitações abertas, taxa de conversão.
+Arquivo: `src/components/proposal/proposal-versions-dialog.tsx`.
 
----
+- Adicionar seleção múltipla na lista (checkbox em cada versão, máx. 2). Barra superior mostra "Comparando A × B" com botão "Limpar".
+- Painel direito ganha uma terceira aba **"Comparar A × B"** (além de "Pré-visualizar" e "Comparar com atual"):
+  - Layout `grid grid-cols-2` com dois `ScrollArea` sincronizados por scroll (listener em um propaga `scrollTop` no outro).
+  - Cabeçalho de cada coluna: rótulo, data e origem da versão.
+  - Corpo: HTML renderizado da versão (mesmo estilo do preview).
+  - Abaixo, um "Diff textual A → B" reutilizando `diffHtml(a.output, b.output)` de `src/lib/proposal-diff.ts`, e "Campos alterados" com `diffForms(a.form, b.form)`.
+- Botões de ação por coluna: **Restaurar esta**.
 
-## Notificações por e-mail
+## 2. Busca e filtros no histórico
 
-Usar infraestrutura de app emails do Lovable (`scaffold_transactional_email`):
-- **Nova solicitação** → `lcardoso@b2bconsulting.com.br` (destino configurável em `app_settings`), com resumo + link para o painel.
-- **Confirmação** para o solicitante ("Recebemos sua solicitação").
-- **Mudança de status para 'Proposta enviada' / 'Aceita' / 'Recusada'** → notifica solicitante.
+Mesmo dialog:
 
-Pré-requisitos: domínio de e-mail configurado + `setup_email_infra`. Se ainda não houver, mostro o diálogo de setup antes de scaffoldar templates.
+- Barra de filtros acima da lista:
+  - `Input` de busca (filtra por `label`, `description`, e por cliente extraído de `form.cliente_nome`/`form.client_name` — normaliza acentos/caixa).
+  - `Popover` de datas com dois `Calendar mode="single"` (De / Até) + preset rápido "Últimos 7/30/90 dias".
+  - `Select` de origem: `todas / manual / gerada / auto`.
+  - Toggle "Somente fixadas".
+- Ordenar por: mais recentes (default), mais antigas, rótulo A→Z.
+- Contador "X de Y versões" quando há filtro ativo.
+- Filtro roda client-side sobre `versions` (já vem completo do server); não muda backend.
 
----
+## 3. PDF com tipografia do DOCX
 
-## Modelagem (Supabase)
+Meta: PDF e DOCX visualmente idênticos — mesma família, tamanhos, pesos, sublinhado e alinhamentos.
 
-Migração criando:
+Como o Word usa **Calibri** (proprietária, não redistribuível), o PDF vai embutir **Carlito** — fonte livre criada pela Google **metricamente compatível com Calibri** (mesma largura de caractere e mesma altura de linha). Resultado visual idêntico ao Word em telas normais.
 
-**`b2b_service_catalog`** (seed com as 6 categorias acima; permite ligar/desligar itens no futuro)
-- `slug` (pk), `title`, `description`, `icon`, `sort_order`, `active`
+### Mudanças
 
-**`b2b_service_requests`**
-- `id`, `requester_user_id` (fk auth.users), `case_id` (nullable fk cases), `service_slug` (fk catalog), `title`, `description`, `urgency` (enum), `desired_deadline`, `contact_email`, `contact_phone`, `status` (enum: novo | em_analise | proposta_enviada | aceita | recusada | cancelada), `created_at`, `updated_at`
+- `bun add @pdf-lib/fontkit pdf-lib` para embutir TTF com subsetting.
+- Adicionar fontes ao repo em `src/lib/documents/fonts/` (Carlito Regular/Bold/Italic/BoldItalic — SIL OFL, ~350KB total, servidas do bundle do server function).
+- Reescrever `src/lib/documents/pdf-renderer.ts` para usar `pdf-lib`:
+  - `PDFDocument.create()` → `registerFontkit(fontkit)` → `embedFont(bytes, { subset: true })` para as 4 variantes.
+  - Substituir writer manual atual pelo pipeline `pdf-lib` (paginação, `drawText`, `drawLine` para underline/strike, retângulos para bordas de header/footer).
+  - Manter o algoritmo de layout existente (quebra por token, justify, listas, headers), mas substituir métrica AFM (`textWidthPt` em `pdf-fonts.ts`) por `font.widthOfTextAtSize()` da fonte Carlito embutida — larguras reais e Unicode nativo (elimina `toWinAnsi` e o `?` para acentos).
+- Atualizar `src/lib/documents/tokens.ts`:
+  - `FONTS.pdfBody = "Carlito"` (etc.).
+  - Tamanhos permanecem em `FONT_SIZES_PT` (11pt body igual DOCX).
+- `src/lib/documents/pdf-fonts.ts`: remover tabela AFM Helvetica, exportar apenas o tipo `PdfFontFace = "body" | "bold" | "italic" | "boldItalic"` e helper `pickFace(bold, italic)`.
+- Suporte a Unicode completo (acentos portugueses, aspas curvas "" '', travessão —, bullet •) sem substituição, já que Carlito TTF tem essas glifos.
 
-**`b2b_service_request_attachments`**
-- `id`, `request_id`, `uploaded_by_user_id`, `visibility` (`client` | `internal`), `file_name`, `storage_path`, `mime_type`, `size_bytes`, `created_at`
+### Consistência garantida com DOCX
 
-**`b2b_service_request_events`** (timeline + notas)
-- `id`, `request_id`, `author_user_id`, `kind` (`status_change` | `note_public` | `note_internal` | `attachment`), `payload` (jsonb), `created_at`
-
-**`app_settings`** (chave/valor genérico, single-row-per-key) — para armazenar o e-mail destino do time B2B sem hardcode.
-
-### RLS + GRANTs
-- `b2b_service_catalog`: leitura pública (`TO authenticated` SELECT); escrita só `is_platform_staff()`.
-- `b2b_service_requests`: solicitante lê/edita as suas; `is_platform_staff()` lê/edita todas.
-- Anexos e eventos: mesma regra do request pai; `note_internal` só visível a staff via policy que filtra por `visibility`/`kind`.
-- Todas com bloco padrão `GRANT SELECT, INSERT, UPDATE, DELETE ... TO authenticated; GRANT ALL ... TO service_role`.
-
----
-
-## Servidor (TanStack `createServerFn`)
-
-`src/lib/b2b-services.functions.ts`:
-- `listCatalog()` — público autenticado.
-- `listMyRequests()` — usa `requireSupabaseAuth`.
-- `createRequest({ ... })` — insere request, faz upload de anexos, cria evento inicial, dispara e-mails.
-- `getRequest({ id })` — retorna request + eventos filtrados por visibilidade.
-- `updateRequestStatus({ id, status, note? })` — staff-only (check `is_platform_staff`).
-- `addRequestNote({ id, kind, body })` — staff-only para `note_internal`, ambos para `note_public`.
-- `listAllRequests({ filters })` — staff-only.
-
-E-mails enviados via helper `src/lib/email/send.ts` chamando `/lovable/email/transactional/send` com `idempotencyKey` baseado em `request_id + evento`.
+| Elemento | DOCX (Word) | PDF (novo) |
+|---|---|---|
+| Fonte corpo | Calibri 11pt | Carlito 11pt (métrica Calibri) |
+| H1 / H2 / H3 | Calibri Bold 16/13/11pt | Carlito Bold 16/13/11pt |
+| Título | Calibri Bold 24pt | Carlito Bold 24pt |
+| Negrito/Itálico/Sublinhado/Alinhamento | nativo | igual (via `pdf-lib` + linhas) |
+| Line-height | 1.35 | 1.35 |
+| Margens | 1" | 1" |
+| Header/Footer | firma + label + página | igual |
 
 ---
 
-## Capacidades e sidebar
+## Detalhes técnicos
 
-Nova capacidade **`b2b_marketplace`** (default: on para todos os perfis — como o próprio card indica que "todos veem"). Adicionada ao `NAV_ENTRIES` como `contract-b2b` na seção **Meu Espaço**.
+- **Sincronização de scroll (A×B)**: refs em cada `ScrollArea` viewport; handler `onScroll` com flag para evitar loop.
+- **Filtro por cliente**: normalização `s.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase()`.
+- **Presets de data**: gera `from`/`to` a partir de `Date.now() - N*86400000`.
+- **pdf-lib no Worker**: `pdf-lib` + `@pdf-lib/fontkit` são JS puros, ok no runtime workerd. Fontes importadas como `?url` + `fetch` em dev, ou como `Uint8Array` via `import bytes from "./fonts/Carlito-Regular.ttf" with { type: "bytes" }` — usar o padrão que já funcione no Vite/TSS do projeto (fallback: `readFile` no server function).
+- Nada no backend/DB muda para as tarefas 1 e 2.
 
-Painel B2B fica sob capacidade existente `platform_admin` (já usada pela seção Plataforma).
+## Fora de escopo
 
----
-
-## Rotas (arquivos novos)
-
-- `src/routes/_authenticated/contratar-b2b.index.tsx` — catálogo + tabs "Solicitar" / "Minhas solicitações".
-- `src/routes/_authenticated/contratar-b2b.solicitar.tsx` — formulário (aceita `?service=slug`).
-- `src/routes/_authenticated/contratar-b2b.$requestId.tsx` — detalhe/timeline da solicitação (cliente).
-- `src/routes/_authenticated/plataforma.solicitacoes.tsx` — painel global (staff).
-- `src/routes/_authenticated/plataforma.solicitacoes.$requestId.tsx` — detalhe staff.
-
-Cada rota com `head()`, `errorComponent`, `notFoundComponent`.
-
----
-
-## Fora de escopo (para próximas iterações)
-
-- Pagamento online / checkout. Continua sob proposta manual.
-- Chat em tempo real dentro da solicitação (a timeline com notas já cobre o essencial).
-- Assinatura digital da proposta (pode entrar depois usando o gerador de proposta já existente).
-
----
-
-## Ordem de implementação
-
-1. Migração das 5 tabelas + enums + policies + grants + seed do catálogo.
-2. `b2b-services.functions.ts` + rotas do cliente (catálogo, solicitar, minhas solicitações, detalhe).
-3. Item na sidebar + capacidade nova.
-4. Painel B2B em `/plataforma/solicitacoes` (lista + detalhe + ações staff).
-5. Setup de e-mail (domínio se necessário → `setup_email_infra` → `scaffold_transactional_email`) + templates: nova solicitação (B2B), confirmação (cliente), status atualizado (cliente).
-6. Tabela `app_settings` seed com `b2b_inbox_email = 'lcardoso@b2bconsulting.com.br'`.
+- Comparar A × B com merge de mudanças (só visualização).
+- Compartilhar link de comparação.
+- Suporte a fontes customizadas por escritório (fica com Carlito para todos).
