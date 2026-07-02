@@ -1884,7 +1884,7 @@ export function JurisMindChat({
                     <Settings2 className="h-4 w-4" />
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent align="end" className="w-72 p-3">
+                <PopoverContent align="end" className="w-72 p-3" aria-label="Selecionar microfone">
                   <div className="mb-2 flex items-center justify-between">
                     <div className="text-sm font-medium">Microfone</div>
                     <button
