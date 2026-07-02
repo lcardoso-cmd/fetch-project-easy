@@ -45,22 +45,45 @@ export const Route = createFileRoute("/api/chat/stream")({
         type ChatMessage = import("@/lib/ai.server").ChatMessage;
 
         const encoder = new TextEncoder();
+        const abortSignal = request.signal;
 
         const stream = new ReadableStream<Uint8Array>({
           async start(controller) {
+            let closed = false;
+            const safeEnqueue = (chunk: Uint8Array) => {
+              if (closed) return;
+              try {
+                controller.enqueue(chunk);
+              } catch {
+                closed = true;
+              }
+            };
             const send = (event: string, data: unknown) => {
-              controller.enqueue(
+              safeEnqueue(
                 encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`),
               );
             };
             // keep-alive ping every 15s (evita proxies fecharem a conexão)
             const ping = setInterval(() => {
+              safeEnqueue(encoder.encode(`: ping\n\n`));
+            }, 15000);
+
+            // Se o cliente abortar (botão "parar" / fechar aba), interrompemos
+            // o loop e o fetch ao gateway via abortSignal.
+            const onAbort = () => {
+              closed = true;
+              clearInterval(ping);
               try {
-                controller.enqueue(encoder.encode(`: ping\n\n`));
+                controller.close();
               } catch {
                 /* noop */
               }
-            }, 15000);
+            };
+            if (abortSignal.aborted) {
+              onAbort();
+              return;
+            }
+            abortSignal.addEventListener("abort", onAbort, { once: true });
 
             try {
               const run = await prepareRagRun({
@@ -68,6 +91,7 @@ export const Route = createFileRoute("/api/chat/stream")({
                 userId: auth.userId,
                 data: body,
               });
+              if (abortSignal.aborted) return;
 
               send("citations", { citations: run.citations });
 
@@ -77,12 +101,15 @@ export const Route = createFileRoute("/api/chat/stream")({
               const maxSteps = 6;
 
               for (let i = 0; i < maxSteps; i++) {
+                if (abortSignal.aborted) break;
                 const r = await chatCompleteStream(convo, {
                   model: run.model,
                   temperature: 0.2,
                   tools: run.tools,
+                  signal: abortSignal,
                   onDelta: (delta) => send("token", { text: delta }),
                 });
+                if (abortSignal.aborted) break;
                 if (!r.tool_calls || r.tool_calls.length === 0) {
                   finalContent = r.content;
                   break;
@@ -93,6 +120,7 @@ export const Route = createFileRoute("/api/chat/stream")({
                   tool_calls: r.tool_calls,
                 });
                 for (const tc of r.tool_calls) {
+                  if (abortSignal.aborted) break;
                   let args: Record<string, unknown> = {};
                   try {
                     args = JSON.parse(tc.function.arguments || "{}");
@@ -117,15 +145,17 @@ export const Route = createFileRoute("/api/chat/stream")({
                 }
               }
 
-              if (!finalContent && steps.length > 0) {
+              if (!abortSignal.aborted && !finalContent && steps.length > 0) {
                 // Última tentativa forçando resposta final sem tools
                 const final = await chatCompleteStream(convo, {
                   model: run.model,
                   temperature: 0.2,
+                  signal: abortSignal,
                   onDelta: (delta) => send("token", { text: delta }),
                 });
                 finalContent = final.content;
               }
+
 
               const toolSteps = steps.map((s) => ({
                 name: s.name,
