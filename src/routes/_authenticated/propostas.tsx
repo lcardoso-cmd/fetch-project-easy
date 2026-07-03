@@ -173,6 +173,8 @@ function ProposalPage() {
   const [hydrated, setHydrated] = useState(false);
   const [, forceTick] = useState(0);
   const [versionsOpen, setVersionsOpen] = useState(false);
+  const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
+
 
   // Popover state para salvar versão com rótulo/descrição/fixar
   const [savePopoverOpen, setSavePopoverOpen] = useState(false);
