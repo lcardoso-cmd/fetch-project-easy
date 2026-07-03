@@ -582,6 +582,41 @@ function ProposalPage() {
     }
   };
 
+  const mmToPtNum = (mm: number) => Math.round(mm * 2.83464567);
+  const shareSnapshot: PdfShareSnapshot | null = output
+    ? {
+        title: `Proposta - ${form.client_name || "Cliente"}`,
+        clientName: form.client_name || null,
+        html: output,
+        page: {
+          format: pdfFormat,
+          orientation: pdfOrientation,
+          margins: {
+            top: mmToPtNum(pdfMargins.top),
+            right: mmToPtNum(pdfMargins.right),
+            bottom: mmToPtNum(pdfMargins.bottom),
+            left: mmToPtNum(pdfMargins.left),
+          },
+        },
+        cover: pdfCoverEnabled
+          ? {
+              clientName: form.client_name,
+              clientDocument: form.client_document,
+              clientAddress: [form.client_address, form.client_city_state]
+                .filter(Boolean)
+                .join(" — "),
+              matter: form.matter,
+            }
+          : null,
+        watermark:
+          pdfWatermarkMode === "draft"
+            ? { text: "RASCUNHO", opacity: 0.12 }
+            : pdfWatermarkMode === "version"
+              ? { text: `VERSÃO ${pdfWatermarkVersion || "1"}`, opacity: 0.12 }
+              : null,
+      }
+    : null;
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
