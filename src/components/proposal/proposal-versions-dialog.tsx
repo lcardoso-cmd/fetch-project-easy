@@ -27,6 +27,7 @@ import {
   X,
   CalendarIcon,
   Filter,
+  FileText,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -272,6 +273,55 @@ export function ProposalVersionsDialog({
   const handleRestore = (v: ProposalVersion) => {
     onRestore(v);
     onOpenChange(false);
+  };
+
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  const handleDownloadPdf = async (v: ProposalVersion) => {
+    if (!v.output) {
+      toast.error("Esta versão não tem conteúdo para exportar.");
+      return;
+    }
+    setDownloadingId(v.id);
+    try {
+      const f = (v.form ?? {}) as Record<string, string>;
+      const cliente = clientOf(v) || "cliente";
+      const titulo = `Proposta - ${clientOf(v) || "Cliente"} (${v.label})`;
+      const filename = `proposta-${cliente.replace(/\s+/g, "-").toLowerCase()}-${v.label.replace(/\s+/g, "-").toLowerCase()}.pdf`;
+      const { supabase } = await import("@/integrations/supabase/client");
+      const { data: sess } = await supabase.auth.getSession();
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (sess.session?.access_token) headers.Authorization = `Bearer ${sess.session.access_token}`;
+      const res = await fetch("/api/tools/pdf", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          titulo,
+          html: v.output,
+          cover: clientOf(v)
+            ? {
+                clientName: f.client_name || clientOf(v),
+                clientDocument: f.client_document,
+                clientAddress: [f.client_address, f.client_city_state].filter(Boolean).join(" — "),
+                matter: f.matter,
+              }
+            : null,
+          watermark: { text: `VERSÃO ${v.label}`, opacity: 0.1 },
+        }),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success("PDF gerado com sucesso.");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Falha ao gerar PDF");
+    } finally {
+      setDownloadingId(null);
+    }
   };
 
   // ---------- Diffs ----------
@@ -597,6 +647,21 @@ export function ProposalVersionsDialog({
                             <Button size="sm" variant="ghost" className="h-6 px-2 text-xs" onClick={() => startEdit(v)}>
                               <Pencil className="mr-1 h-3 w-3" /> Editar
                             </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-6 px-2 text-xs"
+                              onClick={() => handleDownloadPdf(v)}
+                              disabled={downloadingId === v.id || !v.output}
+                              title="Baixar esta versão em PDF"
+                            >
+                              {downloadingId === v.id ? (
+                                <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                              ) : (
+                                <FileText className="mr-1 h-3 w-3" />
+                              )}
+                              PDF
+                            </Button>
                           </div>
                         )}
                       </div>
@@ -623,9 +688,22 @@ export function ProposalVersionsDialog({
                     <p className="truncate text-sm font-semibold">{selected.label}</p>
                     <p className="text-xs text-muted-foreground">{formatDate(selected.created_at)}</p>
                   </div>
-                  <div className="ml-auto flex gap-2">
+                  <div className="ml-auto flex flex-wrap gap-2">
                     <Button size="sm" variant="outline" onClick={() => deleteMut.mutate(selected.id)}>
                       <Trash2 className="mr-1 h-4 w-4" /> Excluir
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleDownloadPdf(selected)}
+                      disabled={downloadingId === selected.id || !selected.output}
+                    >
+                      {downloadingId === selected.id ? (
+                        <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+                      ) : (
+                        <FileText className="mr-1 h-4 w-4" />
+                      )}
+                      Baixar PDF
                     </Button>
                     <Button size="sm" onClick={() => handleRestore(selected)}>
                       <RotateCcw className="mr-1 h-4 w-4" /> Restaurar
