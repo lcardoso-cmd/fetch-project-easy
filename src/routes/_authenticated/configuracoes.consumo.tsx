@@ -14,6 +14,8 @@ import {
 import { Loader2, ChevronLeft, ChevronRight, TrendingUp } from "lucide-react";
 import { getAiUsageSummary, type UsageSummary } from "@/lib/ai-usage.functions";
 import { BudgetCard } from "@/components/ai/budget-card";
+import { LastInteractionCard } from "@/components/ai/last-interaction-card";
+
 
 export const Route = createFileRoute("/_authenticated/configuracoes/consumo")({
   component: ConsumoPage,
