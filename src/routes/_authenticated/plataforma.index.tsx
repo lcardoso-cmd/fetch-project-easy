@@ -2,6 +2,7 @@ import { createFileRoute, redirect, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { PageHeader } from "@/components/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Building2, Users, CreditCard, Activity, ArrowRight } from "lucide-react";
 import { getPlatformKpis } from "@/lib/platform.functions";
@@ -31,12 +32,10 @@ function PlatformOverview() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold font-heading tracking-tight">Plataforma JurisMind</h1>
-        <p className="mt-1 text-muted-foreground">
-          Visão B2B — clientes do SaaS, assinaturas e uso agregado.
-        </p>
-      </div>
+      <PageHeader
+        title="Plataforma JurisMind"
+        subtitle="Visão B2B — clientes do SaaS, assinaturas e uso agregado."
+      />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Kpi
