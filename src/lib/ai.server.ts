@@ -2,7 +2,12 @@
 // Endpoint OpenAI-compatible em https://ai.gateway.lovable.dev/v1
 // Usa LOVABLE_API_KEY (já configurada como secret no projeto).
 
-import { logAiUsage, assertAiBudget, type RawUsage } from "./ai-usage.server";
+import {
+  logAiUsage,
+  assertAiBudget,
+  getAiLimitsForCurrentUser,
+  type RawUsage,
+} from "./ai-usage.server";
 import {
   cacheKey,
   fallbackModel,
@@ -13,6 +18,41 @@ import {
   DEFAULT_LATENCY_TIMEOUT_MS,
   DEFAULT_STREAM_TTFB_MS,
 } from "./ai-cache";
+
+/**
+ * Trunca o histórico de mensagens preservando a `system` inicial e as
+ * mensagens mais recentes até caber em `maxChars`. Mensagens intermediárias
+ * são removidas e sinalizadas com um marcador. `0` = sem limite.
+ */
+function truncateMessages<T extends { role: string; content: unknown }>(
+  messages: T[],
+  maxChars: number,
+): T[] {
+  if (!maxChars || maxChars <= 0) return messages;
+  const size = (m: T) =>
+    typeof m.content === "string" ? m.content.length : JSON.stringify(m.content ?? "").length;
+  const total = messages.reduce((n, m) => n + size(m), 0);
+  if (total <= maxChars) return messages;
+
+  const system = messages[0]?.role === "system" ? [messages[0]] : [];
+  const rest = system.length ? messages.slice(1) : messages.slice();
+  const kept: T[] = [];
+  let used = system.reduce((n, m) => n + size(m), 0);
+  for (let i = rest.length - 1; i >= 0; i--) {
+    const s = size(rest[i]);
+    if (used + s > maxChars) break;
+    kept.unshift(rest[i]);
+    used += s;
+  }
+  const removed = rest.length - kept.length;
+  if (removed > 0) {
+    kept.unshift({
+      role: "system",
+      content: `[Contexto anterior omitido: ${removed} mensagem(ns) removidas por limite de contexto configurado pelo usuário.]`,
+    } as unknown as T);
+  }
+  return [...system, ...kept];
+}
 
 const AI_BASE = "https://ai.gateway.lovable.dev/v1";
 
