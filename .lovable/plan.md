@@ -1,57 +1,54 @@
-## Objetivo
-Adicionar (1) uma **capa** com dados do cliente e (2) uma **marca d'água** ("Rascunho" ou "Versão X") no PDF exportado a partir de `/propostas`.
+## Problemas atuais
 
-## Mudanças
+1. **Dark mode "invertido"**: `--card` no dark hoje é branco → cards, popovers, inputs e o topbar (`bg-card`) aparecem como blocos brancos sobre o fundo navy. Borders `white/14%` somem em superfícies brancas, então inputs ficam "sem linha".
+2. **Topbar destoa da sidebar** (branco vs navy).
+3. **Nenhum menu de usuário** no topo — só um texto do e-mail e um `LogOut` avulso no mobile.
 
-### 1. `src/lib/documents/pdf-renderer.ts`
-Estender `RenderPdfInput`:
-```ts
-cover?: {
-  clientName?: string;
-  clientDocument?: string;
-  clientAddress?: string;
-  matter?: string;      // objeto/assunto
-  reference?: string;   // ex: "Proposta Comercial nº 001/2026"
-  date?: string;        // "02 de julho de 2026" (default: hoje pt-BR)
-} | null;
-watermark?: { text: string; opacity?: number } | null;
-```
-- Nova função `drawCoverPage(page, cover, branding, fonts, layout)`:
-  - Firma no topo (usa `branding.firmName` em caixa alta, cor accent, centralizado).
-  - Título grande centralizado (`FONT_SIZES_PT.title` * 1.6).
-  - Bloco "Preparado para" com os campos do cliente (label muted + valor ink), alinhado à esquerda, com espaçamento generoso.
-  - Bloco "Assunto/Referência/Data" no rodapé da capa.
-  - Sem header/footer numerado nessa página; a numeração começa em 1 na página de conteúdo (ajustar `paginate`/loop para offset).
-- Nova função `drawWatermark(page, text, fonts, layout, opacity)`:
-  - Texto rotacionado ~45° (via `degrees(45)` já importado), grande (~90pt), cor cinza claro com `opacity` ~0.12.
-  - Centralizado geometricamente na página. Aplicado a **todas as páginas incluindo a capa**.
-- No entry point, quando `cover` truthy, adicionar a capa como primeira página, e ajustar `Página X de Y` para começar a partir da segunda página (capa fica sem paginação; total exclui a capa).
+## O que vou fazer
 
-### 2. `src/routes/api/tools/pdf.ts`
-Adicionar ao body:
-- `cover?: { clientName?, clientDocument?, clientAddress?, matter?, reference?, date? }`
-- `watermark?: { text: string; opacity?: number }`
+### 1. Redesenhar tokens do modo escuro em `src/styles.css`
 
-Repassar para `renderPdf(...)`. Validação simples (strings ≤ 300 chars).
+Substituir a paleta atual por uma hierarquia de superfícies coerente (padrão de SaaS profissional — Linear/Vercel style, mas na marca navy/cyan):
 
-### 3. `src/routes/_authenticated/propostas.tsx`
-No Popover de PDF (após margens), adicionar seção **"Capa e marca d'água"**:
-- Switch **"Incluir capa com dados do cliente"** (default ligado). Estado: `pdfCoverEnabled`.
-- Switch **"Marca d'água"** (default desligado). Estado: `pdfWatermarkEnabled`.
-- Select para tipo: `"draft"` → "Rascunho" · `"version"` → usa `versionLabel` atual · `"custom"` → mostra Input.
-- Persistir preferências em `localStorage` (`propostas.pdfOptions`).
+| Token | Valor | Uso |
+|---|---|---|
+| `--background` | navy quase preto (`oklch(0.18 0.05 275)`) | fundo geral |
+| `--sidebar` | navy profundo (`#000038` / `oklch(0.143 0.13 278)`) | sidebar mantém a cor da marca |
+| `--card` / `--popover` | navy elevado (`oklch(0.22 0.05 275)`) | cards, topbar, dropdowns |
+| `--muted` | `oklch(0.26 0.04 275)` | superfícies secundárias dentro de cards |
+| `--secondary` | `oklch(0.26 0.05 275)` | botões secundários |
+| `--accent` | `oklch(0.30 0.06 275)` | hover |
+| `--foreground` / `--card-foreground` | quase branco (`oklch(0.98 0.01 250)`) | texto |
+| `--muted-foreground` | cinza-azulado (`oklch(0.72 0.02 260)`) | texto secundário |
+| `--border` / `--input` | `oklch(1 0 0 / 12%)` — agora **visível** sobre superfícies escuras |
+| `--primary` | cyan da marca (`oklch(0.91 0.155 195)`) | CTAs, foco, links ativos |
+| `--ring` | mesmo cyan | foco acessível |
 
-No `downloadPdf()`:
-- Se `pdfCoverEnabled`, montar `cover` com `form.client_name`, `form.client_document`, `[form.client_address, form.client_city_state].filter(Boolean).join(" — ")`, `form.matter`, `titulo`, data atual formatada em pt-BR.
-- Se `pdfWatermarkEnabled`, montar `watermark: { text: resolvedText }` — usar "Rascunho" ou o `versionLabel` truncado ou o custom.
-- Enviar ambos no body.
+Resultado: topbar, cards e sidebar todos em tons de navy escuro, com borders sutis mas visíveis, texto branco e o cyan como único acento. Modo claro fica inalterado.
 
-### 4. QA
-Fazer download de um PDF de teste com capa + watermark "Rascunho" e outro com "Versão — Cliente X". Converter páginas em imagem com `pdftoppm` e inspecionar:
-- Capa renderiza título, firma, bloco cliente, referência, data — sem sobreposições nem clipping.
-- Watermark aparece diagonal em todas as páginas com opacidade correta.
-- Numeração "Página X de Y" começa em 1 na primeira página de conteúdo e Y não conta a capa.
-- Layout mantém margens configuradas pelo usuário.
+### 2. Alinhar o topbar
 
-## Fora do escopo
-- Aplicar capa/watermark a outros exports (peças/DOCX): esta iteração é só o PDF de propostas. O endpoint suporta os campos, então outras telas podem adotar depois sem mudanças de infra.
+Nenhuma mudança de classe: como `bg-card` passa a ser navy escuro no dark, o topbar automaticamente combina com a sidebar e ganha borda inferior visível.
+
+### 3. Menu de usuário no topo
+
+Criar `src/components/layout/user-menu.tsx`:
+
+- `DropdownMenu` do shadcn com trigger = `Avatar` (foto do `profiles.avatar_url` se existir; fallback com iniciais do e-mail sobre `bg-primary/10`).
+- Header do menu: nome + e-mail.
+- Itens: **Painel** (`/painel`), **Meu perfil** (`/configuracoes/perfil` — se a rota não existir, aponta para `/configuracoes`), **Configurações** (`/configuracoes`), separador, **Sair** (chama `signOut`).
+- Buscar `full_name` e `avatar_url` do `profiles` via `useQuery` (já há client Supabase).
+
+Substituir em `dashboard-shell.tsx`:
+- **Topbar desktop** (linha 486-489): trocar `<div>{user?.email}</div>` por `<UserMenu />` (mantém `NotificationBell` ao lado).
+- **Topbar mobile** (linha 455-460): remover o botão `LogOut` avulso e usar `<UserMenu />` compacto (só avatar), mantendo `NotificationBell`.
+
+### 4. Verificação
+
+- Alternar Claro/Escuro/Sistema e conferir: fundo, sidebar, topbar, cards, inputs, popovers, dropdowns e bordas.
+- Conferir que o avatar aparece com foto (quando houver) ou iniciais, e que os itens do menu navegam corretamente.
+
+## Fora de escopo
+
+- Página de edição de perfil/upload de avatar (só consumo o que já existe em `profiles`).
+- Refatorar componentes específicos que hardcodem cores — se algum quebrar visualmente no dark, corrijo pontualmente.
