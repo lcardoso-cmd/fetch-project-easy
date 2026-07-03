@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, Ban, CheckCircle2, Loader2, Wallet } from "lucide-react";
+import { z } from "zod";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -9,11 +10,66 @@ import { getAiBudgetStatus, updateAiBudget } from "@/lib/ai-usage.functions";
 import { toast } from "sonner";
 
 /**
- * Card de orçamento mensal de IA (pessoal).
- * - Mostra saldo atual (gasto vs limite) e barra de progresso.
- * - Permite ajustar o limite (USD) e o percentual de aviso.
- * - Limite = 0 ⇒ sem bloqueio (ilimitado).
+ * Faixas aceitas (espelham a validação zod do backend em `ai-usage.functions.ts`).
+ * Mantê-las em um único objeto facilita alinhamento cliente/servidor.
  */
+const LIMITS = {
+  limit: { min: 0, max: 100000, label: "Limite mensal (USD)" },
+  warn: { min: 1, max: 100, label: "Aviso (%)" },
+  maxTokens: { min: 0, max: 200000, label: "Máx. tokens de resposta" },
+  maxCtx: { min: 0, max: 2000000, label: "Contexto máx." },
+  maxRetries: { min: 0, max: 5, label: "Tentativas por chamada" },
+} as const;
+
+const FormSchema = z.object({
+  limit: z.number().min(LIMITS.limit.min).max(LIMITS.limit.max),
+  warn: z.number().int().min(LIMITS.warn.min).max(LIMITS.warn.max),
+  maxTokens: z.number().int().min(LIMITS.maxTokens.min).max(LIMITS.maxTokens.max),
+  maxCtx: z.number().int().min(LIMITS.maxCtx.min).max(LIMITS.maxCtx.max),
+  maxRetries: z.number().int().min(LIMITS.maxRetries.min).max(LIMITS.maxRetries.max),
+});
+
+type FieldKey = keyof typeof LIMITS;
+type Errors = Partial<Record<FieldKey, string>>;
+
+function parseNumber(raw: string): number | null {
+  if (raw.trim() === "") return null;
+  const n = Number(raw);
+  return Number.isFinite(n) ? n : null;
+}
+
+function validate(values: Record<FieldKey, string>): { errors: Errors; parsed: z.infer<typeof FormSchema> | null } {
+  const errors: Errors = {};
+  const nums: Partial<Record<FieldKey, number>> = {};
+  (Object.keys(LIMITS) as FieldKey[]).forEach((k) => {
+    const n = parseNumber(values[k]);
+    const { min, max, label } = LIMITS[k];
+    if (n === null) {
+      errors[k] = `${label} é obrigatório.`;
+      return;
+    }
+    if (k !== "limit" && !Number.isInteger(n)) {
+      errors[k] = `${label} deve ser um inteiro.`;
+      return;
+    }
+    if (n < min || n > max) {
+      errors[k] = `Use um valor entre ${min} e ${max.toLocaleString("pt-BR")}.`;
+      return;
+    }
+    nums[k] = n;
+  });
+  if (Object.keys(errors).length > 0) return { errors, parsed: null };
+  const result = FormSchema.safeParse(nums);
+  if (!result.success) {
+    for (const issue of result.error.issues) {
+      const key = issue.path[0] as FieldKey;
+      errors[key] = issue.message;
+    }
+    return { errors, parsed: null };
+  }
+  return { errors, parsed: result.data };
+}
+
 export function BudgetCard() {
   const qc = useQueryClient();
   const { data, isLoading } = useQuery({
@@ -26,6 +82,7 @@ export function BudgetCard() {
   const [maxTokens, setMaxTokens] = useState<string>("0");
   const [maxCtx, setMaxCtx] = useState<string>("0");
   const [maxRetries, setMaxRetries] = useState<string>("1");
+  const [touched, setTouched] = useState<Partial<Record<FieldKey, boolean>>>({});
 
   useEffect(() => {
     if (data) {
@@ -34,26 +91,47 @@ export function BudgetCard() {
       setMaxTokens(String(data.max_tokens ?? 0));
       setMaxCtx(String(data.max_context_chars ?? 0));
       setMaxRetries(String(data.max_retries ?? 1));
+      setTouched({});
     }
   }, [data]);
 
+  const { errors, parsed } = useMemo(
+    () => validate({ limit, warn, maxTokens, maxCtx, maxRetries }),
+    [limit, warn, maxTokens, maxCtx, maxRetries],
+  );
+  const isValid = parsed !== null;
+  const markTouched = (k: FieldKey) => setTouched((t) => ({ ...t, [k]: true }));
+  const errFor = (k: FieldKey) => (touched[k] ? errors[k] : undefined);
+
   const mutation = useMutation({
-    mutationFn: () =>
-      updateAiBudget({
+    mutationFn: () => {
+      if (!parsed) throw new Error("Corrija os campos destacados antes de salvar.");
+      return updateAiBudget({
         data: {
-          monthly_limit_usd: Number(limit) || 0,
-          warn_threshold_pct: Math.min(100, Math.max(1, Number(warn) || 80)),
-          max_tokens: Math.max(0, Math.min(200000, Math.floor(Number(maxTokens) || 0))),
-          max_context_chars: Math.max(0, Math.min(2000000, Math.floor(Number(maxCtx) || 0))),
-          max_retries: Math.max(0, Math.min(5, Math.floor(Number(maxRetries) || 0))),
+          monthly_limit_usd: parsed.limit,
+          warn_threshold_pct: parsed.warn,
+          max_tokens: parsed.maxTokens,
+          max_context_chars: parsed.maxCtx,
+          max_retries: parsed.maxRetries,
         },
-      }),
+      });
+    },
     onSuccess: () => {
       toast.success("Configurações de IA atualizadas.");
       qc.invalidateQueries({ queryKey: ["ai-budget-status"] });
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Falha ao salvar."),
   });
+
+  const handleSave = () => {
+    if (!isValid) {
+      setTouched({ limit: true, warn: true, maxTokens: true, maxCtx: true, maxRetries: true });
+      toast.error("Corrija os campos destacados antes de salvar.");
+      return;
+    }
+    mutation.mutate();
+  };
+
 
   const pct = data?.pct ?? 0;
   const remaining = Math.max(0, (data?.limit_usd ?? 0) - (data?.spent_usd ?? 0));
