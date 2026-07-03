@@ -100,12 +100,33 @@ function AuthPage() {
     }
   };
 
+  const resendStorageKey = (email: string) => `jm.resendCooldown:${email.toLowerCase()}`;
+
+  // Restaura cooldown persistido ao trocar de e-mail pendente (ou no mount).
+  useEffect(() => {
+    if (!pendingEmail || typeof window === "undefined") {
+      setResendCooldown(0);
+      return;
+    }
+    const raw = window.localStorage.getItem(resendStorageKey(pendingEmail));
+    const until = raw ? Number(raw) : 0;
+    const remaining = until ? Math.max(0, Math.ceil((until - Date.now()) / 1000)) : 0;
+    setResendCooldown(remaining);
+    if (!remaining && raw) window.localStorage.removeItem(resendStorageKey(pendingEmail));
+  }, [pendingEmail]);
+
   // Timer para o cooldown do botão de reenviar confirmação.
   useEffect(() => {
-    if (resendCooldown <= 0) return;
+    if (resendCooldown <= 0) {
+      if (pendingEmail && typeof window !== "undefined") {
+        window.localStorage.removeItem(resendStorageKey(pendingEmail));
+      }
+      return;
+    }
     const t = setTimeout(() => setResendCooldown((s) => Math.max(0, s - 1)), 1000);
     return () => clearTimeout(t);
-  }, [resendCooldown]);
+  }, [resendCooldown, pendingEmail]);
+
 
   const isUnconfirmedError = (msg: string) => {
     const m = msg.toLowerCase();
