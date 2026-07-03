@@ -66,6 +66,7 @@ function HireB2bRequestDetail() {
   const [note, setNote] = useState("");
   const [visibility, setVisibility] = useState<"public" | "internal">("public");
   const [sending, setSending] = useState(false);
+  const [previewId, setPreviewId] = useState<string | null>(null);
 
   if (isLoading || !data) {
     return <div className="text-sm text-muted-foreground">Carregando…</div>;
