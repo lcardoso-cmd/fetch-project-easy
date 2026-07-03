@@ -202,6 +202,9 @@ export interface AiBudgetStatus {
   limit_usd: number;
   spent_usd: number;
   warn_threshold_pct: number;
+  max_tokens: number;
+  max_context_chars: number;
+  max_retries: number;
   pct: number;
   warn: boolean;
   blocked: boolean;
@@ -217,6 +220,9 @@ export const getAiBudgetStatus = createServerFn({ method: "GET" })
 const UpdateBudgetSchema = z.object({
   monthly_limit_usd: z.number().min(0).max(100000),
   warn_threshold_pct: z.number().int().min(1).max(100),
+  max_tokens: z.number().int().min(0).max(200000).optional(),
+  max_context_chars: z.number().int().min(0).max(2000000).optional(),
+  max_retries: z.number().int().min(0).max(5).optional(),
 });
 
 export const updateAiBudget = createServerFn({ method: "POST" })
@@ -225,17 +231,18 @@ export const updateAiBudget = createServerFn({ method: "POST" })
   .handler(async ({ context, data }): Promise<AiBudgetStatus> => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const admin = supabaseAdmin as unknown as { from: (t: string) => any };
+    const row: Record<string, unknown> = {
+      user_id: context.userId,
+      monthly_limit_usd: data.monthly_limit_usd,
+      warn_threshold_pct: data.warn_threshold_pct,
+      updated_at: new Date().toISOString(),
+    };
+    if (data.max_tokens !== undefined) row.max_tokens = data.max_tokens;
+    if (data.max_context_chars !== undefined) row.max_context_chars = data.max_context_chars;
+    if (data.max_retries !== undefined) row.max_retries = data.max_retries;
     const { error } = await admin
       .from("ai_budgets")
-      .upsert(
-        {
-          user_id: context.userId,
-          monthly_limit_usd: data.monthly_limit_usd,
-          warn_threshold_pct: data.warn_threshold_pct,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: "user_id" },
-      );
+      .upsert(row, { onConflict: "user_id" });
     if (error) throw new Error(error.message);
     const { invalidateBudgetCache, getAiBudgetSnapshot } = await import("./ai-usage.server");
     invalidateBudgetCache(context.userId);
