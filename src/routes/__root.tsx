@@ -91,7 +91,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
               "@type": "Organization",
               name: "JurisMind AI",
               url: "https://b2bjurismind.lovable.app",
-              logo: "https://storage.googleapis.com/gpt-engineer-file-uploads/Sls90jSFrMa8ECulf4OjLMG7sRB3/social-images/social-1783001247994-LOGO_JURISMIND_16-9.webp",
+              logo: OG_IMAGE_URL,
               sameAs: ["https://b2bjurismind.lovable.app"],
             },
             {
