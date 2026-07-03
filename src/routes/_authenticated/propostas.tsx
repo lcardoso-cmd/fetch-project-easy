@@ -1104,6 +1104,14 @@ function ProposalPage() {
                 <Button size="sm" variant="outline" onClick={downloadPdf}>
                   <FileText className="h-4 w-4 mr-1" /> Baixar PDF
                 </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setShareOpen(true)}
+                  title="Compartilhar por link seguro (sem anexar arquivo)"
+                >
+                  <Link2 className="h-4 w-4 mr-1" /> Compartilhar link
+                </Button>
                 <Button size="sm" onClick={download}>
                   <Download className="h-4 w-4 mr-1" /> Baixar .docx
                 </Button>
