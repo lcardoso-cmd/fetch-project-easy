@@ -193,11 +193,12 @@ export const Route = createFileRoute("/api/chat/stream")({
 
               if (!abortSignal.aborted && !finalContent && steps.length > 0) {
                 // Última tentativa forçando resposta final sem tools
+                const generatedDocument = hasGeneratedDocument(steps);
                 const final = await chatCompleteStream(convo, {
                   model: run.model,
                   temperature: 0.2,
                   signal: abortSignal,
-                  onDelta: (delta) => send("token", { text: delta }),
+                  onDelta: generatedDocument ? undefined : (delta) => send("token", { text: delta }),
                 });
                 finalContent = final.content;
               }
