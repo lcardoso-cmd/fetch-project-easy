@@ -1,13 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Packer } from "docx";
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
-import {
-  createStyledDocument,
-  htmlToDocxChildren,
-  plainTextToDocxChildren,
-} from "@/lib/docx/template";
-import { loadBrandingForUser } from "@/lib/docx/branding.server";
 
 function sanitize(name: string) {
   return (
@@ -62,6 +55,13 @@ export const Route = createFileRoute("/api/tools/petition")({
             return new Response("titulo e conteudo obrigatórios", { status: 400 });
           }
 
+          const [{ Packer }, docxTemplate, brandingModule] = await Promise.all([
+            import("docx"),
+            import("@/lib/docx/template"),
+            import("@/lib/docx/branding.server"),
+          ]);
+          const { createStyledDocument, htmlToDocxChildren, plainTextToDocxChildren } = docxTemplate;
+
           const children = html
             ? htmlToDocxChildren(html)
             : plainTextToDocxChildren(String(conteudo));
@@ -69,7 +69,7 @@ export const Route = createFileRoute("/api/tools/petition")({
           const headerLabel = /proposta/i.test(titulo) ? "Proposta comercial" : "Petição";
 
           const userId = await resolveUserId(request.headers.get("authorization"));
-          const branding = userId ? await loadBrandingForUser(userId) : null;
+          const branding = userId ? await brandingModule.loadBrandingForUser(userId) : null;
 
           const doc = createStyledDocument({
             title: String(titulo),
