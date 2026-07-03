@@ -230,6 +230,7 @@ export async function chatComplete(
   let lastErr: unknown;
   let currentModel = model;
   const totalAttempts = 1 + maxRetries;
+  const startedAt = Date.now();
   for (let i = 0; i < totalAttempts; i++) {
     try {
       result = await attempt(currentModel, i);
@@ -246,7 +247,14 @@ export async function chatComplete(
       if (!opts.noFallback) {
         const fb = fallbackModel(currentModel);
         if (fb) {
-          console.warn(`[ai] fallback ${currentModel} → ${fb}:`, err instanceof Error ? err.message : err);
+          const reason = err instanceof Error ? err.message : String(err);
+          console.warn(`[ai] fallback ${currentModel} → ${fb}:`, reason);
+          await logSessionEvent({
+            event_type: "fallback",
+            model: currentModel,
+            fallback_model: fb,
+            reason,
+          });
           currentModel = fb;
         }
       }
@@ -254,9 +262,17 @@ export async function chatComplete(
   }
   if (!result) throw lastErr instanceof Error ? lastErr : new Error(String(lastErr));
 
+  await logSessionEvent({
+    event_type: "chat_finish",
+    model: currentModel,
+    latency_ms: Date.now() - startedAt,
+    payload: { streaming: false },
+  });
+
   if (key) setCached(key, { content: result.content, tool_calls: result.tool_calls, model });
   return result;
 }
+
 
 /**
  * Streaming chat completion (SSE). Chama onDelta a cada pedaço de texto.
