@@ -218,18 +218,22 @@ export const getAiBudgetStatus = createServerFn({ method: "GET" })
     return getAiBudgetSnapshot(context.userId);
   });
 
-const UpdateBudgetSchema = z.object({
-  monthly_limit_usd: z.number().min(0).max(100000),
-  warn_threshold_pct: z.number().int().min(1).max(100),
-  max_tokens: z.number().int().min(0).max(200000).optional(),
-  max_context_chars: z.number().int().min(0).max(2000000).optional(),
-  max_retries: z.number().int().min(0).max(5).optional(),
-  force_fallback_on_retry: z.boolean().optional(),
-});
+import {
+  AiBudgetPayloadSchema,
+  encodeValidationError,
+  toFieldErrors,
+} from "./ai-budget-schema";
 
 export const updateAiBudget = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((raw: unknown) => UpdateBudgetSchema.parse(raw))
+  .validator((raw: unknown) => {
+    const parsed = AiBudgetPayloadSchema.safeParse(raw);
+    if (!parsed.success) {
+      // Encode structured field errors so the UI can highlight the right inputs.
+      throw new Error(encodeValidationError(toFieldErrors(parsed.error)));
+    }
+    return parsed.data;
+  })
   .handler(async ({ context, data }): Promise<AiBudgetStatus> => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const admin = supabaseAdmin as unknown as { from: (t: string) => any };
