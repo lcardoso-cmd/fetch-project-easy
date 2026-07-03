@@ -13,6 +13,8 @@ import {
   Upload,
   AlertTriangle,
   CheckCircle2,
+  ChevronDown,
+  ChevronRight,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -55,6 +57,7 @@ export function ProposalAttachmentsPanel({ caseId, userId, onSuggestFields }: Pr
   const deleteFn = useServerFn(deleteProposalAttachment);
   const [uploading, setUploading] = useState(false);
   const [extractingId, setExtractingId] = useState<string | null>(null);
+  const [showList, setShowList] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const queryKey = ["proposal-attachments", caseId ?? "none"];
@@ -200,21 +203,35 @@ export function ProposalAttachmentsPanel({ caseId, userId, onSuggestFields }: Pr
 
         {attachmentsQ.isLoading ? (
           <p className="text-xs text-muted-foreground">Carregando anexos…</p>
-        ) : attachments.length === 0 ? (
-          <p className="text-xs text-muted-foreground">Nenhum documento anexado ainda.</p>
-        ) : (
-          <ul className="space-y-2">
-            {attachments.map((att) => (
-              <AttachmentRow
-                key={att.id}
-                att={att}
-                busy={extractingId === att.id}
-                onExtract={() => runExtract(att.id)}
-                onApply={() => att.extracted_fields && onSuggestFields(att.extracted_fields)}
-                onRemove={() => removeAttachment(att.id)}
-              />
-            ))}
-          </ul>
+        ) : attachments.length === 0 ? null : (
+          <div className="space-y-2">
+            <button
+              type="button"
+              onClick={() => setShowList((v) => !v)}
+              className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground"
+            >
+              {showList ? (
+                <ChevronDown className="h-3.5 w-3.5" />
+              ) : (
+                <ChevronRight className="h-3.5 w-3.5" />
+              )}
+              {attachments.length} documento{attachments.length === 1 ? "" : "s"} anexado{attachments.length === 1 ? "" : "s"} a esta proposta
+            </button>
+            {showList && (
+              <ul className="space-y-2">
+                {attachments.map((att) => (
+                  <AttachmentRow
+                    key={att.id}
+                    att={att}
+                    busy={extractingId === att.id}
+                    onExtract={() => runExtract(att.id)}
+                    onApply={() => att.extracted_fields && onSuggestFields(att.extracted_fields)}
+                    onRemove={() => removeAttachment(att.id)}
+                  />
+                ))}
+              </ul>
+            )}
+          </div>
         )}
       </CardContent>
     </Card>
