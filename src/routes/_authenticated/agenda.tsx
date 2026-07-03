@@ -87,7 +87,7 @@ const TYPE_LABEL: Record<string, string> = {
 function CalendarPage() {
   const qc = useQueryClient();
   const navigate = useNavigate();
-  const search = Route.useSearch();
+  const search = useSearch({ from: "/_authenticated/agenda" });
   const listFn = useServerFn(listEvents);
   const createFn = useServerFn(createEvent);
   const deleteFn = useServerFn(deleteEvent);
