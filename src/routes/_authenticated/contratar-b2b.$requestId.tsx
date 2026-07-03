@@ -4,7 +4,8 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { ArrowLeft, Download, FileText, Lock, Send } from "lucide-react";
+import { ArrowLeft, Download, Eye, FileText, Lock, Send } from "lucide-react";
+import { AttachmentPreviewDialog } from "@/components/attachments/attachment-preview-dialog";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -65,6 +66,7 @@ function HireB2bRequestDetail() {
   const [note, setNote] = useState("");
   const [visibility, setVisibility] = useState<"public" | "internal">("public");
   const [sending, setSending] = useState(false);
+  const [previewId, setPreviewId] = useState<string | null>(null);
 
   if (isLoading || !data) {
     return <div className="text-sm text-muted-foreground">Carregando…</div>;
@@ -100,14 +102,24 @@ function HireB2bRequestDetail() {
     }
   };
 
-  const openAttachment = async (id: string) => {
+  const downloadAttachment = async (id: string, fileName: string) => {
     try {
       const { url } = await urlFn({ data: { id } });
-      window.open(url, "_blank", "noopener,noreferrer");
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = fileName;
+      a.rel = "noopener";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Falha ao abrir");
+      toast.error(err instanceof Error ? err.message : "Falha ao baixar");
     }
   };
+
+  const previewAtt = previewId
+    ? attachments.find((a) => a.id === previewId) ?? null
+    : null;
 
   return (
     <div className="max-w-4xl space-y-6">
@@ -225,9 +237,24 @@ function HireB2bRequestDetail() {
                       </Badge>
                     )}
                   </div>
-                  <Button size="sm" variant="ghost" onClick={() => openAttachment(a.id)}>
-                    <Download className="h-4 w-4" />
-                  </Button>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => setPreviewId(a.id)}
+                      title="Pré-visualizar"
+                    >
+                      <Eye className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => downloadAttachment(a.id, a.file_name)}
+                      title="Baixar"
+                    >
+                      <Download className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </li>
               ))}
             </ul>
@@ -331,6 +358,19 @@ function HireB2bRequestDetail() {
           </Link>
           .
         </div>
+      )}
+
+      {previewAtt && (
+        <AttachmentPreviewDialog
+          open={!!previewId}
+          onOpenChange={(v) => !v && setPreviewId(null)}
+          fileName={previewAtt.file_name}
+          mimeType={previewAtt.mime_type}
+          resolveUrl={async () => {
+            const { url } = await urlFn({ data: { id: previewAtt.id } });
+            return url;
+          }}
+        />
       )}
     </div>
   );

@@ -17,11 +17,13 @@ import {
   Paperclip,
   Clock,
   Download,
+  Eye,
   MessageSquare,
   FileText,
   CircleDot,
   Inbox,
 } from "lucide-react";
+import { AttachmentPreviewDialog } from "@/components/attachments/attachment-preview-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { createServerFn, useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
@@ -321,6 +323,7 @@ function eventLabel(ev: B2bServiceRequestEvent): string {
 function RequestPanel({ requestId }: { requestId: string }) {
   const getReq = useServerFn(getB2bRequest);
   const getAttUrl = useServerFn(getB2bAttachmentUrl);
+  const [previewId, setPreviewId] = useState<string | null>(null);
   const { data, isLoading } = useQuery({
     queryKey: ["b2b-request", requestId],
     queryFn: () => getReq({ data: { id: requestId } }),
@@ -339,14 +342,24 @@ function RequestPanel({ requestId }: { requestId: string }) {
     .slice()
     .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
 
-  async function openAttachment(id: string) {
+  async function downloadAttachment(id: string, fileName: string) {
     try {
       const { url } = await getAttUrl({ data: { id } });
-      window.open(url, "_blank", "noopener");
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = fileName;
+      a.rel = "noopener";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
     } catch (e) {
       console.error(e);
     }
   }
+
+  const previewAtt = previewId
+    ? visibleAtt.find((a) => a.id === previewId) ?? null
+    : null;
 
   return (
     <div className="space-y-4 pt-2">
@@ -379,13 +392,24 @@ function RequestPanel({ requestId }: { requestId: string }) {
                     {new Date(a.created_at).toLocaleDateString("pt-BR")}
                   </p>
                 </div>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => openAttachment(a.id)}
-                >
-                  <Download className="h-4 w-4" />
-                </Button>
+                <div className="flex items-center gap-1">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setPreviewId(a.id)}
+                    title="Pré-visualizar"
+                  >
+                    <Eye className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => downloadAttachment(a.id, a.file_name)}
+                    title="Baixar"
+                  >
+                    <Download className="h-4 w-4" />
+                  </Button>
+                </div>
               </li>
             ))}
           </ul>
@@ -431,6 +455,19 @@ function RequestPanel({ requestId }: { requestId: string }) {
           </Link>
         </Button>
       </div>
+
+      {previewAtt && (
+        <AttachmentPreviewDialog
+          open={!!previewId}
+          onOpenChange={(v) => !v && setPreviewId(null)}
+          fileName={previewAtt.file_name}
+          mimeType={previewAtt.mime_type}
+          resolveUrl={async () => {
+            const { url } = await getAttUrl({ data: { id: previewAtt.id } });
+            return url;
+          }}
+        />
+      )}
     </div>
   );
 }
