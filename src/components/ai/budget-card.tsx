@@ -299,7 +299,25 @@ export function BudgetCard() {
                 Ao passar do contexto, mensagens antigas são resumidas em um marcador; ao passar
                 do teto de tokens, a resposta é truncada pelo próprio modelo.
               </p>
+              <div className="flex items-start justify-between gap-3 rounded-md border border-border/60 bg-background p-3">
+                <div className="space-y-0.5">
+                  <Label htmlFor="ai-force-fallback" className="text-sm">
+                    Forçar fallback automático em erros retentáveis
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    Quando ativo, qualquer erro (mesmo os que normalmente seriam apenas
+                    re-tentados) muda imediatamente para o modelo mais barato — mantendo o
+                    streaming quando o gateway permitir.
+                  </p>
+                </div>
+                <Switch
+                  id="ai-force-fallback"
+                  checked={forceFallback}
+                  onCheckedChange={setForceFallback}
+                />
+              </div>
             </div>
+
 
             <div className="flex items-center justify-end gap-3">
               {!isValid && (
