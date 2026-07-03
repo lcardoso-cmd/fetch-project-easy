@@ -107,9 +107,9 @@ function MyTasksPage() {
 
   return (
     <div className="space-y-6">
-      <header className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Minhas Tarefas</h1>
+      <header className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Minhas Tarefas</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Todas as suas tarefas, criadas por você ou atribuídas a você, em um só lugar.
           </p>
@@ -136,7 +136,7 @@ function MyTasksPage() {
             }
           }}
         >
-          <Button size="sm">
+          <Button size="sm" className="w-full sm:w-auto">
             <PlusCircle className="mr-2 h-4 w-4" /> Nova tarefa
           </Button>
         </AddTaskDialog>
@@ -165,15 +165,18 @@ function MyTasksPage() {
             >
               {tasksByCase.map(([key, group]) => (
                 <AccordionItem value={key} key={key}>
-                  <AccordionTrigger className="text-lg font-semibold hover:no-underline">
-                    <div className="flex items-center gap-4">
-                      <span>{group.caseInfo?.title ?? "Sem caso vinculado"}</span>
-                      <Badge variant="outline">
+                  <AccordionTrigger className="text-base font-semibold hover:no-underline sm:text-lg">
+                    <div className="flex min-w-0 flex-1 items-center gap-3 pr-2">
+                      <span className="truncate text-left">
+                        {group.caseInfo?.title ?? "Sem caso vinculado"}
+                      </span>
+                      <Badge variant="outline" className="shrink-0">
                         {group.tasks.length}{" "}
                         {group.tasks.length === 1 ? "tarefa" : "tarefas"}
                       </Badge>
                     </div>
                   </AccordionTrigger>
+
                   <AccordionContent>
                     <Table>
                       <TableHeader>
