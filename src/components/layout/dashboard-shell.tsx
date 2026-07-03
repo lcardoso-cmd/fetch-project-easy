@@ -3,6 +3,7 @@ import { Link, useLocation } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { JurisMindMark, JURISMIND_CONTEXT } from "@/components/brand/jurismind-mark";
 import { useAuth } from "@/hooks/use-auth";
+import { UserMenu } from "@/components/layout/user-menu";
 import { useProfile } from "@/hooks/use-profile";
 import { useCapabilities, VIEW_AS_PRESETS } from "@/hooks/use-capabilities";
 import { labelsForPractice } from "@/lib/practice-labels";
