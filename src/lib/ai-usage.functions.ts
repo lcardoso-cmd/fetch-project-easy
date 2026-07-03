@@ -142,7 +142,7 @@ export const getAiUsageSummary = createServerFn({ method: "POST" })
     const userIds = Array.from(byUser.keys());
     const profileMap = new Map<string, { name: string; email: string | null }>();
     if (userIds.length > 0) {
-      const { data: profiles } = await supabase
+      const { data: profiles } = await admin
         .from("profiles")
         .select("id, full_name, email")
         .in("id", userIds);
