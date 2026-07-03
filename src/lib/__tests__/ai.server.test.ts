@@ -159,14 +159,20 @@ describe("chatComplete: 5 tentativas com fallback", () => {
     expect(fetchMock).toHaveBeenCalledTimes(5);
   });
 
-  it("para imediatamente em erro não-retentável (400) sem consumir retries", async () => {
-    limitsRef.maxRetries = 4;
-    const { fetchMock } = mockFetchSequence([{ status: 400, body: "bad request" }]);
+  it("em erro não-retentável (400) re-tenta no mesmo modelo, sem trocar de fallback", async () => {
+    limitsRef.maxRetries = 2;
+    const { fetchMock, calls } = mockFetchSequence([{ status: 400, body: "bad request" }]);
     await expect(
-      chatComplete([{ role: "user", content: "hi" }], { noCache: true }),
+      chatComplete([{ role: "user", content: "hi" }], {
+        model: "google/gemini-2.5-flash",
+        noCache: true,
+      }),
     ).rejects.toThrow(/400/);
-    expect(fetchMock).toHaveBeenCalledTimes(1);
+    // 1 inicial + 2 retries = 3, todas no modelo original
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(calls.every((c) => c.body.model === "google/gemini-2.5-flash")).toBe(true);
   });
+
 
   it("aciona fallback também em 408 e 425", async () => {
     limitsRef.maxRetries = 2;
