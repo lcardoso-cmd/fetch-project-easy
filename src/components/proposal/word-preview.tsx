@@ -1,7 +1,9 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { getFirmProfile } from "@/lib/firm-profile.functions";
+import { sanitizeProposalHtml } from "@/lib/sanitize-html";
+
 
 /**
  * WordPreview — página em formato US Letter que espelha o template DOCX
@@ -95,8 +97,9 @@ export function WordPreview({ html, title, headerLabel = "Proposta comercial" }:
             <h1 className="word-title">{title}</h1>
             <div
               className="word-doc"
-              dangerouslySetInnerHTML={{ __html: html || "<p></p>" }}
+              dangerouslySetInnerHTML={{ __html: useMemo(() => sanitizeProposalHtml(html) || "<p></p>", [html]) }}
             />
+
           </div>
 
           {/* Rodapé */}
