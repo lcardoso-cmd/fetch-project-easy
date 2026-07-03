@@ -26,22 +26,22 @@ export const Route = createFileRoute("/")({
   component: LandingPage,
   head: () => ({
     meta: [
-      { title: "B2B | JurisMind AI — Inteligência para advogados, peritos e assistentes técnicos" },
+      { title: "B2B | JurisMind AI — Inteligência jurídica com IA" },
       {
         name: "description",
         content:
-          "Plataforma de IA jurídica: chat com documentos, peças, laudos, pareceres, propostas comerciais, agenda integrada (Google/Outlook), marketing e monitoramento de publicações.",
+          "Plataforma de IA jurídica para advogados, peritos e assistentes técnicos: RAG de documentos, geração de peças, laudos, pareceres e propostas comerciais.",
       },
-      { property: "og:title", content: "JurisMind AI — Inteligência para advogados, peritos e assistentes técnicos" },
+      { property: "og:title", content: "B2B | JurisMind AI — Inteligência jurídica com IA" },
       {
         property: "og:description",
         content:
-          "Plataforma B2B de IA jurídica: RAG de documentos, geração de peças, laudos, pareceres e propostas, com agenda e monitoramento integrados.",
+          "Plataforma de IA jurídica para advogados, peritos e assistentes técnicos: RAG de documentos, geração de peças, laudos, pareceres e propostas comerciais.",
       },
       { property: "og:url", content: "https://b2bjurismind.lovable.app/" },
       { property: "og:type", content: "website" },
       { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/Sls90jSFrMa8ECulf4OjLMG7sRB3/social-images/social-1783001247994-LOGO_JURISMIND_16-9.webp" },
-      { name: "twitter:title", content: "JurisMind AI — Inteligência para advogados, peritos e assistentes técnicos" },
+      { name: "twitter:title", content: "B2B | JurisMind AI — Inteligência jurídica com IA" },
       {
         name: "twitter:description",
         content:
@@ -51,6 +51,7 @@ export const Route = createFileRoute("/")({
     ],
     links: [{ rel: "canonical", href: "https://b2bjurismind.lovable.app/" }],
   }),
+
 });
 
 type Pillar = {
@@ -171,6 +172,9 @@ function LandingPage() {
           </div>
         </div>
       </header>
+
+      <main>
+
 
       {/* Hero */}
       <section className="relative overflow-hidden bg-primary text-primary-foreground">
@@ -359,7 +363,10 @@ function LandingPage() {
         </div>
       </section>
 
+      </main>
+
       <footer className="border-t">
+
         <div className="mx-auto max-w-6xl px-4 py-6 text-center text-sm text-muted-foreground">
           © {new Date().getFullYear()} B2B | JurisMind AI. Feito para advogados, peritos e assistentes técnicos.
         </div>

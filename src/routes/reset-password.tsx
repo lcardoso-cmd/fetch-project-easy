@@ -13,7 +13,7 @@ export const Route = createFileRoute("/reset-password")({
   head: () => ({
     meta: [
       { title: "Redefinir senha — JurisMind AI" },
-      { name: "description", content: "Redefina sua senha da conta JurisMind AI." },
+      { name: "description", content: "Defina uma nova senha para sua conta JurisMind AI e retome o acesso à plataforma de IA jurídica." },
       { name: "robots", content: "noindex" },
     ],
   }),
