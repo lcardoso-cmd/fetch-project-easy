@@ -14,10 +14,18 @@ export const Route = createFileRoute("/api/tools/transcribe-stream")({
     handlers: {
       POST: async ({ request }) => {
         try {
+          const { authenticateRequest } = await import("@/lib/route-auth.server");
+          try {
+            await authenticateRequest(request);
+          } catch (r) {
+            if (r instanceof Response) return r;
+            return new Response("Unauthorized", { status: 401 });
+          }
           const body = (await request.json()) as {
             audio_base64?: string;
             format?: string;
           };
+
           const audio = body.audio_base64;
           const format = (body.format ?? "wav").toLowerCase();
           if (!audio || typeof audio !== "string") {

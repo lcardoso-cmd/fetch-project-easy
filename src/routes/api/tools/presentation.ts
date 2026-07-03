@@ -23,6 +23,14 @@ export const Route = createFileRoute("/api/tools/presentation")({
     handlers: {
       POST: async ({ request }) => {
         try {
+          const { authenticateRequest } = await import("@/lib/route-auth.server");
+          try {
+            await authenticateRequest(request);
+          } catch (r) {
+            if (r instanceof Response) return r;
+            return new Response("Unauthorized", { status: 401 });
+          }
+
           const { title, subtitle, slides } = (await request.json()) as {
             title?: string;
             subtitle?: string;

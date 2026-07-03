@@ -40,6 +40,14 @@ export const Route = createFileRoute("/api/tools/pdf")({
     handlers: {
       POST: async ({ request }) => {
         try {
+          const { authenticateRequest } = await import("@/lib/route-auth.server");
+          try {
+            await authenticateRequest(request);
+          } catch (r) {
+            if (r instanceof Response) return r;
+            return new Response("Unauthorized", { status: 401 });
+          }
+
           const body = (await request.json()) as {
             titulo?: string;
             conteudo?: string;
