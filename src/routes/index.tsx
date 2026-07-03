@@ -32,7 +32,24 @@ export const Route = createFileRoute("/")({
         content:
           "Plataforma de IA jurídica: chat com documentos, peças, laudos, pareceres, propostas comerciais, agenda integrada (Google/Outlook), marketing e monitoramento de publicações.",
       },
+      { property: "og:title", content: "JurisMind AI — Inteligência para advogados, peritos e assistentes técnicos" },
+      {
+        property: "og:description",
+        content:
+          "Plataforma B2B de IA jurídica: RAG de documentos, geração de peças, laudos, pareceres e propostas, com agenda e monitoramento integrados.",
+      },
+      { property: "og:url", content: "https://b2bjurismind.lovable.app/" },
+      { property: "og:type", content: "website" },
+      { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/Sls90jSFrMa8ECulf4OjLMG7sRB3/social-images/social-1783001247994-LOGO_JURISMIND_16-9.webp" },
+      { name: "twitter:title", content: "JurisMind AI — Inteligência para advogados, peritos e assistentes técnicos" },
+      {
+        name: "twitter:description",
+        content:
+          "Plataforma B2B de IA jurídica: RAG de documentos, geração de peças, laudos, pareceres e propostas.",
+      },
+      { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/Sls90jSFrMa8ECulf4OjLMG7sRB3/social-images/social-1783001247994-LOGO_JURISMIND_16-9.webp" },
     ],
+    links: [{ rel: "canonical", href: "https://b2bjurismind.lovable.app/" }],
   }),
 });
 
