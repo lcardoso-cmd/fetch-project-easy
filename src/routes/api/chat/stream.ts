@@ -65,6 +65,18 @@ function hasGeneratedDocument(steps: StreamToolStep[]): boolean {
   return steps.some((step) => Boolean(extractArtifactPayload(step)));
 }
 
+function isGeneratedDocumentToolName(name: string): boolean {
+  return name === "create_petition" || name === "create_pdf";
+}
+
+function pickGeneratedDocumentToolCall<T extends { function: { name: string } }>(toolCalls: T[]): T | null {
+  return (
+    toolCalls.find((tc) => tc.function.name === "create_petition") ??
+    toolCalls.find((tc) => tc.function.name === "create_pdf") ??
+    null
+  );
+}
+
 export const Route = createFileRoute("/api/chat/stream")({
   server: {
     handlers: {
@@ -160,12 +172,21 @@ export const Route = createFileRoute("/api/chat/stream")({
                   finalContent = r.content;
                   break;
                 }
+                const generatedToolCall = pickGeneratedDocumentToolCall(r.tool_calls);
+                const toolCallsToRun = generatedToolCall
+                  ? r.tool_calls.filter(
+                      (tc) =>
+                        tc === generatedToolCall ||
+                        !isGeneratedDocumentToolName(tc.function.name),
+                    )
+                  : r.tool_calls;
+
                 convo.push({
                   role: "assistant",
                   content: r.content,
-                  tool_calls: r.tool_calls,
+                  tool_calls: toolCallsToRun,
                 });
-                for (const tc of r.tool_calls) {
+                for (const tc of toolCallsToRun) {
                   if (abortSignal.aborted) break;
                   let args: Record<string, unknown> = {};
                   try {
@@ -188,6 +209,10 @@ export const Route = createFileRoute("/api/chat/stream")({
                     name: tc.function.name,
                     content: JSON.stringify(result),
                   });
+                }
+                if (hasGeneratedDocument(steps)) {
+                  finalContent = "Documento pronto para revisar, editar e baixar.";
+                  break;
                 }
               }
 
