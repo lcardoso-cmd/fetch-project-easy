@@ -113,8 +113,10 @@ interface BudgetSnapshot {
   maxTokens: number;
   maxContextChars: number;
   maxRetries: number;
+  forceFallback: boolean;
   fetchedAt: number;
 }
+
 const budgetCache = new Map<string, BudgetSnapshot>();
 const BUDGET_TTL_MS = 30_000;
 
