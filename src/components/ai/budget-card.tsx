@@ -97,6 +97,11 @@ export function BudgetCard() {
     () => validate({ limit, warn, maxTokens, maxCtx, maxRetries }),
     [limit, warn, maxTokens, maxCtx, maxRetries],
   );
+  // Limpar erros do servidor quando o usuário edita qualquer campo.
+  useEffect(() => {
+    setServerErrors({});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [limit, warn, maxTokens, maxCtx, maxRetries, forceFallback]);
   const isValid = parsed !== null;
   const markTouched = (k: FieldKey) => setTouched((t) => ({ ...t, [k]: true }));
   const errFor = (k: FieldKey) =>
