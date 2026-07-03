@@ -291,7 +291,11 @@ export const Route = createFileRoute("/api/chat/stream")({
               // Aborts do fetch propagam como AbortError — silenciar
               if (!abortSignal.aborted) {
                 const msg = e instanceof Error ? e.message : String(e);
-                send("error", { message: msg });
+                const code =
+                  e && typeof e === "object" && "code" in e
+                    ? String((e as { code?: unknown }).code ?? "")
+                    : "";
+                send("error", { message: msg, code });
               }
             } finally {
               abortSignal.removeEventListener("abort", onAbort);
