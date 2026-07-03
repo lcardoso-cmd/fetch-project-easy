@@ -302,8 +302,9 @@ export const Route = createFileRoute("/api/chat/stream")({
                 /* noop */
               }
             }
-          },
-        });
+        }
+
+
 
         return new Response(stream, {
           headers: {
