@@ -12,7 +12,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Loader2, ChevronLeft, ChevronRight, TrendingUp } from "lucide-react";
-import { getAiUsageSummary, getAiBudgetStatus, updateAiBudget, type UsageSummary } from "@/lib/ai-usage.functions";
+import { getAiUsageSummary, type UsageSummary } from "@/lib/ai-usage.functions";
 import { BudgetCard } from "@/components/ai/budget-card";
 
 export const Route = createFileRoute("/_authenticated/configuracoes/consumo")({
