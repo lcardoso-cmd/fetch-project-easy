@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { createFileRoute, redirect, Link } from "@tanstack/react-router";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { PageHeader } from "@/components/page-header";
+import { EmptyState } from "@/components/empty-state";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -112,15 +114,14 @@ function ExpertOpinionPage() {
 
   return (
     <div className="space-y-6 max-w-4xl">
-      <div>
-        <h1 className="text-3xl font-bold font-heading tracking-tight flex items-center gap-2">
-          <Microscope className="h-7 w-7 text-primary" /> Parecer Técnico
-        </h1>
-        <p className="mt-1 text-muted-foreground">
-          Área dedicada a peritos para elaborar e exportar pareceres técnicos com o padrão de
-          formatação do escritório.
-        </p>
-      </div>
+      <PageHeader
+        title={
+          <span className="inline-flex items-center gap-2">
+            <Microscope className="h-5 w-5 text-primary" strokeWidth={1.5} /> Parecer Técnico
+          </span>
+        }
+        subtitle="Área dedicada a peritos para elaborar e exportar pareceres técnicos com o padrão de formatação do escritório."
+      />
 
 
 
@@ -166,33 +167,19 @@ function ExpertOpinionPage() {
               <Skeleton className="h-12 w-3/4" />
             </div>
           ) : parecerRequests.length === 0 ? (
-            <div
-              role="status"
-              className="flex flex-col items-center text-center py-10 px-4 gap-3"
-            >
-              <div className="rounded-full bg-muted p-3">
-                <Inbox className="h-8 w-8 text-muted-foreground" aria-hidden="true" />
-              </div>
-              <div className="space-y-1">
-                <p className="font-medium">Nenhuma solicitação encontrada</p>
-                <p className="text-sm text-muted-foreground max-w-md">
-                  Você ainda não abriu solicitações de Parecer Técnico com a B2B
-                  Consulting. Crie uma agora para receber orçamento e acompanhar o
-                  andamento por aqui.
-                </p>
-              </div>
-              <div className="flex flex-wrap gap-2 justify-center pt-2">
+            <EmptyState
+              icon={Inbox}
+              title="Nenhuma solicitação encontrada"
+              description="Crie uma solicitação de Parecer Técnico para receber orçamento da B2B e acompanhar o andamento por aqui."
+              action={
                 <Button asChild size="sm">
                   <Link to="/contratar-b2b/solicitar" search={PARECER_PREFILL}>
                     Solicitar Parecer Técnico
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Link>
                 </Button>
-                <Button asChild variant="ghost" size="sm">
-                  <Link to="/contratar-b2b">Ver catálogo B2B</Link>
-                </Button>
-              </div>
-            </div>
+              }
+            />
           ) : (
             <>
               <Accordion type="multiple" className="w-full">
