@@ -105,13 +105,16 @@ export async function chatCompleteStream(
     tools?: ToolDef[];
     onDelta?: (delta: string) => void;
     signal?: AbortSignal;
+    feature?: string;
   } = {},
 ): Promise<{ content: string; tool_calls?: ToolCall[] }> {
+  const model = opts.model ?? "google/gemini-2.5-flash";
   const body: Record<string, unknown> = {
-    model: opts.model ?? "google/gemini-2.5-flash",
+    model,
     messages,
     temperature: opts.temperature ?? 0.3,
     stream: true,
+    stream_options: { include_usage: true },
   };
   if (opts.tools && opts.tools.length > 0) body.tools = opts.tools;
 
@@ -134,6 +137,7 @@ export async function chatCompleteStream(
   const decoder = new TextDecoder();
   let buffer = "";
   let content = "";
+  let usage: RawUsage | undefined;
   const toolCallsByIndex = new Map<
     number,
     { id?: string; name?: string; arguments: string }
@@ -161,12 +165,14 @@ export async function chatCompleteStream(
             }>;
           };
         }>;
+        usage?: RawUsage;
       };
       try {
         chunk = JSON.parse(payload);
       } catch {
         continue;
       }
+      if (chunk.usage) usage = chunk.usage;
       const delta = chunk.choices?.[0]?.delta;
       if (!delta) continue;
       if (typeof delta.content === "string" && delta.content.length > 0) {
@@ -184,6 +190,9 @@ export async function chatCompleteStream(
       }
     }
   }
+
+  const runId = res.headers.get("X-Lovable-AIG-Run-ID");
+  await logAiUsage({ feature: opts.feature, model, usage, gatewayRunId: runId });
 
   const tool_calls: ToolCall[] = [];
   for (const [, v] of Array.from(toolCallsByIndex.entries()).sort((a, b) => a[0] - b[0])) {
