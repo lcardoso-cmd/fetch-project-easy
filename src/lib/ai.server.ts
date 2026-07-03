@@ -408,21 +408,24 @@ export async function chatCompleteStream(
     if (!res.ok || !res.body) {
       const txt = await res.text().catch(() => "");
       const err = new Error(`Chat stream falhou (${res.status}): ${txt}`);
-      if (allowFallback && shouldFallback(err)) {
+      const forced = limits.forceFallback;
+      if (allowFallback && (shouldFallback(err) || forced)) {
         const fb = fallbackModel(m);
         if (fb) {
-          console.warn(`[ai] stream fallback ${m} → ${fb}:`, err.message);
+          const label = forced && !shouldFallback(err) ? `[forçado] ${err.message}` : err.message;
+          console.warn(`[ai] stream fallback ${m} → ${fb}:`, label);
           await logSessionEvent({
             event_type: "fallback",
             model: m,
             fallback_model: fb,
-            reason: err.message,
+            reason: label,
           });
           return attempt(fb, false, retriesUsed + 1);
         }
       }
       throw err;
     }
+
 
 
     const reader = res.body.getReader();
