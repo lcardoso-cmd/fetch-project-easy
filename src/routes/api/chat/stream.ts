@@ -38,15 +38,27 @@ function extractArtifactPayload(step: StreamToolStep): { kind: string; title: st
 }
 
 function dedupeGeneratedDocumentSteps(steps: StreamToolStep[]): StreamToolStep[] {
-  const seenBodies = new Set<string>();
-  return steps.filter((step) => {
+  const byBody = new Map<string, number>();
+  const out: StreamToolStep[] = [];
+  for (const step of steps) {
     const payload = extractArtifactPayload(step);
-    if (!payload) return true;
+    if (!payload) {
+      out.push(step);
+      continue;
+    }
     const key = payload.body || `${payload.kind}:${payload.title}`;
-    if (seenBodies.has(key)) return false;
-    seenBodies.add(key);
-    return true;
-  });
+    const existingIndex = byBody.get(key);
+    if (existingIndex == null) {
+      byBody.set(key, out.length);
+      out.push(step);
+      continue;
+    }
+    const existing = extractArtifactPayload(out[existingIndex]);
+    if (existing?.kind === "pdf" && payload.kind === "petition") {
+      out[existingIndex] = step;
+    }
+  }
+  return out;
 }
 
 function hasGeneratedDocument(steps: StreamToolStep[]): boolean {

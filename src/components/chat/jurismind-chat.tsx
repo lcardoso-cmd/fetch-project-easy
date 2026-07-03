@@ -135,14 +135,27 @@ function getGeneratedDocumentKey(step: ToolStep): string | null {
 }
 
 function dedupeGeneratedDocumentSteps(steps: ToolStep[]): ToolStep[] {
-  const seen = new Set<string>();
-  return steps.filter((step) => {
+  const byKey = new Map<string, number>();
+  const out: ToolStep[] = [];
+  for (const step of steps) {
     const key = getGeneratedDocumentKey(step);
-    if (!key) return true;
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
+    if (!key) {
+      out.push(step);
+      continue;
+    }
+    const existingIndex = byKey.get(key);
+    if (existingIndex == null) {
+      byKey.set(key, out.length);
+      out.push(step);
+      continue;
+    }
+    const existing = parseToolResult(out[existingIndex]);
+    const current = parseToolResult(step);
+    if (existing?.kind === "pdf" && current?.kind === "petition") {
+      out[existingIndex] = step;
+    }
+  }
+  return out;
 }
 
 interface PartyRef {
