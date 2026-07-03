@@ -404,6 +404,12 @@ function AuthPage() {
                   <p className="text-xs opacity-80">
                     Enviamos um link para <span className="font-medium">{pendingEmail}</span>. Não recebeu?
                   </p>
+                  {resendCount > 0 && (
+                    <p className="text-xs opacity-70 mt-0.5">
+                      Reenvios feitos: <span className="font-medium">{resendCount}</span>
+                      {resendCount >= 3 && " — verifique também a caixa de spam."}
+                    </p>
+                  )}
                 </div>
               </div>
               <div className="flex items-center gap-2">
