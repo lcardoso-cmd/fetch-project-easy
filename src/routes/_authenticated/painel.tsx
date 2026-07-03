@@ -4,6 +4,8 @@ import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
 import { z } from "zod";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { PageHeader } from "@/components/page-header";
+import { EmptyState } from "@/components/empty-state";
 import { FolderKanban, FileText, CalendarClock, RotateCcw } from "lucide-react";
 import { JurisMindMark, JURISMIND_CONTEXT } from "@/components/brand/jurismind-mark";
 import { getCases } from "@/lib/cases.functions";
@@ -94,9 +96,10 @@ function DashboardPage() {
         </div>
       ) : null}
 
-      <div className="flex items-center justify-between">
-        <h2 className="text-3xl font-bold font-heading tracking-tight">Painel de Controle</h2>
-      </div>
+      <PageHeader
+        title="Painel de Controle"
+        subtitle="Visão geral dos seus casos, documentos e prazos."
+      />
 
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -144,22 +147,24 @@ function DashboardPage() {
           </CardHeader>
           <CardContent>
             {cases.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-16 text-center">
-                <FolderKanban className="h-10 w-10 text-muted-foreground" />
-                <p className="mt-3 font-medium">Nenhum caso ainda</p>
-                <p className="text-sm text-muted-foreground">Comece criando seu primeiro caso.</p>
-                <Button asChild className="mt-4">
-                  <Link to="/assistencias">Ir para Casos</Link>
-                </Button>
-              </div>
+              <EmptyState
+                icon={FolderKanban}
+                title="Nenhum caso ainda"
+                description="Comece criando seu primeiro caso."
+                action={
+                  <Button asChild size="sm">
+                    <Link to="/assistencias">Ir para Casos</Link>
+                  </Button>
+                }
+              />
             ) : (
-              <ul className="divide-y">
+              <ul className="divide-y divide-black/5 dark:divide-white/10">
                 {cases.slice(0, 5).map((c) => (
                   <li key={c.id} className="flex items-center justify-between py-3">
-                    <div>
-                      <p className="font-medium">{c.title}</p>
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium truncate">{c.title}</p>
                       {c.client_name && (
-                        <p className="text-xs text-muted-foreground">{c.client_name}</p>
+                        <p className="text-xs text-muted-foreground truncate">{c.client_name}</p>
                       )}
                     </div>
                     <Button asChild variant="ghost" size="sm">

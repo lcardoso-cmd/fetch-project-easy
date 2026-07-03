@@ -2,7 +2,8 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
 import { useState, useMemo } from "react";
-import { Card, CardContent } from "@/components/ui/card";
+import { PageHeader } from "@/components/page-header";
+import { EmptyState } from "@/components/empty-state";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -56,12 +57,10 @@ function MyFilesPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Meus Documentos</h1>
-        <p className="mt-1 text-muted-foreground">
-          Todos os documentos enviados em todos os seus casos.
-        </p>
-      </div>
+      <PageHeader
+        title="Meus Documentos"
+        subtitle="Todos os documentos enviados em todos os seus casos."
+      />
 
       <div className="relative max-w-md">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -73,44 +72,40 @@ function MyFilesPage() {
         />
       </div>
 
-      <Card>
-        <CardContent className="p-0">
-          {isLoading ? (
-            <p className="p-6 text-muted-foreground">Carregando...</p>
-          ) : filtered.length === 0 ? (
-            <p className="p-10 text-center text-muted-foreground">Nenhum documento.</p>
-          ) : (
-            <ul className="divide-y">
-              {filtered.map((d) => (
-                <li key={d.id} className="flex items-center gap-3 p-4">
-                  <FileText className="h-5 w-5 text-muted-foreground shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium truncate">{d.filename}</p>
-                    <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-2 flex-wrap">
-                      <Link
-                        to="/assistencias/$caseId"
-                        params={{ caseId: d.case_id }}
-                        className="underline"
-                      >
-                        {caseTitle(d.case_id)}
-                      </Link>
-                      <span>·</span>
-                      <span>{Math.round((d.file_size ?? 0) / 1024)} KB</span>
-                      <span>·</span>
-                      <Badge variant="secondary" className="text-[10px]">
-                        {d.processing_status}
-                      </Badge>
-                    </p>
-                  </div>
-                  <Button variant="ghost" size="icon" onClick={() => download(d.id, d.filename)}>
-                    <Download className="h-4 w-4" />
-                  </Button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </CardContent>
-      </Card>
+      {isLoading ? (
+        <p className="text-sm text-muted-foreground">Carregando...</p>
+      ) : filtered.length === 0 ? (
+        <EmptyState icon={FileText} title="Nenhum documento" />
+      ) : (
+        <ul className="divide-y divide-black/5 dark:divide-white/10 border-y border-black/5 dark:border-white/10">
+          {filtered.map((d) => (
+            <li key={d.id} className="flex items-center gap-3 py-3">
+              <FileText className="h-4 w-4 text-muted-foreground shrink-0" strokeWidth={1.5} />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium truncate">{d.filename}</p>
+                <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-2 flex-wrap">
+                  <Link
+                    to="/assistencias/$caseId"
+                    params={{ caseId: d.case_id }}
+                    className="underline"
+                  >
+                    {caseTitle(d.case_id)}
+                  </Link>
+                  <span>·</span>
+                  <span>{Math.round((d.file_size ?? 0) / 1024)} KB</span>
+                  <span>·</span>
+                  <Badge variant="secondary" className="text-[10px]">
+                    {d.processing_status}
+                  </Badge>
+                </p>
+              </div>
+              <Button variant="ghost" size="icon" onClick={() => download(d.id, d.filename)}>
+                <Download className="h-4 w-4" />
+              </Button>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }

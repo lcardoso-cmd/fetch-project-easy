@@ -3,6 +3,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { PageHeader } from "@/components/page-header";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -91,40 +92,37 @@ function PlatformUsers() {
         >
           <ArrowLeft className="h-3 w-3" /> Plataforma
         </Link>
-        <h1 className="mt-1 text-3xl font-bold font-heading tracking-tight">
-          Usuários da plataforma
-        </h1>
-        <p className="mt-1 text-muted-foreground">
-          Todos os usuários cadastrados no sistema. Aqui a B2B concede/revoga permissões
-          de plataforma e administrador.
-        </p>
+        <div className="mt-2">
+          <PageHeader
+            title="Usuários da plataforma"
+            subtitle="Todos os usuários cadastrados no sistema. A B2B concede ou revoga permissões de plataforma e administrador."
+          />
+        </div>
       </div>
 
-      <Card>
-        <CardContent className="grid gap-3 py-4 md:grid-cols-3">
-          <div className="relative md:col-span-2">
-            <Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Buscar por nome ou escritório…"
-              className="pl-8"
-            />
-          </div>
-          <select
-            className="h-9 rounded-md border bg-background px-3 text-sm"
-            value={capFilter}
-            onChange={(e) => setCapFilter(e.target.value)}
-          >
-            <option value="">Todas as permissões</option>
-            {CAPABILITIES.map((c) => (
-              <option key={c} value={c}>
-                {CAPABILITY_LABELS[c]}
-              </option>
-            ))}
-          </select>
-        </CardContent>
-      </Card>
+      <div className="grid gap-3 md:grid-cols-3">
+        <div className="relative md:col-span-2">
+          <Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Buscar por nome ou escritório…"
+            className="pl-8"
+          />
+        </div>
+        <select
+          className="h-9 rounded-md border bg-background px-3 text-sm"
+          value={capFilter}
+          onChange={(e) => setCapFilter(e.target.value)}
+        >
+          <option value="">Todas as permissões</option>
+          {CAPABILITIES.map((c) => (
+            <option key={c} value={c}>
+              {CAPABILITY_LABELS[c]}
+            </option>
+          ))}
+        </select>
+      </div>
 
       <Card>
         <CardHeader className="pb-3">

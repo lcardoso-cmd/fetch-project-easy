@@ -181,7 +181,7 @@ function CaseDetailPage() {
               <ArrowLeft className="mr-1 h-4 w-4" /> Voltar
             </Link>
           </Button>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground break-words sm:text-3xl">
+          <h1 className="font-heading text-xl font-medium tracking-tight text-foreground break-words">
             {caseData.title}
           </h1>
         </div>

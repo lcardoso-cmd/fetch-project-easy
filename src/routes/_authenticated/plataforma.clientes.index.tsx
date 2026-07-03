@@ -3,6 +3,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { PageHeader } from "@/components/page-header";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -57,61 +58,53 @@ function PlatformCustomers() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <div className="mb-1">
-            <Link
-              to="/plataforma"
-              className="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1"
-            >
-              <ArrowLeft className="h-3 w-3" /> Plataforma
-            </Link>
-          </div>
-          <h1 className="text-3xl font-bold font-heading tracking-tight">Clientes SaaS</h1>
-          <p className="mt-1 text-muted-foreground">
-            Escritórios e profissionais que assinaram a JurisMind. Cada conta é um
-            tenant do sistema.
-          </p>
+      <div>
+        <Link
+          to="/plataforma"
+          className="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1"
+        >
+          <ArrowLeft className="h-3 w-3" /> Plataforma
+        </Link>
+        <div className="mt-2">
+          <PageHeader
+            title="Clientes SaaS"
+            subtitle="Escritórios e profissionais que assinaram a JurisMind. Cada conta é um tenant do sistema."
+          />
         </div>
       </div>
 
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base">Filtros</CardTitle>
-        </CardHeader>
-        <CardContent className="grid gap-3 md:grid-cols-4">
-          <div className="relative md:col-span-2">
-            <Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Buscar por nome ou e-mail…"
-              className="pl-8"
-            />
-          </div>
-          <select
-            className="h-9 rounded-md border bg-background px-3 text-sm"
-            value={status}
-            onChange={(e) => setStatus(e.target.value)}
-          >
-            <option value="">Todos os status</option>
-            <option value="trial">Trial</option>
-            <option value="active">Ativo</option>
-            <option value="suspended">Suspenso</option>
-            <option value="canceled">Cancelado</option>
-          </select>
-          <select
-            className="h-9 rounded-md border bg-background px-3 text-sm"
-            value={plan}
-            onChange={(e) => setPlan(e.target.value)}
-          >
-            <option value="">Todos os planos</option>
-            <option value="free">Free</option>
-            <option value="pro">Pro</option>
-            <option value="enterprise">Enterprise</option>
-          </select>
-        </CardContent>
-      </Card>
+      <div className="grid gap-3 md:grid-cols-4">
+        <div className="relative md:col-span-2">
+          <Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Buscar por nome ou e-mail…"
+            className="pl-8"
+          />
+        </div>
+        <select
+          className="h-9 rounded-md border bg-background px-3 text-sm"
+          value={status}
+          onChange={(e) => setStatus(e.target.value)}
+        >
+          <option value="">Todos os status</option>
+          <option value="trial">Trial</option>
+          <option value="active">Ativo</option>
+          <option value="suspended">Suspenso</option>
+          <option value="canceled">Cancelado</option>
+        </select>
+        <select
+          className="h-9 rounded-md border bg-background px-3 text-sm"
+          value={plan}
+          onChange={(e) => setPlan(e.target.value)}
+        >
+          <option value="">Todos os planos</option>
+          <option value="free">Free</option>
+          <option value="pro">Pro</option>
+          <option value="enterprise">Enterprise</option>
+        </select>
+      </div>
 
       <Card>
         <CardHeader className="pb-3">
