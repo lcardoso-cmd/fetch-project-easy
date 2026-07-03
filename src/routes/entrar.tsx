@@ -114,6 +114,13 @@ function AuthPage() {
     const remaining = until ? Math.max(0, Math.ceil((until - Date.now()) / 1000)) : 0;
     setResendCooldown(remaining);
     if (!remaining && raw) window.localStorage.removeItem(resendStorageKey(pendingEmail));
+    // hidrata contador persistido
+    try {
+      const s = window.localStorage.getItem(`jm.resendStats:${pendingEmail.toLowerCase()}`);
+      setResendCount(s ? (JSON.parse(s).count ?? 0) : 0);
+    } catch {
+      setResendCount(0);
+    }
   }, [pendingEmail]);
 
   // Timer para o cooldown do botão de reenviar confirmação.
