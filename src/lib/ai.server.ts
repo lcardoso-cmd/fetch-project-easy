@@ -335,7 +335,9 @@ export async function chatCompleteStream(
       }
       return { content: hit.content, tool_calls: hit.tool_calls };
     }
+    await logSessionEvent({ event_type: "cache_miss", model });
   }
+
 
   const attempt = async (
     m: string,
