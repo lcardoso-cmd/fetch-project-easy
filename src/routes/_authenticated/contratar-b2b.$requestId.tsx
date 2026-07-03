@@ -69,7 +69,10 @@ function HireB2bRequestDetail() {
   if (isLoading || !data) {
     return <div className="text-sm text-muted-foreground">Carregando…</div>;
   }
-  const { request, events, attachments } = data;
+  const { request, events: rawEvents, attachments } = data;
+  const events = [...rawEvents].sort(
+    (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
+  );
 
   const sendNote = async () => {
     if (!note.trim()) return;
