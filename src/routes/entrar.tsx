@@ -138,6 +138,47 @@ function AuthPage() {
     );
   };
 
+  const resendStatsKey = (email: string) => `jm.resendStats:${email.toLowerCase()}`;
+
+  type ResendStats = { count: number; firstAt: number; lastAt: number };
+  const readResendStats = (email: string): ResendStats => {
+    if (typeof window === "undefined") return { count: 0, firstAt: 0, lastAt: 0 };
+    try {
+      const raw = window.localStorage.getItem(resendStatsKey(email));
+      return raw ? (JSON.parse(raw) as ResendStats) : { count: 0, firstAt: 0, lastAt: 0 };
+    } catch {
+      return { count: 0, firstAt: 0, lastAt: 0 };
+    }
+  };
+
+  const describeResendError = (err: unknown): { title: string; description: string } => {
+    // Supabase rate limit: status 429 ou mensagens "over_email_send_rate_limit" / "rate limit".
+    const anyErr = err as { status?: number; message?: string; code?: string; name?: string } | null;
+    const raw = anyErr?.message ?? "";
+    const lower = raw.toLowerCase();
+    const status = anyErr?.status;
+    const code = anyErr?.code?.toLowerCase() ?? "";
+    const isRate =
+      status === 429 ||
+      code.includes("rate") ||
+      lower.includes("rate limit") ||
+      lower.includes("too many") ||
+      lower.includes("over_email_send_rate_limit");
+    if (isRate) {
+      // Tenta extrair "after N seconds"
+      const secs = /after\s+(\d+)\s*seconds?/i.exec(raw)?.[1];
+      const waitHint = secs ? `Aguarde ~${secs}s antes de tentar de novo.` : "Aguarde alguns minutos antes de tentar de novo.";
+      return {
+        title: "Limite de envios atingido",
+        description: `O servidor bloqueou temporariamente novos envios para este e-mail. ${waitHint} (código: ${status ?? code ?? "rate_limit"})`,
+      };
+    }
+    if (lower.includes("user not found") || lower.includes("invalid")) {
+      return { title: "E-mail inválido", description: raw || "Verifique o endereço informado." };
+    }
+    return { title: "Não foi possível reenviar", description: raw || "Falha desconhecida." };
+  };
+
   const handleResendConfirmation = async () => {
     if (!pendingEmail || resendCooldown > 0 || isResending) return;
     setIsResending(true);
@@ -148,8 +189,22 @@ function AuthPage() {
         options: { emailRedirectTo: window.location.origin },
       });
       if (error) throw error;
+
+      // Telemetria local: contabiliza reenvios bem-sucedidos por e-mail.
+      const now = Date.now();
+      const prev = readResendStats(pendingEmail);
+      const next: ResendStats = {
+        count: prev.count + 1,
+        firstAt: prev.firstAt || now,
+        lastAt: now,
+      };
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem(resendStatsKey(pendingEmail), JSON.stringify(next));
+      }
+      setResendCount(next.count);
+
       toast.success("Email de confirmação reenviado", {
-        description: `Verifique a caixa de entrada de ${pendingEmail}.`,
+        description: `Verifique a caixa de entrada de ${pendingEmail}. (${next.count}º envio)`,
       });
       setResendCooldown(60);
       if (typeof window !== "undefined") {
@@ -157,12 +212,24 @@ function AuthPage() {
       }
 
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Falha ao reenviar";
-      toast.error("Não foi possível reenviar", { description: message });
+      const { title, description } = describeResendError(err);
+      toast.error(title, { description });
+      // Se for rate-limit, aplica um cooldown mínimo para o botão não ficar
+      // pronto imediatamente e disparar de novo.
+      const anyErr = err as { status?: number; message?: string } | null;
+      const raw = (anyErr?.message ?? "").toLowerCase();
+      if (anyErr?.status === 429 || raw.includes("rate limit") || raw.includes("over_email_send_rate_limit")) {
+        const secs = Number(/after\s+(\d+)\s*seconds?/i.exec(anyErr?.message ?? "")?.[1] ?? 60);
+        setResendCooldown(secs);
+        if (pendingEmail && typeof window !== "undefined") {
+          window.localStorage.setItem(resendStorageKey(pendingEmail), String(Date.now() + secs * 1000));
+        }
+      }
     } finally {
       setIsResending(false);
     }
   };
+
 
 
   // Resolve destino pós-login: query ?redirect=, senão sessionStorage (OAuth), senão /painel.
