@@ -81,12 +81,30 @@ import { z } from "zod";
  * there through `context`.
  */
 
-export type JurisMindVariant =
-  | "sidebar"
-  | "square-navy"
-  | "square-white"
-  | "glyph-navy"
-  | "glyph-white";
+export const JURISMIND_VARIANTS = [
+  "sidebar",
+  "square-navy",
+  "square-white",
+  "glyph-navy",
+  "glyph-white",
+] as const;
+
+export type JurisMindVariant = (typeof JURISMIND_VARIANTS)[number];
+
+/**
+ * Named lookup for every `JurisMindVariant` literal. Prefer this over passing
+ * raw strings so misspellings become type errors and future renames propagate.
+ *
+ * @example
+ * <JurisMindMark variant={JURISMIND_VARIANT.squareNavy} size={32} />
+ */
+export const JURISMIND_VARIANT = {
+  sidebar: "sidebar",
+  squareNavy: "square-navy",
+  squareWhite: "square-white",
+  glyphNavy: "glyph-navy",
+  glyphWhite: "glyph-white",
+} as const satisfies Record<string, JurisMindVariant>;
 
 const SOURCES: Record<JurisMindVariant, string> = {
   sidebar: sidebarIcon.url,
@@ -95,6 +113,70 @@ const SOURCES: Record<JurisMindVariant, string> = {
   "glyph-navy": glyphNavy.url,
   "glyph-white": glyphWhite.url,
 };
+
+/** Fallback variant used when a caller passes `null`, `undefined` or unknown. */
+export const DEFAULT_JURISMIND_VARIANT: JurisMindVariant = "sidebar";
+
+export function isJurisMindVariant(value: unknown): value is JurisMindVariant {
+  return (
+    typeof value === "string" &&
+    (JURISMIND_VARIANTS as readonly string[]).includes(value)
+  );
+}
+
+/** Zod schema para validar `variant` recebido de fontes externas. */
+export const jurisMindVariantSchema = z.enum(JURISMIND_VARIANTS);
+
+export class InvalidJurisMindVariantError extends Error {
+  readonly received: unknown;
+  constructor(received: unknown, source?: string) {
+    super(
+      `[JurisMindVariant] valor inválido${source ? ` em "${source}"` : ""}: ${JSON.stringify(
+        received,
+      )}. Esperado um de: ${JURISMIND_VARIANTS.join(", ")}.`,
+    );
+    this.name = "InvalidJurisMindVariantError";
+    this.received = received;
+  }
+}
+
+/** Estrito: retorna o valor tipado ou lança `InvalidJurisMindVariantError`. */
+export function parseJurisMindVariant(
+  value: unknown,
+  source?: string,
+): JurisMindVariant {
+  if (isJurisMindVariant(value)) return value;
+  throw new InvalidJurisMindVariantError(value, source);
+}
+
+/**
+ * Permissivo: valida e devolve o valor tipado; se inválido, loga um `warn`
+ * e cai no `fallback` — nunca lança. Espelha `coerceJurisMindContext`.
+ */
+export function coerceJurisMindVariant(
+  value: unknown,
+  options?: { fallback?: JurisMindVariant; source?: string; silent?: boolean },
+): JurisMindVariant {
+  if (isJurisMindVariant(value)) return value;
+  const fallback = options?.fallback ?? DEFAULT_JURISMIND_VARIANT;
+  if (!options?.silent && typeof console !== "undefined") {
+    console.warn(
+      `[JurisMindVariant] valor inválido${options?.source ? ` em "${options.source}"` : ""}: ${JSON.stringify(
+        value,
+      )}. Usando fallback "${fallback}".`,
+    );
+  }
+  return fallback;
+}
+
+export function assertJurisMindVariant(
+  value: unknown,
+  source?: string,
+): asserts value is JurisMindVariant {
+  if (!isJurisMindVariant(value)) {
+    throw new InvalidJurisMindVariantError(value, source);
+  }
+}
 
 /**
  * Semantic contexts where the mark is rendered. Prefer passing `context`
