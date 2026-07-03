@@ -402,7 +402,7 @@ function AuthPage() {
         <div className="w-full max-w-md space-y-6">
           <div className="text-center">
             <JurisMindMark size={48} context={JURISMIND_CONTEXT.auth} rounded className="mb-4" />
-            <h1 className="text-3xl font-bold text-foreground">B2B | JurisMind AI</h1>
+            <h1 className="text-3xl font-bold text-foreground">Entrar no JurisMind</h1>
             <p className="mt-2 text-sm text-muted-foreground">
               Inteligência para advogados, peritos e assistentes técnicos
             </p>
