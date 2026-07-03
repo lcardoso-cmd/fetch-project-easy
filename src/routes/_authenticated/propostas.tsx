@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Handshake, Loader2, Copy, Download, FileText, Check, Trash2, History, Save, Cloud, CloudOff, Eraser, Settings2 } from "lucide-react";
+import { Handshake, Loader2, Copy, Download, FileText, Check, Trash2, History, Save, Cloud, CloudOff, Eraser, Settings2, Link2 } from "lucide-react";
 import { toast } from "sonner";
 import { generateProposal } from "@/lib/generators.functions";
 import { getCases } from "@/lib/cases.functions";
@@ -20,6 +20,7 @@ import { ProposalVersionsDialog } from "@/components/proposal/proposal-versions-
 import { ProposalAttachmentsPanel } from "@/components/proposal/proposal-attachments-panel";
 import { ConvertToCasePopover } from "@/components/proposal/convert-to-case-popover";
 import { WordPreview } from "@/components/proposal/word-preview";
+import { ShareProposalDialog, type PdfShareSnapshot } from "@/components/proposal/share-proposal-dialog";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useAuth } from "@/hooks/use-auth";
 import { useUnsavedChangesGuard } from "@/hooks/use-unsaved-changes-guard";
