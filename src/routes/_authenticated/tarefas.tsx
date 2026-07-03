@@ -178,81 +178,150 @@ function MyTasksPage() {
                   </AccordionTrigger>
 
                   <AccordionContent>
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Tarefa</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead>Prazo</TableHead>
-                          <TableHead>Responsável</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {group.tasks.map((t) => {
-                          const assignee = assignees.find(
-                            (a) => a.id === t.assigned_to_user_id,
-                          );
-                          return (
-                            <TableRow key={t.id}>
-                              <TableCell className="font-medium">
+                    {/* Mobile: stacked cards */}
+                    <ul className="space-y-2 sm:hidden">
+                      {group.tasks.map((t) => {
+                        const assignee = assignees.find(
+                          (a) => a.id === t.assigned_to_user_id,
+                        );
+                        return (
+                          <li
+                            key={t.id}
+                            className="rounded-md border bg-card/50 p-3 space-y-2"
+                          >
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="min-w-0 flex-1 text-sm font-medium">
                                 {group.caseInfo ? (
                                   <Link
                                     to="/assistencias/$caseId"
                                     params={{ caseId: group.caseInfo.id }}
-                                    className="text-primary hover:underline"
+                                    className="text-primary hover:underline break-words"
                                   >
                                     {t.title}
                                   </Link>
                                 ) : (
-                                  t.title
+                                  <span className="break-words">{t.title}</span>
                                 )}
-                              </TableCell>
-                              <TableCell>
-                                <Badge variant={statusVariant(t.status)}>
-                                  {TASK_STATUS_LABEL[t.status as TaskStatus] ?? t.status}
-                                </Badge>
-                              </TableCell>
-                              <TableCell
-                                className={cn(
-                                  "text-xs",
-                                  getDueDateColor(t.due_date, t.status),
-                                )}
-                              >
-                                {t.due_date ? (
-                                  <div className="flex items-center gap-2">
-                                    <Clock className="h-3 w-3" />
-                                    {format(
-                                      parseISO(t.due_date),
-                                      "dd/MM/yy 'às' HH:mm",
-                                      { locale: ptBR },
-                                    )}
-                                  </div>
-                                ) : (
-                                  <span className="text-muted-foreground">—</span>
-                                )}
-                              </TableCell>
-                              <TableCell>
-                                {assignee ? (
-                                  <div className="flex items-center gap-2">
-                                    <Avatar className="h-6 w-6">
-                                      <AvatarFallback>
-                                        {assignee.name.charAt(0)}
-                                      </AvatarFallback>
-                                    </Avatar>
-                                    <span>{assignee.name}</span>
-                                  </div>
-                                ) : (
-                                  <span className="text-xs text-muted-foreground">
-                                    Não atribuído
-                                  </span>
-                                )}
-                              </TableCell>
-                            </TableRow>
-                          );
-                        })}
-                      </TableBody>
-                    </Table>
+                              </div>
+                              <Badge variant={statusVariant(t.status)} className="shrink-0">
+                                {TASK_STATUS_LABEL[t.status as TaskStatus] ?? t.status}
+                              </Badge>
+                            </div>
+                            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
+                              {t.due_date ? (
+                                <div
+                                  className={cn(
+                                    "flex items-center gap-1.5",
+                                    getDueDateColor(t.due_date, t.status),
+                                  )}
+                                >
+                                  <Clock className="h-3 w-3" />
+                                  {format(
+                                    parseISO(t.due_date),
+                                    "dd/MM/yy 'às' HH:mm",
+                                    { locale: ptBR },
+                                  )}
+                                </div>
+                              ) : (
+                                <span className="text-muted-foreground">Sem prazo</span>
+                              )}
+                              {assignee ? (
+                                <div className="flex items-center gap-1.5 text-muted-foreground">
+                                  <Avatar className="h-4 w-4">
+                                    <AvatarFallback className="text-[9px]">
+                                      {assignee.name.charAt(0)}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                  <span>{assignee.name}</span>
+                                </div>
+                              ) : (
+                                <span className="text-muted-foreground">Não atribuído</span>
+                              )}
+                            </div>
+                          </li>
+                        );
+                      })}
+                    </ul>
+
+                    {/* Tablet/Desktop: table */}
+                    <div className="hidden sm:block overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Tarefa</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead>Prazo</TableHead>
+                            <TableHead>Responsável</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {group.tasks.map((t) => {
+                            const assignee = assignees.find(
+                              (a) => a.id === t.assigned_to_user_id,
+                            );
+                            return (
+                              <TableRow key={t.id}>
+                                <TableCell className="font-medium">
+                                  {group.caseInfo ? (
+                                    <Link
+                                      to="/assistencias/$caseId"
+                                      params={{ caseId: group.caseInfo.id }}
+                                      className="text-primary hover:underline"
+                                    >
+                                      {t.title}
+                                    </Link>
+                                  ) : (
+                                    t.title
+                                  )}
+                                </TableCell>
+                                <TableCell>
+                                  <Badge variant={statusVariant(t.status)}>
+                                    {TASK_STATUS_LABEL[t.status as TaskStatus] ?? t.status}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell
+                                  className={cn(
+                                    "text-xs whitespace-nowrap",
+                                    getDueDateColor(t.due_date, t.status),
+                                  )}
+                                >
+                                  {t.due_date ? (
+                                    <div className="flex items-center gap-2">
+                                      <Clock className="h-3 w-3" />
+                                      {format(
+                                        parseISO(t.due_date),
+                                        "dd/MM/yy 'às' HH:mm",
+                                        { locale: ptBR },
+                                      )}
+                                    </div>
+                                  ) : (
+                                    <span className="text-muted-foreground">—</span>
+                                  )}
+                                </TableCell>
+                                <TableCell>
+                                  {assignee ? (
+                                    <div className="flex items-center gap-2">
+                                      <Avatar className="h-6 w-6">
+                                        <AvatarFallback>
+                                          {assignee.name.charAt(0)}
+                                        </AvatarFallback>
+                                      </Avatar>
+                                      <span>{assignee.name}</span>
+                                    </div>
+                                  ) : (
+                                    <span className="text-xs text-muted-foreground">
+                                      Não atribuído
+                                    </span>
+                                  )}
+                                </TableCell>
+                              </TableRow>
+                            );
+                          })}
+                        </TableBody>
+                      </Table>
+                    </div>
                   </AccordionContent>
+
                 </AccordionItem>
               ))}
             </Accordion>
