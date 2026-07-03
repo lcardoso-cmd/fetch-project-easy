@@ -305,6 +305,16 @@ export async function chatCompleteStream(
   const maxTokens = opts.maxTokens ?? limits.maxTokens;
   const trunc = truncateMessages(messages, limits.maxContextChars);
   const truncated = trunc.messages;
+  if (trunc.removed > 0) {
+    await logSessionEvent({
+      event_type: "context_truncated",
+      model,
+      chars_before: trunc.charsBefore,
+      chars_after: trunc.charsAfter,
+      messages_truncated: trunc.removed,
+      reason: `limite de contexto ${limits.maxContextChars} caracteres`,
+    });
+  }
 
   // Cache replay
   const cacheable = !opts.noCache && isCacheable({ model, messages: truncated, temperature, tools: opts.tools });
@@ -313,11 +323,13 @@ export async function chatCompleteStream(
   if (key) {
     const hit = getCached(key);
     if (hit) {
+      await logSessionEvent({ event_type: "cache_hit", model, reason: "resposta idêntica em cache (replay)" });
       // Replay em chunks curtos para simular streaming
       if (opts.onDelta && hit.content) {
         const step = 24;
         for (let i = 0; i < hit.content.length; i += step) {
           if (opts.signal?.aborted) break;
+
           opts.onDelta(hit.content.slice(i, i + step));
         }
       }
