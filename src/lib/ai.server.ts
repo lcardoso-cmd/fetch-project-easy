@@ -270,11 +270,13 @@ export async function chatCompleteStream(
   const model = opts.model ?? "google/gemini-2.5-flash";
   const temperature = opts.temperature ?? 0.3;
   const maxTokens = opts.maxTokens ?? limits.maxTokens;
-  const truncated = truncateMessages(messages, limits.maxContextChars);
+  const trunc = truncateMessages(messages, limits.maxContextChars);
+  const truncated = trunc.messages;
 
   // Cache replay
   const cacheable = !opts.noCache && isCacheable({ model, messages: truncated, temperature, tools: opts.tools });
   const key = cacheable ? cacheKey({ model, messages: truncated, temperature, tools: opts.tools }) : null;
+
   if (key) {
     const hit = getCached(key);
     if (hit) {
