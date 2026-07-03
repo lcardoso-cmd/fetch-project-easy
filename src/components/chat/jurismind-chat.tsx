@@ -2040,26 +2040,26 @@ export function JurisMindChat({
                 )}
               </div>
             )}
-            <div className="flex items-end gap-2">
-              <input
-                ref={fileRef}
-                type="file"
-                accept="image/*"
-                multiple
-                hidden
-                onChange={(e) => {
-                  onPickImages(e.target.files);
-                  e.target.value = "";
-                }}
-              />
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/*"
+              multiple
+              hidden
+              onChange={(e) => {
+                onPickImages(e.target.files);
+                e.target.value = "";
+              }}
+            />
+            <div className="flex items-center gap-1.5 pb-2">
               <Button
                 type="button"
                 size="icon"
-                variant="outline"
+                variant="ghost"
                 onClick={() => fileRef.current?.click()}
                 disabled={busy || images.length >= 6}
                 title="Anexar imagens (ou arraste / cole)"
-                className="h-10 w-10 shrink-0"
+                className="h-9 w-9 shrink-0"
               >
                 <ImagePlus className="h-4 w-4" />
               </Button>
@@ -2067,7 +2067,7 @@ export function JurisMindChat({
                 ref={micButtonRef}
                 type="button"
                 size="icon"
-                variant={recording ? "destructive" : "outline"}
+                variant={recording ? "destructive" : "ghost"}
                 onClick={() => (recording ? stopRecording() : void startRecording())}
                 disabled={busy || transcribing}
                 aria-pressed={recording}
@@ -2086,7 +2086,7 @@ export function JurisMindChat({
                       : "Ditar mensagem"
                 }
                 className={cn(
-                  "h-10 w-10 shrink-0",
+                  "h-9 w-9 shrink-0",
                   recording && "animate-pulse",
                 )}
               >
@@ -2103,7 +2103,7 @@ export function JurisMindChat({
                   <Button
                     type="button"
                     size="icon"
-                    variant="outline"
+                    variant="ghost"
                     disabled={recording || transcribing}
                     aria-label="Escolher microfone"
                     title={
@@ -2111,13 +2111,13 @@ export function JurisMindChat({
                         ? "Pare a gravação para trocar o microfone"
                         : "Escolher microfone"
                     }
-                    className="h-10 w-10 shrink-0"
+                    className="h-9 w-9 shrink-0"
                     onClick={() => void refreshMics()}
                   >
                     <Settings2 className="h-4 w-4" />
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent align="end" className="w-72 p-3" aria-label="Selecionar microfone">
+                <PopoverContent align="start" className="w-72 p-3" aria-label="Selecionar microfone">
                   <div className="mb-2 flex items-center justify-between">
                     <div className="text-sm font-medium">Microfone</div>
                     <button
@@ -2204,6 +2204,11 @@ export function JurisMindChat({
                   )}
                 </PopoverContent>
               </Popover>
+              <div className="ml-auto text-[11px] text-muted-foreground">
+                Enter envia · Shift+Enter quebra
+              </div>
+            </div>
+            <div className="flex items-end gap-2">
               <Textarea
                 ref={inputRef}
                 value={input}
@@ -2216,7 +2221,7 @@ export function JurisMindChat({
                 }}
                 placeholder="Pergunte, peça peça jurídica, planilha, apresentação ou PDF…"
                 rows={2}
-                className="min-h-[42px] resize-none"
+                className="min-h-[44px] flex-1 resize-none"
                 disabled={busy}
               />
               {busy ? (
@@ -2224,7 +2229,7 @@ export function JurisMindChat({
                   onClick={stopStreaming}
                   size="icon"
                   variant="secondary"
-                  className="h-10 w-10 shrink-0"
+                  className="h-11 w-11 shrink-0"
                   title="Parar geração"
                 >
                   <Square className="h-4 w-4" />
@@ -2234,12 +2239,13 @@ export function JurisMindChat({
                   onClick={() => void send()}
                   disabled={!input.trim() && images.length === 0}
                   size="icon"
-                  className="h-10 w-10 shrink-0"
+                  className="h-11 w-11 shrink-0"
                 >
                   <Send className="h-4 w-4" />
                 </Button>
               )}
             </div>
+
           </div>
         </div>
       </div>
