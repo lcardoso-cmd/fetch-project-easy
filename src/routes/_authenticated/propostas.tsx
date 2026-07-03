@@ -9,7 +9,15 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Handshake, Loader2, Copy, Download, FileText, Check, Trash2, History, Save, Cloud, CloudOff, Eraser, Settings2, Link2 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Loader2, Copy, Download, FileText, Check, Trash2, History, Save, Cloud, CloudOff, Eraser, Settings2, Link2, ChevronLeft, ChevronRight, MoreHorizontal, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { generateProposal } from "@/lib/generators.functions";
 import { getCases } from "@/lib/cases.functions";
@@ -24,6 +32,7 @@ import { ShareProposalDialog, type PdfShareSnapshot } from "@/components/proposa
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useAuth } from "@/hooks/use-auth";
 import { useUnsavedChangesGuard } from "@/hooks/use-unsaved-changes-guard";
+import { cn } from "@/lib/utils";
 import { listProposalAttachments, type ExtractedProposalFields } from "@/lib/proposal-attachments.functions";
 import {
   getProposalDraft,
@@ -165,6 +174,8 @@ function ProposalPage() {
   const [hydrated, setHydrated] = useState(false);
   const [, forceTick] = useState(0);
   const [versionsOpen, setVersionsOpen] = useState(false);
+  const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
+
 
   // Popover state para salvar versão com rótulo/descrição/fixar
   const [savePopoverOpen, setSavePopoverOpen] = useState(false);
@@ -414,6 +425,8 @@ function ProposalPage() {
       const { case_id: _omit, ...payload } = form;
       const r = await gen({ data: payload });
       setOutput(r.content);
+      setStep(4);
+
       try {
         await persistVersion({
           label: `Gerada — ${form.client_name || "Cliente"}`,
@@ -617,153 +630,497 @@ function ProposalPage() {
       }
     : null;
 
+  const steps = [
+    { n: 1, label: "Documentos" },
+    { n: 2, label: "Partes" },
+    { n: 3, label: "Escopo & honorários" },
+    { n: 4, label: "Prévia" },
+  ] as const;
+
+  const canAdvance =
+    step === 1 ? true
+    : step === 2 ? form.client_name.trim().length >= 2
+    : step === 3 ? form.matter.trim().length >= 10 && form.scope.trim().length >= 10 && form.fees.trim().length >= 1
+    : false;
+
+  const goNext = () => setStep((s) => (s < 4 ? ((s + 1) as 1 | 2 | 3 | 4) : s));
+  const goPrev = () => setStep((s) => (s > 1 ? ((s - 1) as 1 | 2 | 3 | 4) : s));
+
+  const StatusPill = () => {
+    if (saving)
+      return (
+        <span role="status" aria-live="polite" className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground">
+          <Loader2 className="h-3 w-3 animate-spin" /> Salvando…
+        </span>
+      );
+    if (pending)
+      return (
+        <span role="status" aria-live="polite" className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground">
+          <span className="h-1.5 w-1.5 rounded-full bg-amber-500" /> Alterações pendentes
+        </span>
+      );
+    if (syncError)
+      return (
+        <span role="alert" className="inline-flex items-center gap-1.5 text-[11px] text-destructive">
+          <CloudOff className="h-3 w-3" /> Falha ao sincronizar
+        </span>
+      );
+    if (savedAt)
+      return (
+        <span className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground">
+          <Cloud className="h-3 w-3" /> Salvo {formatSavedAt(savedAt)}
+        </span>
+      );
+    return <span className="text-[11px] text-muted-foreground">Autosave ativo</span>;
+  };
+
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-4">
+    <div className="mx-auto w-full max-w-3xl px-4 py-8 sm:py-12 space-y-8">
+      {/* Header */}
+      <header className="flex items-start justify-between gap-4">
         <div className="min-w-0">
-          <h1 className="text-3xl font-bold font-heading tracking-tight">Proposta Comercial</h1>
-          <p className="mt-1 text-muted-foreground">
-            Escolha um caso existente para preencher os dados do cliente automaticamente. Campos marcados com <span className="text-destructive">*</span> são obrigatórios.
+          <h1 className="font-heading text-xl font-medium tracking-tight">Proposta Comercial</h1>
+          <p className="mt-1 text-[13px] text-muted-foreground">
+            Um fluxo em quatro etapas para gerar sua proposta.
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-          {saving ? (
-            <span
-              role="status"
-              aria-live="polite"
-              className="inline-flex items-center gap-1.5 rounded-full border border-sky-500/30 bg-sky-500/10 px-2 py-0.5 text-sky-700 dark:text-sky-300"
-            >
-              <Loader2 className="h-3.5 w-3.5 animate-spin" /> Salvando na nuvem…
-            </span>
-          ) : pending ? (
-            <span
-              role="status"
-              aria-live="polite"
-              className="inline-flex items-center gap-1.5 rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-amber-700 dark:text-amber-300"
-            >
-              <span className="relative flex h-2 w-2">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-500 opacity-75" />
-                <span className="relative inline-flex h-2 w-2 rounded-full bg-amber-500" />
-              </span>
-              Alterações não salvas — autosave pendente
-            </span>
-          ) : syncError ? (
-            <span
-              role="alert"
-              className="inline-flex items-center gap-1.5 rounded-full border border-destructive/30 bg-destructive/10 px-2 py-0.5 text-destructive"
-            >
-              <CloudOff className="h-3.5 w-3.5" /> Falha ao sincronizar
-            </span>
-          ) : savedAt ? (
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-emerald-700 dark:text-emerald-300">
-              <Cloud className="h-3.5 w-3.5" />
-              <Check className="h-3.5 w-3.5" /> Rascunho salvo {formatSavedAt(savedAt)}
-            </span>
-          ) : (
-            <span>Alterações são salvas automaticamente</span>
-          )}
-          {savedAt && (
-            <Button size="sm" variant="ghost" onClick={discardDraft} className="h-7 px-2">
-              <Trash2 className="mr-1 h-3.5 w-3.5" /> Descartar
-            </Button>
-          )}
-          <Popover open={savePopoverOpen} onOpenChange={setSavePopoverOpen}>
-            <PopoverTrigger asChild>
-              <Button size="sm" variant="outline" onClick={openSavePopover} className="h-7 px-2">
-                <Save className="mr-1 h-3.5 w-3.5" /> Salvar versão
+        <div className="flex items-center gap-3">
+          <StatusPill />
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-8 w-8">
+                <MoreHorizontal className="h-4 w-4" />
               </Button>
-            </PopoverTrigger>
-            <PopoverContent align="end" className="w-80 space-y-3">
-              <div className="space-y-1">
-                <Label htmlFor="v-label" className="text-xs">Rótulo</Label>
-                <Input
-                  id="v-label"
-                  value={versionLabel}
-                  onChange={(e) => setVersionLabel(e.target.value)}
-                  placeholder="Ex.: Envio ao cliente v1"
-                />
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor="v-desc" className="text-xs">Descrição (opcional)</Label>
-                <Textarea
-                  id="v-desc"
-                  rows={2}
-                  value={versionDescription}
-                  onChange={(e) => setVersionDescription(e.target.value)}
-                  placeholder="Anotações sobre esta versão…"
-                />
-              </div>
-              <label className="flex items-center gap-2 text-xs">
-                <input
-                  type="checkbox"
-                  checked={versionPinned}
-                  onChange={(e) => setVersionPinned(e.target.checked)}
-                />
-                Fixar versão (não será removida pelo limite automático)
-              </label>
-              <div className="flex justify-end gap-2">
-                <Button size="sm" variant="ghost" onClick={() => setSavePopoverOpen(false)}>
-                  Cancelar
-                </Button>
-                <Button size="sm" onClick={confirmSaveVersion} disabled={savingVersion}>
-                  {savingVersion && <Loader2 className="mr-1 h-3 w-3 animate-spin" />}
-                  Salvar
-                </Button>
-              </div>
-            </PopoverContent>
-          </Popover>
-          <Button size="sm" variant="outline" onClick={() => setVersionsOpen(true)} className="h-7 px-2">
-            <History className="mr-1 h-3.5 w-3.5" /> Histórico
-          </Button>
-          <AlertDialog open={clearOpen} onOpenChange={setClearOpen}>
-            <AlertDialogTrigger asChild>
-              <Button size="sm" variant="outline" className="h-7 px-2 text-destructive hover:text-destructive">
-                <Eraser className="mr-1 h-3.5 w-3.5" /> Limpar tudo
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Limpar histórico e rascunho?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  Isso apaga <strong>todas as versões salvas</strong> (inclusive fixadas) e o
-                  rascunho atual {activeCaseId ? "deste caso" : "sem caso vinculado"}, além do
-                  rascunho antigo guardado neste navegador. Esta ação não pode ser desfeita.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel disabled={clearing}>Cancelar</AlertDialogCancel>
-                <AlertDialogAction
-                  onClick={(e) => {
-                    e.preventDefault();
-                    clearAll();
-                  }}
-                  disabled={clearing}
-                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                >
-                  {clearing && <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />}
-                  Apagar tudo
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-
-          <ConvertToCasePopover
-            disabled={!!activeCaseId}
-            attachmentIds={attachmentIds}
-            fromCaseId={activeCaseId}
-            defaults={{
-              title: form.matter || `Proposta — ${form.client_name || "Cliente"}`,
-              client_name: form.client_name || "",
-              description: form.scope || "",
-              case_type: "",
-              jurisdiction: "",
-            }}
-            onConverted={(newCaseId) => {
-              setForm((f) => ({ ...f, case_id: newCaseId }));
-            }}
-          />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuLabel className="text-[11px] font-normal text-muted-foreground">
+                Rascunho
+              </DropdownMenuLabel>
+              <DropdownMenuItem onClick={openSavePopover}>
+                <Save className="h-3.5 w-3.5" /> Salvar versão
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setVersionsOpen(true)}>
+                <History className="h-3.5 w-3.5" /> Histórico
+              </DropdownMenuItem>
+              {savedAt && (
+                <DropdownMenuItem onClick={discardDraft}>
+                  <Trash2 className="h-3.5 w-3.5" /> Descartar rascunho
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                className="text-destructive focus:text-destructive"
+                onClick={() => setClearOpen(true)}
+              >
+                <Eraser className="h-3.5 w-3.5" /> Limpar tudo
+              </DropdownMenuItem>
+              {!activeCaseId && (
+                <>
+                  <DropdownMenuSeparator />
+                  <div className="px-1 py-1">
+                    <ConvertToCasePopover
+                      disabled={false}
+                      attachmentIds={attachmentIds}
+                      fromCaseId={activeCaseId}
+                      defaults={{
+                        title: form.matter || `Proposta — ${form.client_name || "Cliente"}`,
+                        client_name: form.client_name || "",
+                        description: form.scope || "",
+                        case_type: "",
+                        jurisdiction: "",
+                      }}
+                      onConverted={(newCaseId) => setForm((f) => ({ ...f, case_id: newCaseId }))}
+                    />
+                  </div>
+                </>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
-      </div>
+      </header>
+
+      {/* Stepper */}
+      <nav aria-label="Etapas" className="flex items-center gap-2 text-[12px]">
+        {steps.map((s, i) => {
+          const active = step === s.n;
+          const done = step > s.n;
+          return (
+            <button
+              key={s.n}
+              type="button"
+              onClick={() => setStep(s.n)}
+              className={cn(
+                "flex items-center gap-2 rounded-md px-2 py-1 transition",
+                active ? "text-foreground" : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              <span
+                className={cn(
+                  "flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-medium",
+                  active
+                    ? "bg-primary text-primary-foreground"
+                    : done
+                      ? "bg-foreground/80 text-background"
+                      : "bg-muted text-muted-foreground",
+                )}
+              >
+                {done ? <Check className="h-3 w-3" /> : s.n}
+              </span>
+              <span className={cn("hidden sm:inline", active && "font-medium")}>{s.label}</span>
+              {i < steps.length - 1 && <span className="mx-1 h-px w-6 bg-border" aria-hidden />}
+            </button>
+          );
+        })}
+      </nav>
+
+      {/* Step content */}
+      <section className="space-y-6">
+        {step === 1 && (
+          <div className="space-y-6">
+            <div>
+              <h2 className="text-[15px] font-medium">Documentos do cliente</h2>
+              <p className="mt-1 text-[13px] text-muted-foreground">
+                Suba petições, contratos ou documentos — a IA sugere cliente, matéria e
+                contraparte automaticamente. Opcional.
+              </p>
+            </div>
+            <ProposalAttachmentsPanel
+              caseId={activeCaseId}
+              userId={user?.id}
+              onSuggestFields={applyExtractedFields}
+            />
+          </div>
+        )}
+
+        {step === 2 && (
+          <form className="space-y-8" onSubmit={(e) => { e.preventDefault(); if (canAdvance) goNext(); }}>
+            <div className="space-y-4">
+              <h2 className="text-[15px] font-medium">Caso e cliente</h2>
+              <FieldRow label="Caso vinculado">
+                <Select value={form.case_id} onValueChange={onSelectCase}>
+                  <SelectTrigger><SelectValue placeholder="Sem caso vinculado" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={NO_CASE}>Sem caso vinculado</SelectItem>
+                    {cases.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.title}{c.client_name ? ` — ${c.client_name}` : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </FieldRow>
+              <FieldRow label="Nome do cliente" required error={errors.client_name}>
+                <Input
+                  value={form.client_name}
+                  onChange={(e) => setForm({ ...form, client_name: e.target.value })}
+                  aria-invalid={!!errors.client_name}
+                />
+              </FieldRow>
+              {clientSummary && (
+                <p className="pl-[188px] text-[11px] text-muted-foreground">
+                  {clientSummary}
+                </p>
+              )}
+            </div>
+
+            <div className="space-y-4 pt-2">
+              <h2 className="text-[15px] font-medium">Contraparte</h2>
+              <FieldRow label="Nome / Razão social">
+                <Input value={form.counterparty_name} onChange={(e) => setForm({ ...form, counterparty_name: e.target.value })} />
+              </FieldRow>
+              <FieldRow label="CPF / CNPJ">
+                <Input value={form.counterparty_document} onChange={(e) => setForm({ ...form, counterparty_document: e.target.value })} />
+              </FieldRow>
+              <FieldRow label="Endereço">
+                <Input value={form.counterparty_address} onChange={(e) => setForm({ ...form, counterparty_address: e.target.value })} />
+              </FieldRow>
+              <FieldRow label="Cidade / Estado">
+                <Input value={form.counterparty_city_state} onChange={(e) => setForm({ ...form, counterparty_city_state: e.target.value })} />
+              </FieldRow>
+              <FieldRow label="Advogado da contraparte">
+                <Input placeholder="Nome + OAB" value={form.counterparty_lawyer} onChange={(e) => setForm({ ...form, counterparty_lawyer: e.target.value })} />
+              </FieldRow>
+            </div>
+          </form>
+        )}
+
+        {step === 3 && (
+          <form className="space-y-8" onSubmit={submit}>
+            <div className="space-y-4">
+              <h2 className="text-[15px] font-medium">Objeto</h2>
+              <FieldRow label="Matéria / Caso" required error={errors.matter}>
+                <Textarea
+                  rows={3}
+                  value={form.matter}
+                  onChange={(e) => setForm({ ...form, matter: e.target.value })}
+                  aria-invalid={!!errors.matter}
+                />
+              </FieldRow>
+              <FieldRow label="Escopo" required error={errors.scope}>
+                <Textarea
+                  rows={3}
+                  value={form.scope}
+                  onChange={(e) => setForm({ ...form, scope: e.target.value })}
+                  aria-invalid={!!errors.scope}
+                />
+              </FieldRow>
+            </div>
+            <div className="space-y-4 pt-2">
+              <h2 className="text-[15px] font-medium">Honorários & prazo</h2>
+              <FieldRow label="Honorários" required error={errors.fees}>
+                <Input
+                  placeholder="Ex.: R$ 1.200/hora"
+                  value={form.fees}
+                  onChange={(e) => setForm({ ...form, fees: e.target.value })}
+                  aria-invalid={!!errors.fees}
+                />
+              </FieldRow>
+              <FieldRow label="Honorários de êxito">
+                <Input placeholder="Ex.: 20%" value={form.success_fee} onChange={(e) => setForm({ ...form, success_fee: e.target.value })} />
+              </FieldRow>
+              <FieldRow label="Prazo estimado">
+                <Input placeholder="Ex.: 600 dias" value={form.deadline} onChange={(e) => setForm({ ...form, deadline: e.target.value })} />
+              </FieldRow>
+              <FieldRow label="Tom">
+                <Select value={form.tone} onValueChange={(v) => setForm({ ...form, tone: v as FormState["tone"] })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="formal">Formal</SelectItem>
+                    <SelectItem value="consultivo">Consultivo</SelectItem>
+                    <SelectItem value="direto">Direto</SelectItem>
+                  </SelectContent>
+                </Select>
+              </FieldRow>
+            </div>
+            <p className="text-[11px] text-muted-foreground">
+              Escritório e advogado responsável são preenchidos automaticamente pelo seu perfil.
+            </p>
+          </form>
+        )}
+
+        {step === 4 && (
+          <div className="space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h2 className="text-[15px] font-medium">Prévia da proposta</h2>
+                <p className="mt-0.5 text-[12px] text-muted-foreground">Edite livremente antes de exportar.</p>
+              </div>
+              {output && (
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <Button size="sm" variant="ghost" onClick={copy} className="h-8">
+                    <Copy className="h-3.5 w-3.5" /> Copiar
+                  </Button>
+                  <Popover open={pdfSettingsOpen} onOpenChange={setPdfSettingsOpen}>
+                    <PopoverTrigger asChild>
+                      <Button size="sm" variant="ghost" className="h-8" title="Configurar PDF">
+                        <Settings2 className="h-3.5 w-3.5" />
+                        {pdfFormat} · {pdfOrientation === "portrait" ? "Retrato" : "Paisagem"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent align="end" className="w-80 space-y-4">
+                      <div>
+                        <p className="text-sm font-medium">Configurações do PDF</p>
+                        <p className="text-xs text-muted-foreground">Ajuste tamanho, orientação e margens.</p>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1">
+                          <Label className="text-xs">Tamanho</Label>
+                          <Select value={pdfFormat} onValueChange={(v) => setPdfFormat(v as "A4" | "Letter")}>
+                            <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="A4">A4</SelectItem>
+                              <SelectItem value="Letter">Carta</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs">Orientação</Label>
+                          <Select value={pdfOrientation} onValueChange={(v) => setPdfOrientation(v as "portrait" | "landscape")}>
+                            <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="portrait">Retrato</SelectItem>
+                              <SelectItem value="landscape">Paisagem</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <Label className="text-xs">Margens (mm)</Label>
+                          <button
+                            type="button"
+                            className="text-[11px] text-muted-foreground hover:text-foreground underline"
+                            onClick={() => setPdfMargins({ top: 25, right: 25, bottom: 25, left: 25 })}
+                          >
+                            Redefinir
+                          </button>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                          {(["top", "right", "bottom", "left"] as const).map((side) => (
+                            <div key={side} className="space-y-1">
+                              <Label className="text-[11px] capitalize text-muted-foreground">
+                                {side === "top" ? "Superior" : side === "right" ? "Direita" : side === "bottom" ? "Inferior" : "Esquerda"}
+                              </Label>
+                              <Input
+                                type="number" min={5} max={60} step={1}
+                                value={pdfMargins[side]}
+                                onChange={(e) => {
+                                  const n = Number(e.target.value);
+                                  setPdfMargins((prev) => ({
+                                    ...prev,
+                                    [side]: Number.isFinite(n) ? Math.max(5, Math.min(60, n)) : prev[side],
+                                  }));
+                                }}
+                                className="h-8"
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="space-y-2 border-t pt-3">
+                        <div className="flex items-center justify-between gap-2">
+                          <Label htmlFor="pdf-cover-toggle" className="text-xs">Incluir capa</Label>
+                          <input
+                            id="pdf-cover-toggle" type="checkbox"
+                            checked={pdfCoverEnabled}
+                            onChange={(e) => setPdfCoverEnabled(e.target.checked)}
+                            className="h-4 w-4 accent-primary"
+                          />
+                        </div>
+                      </div>
+                      <div className="space-y-2 border-t pt-3">
+                        <Label className="text-xs">Marca d’água</Label>
+                        <Select value={pdfWatermarkMode} onValueChange={(v) => setPdfWatermarkMode(v as "none" | "draft" | "version")}>
+                          <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">Nenhuma</SelectItem>
+                            <SelectItem value="draft">Rascunho</SelectItem>
+                            <SelectItem value="version">Versão…</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        {pdfWatermarkMode === "version" && (
+                          <Input
+                            value={pdfWatermarkVersion}
+                            onChange={(e) => setPdfWatermarkVersion(e.target.value)}
+                            className="h-8" placeholder="1"
+                          />
+                        )}
+                      </div>
+                      <Button size="sm" className="w-full" onClick={() => { setPdfSettingsOpen(false); void downloadPdf(); }}>
+                        <FileText className="h-3.5 w-3.5" /> Baixar PDF
+                      </Button>
+                    </PopoverContent>
+                  </Popover>
+                  <Button size="sm" variant="ghost" onClick={downloadPdf} className="h-8">
+                    <FileText className="h-3.5 w-3.5" /> PDF
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={() => setShareOpen(true)} className="h-8">
+                    <Link2 className="h-3.5 w-3.5" /> Link
+                  </Button>
+                  <Button size="sm" onClick={download} className="h-8">
+                    <Download className="h-3.5 w-3.5" /> .docx
+                  </Button>
+                </div>
+              )}
+            </div>
+            {output ? (
+              <RichTextEditor
+                html={output}
+                onChange={setOutput}
+                minHeight={640}
+                contentClassName="word-doc max-w-none px-10 py-12 bg-white text-slate-900 focus:outline-none"
+              />
+            ) : (
+              <div className="rounded-lg border border-dashed border-border px-6 py-16 text-center">
+                <p className="text-[13px] text-muted-foreground">
+                  Nenhuma proposta gerada ainda.
+                </p>
+                <Button className="mt-4" onClick={() => setStep(3)}>
+                  Voltar e gerar
+                </Button>
+              </div>
+            )}
+            <details className="text-[12px]">
+              <summary className="cursor-pointer text-muted-foreground hover:text-foreground">
+                Ver prévia em formato Word (página fisica)
+              </summary>
+              <div className="mt-3">
+                <WordPreview
+                  html={output || previewHtml}
+                  title={`Proposta - ${form.client_name || "Cliente"}`}
+                />
+              </div>
+            </details>
+          </div>
+        )}
+      </section>
+
+      {/* Nav */}
+      <footer className="flex items-center justify-between border-t border-border pt-6">
+        <Button variant="ghost" onClick={goPrev} disabled={step === 1} className="gap-1">
+          <ChevronLeft className="h-4 w-4" /> Voltar
+        </Button>
+        {step === 3 ? (
+          <Button onClick={submit as unknown as () => void} disabled={loading} className="gap-1">
+            {loading ? <><Loader2 className="h-4 w-4 animate-spin" /> Gerando…</> : <><Sparkles className="h-4 w-4" /> Gerar proposta</>}
+          </Button>
+        ) : step === 4 ? (
+          <Button variant="outline" onClick={() => setStep(3)}>Gerar novamente</Button>
+        ) : (
+          <Button onClick={goNext} disabled={!canAdvance} className="gap-1">
+            Continuar <ChevronRight className="h-4 w-4" />
+          </Button>
+        )}
+      </footer>
+
+      {/* Popover para salvar versão (invocado via menu) */}
+      <Popover open={savePopoverOpen} onOpenChange={setSavePopoverOpen}>
+        <PopoverTrigger asChild><span className="sr-only" /></PopoverTrigger>
+        <PopoverContent align="end" className="w-80 space-y-3">
+          <div className="space-y-1">
+            <Label htmlFor="v-label" className="text-xs">Rótulo</Label>
+            <Input id="v-label" value={versionLabel} onChange={(e) => setVersionLabel(e.target.value)} placeholder="Ex.: Envio ao cliente v1" />
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="v-desc" className="text-xs">Descrição (opcional)</Label>
+            <Textarea id="v-desc" rows={2} value={versionDescription} onChange={(e) => setVersionDescription(e.target.value)} />
+          </div>
+          <label className="flex items-center gap-2 text-xs">
+            <input type="checkbox" checked={versionPinned} onChange={(e) => setVersionPinned(e.target.checked)} />
+            Fixar versão
+          </label>
+          <div className="flex justify-end gap-2">
+            <Button size="sm" variant="ghost" onClick={() => setSavePopoverOpen(false)}>Cancelar</Button>
+            <Button size="sm" onClick={confirmSaveVersion} disabled={savingVersion}>
+              {savingVersion && <Loader2 className="mr-1 h-3 w-3 animate-spin" />}
+              Salvar
+            </Button>
+          </div>
+        </PopoverContent>
+      </Popover>
+
+      <AlertDialog open={clearOpen} onOpenChange={setClearOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Limpar histórico e rascunho?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Isso apaga todas as versões salvas (inclusive fixadas) e o rascunho atual{" "}
+              {activeCaseId ? "deste caso" : "sem caso vinculado"}. Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={clearing}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => { e.preventDefault(); clearAll(); }}
+              disabled={clearing}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {clearing && <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />}
+              Apagar tudo
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <ProposalVersionsDialog
         open={versionsOpen}
@@ -773,397 +1130,36 @@ function ProposalPage() {
         currentOutput={output}
         onRestore={restoreVersion}
       />
-
-      <ProposalAttachmentsPanel
-        caseId={activeCaseId}
-        userId={user?.id}
-        onSuggestFields={applyExtractedFields}
-      />
-
-
-
-
-
-
-      <div className="grid gap-6 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle className="font-heading flex items-center gap-2">
-              <Handshake className="h-5 w-5" /> Dados da proposta
-            </CardTitle>
-            <CardDescription>Campos com <span className="text-destructive">*</span> são obrigatórios.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={submit} className="space-y-5">
-              <div className="space-y-3">
-                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Caso / Cliente</p>
-                <div>
-                  <Label>Caso vinculado</Label>
-                  <Select value={form.case_id} onValueChange={onSelectCase}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Sem caso vinculado" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value={NO_CASE}>Sem caso vinculado</SelectItem>
-                      {cases.map((c) => (
-                        <SelectItem key={c.id} value={c.id}>
-                          {c.title}
-                          {c.client_name ? ` — ${c.client_name}` : ""}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {clientSummary && (
-                    <p className="mt-2 text-xs text-muted-foreground">Cliente: {clientSummary}</p>
-                  )}
-                </div>
-                <div>
-                  <Label>Nome do cliente <span className="text-destructive">*</span></Label>
-                  <Input
-                    value={form.client_name}
-                    onChange={(e) => setForm({ ...form, client_name: e.target.value })}
-                    aria-invalid={!!errors.client_name}
-                    className={errors.client_name ? "border-destructive" : ""}
-                  />
-                  {errors.client_name && (
-                    <p className="mt-1 text-xs text-destructive">{errors.client_name}</p>
-                  )}
-                </div>
-              </div>
-
-              <div className="space-y-3">
-                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Contraparte</p>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <Label>Nome / Razão social</Label>
-                    <Input value={form.counterparty_name} onChange={(e) => setForm({ ...form, counterparty_name: e.target.value })} />
-                  </div>
-                  <div>
-                    <Label>CPF / CNPJ</Label>
-                    <Input value={form.counterparty_document} onChange={(e) => setForm({ ...form, counterparty_document: e.target.value })} />
-                  </div>
-                </div>
-                <div>
-                  <Label>Endereço</Label>
-                  <Input value={form.counterparty_address} onChange={(e) => setForm({ ...form, counterparty_address: e.target.value })} />
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <Label>Cidade / Estado</Label>
-                    <Input value={form.counterparty_city_state} onChange={(e) => setForm({ ...form, counterparty_city_state: e.target.value })} />
-                  </div>
-                  <div>
-                    <Label>Advogado da contraparte</Label>
-                    <Input placeholder="Nome + OAB" value={form.counterparty_lawyer} onChange={(e) => setForm({ ...form, counterparty_lawyer: e.target.value })} />
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-3">
-                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Objeto</p>
-                <div>
-                  <Label>Matéria / Caso <span className="text-destructive">*</span></Label>
-                  <Textarea
-                    rows={3}
-                    value={form.matter}
-                    onChange={(e) => setForm({ ...form, matter: e.target.value })}
-                    aria-invalid={!!errors.matter}
-                    className={errors.matter ? "border-destructive" : ""}
-                  />
-                  {errors.matter && <p className="mt-1 text-xs text-destructive">{errors.matter}</p>}
-                </div>
-                <div>
-                  <Label>Escopo <span className="text-destructive">*</span></Label>
-                  <Textarea
-                    rows={2}
-                    value={form.scope}
-                    onChange={(e) => setForm({ ...form, scope: e.target.value })}
-                    aria-invalid={!!errors.scope}
-                    className={errors.scope ? "border-destructive" : ""}
-                  />
-                  {errors.scope && <p className="mt-1 text-xs text-destructive">{errors.scope}</p>}
-                </div>
-              </div>
-
-              <div className="space-y-3">
-                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Honorários e prazo</p>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <Label>Honorários <span className="text-destructive">*</span></Label>
-                    <Input
-                      placeholder="Ex.: R$ 1.200/hora"
-                      value={form.fees}
-                      onChange={(e) => setForm({ ...form, fees: e.target.value })}
-                      aria-invalid={!!errors.fees}
-                      className={errors.fees ? "border-destructive" : ""}
-                    />
-                    {errors.fees && <p className="mt-1 text-xs text-destructive">{errors.fees}</p>}
-                  </div>
-                  <div>
-                    <Label>Honorários de êxito</Label>
-                    <Input placeholder="Ex.: 20%" value={form.success_fee} onChange={(e) => setForm({ ...form, success_fee: e.target.value })} />
-                  </div>
-                </div>
-                <div>
-                  <Label>Prazo estimado</Label>
-                  <Input placeholder="Ex.: 600 dias" value={form.deadline} onChange={(e) => setForm({ ...form, deadline: e.target.value })} />
-                </div>
-              </div>
-
-              <p className="text-xs text-muted-foreground">
-                Os dados do escritório e advogado responsável são preenchidos automaticamente
-                a partir do seu perfil.
-              </p>
-
-
-              <div>
-                <Label>Tom</Label>
-                <Select value={form.tone} onValueChange={(v) => setForm({ ...form, tone: v as FormState["tone"] })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="formal">Formal</SelectItem>
-                    <SelectItem value="consultivo">Consultivo</SelectItem>
-                    <SelectItem value="direto">Direto</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <Button type="submit" disabled={loading} className="w-full">
-                {loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Gerando...</> : "Gerar proposta"}
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <div>
-              <CardTitle className="font-heading">Resultado</CardTitle>
-              <CardDescription>Edite livremente antes de baixar.</CardDescription>
-            </div>
-            {output && (
-              <div className="flex flex-wrap gap-2">
-                <Button size="sm" variant="outline" onClick={copy}>
-                  <Copy className="h-4 w-4 mr-1" /> Copiar
-                </Button>
-                <Popover open={pdfSettingsOpen} onOpenChange={setPdfSettingsOpen}>
-                  <PopoverTrigger asChild>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      title="Configurar página do PDF"
-                    >
-                      <Settings2 className="h-4 w-4 mr-1" />
-                      {pdfFormat} · {pdfOrientation === "portrait" ? "Retrato" : "Paisagem"}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent align="end" className="w-80 space-y-4">
-                    <div>
-                      <p className="text-sm font-medium">Configurações do PDF</p>
-                      <p className="text-xs text-muted-foreground">
-                        Ajuste tamanho, orientação e margens antes de baixar.
-                      </p>
-                    </div>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="space-y-1">
-                        <Label className="text-xs">Tamanho</Label>
-                        <Select
-                          value={pdfFormat}
-                          onValueChange={(v) => setPdfFormat(v as "A4" | "Letter")}
-                        >
-                          <SelectTrigger className="h-8">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="A4">A4 (210 × 297 mm)</SelectItem>
-                            <SelectItem value="Letter">Carta (216 × 279 mm)</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-xs">Orientação</Label>
-                        <Select
-                          value={pdfOrientation}
-                          onValueChange={(v) =>
-                            setPdfOrientation(v as "portrait" | "landscape")
-                          }
-                        >
-                          <SelectTrigger className="h-8">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="portrait">Retrato</SelectItem>
-                            <SelectItem value="landscape">Paisagem</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <Label className="text-xs">Margens (mm)</Label>
-                        <button
-                          type="button"
-                          className="text-[11px] text-muted-foreground hover:text-foreground underline"
-                          onClick={() =>
-                            setPdfMargins({ top: 25, right: 25, bottom: 25, left: 25 })
-                          }
-                        >
-                          Redefinir
-                        </button>
-                      </div>
-                      <div className="grid grid-cols-2 gap-2">
-                        {(["top", "right", "bottom", "left"] as const).map((side) => (
-                          <div key={side} className="space-y-1">
-                            <Label className="text-[11px] capitalize text-muted-foreground">
-                              {side === "top"
-                                ? "Superior"
-                                : side === "right"
-                                  ? "Direita"
-                                  : side === "bottom"
-                                    ? "Inferior"
-                                    : "Esquerda"}
-                            </Label>
-                            <Input
-                              type="number"
-                              min={5}
-                              max={60}
-                              step={1}
-                              value={pdfMargins[side]}
-                              onChange={(e) => {
-                                const n = Number(e.target.value);
-                                setPdfMargins((prev) => ({
-                                  ...prev,
-                                  [side]: Number.isFinite(n)
-                                    ? Math.max(5, Math.min(60, n))
-                                    : prev[side],
-                                }));
-                              }}
-                              className="h-8"
-                            />
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                    <div className="space-y-2 border-t pt-3">
-                      <div className="flex items-center justify-between gap-2">
-                        <Label htmlFor="pdf-cover-toggle" className="text-xs">
-                          Incluir capa com dados do cliente
-                        </Label>
-                        <input
-                          id="pdf-cover-toggle"
-                          type="checkbox"
-                          checked={pdfCoverEnabled}
-                          onChange={(e) => setPdfCoverEnabled(e.target.checked)}
-                          className="h-4 w-4 accent-primary"
-                        />
-                      </div>
-                      <p className="text-[11px] text-muted-foreground">
-                        Usa nome, documento, endereço e assunto do formulário.
-                      </p>
-                    </div>
-                    <div className="space-y-2 border-t pt-3">
-                      <Label className="text-xs">Marca d’água</Label>
-                      <Select
-                        value={pdfWatermarkMode}
-                        onValueChange={(v) =>
-                          setPdfWatermarkMode(v as "none" | "draft" | "version")
-                        }
-                      >
-                        <SelectTrigger className="h-8">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none">Nenhuma</SelectItem>
-                          <SelectItem value="draft">Rascunho</SelectItem>
-                          <SelectItem value="version">Versão…</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      {pdfWatermarkMode === "version" && (
-                        <div className="flex items-center gap-2">
-                          <Label className="text-[11px] text-muted-foreground">Nº</Label>
-                          <Input
-                            value={pdfWatermarkVersion}
-                            onChange={(e) => setPdfWatermarkVersion(e.target.value)}
-                            className="h-8"
-                            placeholder="1"
-                          />
-                        </div>
-                      )}
-                    </div>
-                    <Button
-                      size="sm"
-                      className="w-full"
-                      onClick={() => {
-                        setPdfSettingsOpen(false);
-                        void downloadPdf();
-                      }}
-                    >
-                      <FileText className="h-4 w-4 mr-1" /> Confirmar e baixar PDF
-                    </Button>
-                  </PopoverContent>
-                </Popover>
-                <Button size="sm" variant="outline" onClick={downloadPdf}>
-                  <FileText className="h-4 w-4 mr-1" /> Baixar PDF
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setShareOpen(true)}
-                  title="Compartilhar por link seguro (sem anexar arquivo)"
-                >
-                  <Link2 className="h-4 w-4 mr-1" /> Compartilhar link
-                </Button>
-                <Button size="sm" onClick={download}>
-                  <Download className="h-4 w-4 mr-1" /> Baixar .docx
-                </Button>
-              </div>
-            )}
-          </CardHeader>
-          <CardContent>
-            {output ? (
-              <Tabs defaultValue="editor" className="w-full">
-                <TabsList className="mb-3">
-                  <TabsTrigger value="editor">Editor</TabsTrigger>
-                  <TabsTrigger value="preview">Prévia Word</TabsTrigger>
-                </TabsList>
-                <TabsContent value="editor" className="mt-0">
-                  <RichTextEditor
-                    html={output}
-                    onChange={setOutput}
-                    minHeight={520}
-                    contentClassName="word-doc max-w-none p-6 focus:outline-none"
-                  />
-                </TabsContent>
-                <TabsContent value="preview" className="mt-0">
-                  <WordPreview
-                    html={output}
-                    title={`Proposta - ${form.client_name || "Cliente"}`}
-                  />
-                </TabsContent>
-              </Tabs>
-            ) : (
-              <div className="space-y-2">
-                <p className="text-xs text-muted-foreground">
-                  Prévia em tempo real dos campos preenchidos — mesmo layout do .docx exportado. Clique em <strong>Gerar proposta</strong> para produzir a versão final com JurisMind.
-                </p>
-                <WordPreview
-                  html={previewHtml}
-                  title={`Proposta - ${form.client_name || "Cliente"}`}
-                />
-              </div>
-            )}
-
-          </CardContent>
-        </Card>
-      </div>
       {unsavedDialog}
-      <ShareProposalDialog
-        open={shareOpen}
-        onOpenChange={setShareOpen}
-        snapshot={shareSnapshot}
-      />
+      <ShareProposalDialog open={shareOpen} onOpenChange={setShareOpen} snapshot={shareSnapshot} />
     </div>
   );
 }
+
+function FieldRow({
+  label,
+  required,
+  error,
+  children,
+}: {
+  label: string;
+  required?: boolean;
+  error?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="grid grid-cols-1 gap-1 sm:grid-cols-[180px_1fr] sm:items-start sm:gap-4">
+      <Label className="pt-2 text-[12px] font-normal text-muted-foreground">
+        {label}{required && <span className="text-destructive">*</span>}
+      </Label>
+      <div className="min-w-0">
+        {children}
+        {error && <p className="mt-1 text-[11px] text-destructive">{error}</p>}
+      </div>
+    </div>
+  );
+}
+
 
 function esc(s: string) {
   return s
