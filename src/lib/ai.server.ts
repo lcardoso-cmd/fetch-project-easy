@@ -295,7 +295,9 @@ export async function chatCompleteStream(
   const attempt = async (
     m: string,
     allowFallback: boolean,
+    retriesUsed: number,
   ): Promise<{ content: string; tool_calls?: ToolCall[] }> => {
+
     const body: Record<string, unknown> = {
       model: m,
       messages: truncated,
