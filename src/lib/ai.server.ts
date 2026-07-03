@@ -14,6 +14,7 @@ function apiKey() {
 
 export async function embedTexts(inputs: string[]): Promise<number[][]> {
   if (inputs.length === 0) return [];
+  await assertAiBudget();
   const model = "openai/text-embedding-3-small";
   const res = await fetch(`${AI_BASE}/embeddings`, {
     method: "POST",
