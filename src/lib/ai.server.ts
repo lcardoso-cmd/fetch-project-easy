@@ -3,6 +3,16 @@
 // Usa LOVABLE_API_KEY (já configurada como secret no projeto).
 
 import { logAiUsage, assertAiBudget, type RawUsage } from "./ai-usage.server";
+import {
+  cacheKey,
+  fallbackModel,
+  getCached,
+  isCacheable,
+  setCached,
+  shouldFallback,
+  DEFAULT_LATENCY_TIMEOUT_MS,
+  DEFAULT_STREAM_TTFB_MS,
+} from "./ai-cache";
 
 const AI_BASE = "https://ai.gateway.lovable.dev/v1";
 
@@ -62,42 +72,94 @@ export interface ToolDef {
 
 export async function chatComplete(
   messages: ChatMessage[],
-  opts: { model?: string; temperature?: number; tools?: ToolDef[]; feature?: string } = {},
+  opts: {
+    model?: string;
+    temperature?: number;
+    tools?: ToolDef[];
+    feature?: string;
+    /** Desabilita cache (default: cacheável se determinístico e sem tools). */
+    noCache?: boolean;
+    /** Timeout de latência (ms) que dispara fallback para modelo mais barato. */
+    latencyTimeoutMs?: number;
+    /** Desativa fallback automático. */
+    noFallback?: boolean;
+  } = {},
 ): Promise<{ content: string; tool_calls?: ToolCall[] }> {
   await assertAiBudget();
   const model = opts.model ?? "google/gemini-2.5-flash";
-  const body: Record<string, unknown> = {
-    model,
-    messages,
-    temperature: opts.temperature ?? 0.3,
-  };
-  if (opts.tools && opts.tools.length > 0) body.tools = opts.tools;
-
-  const res = await fetch(`${AI_BASE}/chat/completions`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey()}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(body),
-  });
-  if (!res.ok) {
-    const txt = await res.text();
-    throw new Error(`Chat falhou (${res.status}): ${txt}`);
+  const temperature = opts.temperature ?? 0.3;
+  const cacheable = !opts.noCache && isCacheable({ model, messages, temperature, tools: opts.tools });
+  const key = cacheable ? cacheKey({ model, messages, temperature, tools: opts.tools }) : null;
+  if (key) {
+    const hit = getCached(key);
+    if (hit) return { content: hit.content, tool_calls: hit.tool_calls };
   }
-  const json = (await res.json()) as {
-    choices: { message: { content: string | null; tool_calls?: ToolCall[] } }[];
-    usage?: RawUsage;
+
+  const attempt = async (m: string): Promise<{ content: string; tool_calls?: ToolCall[] }> => {
+    const body: Record<string, unknown> = {
+      model: m,
+      messages,
+      temperature,
+    };
+    if (opts.tools && opts.tools.length > 0) body.tools = opts.tools;
+
+    const controller = new AbortController();
+    const timeoutMs = opts.latencyTimeoutMs ?? DEFAULT_LATENCY_TIMEOUT_MS;
+    const timer = setTimeout(() => controller.abort(new Error("AI_LATENCY_TIMEOUT")), timeoutMs);
+    let res: Response;
+    try {
+      res = await fetch(`${AI_BASE}/chat/completions`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey()}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(body),
+        signal: controller.signal,
+      });
+    } catch (e) {
+      if (controller.signal.aborted) throw new Error("AI_LATENCY_TIMEOUT");
+      throw e;
+    } finally {
+      clearTimeout(timer);
+    }
+    if (!res.ok) {
+      const txt = await res.text();
+      throw new Error(`Chat falhou (${res.status}): ${txt}`);
+    }
+    const json = (await res.json()) as {
+      choices: { message: { content: string | null; tool_calls?: ToolCall[] } }[];
+      usage?: RawUsage;
+    };
+    const runId = res.headers.get("X-Lovable-AIG-Run-ID");
+    await logAiUsage({ feature: opts.feature, model: m, usage: json.usage, gatewayRunId: runId });
+    const msg = json.choices[0]?.message;
+    return { content: msg?.content ?? "", tool_calls: msg?.tool_calls };
   };
-  const runId = res.headers.get("X-Lovable-AIG-Run-ID");
-  await logAiUsage({ feature: opts.feature, model, usage: json.usage, gatewayRunId: runId });
-  const msg = json.choices[0]?.message;
-  return { content: msg?.content ?? "", tool_calls: msg?.tool_calls };
+
+  let result: { content: string; tool_calls?: ToolCall[] };
+  try {
+    result = await attempt(model);
+  } catch (err) {
+    const fb = opts.noFallback ? null : fallbackModel(model);
+    if (fb && shouldFallback(err)) {
+      console.warn(`[ai] fallback ${model} → ${fb}:`, err instanceof Error ? err.message : err);
+      result = await attempt(fb);
+    } else {
+      throw err;
+    }
+  }
+
+  if (key) setCached(key, { content: result.content, tool_calls: result.tool_calls, model });
+  return result;
 }
 
 /**
  * Streaming chat completion (SSE). Chama onDelta a cada pedaço de texto.
  * Retorna o conteúdo completo agregado + tool_calls acumulados (se houver).
+ * - Se houver resposta em cache, faz replay via onDelta (mantendo streaming aparente).
+ * - Fallback automático se a conexão falhar antes do primeiro token (não podemos
+ *   duplicar tokens já enviados ao cliente).
  */
 export async function chatCompleteStream(
   messages: ChatMessage[],
@@ -108,105 +170,180 @@ export async function chatCompleteStream(
     onDelta?: (delta: string) => void;
     signal?: AbortSignal;
     feature?: string;
+    noCache?: boolean;
+    noFallback?: boolean;
+    /** TTFB máximo (ms) antes de considerar fallback. */
+    ttfbTimeoutMs?: number;
   } = {},
 ): Promise<{ content: string; tool_calls?: ToolCall[] }> {
   await assertAiBudget();
   const model = opts.model ?? "google/gemini-2.5-flash";
-  const body: Record<string, unknown> = {
-    model,
-    messages,
-    temperature: opts.temperature ?? 0.3,
-    stream: true,
-    stream_options: { include_usage: true },
-  };
-  if (opts.tools && opts.tools.length > 0) body.tools = opts.tools;
+  const temperature = opts.temperature ?? 0.3;
 
-  const res = await fetch(`${AI_BASE}/chat/completions`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey()}`,
-      "Content-Type": "application/json",
-      Accept: "text/event-stream",
-    },
-    body: JSON.stringify(body),
-    signal: opts.signal,
-  });
-  if (!res.ok || !res.body) {
-    const txt = await res.text().catch(() => "");
-    throw new Error(`Chat stream falhou (${res.status}): ${txt}`);
-  }
-
-  const reader = res.body.getReader();
-  const decoder = new TextDecoder();
-  let buffer = "";
-  let content = "";
-  let usage: RawUsage | undefined;
-  const toolCallsByIndex = new Map<
-    number,
-    { id?: string; name?: string; arguments: string }
-  >();
-
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    buffer += decoder.decode(value, { stream: true });
-    let sep: number;
-    while ((sep = buffer.indexOf("\n")) !== -1) {
-      const rawLine = buffer.slice(0, sep).replace(/\r$/, "");
-      buffer = buffer.slice(sep + 1);
-      if (!rawLine.startsWith("data:")) continue;
-      const payload = rawLine.slice(5).trim();
-      if (!payload || payload === "[DONE]") continue;
-      let chunk: {
-        choices?: Array<{
-          delta?: {
-            content?: string | null;
-            tool_calls?: Array<{
-              index: number;
-              id?: string;
-              function?: { name?: string; arguments?: string };
-            }>;
-          };
-        }>;
-        usage?: RawUsage;
-      };
-      try {
-        chunk = JSON.parse(payload);
-      } catch {
-        continue;
-      }
-      if (chunk.usage) usage = chunk.usage;
-      const delta = chunk.choices?.[0]?.delta;
-      if (!delta) continue;
-      if (typeof delta.content === "string" && delta.content.length > 0) {
-        content += delta.content;
-        opts.onDelta?.(delta.content);
-      }
-      if (delta.tool_calls) {
-        for (const tc of delta.tool_calls) {
-          const cur = toolCallsByIndex.get(tc.index) ?? { arguments: "" };
-          if (tc.id) cur.id = tc.id;
-          if (tc.function?.name) cur.name = tc.function.name;
-          if (tc.function?.arguments) cur.arguments += tc.function.arguments;
-          toolCallsByIndex.set(tc.index, cur);
+  // Cache replay
+  const cacheable = !opts.noCache && isCacheable({ model, messages, temperature, tools: opts.tools });
+  const key = cacheable ? cacheKey({ model, messages, temperature, tools: opts.tools }) : null;
+  if (key) {
+    const hit = getCached(key);
+    if (hit) {
+      // Replay em chunks curtos para simular streaming
+      if (opts.onDelta && hit.content) {
+        const step = 24;
+        for (let i = 0; i < hit.content.length; i += step) {
+          if (opts.signal?.aborted) break;
+          opts.onDelta(hit.content.slice(i, i + step));
         }
       }
+      return { content: hit.content, tool_calls: hit.tool_calls };
     }
   }
 
-  const runId = res.headers.get("X-Lovable-AIG-Run-ID");
-  await logAiUsage({ feature: opts.feature, model, usage, gatewayRunId: runId });
+  const attempt = async (
+    m: string,
+    allowFallback: boolean,
+  ): Promise<{ content: string; tool_calls?: ToolCall[] }> => {
+    const body: Record<string, unknown> = {
+      model: m,
+      messages,
+      temperature,
+      stream: true,
+      stream_options: { include_usage: true },
+    };
+    if (opts.tools && opts.tools.length > 0) body.tools = opts.tools;
 
-  const tool_calls: ToolCall[] = [];
-  for (const [, v] of Array.from(toolCallsByIndex.entries()).sort((a, b) => a[0] - b[0])) {
-    if (!v.name) continue;
-    tool_calls.push({
-      id: v.id ?? `call_${tool_calls.length}`,
-      type: "function",
-      function: { name: v.name, arguments: v.arguments || "{}" },
-    });
+    // TTFB timeout controla apenas a abertura da conexão
+    const ttfbCtrl = new AbortController();
+    const ttfbMs = opts.ttfbTimeoutMs ?? DEFAULT_STREAM_TTFB_MS;
+    const ttfbTimer = setTimeout(() => ttfbCtrl.abort(new Error("AI_LATENCY_TIMEOUT")), ttfbMs);
+    const onExternalAbort = () => ttfbCtrl.abort();
+    opts.signal?.addEventListener("abort", onExternalAbort);
+
+    let res: Response;
+    try {
+      res = await fetch(`${AI_BASE}/chat/completions`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey()}`,
+          "Content-Type": "application/json",
+          Accept: "text/event-stream",
+        },
+        body: JSON.stringify(body),
+        signal: ttfbCtrl.signal,
+      });
+    } catch (e) {
+      opts.signal?.removeEventListener("abort", onExternalAbort);
+      clearTimeout(ttfbTimer);
+      if (opts.signal?.aborted) throw e;
+      if (ttfbCtrl.signal.aborted) {
+        const err = new Error("AI_LATENCY_TIMEOUT");
+        if (allowFallback) {
+          const fb = fallbackModel(m);
+          if (fb) {
+            console.warn(`[ai] stream fallback ${m} → ${fb} (TTFB)`);
+            return attempt(fb, false);
+          }
+        }
+        throw err;
+      }
+      throw e;
+    }
+    clearTimeout(ttfbTimer);
+    opts.signal?.removeEventListener("abort", onExternalAbort);
+
+    if (!res.ok || !res.body) {
+      const txt = await res.text().catch(() => "");
+      const err = new Error(`Chat stream falhou (${res.status}): ${txt}`);
+      if (allowFallback && shouldFallback(err)) {
+        const fb = fallbackModel(m);
+        if (fb) {
+          console.warn(`[ai] stream fallback ${m} → ${fb}:`, err.message);
+          return attempt(fb, false);
+        }
+      }
+      throw err;
+    }
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+    let content = "";
+    let usage: RawUsage | undefined;
+    const toolCallsByIndex = new Map<
+      number,
+      { id?: string; name?: string; arguments: string }
+    >();
+
+    // Do primeiro chunk em diante, cliente do usuário já pode estar recebendo tokens.
+    // Se falhar mid-stream, não podemos retentar sem duplicar — apenas propagamos.
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      if (opts.signal?.aborted) break;
+      buffer += decoder.decode(value, { stream: true });
+      let sep: number;
+      while ((sep = buffer.indexOf("\n")) !== -1) {
+        const rawLine = buffer.slice(0, sep).replace(/\r$/, "");
+        buffer = buffer.slice(sep + 1);
+        if (!rawLine.startsWith("data:")) continue;
+        const payload = rawLine.slice(5).trim();
+        if (!payload || payload === "[DONE]") continue;
+        let chunk: {
+          choices?: Array<{
+            delta?: {
+              content?: string | null;
+              tool_calls?: Array<{
+                index: number;
+                id?: string;
+                function?: { name?: string; arguments?: string };
+              }>;
+            };
+          }>;
+          usage?: RawUsage;
+        };
+        try {
+          chunk = JSON.parse(payload);
+        } catch {
+          continue;
+        }
+        if (chunk.usage) usage = chunk.usage;
+        const delta = chunk.choices?.[0]?.delta;
+        if (!delta) continue;
+        if (typeof delta.content === "string" && delta.content.length > 0) {
+          content += delta.content;
+          opts.onDelta?.(delta.content);
+        }
+        if (delta.tool_calls) {
+          for (const tc of delta.tool_calls) {
+            const cur = toolCallsByIndex.get(tc.index) ?? { arguments: "" };
+            if (tc.id) cur.id = tc.id;
+            if (tc.function?.name) cur.name = tc.function.name;
+            if (tc.function?.arguments) cur.arguments += tc.function.arguments;
+            toolCallsByIndex.set(tc.index, cur);
+          }
+        }
+      }
+    }
+
+    const runId = res.headers.get("X-Lovable-AIG-Run-ID");
+    await logAiUsage({ feature: opts.feature, model: m, usage, gatewayRunId: runId });
+
+    const tool_calls: ToolCall[] = [];
+    for (const [, v] of Array.from(toolCallsByIndex.entries()).sort((a, b) => a[0] - b[0])) {
+      if (!v.name) continue;
+      tool_calls.push({
+        id: v.id ?? `call_${tool_calls.length}`,
+        type: "function",
+        function: { name: v.name, arguments: v.arguments || "{}" },
+      });
+    }
+    return { content, tool_calls: tool_calls.length ? tool_calls : undefined };
+  };
+
+  const result = await attempt(model, !opts.noFallback);
+  if (key && result.content && (!result.tool_calls || result.tool_calls.length === 0)) {
+    setCached(key, { content: result.content, tool_calls: result.tool_calls, model });
   }
-  return { content, tool_calls: tool_calls.length ? tool_calls : undefined };
+  return result;
 }
 
 /** Loop multi-step de tool calling. Para quando o modelo retorna texto sem tool_calls. */
