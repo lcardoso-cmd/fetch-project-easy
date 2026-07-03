@@ -450,7 +450,7 @@ export async function chatCompleteStream(
     return { content, tool_calls: tool_calls.length ? tool_calls : undefined };
   };
 
-  const result = await attempt(model, !opts.noFallback);
+  const result = await attempt(model, !opts.noFallback, 0);
   if (key && result.content && (!result.tool_calls || result.tool_calls.length === 0)) {
     setCached(key, { content: result.content, tool_calls: result.tool_calls, model });
   }
