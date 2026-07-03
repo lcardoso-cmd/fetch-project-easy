@@ -110,6 +110,7 @@ export async function chatCompleteStream(
     feature?: string;
   } = {},
 ): Promise<{ content: string; tool_calls?: ToolCall[] }> {
+  await assertAiBudget();
   const model = opts.model ?? "google/gemini-2.5-flash";
   const body: Record<string, unknown> = {
     model,
