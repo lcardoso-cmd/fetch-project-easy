@@ -271,3 +271,24 @@ async function assertOfficeAdmin(userId: string) {
   if (error) throw new Error(error.message);
   if (!data) throw new Error("Acesso restrito a administradores do escritório");
 }
+
+/**
+ * Garante que `targetUserId` faz parte da equipe do `ownerUserId`
+ * (office_admin). Permite também o próprio caller consultar/alterar
+ * suas próprias capacidades. Evita que um office_admin de um
+ * escritório manipule capacidades de usuários de outro escritório.
+ */
+async function assertTeamMember(ownerUserId: string, targetUserId: string) {
+  if (ownerUserId === targetUserId) return;
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const admin = supabaseAdmin as unknown as { from: (t: string) => any };
+  const { data, error } = await admin
+    .from("team_members")
+    .select("id")
+    .eq("user_id", ownerUserId)
+    .eq("member_user_id", targetUserId)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!data) throw new Error("Usuário não pertence à sua equipe");
+
+}
