@@ -108,7 +108,7 @@ export const createProposalShare = createServerFn({ method: "POST" })
     let passwordHash: string | null = null;
     if (data.password && data.password.trim()) {
       passwordSalt = randomToken(16);
-      passwordHash = await hashPassword(data.password, passwordSalt);
+      passwordHash = await hashSharePassword(data.password, passwordSalt);
     }
     const expiresAt = data.expires_in_days
       ? new Date(Date.now() + data.expires_in_days * 86_400_000).toISOString()
