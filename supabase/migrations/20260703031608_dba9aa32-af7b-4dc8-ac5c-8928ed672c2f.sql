@@ -1,0 +1,1 @@
+ALTER TABLE public.ai_budgets ADD COLUMN IF NOT EXISTS force_fallback_on_retry boolean NOT NULL DEFAULT false;

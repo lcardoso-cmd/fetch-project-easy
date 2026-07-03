@@ -16,6 +16,7 @@ export type Database = {
     Tables: {
       ai_budgets: {
         Row: {
+          force_fallback_on_retry: boolean
           max_context_chars: number
           max_retries: number
           max_tokens: number
@@ -25,6 +26,7 @@ export type Database = {
           warn_threshold_pct: number
         }
         Insert: {
+          force_fallback_on_retry?: boolean
           max_context_chars?: number
           max_retries?: number
           max_tokens?: number
@@ -34,6 +36,7 @@ export type Database = {
           warn_threshold_pct?: number
         }
         Update: {
+          force_fallback_on_retry?: boolean
           max_context_chars?: number
           max_retries?: number
           max_tokens?: number
