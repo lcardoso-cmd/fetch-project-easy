@@ -1,0 +1,22 @@
+User-agent: *
+Allow: /
+Disallow: /painel
+Disallow: /assistencias
+Disallow: /pecas
+Disallow: /parecer-tecnico
+Disallow: /propostas
+Disallow: /documentos
+Disallow: /agenda
+Disallow: /monitor
+Disallow: /marketing
+Disallow: /chats
+Disallow: /configuracoes
+Disallow: /admin
+Disallow: /convite
+Disallow: /invite
+Disallow: /reset-password
+Disallow: /sem-permissao
+Disallow: /api/
+Disallow: /p/
+
+Sitemap: https://b2bjurismind.lovable.app/sitemap.xml
