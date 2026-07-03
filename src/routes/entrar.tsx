@@ -182,10 +182,36 @@ function AuthPage() {
     navigate({ to: target, replace: true });
   };
 
-  if (user) {
-    goPostLogin();
-    return null;
-  }
+  // Redireciona quando o usuário autentica — inclui o caso em que confirma o
+  // e-mail em outra aba/janela: o onAuthStateChange do Supabase propaga via
+  // storage events e atualiza `user` aqui, disparando o efeito abaixo.
+  useEffect(() => {
+    if (user) {
+      setPendingEmail(null);
+      goPostLogin();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
+
+  // Enquanto o card de confirmação estiver visível, revalida a sessão sempre
+  // que a aba volta ao foco — cobre o fluxo "confirmei no e-mail e voltei".
+  useEffect(() => {
+    if (!pendingEmail) return;
+    const revalidate = () => {
+      if (document.visibilityState === "visible") {
+        void supabase.auth.getSession();
+      }
+    };
+    document.addEventListener("visibilitychange", revalidate);
+    window.addEventListener("focus", revalidate);
+    return () => {
+      document.removeEventListener("visibilitychange", revalidate);
+      window.removeEventListener("focus", revalidate);
+    };
+  }, [pendingEmail]);
+
+  if (user) return null;
+
 
 
   const handleLogin = async (e: React.FormEvent) => {
