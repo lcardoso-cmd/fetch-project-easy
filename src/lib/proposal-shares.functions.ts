@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireCapability } from "@/lib/capability-middleware";
+import { hashSharePassword } from "@/lib/proposal-shares-crypto";
 
 export interface ProposalShare {
   id: string;
@@ -56,25 +57,6 @@ function randomToken(bytes = 32): string {
   return btoa(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
 
-async function hashPassword(password: string, salt: string): Promise<string> {
-  const enc = new TextEncoder();
-  const key = await crypto.subtle.importKey(
-    "raw",
-    enc.encode(password),
-    "PBKDF2",
-    false,
-    ["deriveBits"],
-  );
-  const bits = await crypto.subtle.deriveBits(
-    { name: "PBKDF2", salt: enc.encode(salt), iterations: 100_000, hash: "SHA-256" },
-    key,
-    256,
-  );
-  const bytes = new Uint8Array(bits);
-  let hex = "";
-  for (const b of bytes) hex += b.toString(16).padStart(2, "0");
-  return hex;
-}
 
 function mapRow(row: {
   id: string;
