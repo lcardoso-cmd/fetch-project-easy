@@ -59,7 +59,7 @@ function CaseDataRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="grid min-w-0 grid-cols-1 gap-y-0.5 sm:contents">
       <dt className="min-w-0 text-xs font-medium uppercase tracking-wide text-muted-foreground [overflow-wrap:anywhere] sm:self-start sm:pr-2 sm:text-sm sm:font-normal sm:normal-case sm:tracking-normal sm:text-foreground">
-        {label}
+        {label}:
       </dt>
       <dd className="min-w-0 text-foreground [overflow-wrap:anywhere] sm:self-start sm:text-muted-foreground">
         {value}
@@ -282,7 +282,7 @@ function CaseDetailPage() {
             <ul className="space-y-1.5">
               {(caseData.parties as Array<{ role: string; name: string; relation?: string | null }>).map((party, i) => {
                 const roleLabel = `${capitalize(party.role)}:`;
-                const detail = party.relation ? `${party.name} (${capitalize(party.relation)})` : party.name;
+                const detail = party.name;
                 return (
                   <li key={i} className="flex min-w-0 items-baseline gap-2 text-sm text-muted-foreground">
                     <span className="shrink-0 font-medium text-foreground">{roleLabel}</span>
