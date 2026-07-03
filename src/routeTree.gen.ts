@@ -68,6 +68,7 @@ import { Route as AuthenticatedContratarB2bSolicitarRouteImport } from './routes
 import { Route as AuthenticatedContratarB2bRequestIdRouteImport } from './routes/_authenticated/contratar-b2b.$requestId'
 import { Route as AuthenticatedConfiguracoesOauthRouteImport } from './routes/_authenticated/configuracoes.oauth'
 import { Route as AuthenticatedConfiguracoesEscritorioRouteImport } from './routes/_authenticated/configuracoes.escritorio'
+import { Route as AuthenticatedConfiguracoesConsumoRouteImport } from './routes/_authenticated/configuracoes.consumo'
 import { Route as AuthenticatedConfiguracoesCapacidadesRouteImport } from './routes/_authenticated/configuracoes.capacidades'
 import { Route as AuthenticatedCasesNewRouteImport } from './routes/_authenticated/cases.new'
 import { Route as AuthenticatedCasesBulkRouteImport } from './routes/_authenticated/cases.bulk'
@@ -407,6 +408,12 @@ const AuthenticatedConfiguracoesEscritorioRoute =
     path: '/escritorio',
     getParentRoute: () => AuthenticatedConfiguracoesRoute,
   } as any)
+const AuthenticatedConfiguracoesConsumoRoute =
+  AuthenticatedConfiguracoesConsumoRouteImport.update({
+    id: '/consumo',
+    path: '/consumo',
+    getParentRoute: () => AuthenticatedConfiguracoesRoute,
+  } as any)
 const AuthenticatedConfiguracoesCapacidadesRoute =
   AuthenticatedConfiguracoesCapacidadesRouteImport.update({
     id: '/capacidades',
@@ -598,6 +605,7 @@ export interface FileRoutesByFullPath {
   '/cases/bulk': typeof AuthenticatedCasesBulkRoute
   '/cases/new': typeof AuthenticatedCasesNewRoute
   '/configuracoes/capacidades': typeof AuthenticatedConfiguracoesCapacidadesRoute
+  '/configuracoes/consumo': typeof AuthenticatedConfiguracoesConsumoRoute
   '/configuracoes/escritorio': typeof AuthenticatedConfiguracoesEscritorioRoute
   '/configuracoes/oauth': typeof AuthenticatedConfiguracoesOauthRoute
   '/contratar-b2b/$requestId': typeof AuthenticatedContratarB2bRequestIdRoute
@@ -680,6 +688,7 @@ export interface FileRoutesByTo {
   '/cases/bulk': typeof AuthenticatedCasesBulkRoute
   '/cases/new': typeof AuthenticatedCasesNewRoute
   '/configuracoes/capacidades': typeof AuthenticatedConfiguracoesCapacidadesRoute
+  '/configuracoes/consumo': typeof AuthenticatedConfiguracoesConsumoRoute
   '/configuracoes/escritorio': typeof AuthenticatedConfiguracoesEscritorioRoute
   '/configuracoes/oauth': typeof AuthenticatedConfiguracoesOauthRoute
   '/contratar-b2b/$requestId': typeof AuthenticatedContratarB2bRequestIdRoute
@@ -766,6 +775,7 @@ export interface FileRoutesById {
   '/_authenticated/cases/bulk': typeof AuthenticatedCasesBulkRoute
   '/_authenticated/cases/new': typeof AuthenticatedCasesNewRoute
   '/_authenticated/configuracoes/capacidades': typeof AuthenticatedConfiguracoesCapacidadesRoute
+  '/_authenticated/configuracoes/consumo': typeof AuthenticatedConfiguracoesConsumoRoute
   '/_authenticated/configuracoes/escritorio': typeof AuthenticatedConfiguracoesEscritorioRoute
   '/_authenticated/configuracoes/oauth': typeof AuthenticatedConfiguracoesOauthRoute
   '/_authenticated/contratar-b2b/$requestId': typeof AuthenticatedContratarB2bRequestIdRoute
@@ -852,6 +862,7 @@ export interface FileRouteTypes {
     | '/cases/bulk'
     | '/cases/new'
     | '/configuracoes/capacidades'
+    | '/configuracoes/consumo'
     | '/configuracoes/escritorio'
     | '/configuracoes/oauth'
     | '/contratar-b2b/$requestId'
@@ -934,6 +945,7 @@ export interface FileRouteTypes {
     | '/cases/bulk'
     | '/cases/new'
     | '/configuracoes/capacidades'
+    | '/configuracoes/consumo'
     | '/configuracoes/escritorio'
     | '/configuracoes/oauth'
     | '/contratar-b2b/$requestId'
@@ -1019,6 +1031,7 @@ export interface FileRouteTypes {
     | '/_authenticated/cases/bulk'
     | '/_authenticated/cases/new'
     | '/_authenticated/configuracoes/capacidades'
+    | '/_authenticated/configuracoes/consumo'
     | '/_authenticated/configuracoes/escritorio'
     | '/_authenticated/configuracoes/oauth'
     | '/_authenticated/contratar-b2b/$requestId'
@@ -1493,6 +1506,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedConfiguracoesEscritorioRouteImport
       parentRoute: typeof AuthenticatedConfiguracoesRoute
     }
+    '/_authenticated/configuracoes/consumo': {
+      id: '/_authenticated/configuracoes/consumo'
+      path: '/consumo'
+      fullPath: '/configuracoes/consumo'
+      preLoaderRoute: typeof AuthenticatedConfiguracoesConsumoRouteImport
+      parentRoute: typeof AuthenticatedConfiguracoesRoute
+    }
     '/_authenticated/configuracoes/capacidades': {
       id: '/_authenticated/configuracoes/capacidades'
       path: '/capacidades'
@@ -1733,6 +1753,7 @@ const AuthenticatedCasesRouteWithChildren =
 
 interface AuthenticatedConfiguracoesRouteChildren {
   AuthenticatedConfiguracoesCapacidadesRoute: typeof AuthenticatedConfiguracoesCapacidadesRoute
+  AuthenticatedConfiguracoesConsumoRoute: typeof AuthenticatedConfiguracoesConsumoRoute
   AuthenticatedConfiguracoesEscritorioRoute: typeof AuthenticatedConfiguracoesEscritorioRoute
   AuthenticatedConfiguracoesOauthRoute: typeof AuthenticatedConfiguracoesOauthRoute
 }
@@ -1741,6 +1762,8 @@ const AuthenticatedConfiguracoesRouteChildren: AuthenticatedConfiguracoesRouteCh
   {
     AuthenticatedConfiguracoesCapacidadesRoute:
       AuthenticatedConfiguracoesCapacidadesRoute,
+    AuthenticatedConfiguracoesConsumoRoute:
+      AuthenticatedConfiguracoesConsumoRoute,
     AuthenticatedConfiguracoesEscritorioRoute:
       AuthenticatedConfiguracoesEscritorioRoute,
     AuthenticatedConfiguracoesOauthRoute: AuthenticatedConfiguracoesOauthRoute,
