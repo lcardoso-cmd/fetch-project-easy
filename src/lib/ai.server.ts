@@ -215,8 +215,9 @@ export async function chatComplete(
   const totalAttempts = 1 + maxRetries;
   for (let i = 0; i < totalAttempts; i++) {
     try {
-      result = await attempt(currentModel);
+      result = await attempt(currentModel, i);
       break;
+
     } catch (err) {
       lastErr = err;
       const isLast = i === totalAttempts - 1;
