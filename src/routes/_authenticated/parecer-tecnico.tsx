@@ -323,6 +323,7 @@ function eventLabel(ev: B2bServiceRequestEvent): string {
 function RequestPanel({ requestId }: { requestId: string }) {
   const getReq = useServerFn(getB2bRequest);
   const getAttUrl = useServerFn(getB2bAttachmentUrl);
+  const [previewId, setPreviewId] = useState<string | null>(null);
   const { data, isLoading } = useQuery({
     queryKey: ["b2b-request", requestId],
     queryFn: () => getReq({ data: { id: requestId } }),
