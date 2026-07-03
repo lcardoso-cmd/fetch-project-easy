@@ -248,3 +248,65 @@ export const updateAiBudget = createServerFn({ method: "POST" })
     invalidateBudgetCache(context.userId);
     return getAiBudgetSnapshot(context.userId);
   });
+
+// ============================================================
+// Última interação — auditoria dos limites efetivamente aplicados
+// ============================================================
+
+export interface LastInteractionInfo {
+  created_at: string;
+  feature: string;
+  model: string;
+  prompt_tokens: number;
+  completion_tokens: number;
+  total_tokens: number;
+  cost_usd: number;
+  max_tokens_applied: number | null;
+  context_chars_before: number | null;
+  context_chars_after: number | null;
+  messages_truncated: number | null;
+  retries_used: number | null;
+}
+
+export const getLastAiInteraction = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<LastInteractionInfo | null> => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const admin = supabaseAdmin as unknown as { from: (t: string) => any };
+    const { data, error } = await admin
+      .from("ai_usage_events")
+      .select(
+        "created_at,feature,model,prompt_tokens,completion_tokens,total_tokens,cost_usd,max_tokens_applied,context_chars_before,context_chars_after,messages_truncated,retries_used",
+      )
+      .eq("user_id", context.userId)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!data) return null;
+    return {
+      created_at: data.created_at as string,
+      feature: (data.feature as string) ?? "unknown",
+      model: (data.model as string) ?? "",
+      prompt_tokens: Number(data.prompt_tokens ?? 0),
+      completion_tokens: Number(data.completion_tokens ?? 0),
+      total_tokens: Number(data.total_tokens ?? 0),
+      cost_usd: Number(data.cost_usd ?? 0),
+      max_tokens_applied: data.max_tokens_applied === null || data.max_tokens_applied === undefined
+        ? null
+        : Number(data.max_tokens_applied),
+      context_chars_before: data.context_chars_before === null || data.context_chars_before === undefined
+        ? null
+        : Number(data.context_chars_before),
+      context_chars_after: data.context_chars_after === null || data.context_chars_after === undefined
+        ? null
+        : Number(data.context_chars_after),
+      messages_truncated: data.messages_truncated === null || data.messages_truncated === undefined
+        ? null
+        : Number(data.messages_truncated),
+      retries_used: data.retries_used === null || data.retries_used === undefined
+        ? null
+        : Number(data.retries_used),
+    };
+  });
+
