@@ -56,11 +56,13 @@ function InvitePage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-background">
+    <main className="min-h-screen flex items-center justify-center p-4 bg-background">
       <Card className="w-full max-w-md">
         <CardHeader>
+          <h1 className="sr-only">Convite para equipe JurisMind AI</h1>
           <CardTitle>Convite para equipe</CardTitle>
           <CardDescription>
+
             Você foi convidado a colaborar em casos no Lovable Juris.
           </CardDescription>
         </CardHeader>
