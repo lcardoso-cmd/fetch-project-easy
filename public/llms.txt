@@ -1,0 +1,10 @@
+# JurisMind AI
+
+> Plataforma B2B de IA jurídica para advogados, peritos e assistentes técnicos: RAG de documentos, geração de peças, laudos, pareceres técnicos, propostas comerciais, agenda integrada (Google/Outlook) e monitoramento de publicações.
+
+JurisMind AI é uma ferramenta especializada em direito brasileiro. Combina recuperação semântica sobre documentos jurídicos com fluxos assistidos por IA para produção documental, gestão de casos e comunicação com clientes.
+
+## Páginas principais
+
+- [Home](/): visão geral do produto, pilares e casos de uso.
+- [Entrar](/entrar): acesso à conta (login e cadastro por e-mail, Google ou Microsoft).
