@@ -4,6 +4,7 @@ import squareWhite from "@/assets/brain-square-white.png.asset.json";
 import glyphNavy from "@/assets/brain-glyph-navy.png.asset.json";
 import glyphWhite from "@/assets/brain-glyph-white.png.asset.json";
 import { cn } from "@/lib/utils";
+import { z } from "zod";
 
 /**
  * JurisMind brand mark — unified icon component.
