@@ -205,6 +205,7 @@ export interface AiBudgetStatus {
   max_tokens: number;
   max_context_chars: number;
   max_retries: number;
+  force_fallback_on_retry: boolean;
   pct: number;
   warn: boolean;
   blocked: boolean;
@@ -223,6 +224,7 @@ const UpdateBudgetSchema = z.object({
   max_tokens: z.number().int().min(0).max(200000).optional(),
   max_context_chars: z.number().int().min(0).max(2000000).optional(),
   max_retries: z.number().int().min(0).max(5).optional(),
+  force_fallback_on_retry: z.boolean().optional(),
 });
 
 export const updateAiBudget = createServerFn({ method: "POST" })
@@ -240,6 +242,8 @@ export const updateAiBudget = createServerFn({ method: "POST" })
     if (data.max_tokens !== undefined) row.max_tokens = data.max_tokens;
     if (data.max_context_chars !== undefined) row.max_context_chars = data.max_context_chars;
     if (data.max_retries !== undefined) row.max_retries = data.max_retries;
+    if (data.force_fallback_on_retry !== undefined)
+      row.force_fallback_on_retry = data.force_fallback_on_retry;
     const { error } = await admin
       .from("ai_budgets")
       .upsert(row, { onConflict: "user_id" });
@@ -248,6 +252,7 @@ export const updateAiBudget = createServerFn({ method: "POST" })
     invalidateBudgetCache(context.userId);
     return getAiBudgetSnapshot(context.userId);
   });
+
 
 // ============================================================
 // Última interação — auditoria dos limites efetivamente aplicados
