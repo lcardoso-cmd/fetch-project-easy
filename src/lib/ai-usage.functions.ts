@@ -54,16 +54,22 @@ function monthRange(year: number, month: number) {
 }
 
 export const getAiUsageSummary = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .validator((raw: unknown) => InputSchema.parse(raw))
-  .handler(async ({ data }) => {
-    const { supabase, userId } = await requireSupabaseAuth();
+  .handler(async ({ context, data }): Promise<UsageSummary> => {
+    const userId = context.userId;
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const admin = supabaseAdmin as unknown as {
+      from: (t: string) => any;
+    };
 
     // Detecta se pode ver consumo do workspace inteiro.
-    const { data: caps } = await supabase
+    const capsRes = await admin
       .from("user_capabilities")
       .select("capability")
       .eq("user_id", userId);
-    const capSet = new Set((caps ?? []).map((c) => c.capability));
+    const caps = (capsRes.data ?? []) as Array<{ capability: string }>;
+    const capSet = new Set(caps.map((c) => c.capability));
     const canViewAll =
       capSet.has("office_admin") ||
       capSet.has("platform_admin") ||
@@ -71,7 +77,7 @@ export const getAiUsageSummary = createServerFn({ method: "POST" })
 
     const { from, to } = monthRange(data.year, data.month);
 
-    let query = supabase
+    let query = admin
       .from("ai_usage_events")
       .select(
         "created_at,user_id,feature,model,prompt_tokens,completion_tokens,total_tokens,cost_usd",
