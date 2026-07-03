@@ -3,6 +3,16 @@
 // Usa LOVABLE_API_KEY (já configurada como secret no projeto).
 
 import { logAiUsage, assertAiBudget, type RawUsage } from "./ai-usage.server";
+import {
+  cacheKey,
+  fallbackModel,
+  getCached,
+  isCacheable,
+  setCached,
+  shouldFallback,
+  DEFAULT_LATENCY_TIMEOUT_MS,
+  DEFAULT_STREAM_TTFB_MS,
+} from "./ai-cache";
 
 const AI_BASE = "https://ai.gateway.lovable.dev/v1";
 
