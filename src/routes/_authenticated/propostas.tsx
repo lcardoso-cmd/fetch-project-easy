@@ -155,6 +155,7 @@ function ProposalPage() {
   const [pdfCoverEnabled, setPdfCoverEnabled] = useState(true);
   const [pdfWatermarkMode, setPdfWatermarkMode] = useState<"none" | "draft" | "version">("none");
   const [pdfWatermarkVersion, setPdfWatermarkVersion] = useState("1");
+  const [shareOpen, setShareOpen] = useState(false);
   const [form, setForm] = useState<FormState>(EMPTY);
   const [errors, setErrors] = useState<FieldErrors>({});
   const [savedAt, setSavedAt] = useState<number | null>(null);
