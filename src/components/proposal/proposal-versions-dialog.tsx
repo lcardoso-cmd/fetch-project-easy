@@ -688,9 +688,22 @@ export function ProposalVersionsDialog({
                     <p className="truncate text-sm font-semibold">{selected.label}</p>
                     <p className="text-xs text-muted-foreground">{formatDate(selected.created_at)}</p>
                   </div>
-                  <div className="ml-auto flex gap-2">
+                  <div className="ml-auto flex flex-wrap gap-2">
                     <Button size="sm" variant="outline" onClick={() => deleteMut.mutate(selected.id)}>
                       <Trash2 className="mr-1 h-4 w-4" /> Excluir
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleDownloadPdf(selected)}
+                      disabled={downloadingId === selected.id || !selected.output}
+                    >
+                      {downloadingId === selected.id ? (
+                        <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+                      ) : (
+                        <FileText className="mr-1 h-4 w-4" />
+                      )}
+                      Baixar PDF
                     </Button>
                     <Button size="sm" onClick={() => handleRestore(selected)}>
                       <RotateCcw className="mr-1 h-4 w-4" /> Restaurar
