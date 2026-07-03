@@ -296,69 +296,62 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
         {/* Sidebar */}
         <aside
           className={cn(
-            "relative hidden flex-col bg-sidebar text-sidebar-foreground transition-all duration-300 ease-in-out lg:flex",
-            collapsed ? "w-20" : "w-64",
+            "relative hidden flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-[width] duration-200 ease-out lg:flex",
+            collapsed ? "w-16" : "w-60",
             activePreset && "mt-6",
           )}
         >
-          <button
-            onClick={toggle}
-            className="absolute top-16 -right-4 z-20 flex h-9 w-9 items-center justify-center rounded-full border border-sidebar-border bg-sidebar text-sidebar-foreground shadow-lg ring-1 ring-sidebar-ring/35 transition-transform hover:scale-105 hover:bg-sidebar-accent"
-            aria-label={collapsed ? "Expandir" : "Recolher"}
-          >
-            {collapsed ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
-          </button>
-
           <div
             className={cn(
-              "flex h-20 items-center border-b border-sidebar-border px-4",
-              collapsed && "justify-center px-2",
+              "flex h-14 items-center gap-2 px-3",
+              collapsed && "justify-center px-0",
             )}
           >
             <Link
               to="/painel"
               aria-label="Ir para o Dashboard"
-              className="group flex items-center gap-3 overflow-hidden rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-sidebar"
+              className="group flex min-w-0 flex-1 items-center gap-2 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
-              <JurisMindMark size={32} context={JURISMIND_CONTEXT.sidebar} interactive />
+              <JurisMindMark size={26} context={JURISMIND_CONTEXT.sidebar} interactive />
               {!collapsed && (
-                <h2 className="font-heading text-base font-semibold leading-tight truncate">
-                  B2B | JurisMind AI
-                </h2>
+                <span className="truncate font-heading text-[13px] font-semibold text-foreground">
+                  JurisMind
+                </span>
               )}
             </Link>
+            {!collapsed && (
+              <button
+                onClick={toggle}
+                className="ml-auto flex h-7 w-7 items-center justify-center rounded-md text-sidebar-foreground/60 transition hover:bg-sidebar-accent hover:text-sidebar-foreground"
+                aria-label="Recolher"
+              >
+                <PanelLeftClose className="h-3.5 w-3.5" />
+              </button>
+            )}
           </div>
+          {collapsed && (
+            <button
+              onClick={toggle}
+              className="mx-auto mb-1 flex h-7 w-7 items-center justify-center rounded-md text-sidebar-foreground/60 transition hover:bg-sidebar-accent hover:text-sidebar-foreground"
+              aria-label="Expandir"
+            >
+              <PanelLeftOpen className="h-3.5 w-3.5" />
+            </button>
+          )}
 
-          <nav className="flex-1 space-y-1 overflow-y-auto overflow-x-hidden px-2 py-4">
+          <nav className="flex-1 space-y-0.5 overflow-y-auto overflow-x-hidden px-2 py-2">
             {NAV.map((item, idx) => {
               if (item.type === "separator") {
-                return <div key={idx} className="my-2 border-t border-sidebar-border/50" />;
+                return <div key={idx} className="my-2" />;
               }
               if (item.type === "label") {
                 if (collapsed) return null;
                 return (
                   <div
                     key={idx}
-                    className="flex items-center gap-1 px-3 pb-1 pt-3 text-[11px] font-semibold uppercase tracking-wider text-sidebar-foreground/50"
+                    className="px-2 pb-1 pt-3 text-[10px] font-medium uppercase tracking-[0.14em] text-sidebar-foreground/45"
                   >
-                    <span>{item.label}</span>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <button
-                          type="button"
-                          aria-label={`Sobre a seção ${item.label}`}
-                          className="rounded-full p-0.5 opacity-60 transition hover:opacity-100 focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                        >
-                          <Info className="h-3 w-3" />
-                        </button>
-                      </TooltipTrigger>
-                      <TooltipContent
-                        side="right"
-                        className="max-w-xs bg-popover text-popover-foreground border shadow-md"
-                      >
-                        {item.description}
-                      </TooltipContent>
-                    </Tooltip>
+                    {item.label}
                   </div>
                 );
               }
@@ -370,44 +363,42 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                     <Link
                       to={item.to}
                       className={cn(
-                        "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                        "group relative flex items-center gap-2.5 rounded-md px-2 text-[13px] transition-colors",
+                        "h-8",
                         active
-                          ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-sm"
-                          : "text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground",
-                        collapsed && "justify-center px-2",
+                          ? "bg-sidebar-accent font-medium text-foreground"
+                          : "text-sidebar-foreground/80 hover:bg-sidebar-accent/60 hover:text-foreground",
+                        collapsed && "justify-center px-0",
                       )}
                     >
-                      <Icon className="h-4 w-4 shrink-0" />
+                      {active && !collapsed && (
+                        <span className="absolute left-0 top-1/2 h-4 w-[2px] -translate-y-1/2 rounded-r bg-sidebar-primary" />
+                      )}
+                      <Icon className="h-[15px] w-[15px] shrink-0" strokeWidth={1.75} />
                       {!collapsed && <span className="truncate">{item.label}</span>}
                     </Link>
                   </TooltipTrigger>
-                  <TooltipContent
-                    side="right"
-                    className="max-w-xs bg-popover text-popover-foreground border shadow-md"
-                  >
-                    <div className="space-y-1">
-                      <div className="text-xs font-semibold">{item.label}</div>
-                      <p className="text-xs text-muted-foreground">{item.description}</p>
-                    </div>
-                  </TooltipContent>
+                  {collapsed && (
+                    <TooltipContent side="right" className="text-xs">
+                      {item.label}
+                    </TooltipContent>
+                  )}
                 </Tooltip>
               );
             })}
           </nav>
 
           {/* Footer */}
-          <div className="border-t border-sidebar-border p-3 space-y-2">
+          <div className="border-t border-sidebar-border p-2 space-y-1">
             {isSuperAdmin && !collapsed && <ViewAsSwitcher />}
             {!collapsed && user && (
-              <div className="flex items-center gap-2 px-2">
-                <div className="flex h-8 w-8 items-center justify-center rounded-full border border-sidebar-border bg-sidebar-accent text-xs font-semibold uppercase text-sidebar-foreground">
+              <div className="flex items-center gap-2 px-1 py-1">
+                <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-sidebar-accent text-[10px] font-semibold uppercase text-foreground">
                   {user.email?.charAt(0) ?? "U"}
                 </div>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-xs font-medium text-sidebar-foreground">
-                    {user.email}
-                  </p>
-                </div>
+                <p className="truncate text-[11px] text-sidebar-foreground/75 flex-1">
+                  {user.email}
+                </p>
               </div>
             )}
             <Button
@@ -415,13 +406,13 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
               variant="ghost"
               size={collapsed ? "icon" : "sm"}
               className={cn(
-                "text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground",
-                collapsed ? "h-9 w-9 mx-auto" : "w-full justify-start gap-2",
+                "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-foreground",
+                collapsed ? "h-8 w-8 mx-auto" : "w-full justify-start gap-2 h-8 text-[12px] font-normal px-2",
               )}
             >
               <Link to="/ajuda/permissoes" aria-label="Como liberar permissões">
-                <HelpCircle className="h-4 w-4" />
-                {!collapsed && "Como liberar"}
+                <HelpCircle className="h-3.5 w-3.5" />
+                {!collapsed && "Ajuda"}
               </Link>
             </Button>
             <Button
@@ -429,15 +420,16 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
               size={collapsed ? "icon" : "sm"}
               onClick={signOut}
               className={cn(
-                "text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground",
-                collapsed ? "h-9 w-9 mx-auto" : "w-full justify-start gap-2",
+                "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-foreground",
+                collapsed ? "h-8 w-8 mx-auto" : "w-full justify-start gap-2 h-8 text-[12px] font-normal px-2",
               )}
             >
-              <LogOut className="h-4 w-4" />
+              <LogOut className="h-3.5 w-3.5" />
               {!collapsed && "Sair"}
             </Button>
           </div>
         </aside>
+
 
         {/* Main column */}
         <div className={cn("flex flex-1 flex-col min-w-0", activePreset && "mt-6")}>
