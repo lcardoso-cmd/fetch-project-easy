@@ -71,43 +71,43 @@
   --radius: 0.5rem;
 
   /* Cores fixas da marca — idênticas em light/dark. */
-  --brand-navy: oklch(0.143 0.13 278);       /* #000038 */
+  --brand-navy: oklch(0.154 0.107 264.1);    /* #000038 */
   --brand-cyan: oklch(0.91 0.155 195);        /* ciano institucional */
   --brand-on-navy: oklch(1 0 0);             /* glyph branco sobre navy */
   --brand-surface: oklch(1 0 0);             /* quadrado branco */
-  --brand-on-surface: oklch(0.143 0.13 278); /* glyph navy sobre branco */
+  --brand-on-surface: var(--brand-navy);      /* glyph navy sobre branco */
 
 
 
   /* B2B Consulting — deep navy #000038, cyan #00FFFF, white */
   --background: oklch(0.985 0.003 250);
-  --foreground: oklch(0.18 0.12 275);
+  --foreground: var(--brand-navy);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.18 0.12 275);
+  --card-foreground: var(--brand-navy);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.18 0.12 275);
-  --primary: oklch(0.143 0.13 278);         /* #000038 deep navy */
+  --popover-foreground: var(--brand-navy);
+  --primary: var(--brand-navy);
   --primary-foreground: oklch(1 0 0);
   --secondary: oklch(0.96 0.008 250);
-  --secondary-foreground: oklch(0.143 0.13 278);
+  --secondary-foreground: var(--brand-navy);
   --muted: oklch(0.95 0.008 250);
   --muted-foreground: oklch(0.5 0.04 275);
   --accent: oklch(0.94 0.03 278);           /* navy tint for hover/focus */
-  --accent-foreground: oklch(0.143 0.13 278);
+  --accent-foreground: var(--brand-navy);
   --destructive: oklch(0.55 0.22 25);
   --destructive-foreground: oklch(1 0 0);
   --border: oklch(0.91 0.01 250);
   --input: oklch(0.91 0.01 250);
-  --ring: oklch(0.143 0.13 278);            /* navy focus ring */
-  --chart-1: oklch(0.143 0.13 278);   /* navy */
+  --ring: var(--brand-navy);
+  --chart-1: var(--brand-navy);
   --chart-2: oklch(0.30 0.13 278);
   --chart-3: oklch(0.45 0.13 275);
   --chart-4: oklch(0.60 0.10 268);
   --chart-5: oklch(0.78 0.06 260);
-  --sidebar: oklch(0.143 0.13 278);         /* #000038 — mesmo do botão primário */
+  --sidebar: var(--brand-navy);
   --sidebar-foreground: oklch(1 0 0);
   --sidebar-primary: oklch(0.91 0.155 195);
-  --sidebar-primary-foreground: oklch(0.143 0.13 278);
+  --sidebar-primary-foreground: var(--brand-navy);
   --sidebar-accent: oklch(0.22 0.13 278);
   --sidebar-accent-foreground: oklch(1 0 0);
   --sidebar-border: oklch(0.22 0.13 278);
@@ -117,24 +117,24 @@
 .dark {
   /* Dark mode institucional: navy #000038 como base real do sistema,
    * com superfícies em degraus do mesmo matiz e ciano apenas como ação/foco. */
-  --background: oklch(0.105 0.095 278);
+  --background: oklch(0.128 0.062 273.3);     /* #03031f */
   --foreground: oklch(0.985 0.004 250);
-  --card: oklch(0.155 0.09 278);
+  --card: oklch(0.174 0.087 272.7);           /* #070735 */
   --card-foreground: oklch(0.985 0.004 250);
-  --popover: oklch(0.17 0.095 278);
+  --popover: oklch(0.187 0.097 272);          /* #08083d */
   --popover-foreground: oklch(0.985 0.004 250);
   --primary: var(--brand-cyan);
   --primary-foreground: var(--brand-navy);
-  --secondary: oklch(0.205 0.075 278);
+  --secondary: oklch(0.234 0.107 272.4);      /* #10134f */
   --secondary-foreground: oklch(0.985 0.004 250);
-  --muted: oklch(0.205 0.06 278);
-  --muted-foreground: oklch(0.78 0.025 260);
-  --accent: oklch(0.245 0.085 278);
+  --muted: oklch(0.205 0.104 272.4);          /* #0b0b45 */
+  --muted-foreground: oklch(0.80 0.025 260);
+  --accent: oklch(0.234 0.107 272.4);         /* #10134f */
   --accent-foreground: oklch(0.985 0.004 250);
   --destructive: oklch(0.64 0.21 25);
   --destructive-foreground: oklch(1 0 0);
-  --border: oklch(0.46 0.06 278 / 38%);
-  --input: oklch(0.46 0.06 278 / 44%);
+  --border: oklch(0.72 0.035 264 / 26%);
+  --input: oklch(0.72 0.035 264 / 34%);
   --ring: var(--brand-cyan);
   --chart-1: var(--brand-cyan);
   --chart-2: oklch(0.74 0.11 220);
@@ -145,9 +145,9 @@
   --sidebar-foreground: oklch(0.985 0.004 250);
   --sidebar-primary: oklch(0.985 0.004 250);
   --sidebar-primary-foreground: var(--brand-navy);
-  --sidebar-accent: oklch(0.235 0.12 278);
+  --sidebar-accent: oklch(0.234 0.107 272.4);
   --sidebar-accent-foreground: oklch(0.985 0.004 250);
-  --sidebar-border: oklch(0.52 0.075 278 / 32%);
+  --sidebar-border: oklch(0.72 0.035 264 / 24%);
   --sidebar-ring: var(--brand-cyan);
 }
 
