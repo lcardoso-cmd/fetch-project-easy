@@ -234,6 +234,7 @@ function SharedProposalPage() {
           </p>
         </CardContent>
       </Card>
-    </div>
+    </main>
   );
+
 }
