@@ -82,6 +82,9 @@ interface BudgetSnapshot {
   limit: number;
   warnPct: number;
   spent: number;
+  maxTokens: number;
+  maxContextChars: number;
+  maxRetries: number;
   fetchedAt: number;
 }
 const budgetCache = new Map<string, BudgetSnapshot>();
@@ -107,12 +110,15 @@ async function loadBudget(userId: string): Promise<BudgetSnapshot> {
 
   const { data: row } = await admin
     .from("ai_budgets")
-    .select("monthly_limit_usd, warn_threshold_pct")
+    .select("monthly_limit_usd, warn_threshold_pct, max_tokens, max_context_chars, max_retries")
     .eq("user_id", userId)
     .maybeSingle();
 
   const limit = Number(row?.monthly_limit_usd ?? 0);
   const warnPct = Number(row?.warn_threshold_pct ?? 80);
+  const maxTokens = Math.max(0, Number(row?.max_tokens ?? 0));
+  const maxContextChars = Math.max(0, Number(row?.max_context_chars ?? 0));
+  const maxRetries = Math.max(0, Math.min(5, Number(row?.max_retries ?? 1)));
 
   let spent = 0;
   if (limit > 0) {
@@ -120,7 +126,15 @@ async function loadBudget(userId: string): Promise<BudgetSnapshot> {
     spent = Number(data ?? 0);
   }
 
-  const snap: BudgetSnapshot = { limit, warnPct, spent, fetchedAt: Date.now() };
+  const snap: BudgetSnapshot = {
+    limit,
+    warnPct,
+    spent,
+    maxTokens,
+    maxContextChars,
+    maxRetries,
+    fetchedAt: Date.now(),
+  };
   budgetCache.set(userId, snap);
   return snap;
 }
@@ -135,6 +149,20 @@ export async function assertAiBudget(): Promise<void> {
   }
 }
 
+export interface AiLimits {
+  maxTokens: number; // 0 = sem limite
+  maxContextChars: number; // 0 = sem limite
+  maxRetries: number; // tentativas EXTRAS após a inicial (0..5)
+}
+
+/** Limites de chamada configurados pelo dono do contexto atual (ou defaults). */
+export async function getAiLimitsForCurrentUser(): Promise<AiLimits> {
+  const ctx = getUsageContext();
+  if (!ctx?.userId) return { maxTokens: 0, maxContextChars: 0, maxRetries: 1 };
+  const b = await loadBudget(ctx.userId);
+  return { maxTokens: b.maxTokens, maxContextChars: b.maxContextChars, maxRetries: b.maxRetries };
+}
+
 /** Snapshot para exibição no cliente (sem cache-invalidação — leitura rápida). */
 export async function getAiBudgetSnapshot(userId: string) {
   const b = await loadBudget(userId);
@@ -142,6 +170,9 @@ export async function getAiBudgetSnapshot(userId: string) {
     limit_usd: b.limit,
     warn_threshold_pct: b.warnPct,
     spent_usd: b.spent,
+    max_tokens: b.maxTokens,
+    max_context_chars: b.maxContextChars,
+    max_retries: b.maxRetries,
     pct: b.limit > 0 ? Math.min(100, Math.round((b.spent / b.limit) * 1000) / 10) : 0,
     warn: b.limit > 0 && b.spent >= (b.limit * b.warnPct) / 100,
     blocked: b.limit > 0 && b.spent >= b.limit,

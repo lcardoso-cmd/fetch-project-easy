@@ -23,11 +23,17 @@ export function BudgetCard() {
 
   const [limit, setLimit] = useState<string>("");
   const [warn, setWarn] = useState<string>("80");
+  const [maxTokens, setMaxTokens] = useState<string>("0");
+  const [maxCtx, setMaxCtx] = useState<string>("0");
+  const [maxRetries, setMaxRetries] = useState<string>("1");
 
   useEffect(() => {
     if (data) {
       setLimit(String(data.limit_usd ?? 0));
       setWarn(String(data.warn_threshold_pct ?? 80));
+      setMaxTokens(String(data.max_tokens ?? 0));
+      setMaxCtx(String(data.max_context_chars ?? 0));
+      setMaxRetries(String(data.max_retries ?? 1));
     }
   }, [data]);
 
@@ -37,10 +43,13 @@ export function BudgetCard() {
         data: {
           monthly_limit_usd: Number(limit) || 0,
           warn_threshold_pct: Math.min(100, Math.max(1, Number(warn) || 80)),
+          max_tokens: Math.max(0, Math.min(200000, Math.floor(Number(maxTokens) || 0))),
+          max_context_chars: Math.max(0, Math.min(2000000, Math.floor(Number(maxCtx) || 0))),
+          max_retries: Math.max(0, Math.min(5, Math.floor(Number(maxRetries) || 0))),
         },
       }),
     onSuccess: () => {
-      toast.success("Orçamento atualizado.");
+      toast.success("Configurações de IA atualizadas.");
       qc.invalidateQueries({ queryKey: ["ai-budget-status"] });
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Falha ao salvar."),
@@ -97,7 +106,7 @@ export function BudgetCard() {
               </p>
             )}
 
-            <div className="grid gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
+            <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-1">
                 <Label htmlFor="ai-budget-limit" className="text-xs">
                   Limite mensal (USD) — 0 = ilimitado
@@ -125,15 +134,69 @@ export function BudgetCard() {
                   onChange={(e) => setWarn(e.target.value)}
                 />
               </div>
-              <Button
-                onClick={() => mutation.mutate()}
-                disabled={mutation.isPending}
-                className="sm:w-auto"
-              >
+            </div>
+
+            <div className="space-y-2 rounded-md border border-border/60 bg-muted/40 p-3">
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Limites por chamada
+              </p>
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div className="space-y-1">
+                  <Label htmlFor="ai-max-tokens" className="text-xs">
+                    Máx. tokens de resposta — 0 = sem limite
+                  </Label>
+                  <Input
+                    id="ai-max-tokens"
+                    type="number"
+                    min="0"
+                    max="200000"
+                    step="256"
+                    value={maxTokens}
+                    onChange={(e) => setMaxTokens(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="ai-max-ctx" className="text-xs">
+                    Contexto máx. (caracteres) — 0 = sem limite
+                  </Label>
+                  <Input
+                    id="ai-max-ctx"
+                    type="number"
+                    min="0"
+                    max="2000000"
+                    step="1000"
+                    value={maxCtx}
+                    onChange={(e) => setMaxCtx(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="ai-max-retries" className="text-xs">
+                    Tentativas por chamada (0–5)
+                  </Label>
+                  <Input
+                    id="ai-max-retries"
+                    type="number"
+                    min="0"
+                    max="5"
+                    step="1"
+                    value={maxRetries}
+                    onChange={(e) => setMaxRetries(e.target.value)}
+                  />
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Ao passar do contexto, mensagens antigas são resumidas em um marcador; ao passar
+                do teto de tokens, a resposta é truncada pelo próprio modelo.
+              </p>
+            </div>
+
+            <div className="flex justify-end">
+              <Button onClick={() => mutation.mutate()} disabled={mutation.isPending}>
                 {mutation.isPending && <Loader2 className="mr-2 h-3 w-3 animate-spin" />}
                 Salvar
               </Button>
             </div>
+
           </>
         )}
       </CardContent>

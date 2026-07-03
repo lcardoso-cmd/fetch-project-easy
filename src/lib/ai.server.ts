@@ -2,7 +2,12 @@
 // Endpoint OpenAI-compatible em https://ai.gateway.lovable.dev/v1
 // Usa LOVABLE_API_KEY (já configurada como secret no projeto).
 
-import { logAiUsage, assertAiBudget, type RawUsage } from "./ai-usage.server";
+import {
+  logAiUsage,
+  assertAiBudget,
+  getAiLimitsForCurrentUser,
+  type RawUsage,
+} from "./ai-usage.server";
 import {
   cacheKey,
   fallbackModel,
@@ -13,6 +18,41 @@ import {
   DEFAULT_LATENCY_TIMEOUT_MS,
   DEFAULT_STREAM_TTFB_MS,
 } from "./ai-cache";
+
+/**
+ * Trunca o histórico de mensagens preservando a `system` inicial e as
+ * mensagens mais recentes até caber em `maxChars`. Mensagens intermediárias
+ * são removidas e sinalizadas com um marcador. `0` = sem limite.
+ */
+function truncateMessages<T extends { role: string; content: unknown }>(
+  messages: T[],
+  maxChars: number,
+): T[] {
+  if (!maxChars || maxChars <= 0) return messages;
+  const size = (m: T) =>
+    typeof m.content === "string" ? m.content.length : JSON.stringify(m.content ?? "").length;
+  const total = messages.reduce((n, m) => n + size(m), 0);
+  if (total <= maxChars) return messages;
+
+  const system = messages[0]?.role === "system" ? [messages[0]] : [];
+  const rest = system.length ? messages.slice(1) : messages.slice();
+  const kept: T[] = [];
+  let used = system.reduce((n, m) => n + size(m), 0);
+  for (let i = rest.length - 1; i >= 0; i--) {
+    const s = size(rest[i]);
+    if (used + s > maxChars) break;
+    kept.unshift(rest[i]);
+    used += s;
+  }
+  const removed = rest.length - kept.length;
+  if (removed > 0) {
+    kept.unshift({
+      role: "system",
+      content: `[Contexto anterior omitido: ${removed} mensagem(ns) removidas por limite de contexto configurado pelo usuário.]`,
+    } as unknown as T);
+  }
+  return [...system, ...kept];
+}
 
 const AI_BASE = "https://ai.gateway.lovable.dev/v1";
 
@@ -83,13 +123,22 @@ export async function chatComplete(
     latencyTimeoutMs?: number;
     /** Desativa fallback automático. */
     noFallback?: boolean;
+    /** Sobrepõe max_tokens configurado pelo usuário (0 = sem limite). */
+    maxTokens?: number;
+    /** Sobrepõe tentativas configuradas pelo usuário (0..5). */
+    maxRetries?: number;
   } = {},
 ): Promise<{ content: string; tool_calls?: ToolCall[] }> {
   await assertAiBudget();
+  const limits = await getAiLimitsForCurrentUser();
   const model = opts.model ?? "google/gemini-2.5-flash";
   const temperature = opts.temperature ?? 0.3;
-  const cacheable = !opts.noCache && isCacheable({ model, messages, temperature, tools: opts.tools });
-  const key = cacheable ? cacheKey({ model, messages, temperature, tools: opts.tools }) : null;
+  const maxTokens = opts.maxTokens ?? limits.maxTokens;
+  const maxRetries = Math.max(0, Math.min(5, opts.maxRetries ?? limits.maxRetries));
+  const truncated = truncateMessages(messages, limits.maxContextChars);
+
+  const cacheable = !opts.noCache && isCacheable({ model, messages: truncated, temperature, tools: opts.tools });
+  const key = cacheable ? cacheKey({ model, messages: truncated, temperature, tools: opts.tools }) : null;
   if (key) {
     const hit = getCached(key);
     if (hit) return { content: hit.content, tool_calls: hit.tool_calls };
@@ -98,9 +147,10 @@ export async function chatComplete(
   const attempt = async (m: string): Promise<{ content: string; tool_calls?: ToolCall[] }> => {
     const body: Record<string, unknown> = {
       model: m,
-      messages,
+      messages: truncated,
       temperature,
     };
+    if (maxTokens > 0) body.max_tokens = maxTokens;
     if (opts.tools && opts.tools.length > 0) body.tools = opts.tools;
 
     const controller = new AbortController();
@@ -137,18 +187,32 @@ export async function chatComplete(
     return { content: msg?.content ?? "", tool_calls: msg?.tool_calls };
   };
 
-  let result: { content: string; tool_calls?: ToolCall[] };
-  try {
-    result = await attempt(model);
-  } catch (err) {
-    const fb = opts.noFallback ? null : fallbackModel(model);
-    if (fb && shouldFallback(err)) {
-      console.warn(`[ai] fallback ${model} → ${fb}:`, err instanceof Error ? err.message : err);
-      result = await attempt(fb);
-    } else {
-      throw err;
+  let result: { content: string; tool_calls?: ToolCall[] } | null = null;
+  let lastErr: unknown;
+  let currentModel = model;
+  const totalAttempts = 1 + maxRetries;
+  for (let i = 0; i < totalAttempts; i++) {
+    try {
+      result = await attempt(currentModel);
+      break;
+    } catch (err) {
+      lastErr = err;
+      const isLast = i === totalAttempts - 1;
+      if (isLast || !shouldFallback(err)) {
+        if (!isLast) continue; // erro não-retentável: para
+        break;
+      }
+      // troca para modelo mais barato quando disponível
+      if (!opts.noFallback) {
+        const fb = fallbackModel(currentModel);
+        if (fb) {
+          console.warn(`[ai] fallback ${currentModel} → ${fb}:`, err instanceof Error ? err.message : err);
+          currentModel = fb;
+        }
+      }
     }
   }
+  if (!result) throw lastErr instanceof Error ? lastErr : new Error(String(lastErr));
 
   if (key) setCached(key, { content: result.content, tool_calls: result.tool_calls, model });
   return result;
@@ -174,15 +238,20 @@ export async function chatCompleteStream(
     noFallback?: boolean;
     /** TTFB máximo (ms) antes de considerar fallback. */
     ttfbTimeoutMs?: number;
+    /** Sobrepõe max_tokens configurado pelo usuário (0 = sem limite). */
+    maxTokens?: number;
   } = {},
 ): Promise<{ content: string; tool_calls?: ToolCall[] }> {
   await assertAiBudget();
+  const limits = await getAiLimitsForCurrentUser();
   const model = opts.model ?? "google/gemini-2.5-flash";
   const temperature = opts.temperature ?? 0.3;
+  const maxTokens = opts.maxTokens ?? limits.maxTokens;
+  const truncated = truncateMessages(messages, limits.maxContextChars);
 
   // Cache replay
-  const cacheable = !opts.noCache && isCacheable({ model, messages, temperature, tools: opts.tools });
-  const key = cacheable ? cacheKey({ model, messages, temperature, tools: opts.tools }) : null;
+  const cacheable = !opts.noCache && isCacheable({ model, messages: truncated, temperature, tools: opts.tools });
+  const key = cacheable ? cacheKey({ model, messages: truncated, temperature, tools: opts.tools }) : null;
   if (key) {
     const hit = getCached(key);
     if (hit) {
@@ -204,11 +273,12 @@ export async function chatCompleteStream(
   ): Promise<{ content: string; tool_calls?: ToolCall[] }> => {
     const body: Record<string, unknown> = {
       model: m,
-      messages,
+      messages: truncated,
       temperature,
       stream: true,
       stream_options: { include_usage: true },
     };
+    if (maxTokens > 0) body.max_tokens = maxTokens;
     if (opts.tools && opts.tools.length > 0) body.tools = opts.tools;
 
     // TTFB timeout controla apenas a abertura da conexão
