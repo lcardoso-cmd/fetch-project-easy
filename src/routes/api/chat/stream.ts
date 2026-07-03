@@ -82,7 +82,8 @@ export const Route = createFileRoute("/api/chat/stream")({
     handlers: {
       POST: async ({ request }) => {
         const { authenticateRequest } = await import("@/lib/route-auth.server");
-        let auth;
+        type Auth = Awaited<ReturnType<typeof authenticateRequest>>;
+        let auth: Auth;
         try {
           auth = await authenticateRequest(request);
         } catch (e) {
@@ -100,6 +101,7 @@ export const Route = createFileRoute("/api/chat/stream")({
 
         const { prepareRagRun, persistChatTurn } = await import("@/lib/chat-rag.server");
         const { chatCompleteStream } = await import("@/lib/ai.server");
+        const { runWithUsageContext } = await import("@/lib/ai-usage.server");
         type ChatMessage = import("@/lib/ai.server").ChatMessage;
 
         const encoder = new TextEncoder();
@@ -107,6 +109,19 @@ export const Route = createFileRoute("/api/chat/stream")({
 
         const stream = new ReadableStream<Uint8Array>({
           async start(controller) {
+            return runWithUsageContext(
+              {
+                userId: auth.userId,
+                caseId: body.case_id,
+                threadId: body.thread_id ?? null,
+                feature: "chat_stream",
+              },
+              () => runStream(controller),
+            );
+          },
+        });
+
+        async function runStream(controller: ReadableStreamDefaultController<Uint8Array>) {
             let closed = false;
             const safeEnqueue = (chunk: Uint8Array) => {
               if (closed) return;
@@ -288,8 +303,9 @@ export const Route = createFileRoute("/api/chat/stream")({
                 /* noop */
               }
             }
-          },
-        });
+        }
+
+
 
         return new Response(stream, {
           headers: {

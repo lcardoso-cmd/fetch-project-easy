@@ -108,6 +108,51 @@ export type Database = {
           },
         ]
       }
+      ai_usage_events: {
+        Row: {
+          case_id: string | null
+          completion_tokens: number
+          cost_usd: number
+          created_at: string
+          feature: string
+          gateway_run_id: string | null
+          id: string
+          model: string
+          prompt_tokens: number
+          thread_id: string | null
+          total_tokens: number
+          user_id: string
+        }
+        Insert: {
+          case_id?: string | null
+          completion_tokens?: number
+          cost_usd?: number
+          created_at?: string
+          feature: string
+          gateway_run_id?: string | null
+          id?: string
+          model: string
+          prompt_tokens?: number
+          thread_id?: string | null
+          total_tokens?: number
+          user_id: string
+        }
+        Update: {
+          case_id?: string | null
+          completion_tokens?: number
+          cost_usd?: number
+          created_at?: string
+          feature?: string
+          gateway_run_id?: string | null
+          id?: string
+          model?: string
+          prompt_tokens?: number
+          thread_id?: string | null
+          total_tokens?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
       app_oauth_settings: {
         Row: {
           client_id: string | null
@@ -1512,6 +1557,53 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      ai_usage_by_feature: {
+        Args: { _from: string; _to: string }
+        Returns: {
+          calls: number
+          completion_tokens: number
+          cost_usd: number
+          feature: string
+          prompt_tokens: number
+          total_tokens: number
+        }[]
+      }
+      ai_usage_by_model: {
+        Args: { _from: string; _to: string }
+        Returns: {
+          calls: number
+          completion_tokens: number
+          cost_usd: number
+          model: string
+          prompt_tokens: number
+          total_tokens: number
+        }[]
+      }
+      ai_usage_by_user: {
+        Args: { _from: string; _to: string }
+        Returns: {
+          calls: number
+          completion_tokens: number
+          cost_usd: number
+          email: string
+          full_name: string
+          prompt_tokens: number
+          total_tokens: number
+          user_id: string
+        }[]
+      }
+      ai_usage_summary: {
+        Args: { _from: string; _to: string }
+        Returns: {
+          calls: number
+          completion_tokens: number
+          cost_usd: number
+          day: string
+          prompt_tokens: number
+          total_tokens: number
+        }[]
+      }
+      can_view_all_ai_usage: { Args: { _user_id: string }; Returns: boolean }
       has_capability: {
         Args: {
           _capability: Database["public"]["Enums"]["app_capability"]

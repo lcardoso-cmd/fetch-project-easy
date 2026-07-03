@@ -13,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Trash2, Loader2, Users, UserCog, KeyRound, ChevronRight, Building2 } from "lucide-react";
+import { Plus, Trash2, Loader2, Users, UserCog, KeyRound, ChevronRight, Building2, BarChart3 } from "lucide-react";
 import { toast } from "sonner";
 import {
   listTeamMembers,
@@ -447,6 +447,26 @@ function SettingsPage() {
           </CardContent>
         </Card>
       )}
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg flex items-center gap-2">
+            <BarChart3 className="h-5 w-5" /> Consumo de IA
+          </CardTitle>
+          <CardDescription>
+            Tokens usados no mês por funcionalidade, modelo e usuário — com estimativa de custo.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Link
+            to="/configuracoes/consumo"
+            className="flex items-center justify-between rounded-lg border p-3 hover:bg-accent/50"
+          >
+            <span className="text-sm">Abrir painel de consumo</span>
+            <ChevronRight className="h-4 w-4 text-muted-foreground" />
+          </Link>
+        </CardContent>
+      </Card>
     </div>
   );
 }

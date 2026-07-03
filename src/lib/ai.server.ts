@@ -2,6 +2,8 @@
 // Endpoint OpenAI-compatible em https://ai.gateway.lovable.dev/v1
 // Usa LOVABLE_API_KEY (já configurada como secret no projeto).
 
+import { logAiUsage, type RawUsage } from "./ai-usage.server";
+
 const AI_BASE = "https://ai.gateway.lovable.dev/v1";
 
 function apiKey() {
@@ -12,6 +14,7 @@ function apiKey() {
 
 export async function embedTexts(inputs: string[]): Promise<number[][]> {
   if (inputs.length === 0) return [];
+  const model = "openai/text-embedding-3-small";
   const res = await fetch(`${AI_BASE}/embeddings`, {
     method: "POST",
     headers: {
@@ -19,7 +22,7 @@ export async function embedTexts(inputs: string[]): Promise<number[][]> {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      model: "openai/text-embedding-3-small",
+      model,
       input: inputs,
     }),
   });
@@ -27,7 +30,9 @@ export async function embedTexts(inputs: string[]): Promise<number[][]> {
     const txt = await res.text();
     throw new Error(`Embeddings falhou (${res.status}): ${txt}`);
   }
-  const json = (await res.json()) as { data: { embedding: number[] }[] };
+  const json = (await res.json()) as { data: { embedding: number[] }[]; usage?: RawUsage };
+  const runId = res.headers.get("X-Lovable-AIG-Run-ID");
+  await logAiUsage({ feature: "embeddings", model, usage: json.usage, gatewayRunId: runId });
   return json.data.map((d) => d.embedding);
 }
 
@@ -56,10 +61,11 @@ export interface ToolDef {
 
 export async function chatComplete(
   messages: ChatMessage[],
-  opts: { model?: string; temperature?: number; tools?: ToolDef[] } = {},
+  opts: { model?: string; temperature?: number; tools?: ToolDef[]; feature?: string } = {},
 ): Promise<{ content: string; tool_calls?: ToolCall[] }> {
+  const model = opts.model ?? "google/gemini-2.5-flash";
   const body: Record<string, unknown> = {
-    model: opts.model ?? "google/gemini-2.5-flash",
+    model,
     messages,
     temperature: opts.temperature ?? 0.3,
   };
@@ -79,7 +85,10 @@ export async function chatComplete(
   }
   const json = (await res.json()) as {
     choices: { message: { content: string | null; tool_calls?: ToolCall[] } }[];
+    usage?: RawUsage;
   };
+  const runId = res.headers.get("X-Lovable-AIG-Run-ID");
+  await logAiUsage({ feature: opts.feature, model, usage: json.usage, gatewayRunId: runId });
   const msg = json.choices[0]?.message;
   return { content: msg?.content ?? "", tool_calls: msg?.tool_calls };
 }
@@ -96,13 +105,16 @@ export async function chatCompleteStream(
     tools?: ToolDef[];
     onDelta?: (delta: string) => void;
     signal?: AbortSignal;
+    feature?: string;
   } = {},
 ): Promise<{ content: string; tool_calls?: ToolCall[] }> {
+  const model = opts.model ?? "google/gemini-2.5-flash";
   const body: Record<string, unknown> = {
-    model: opts.model ?? "google/gemini-2.5-flash",
+    model,
     messages,
     temperature: opts.temperature ?? 0.3,
     stream: true,
+    stream_options: { include_usage: true },
   };
   if (opts.tools && opts.tools.length > 0) body.tools = opts.tools;
 
@@ -125,6 +137,7 @@ export async function chatCompleteStream(
   const decoder = new TextDecoder();
   let buffer = "";
   let content = "";
+  let usage: RawUsage | undefined;
   const toolCallsByIndex = new Map<
     number,
     { id?: string; name?: string; arguments: string }
@@ -152,12 +165,14 @@ export async function chatCompleteStream(
             }>;
           };
         }>;
+        usage?: RawUsage;
       };
       try {
         chunk = JSON.parse(payload);
       } catch {
         continue;
       }
+      if (chunk.usage) usage = chunk.usage;
       const delta = chunk.choices?.[0]?.delta;
       if (!delta) continue;
       if (typeof delta.content === "string" && delta.content.length > 0) {
@@ -175,6 +190,9 @@ export async function chatCompleteStream(
       }
     }
   }
+
+  const runId = res.headers.get("X-Lovable-AIG-Run-ID");
+  await logAiUsage({ feature: opts.feature, model, usage, gatewayRunId: runId });
 
   const tool_calls: ToolCall[] = [];
   for (const [, v] of Array.from(toolCallsByIndex.entries()).sort((a, b) => a[0] - b[0])) {
