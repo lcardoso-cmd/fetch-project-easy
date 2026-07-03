@@ -142,6 +142,74 @@ export function isJurisMindContext(value: unknown): value is JurisMindContext {
   );
 }
 
+/**
+ * Zod schema para validar `context` recebido de fontes externas
+ * (query string, JSON de API, payloads de eventos, localStorage, etc.).
+ * Use com `.parse()` quando quiser falhar alto ou `.safeParse()` para tratar.
+ */
+export const jurisMindContextSchema = z.enum(JURISMIND_CONTEXTS);
+
+export class InvalidJurisMindContextError extends Error {
+  readonly received: unknown;
+  constructor(received: unknown, source?: string) {
+    super(
+      `[JurisMindContext] valor inválido${source ? ` em "${source}"` : ""}: ${JSON.stringify(
+        received,
+      )}. Esperado um de: ${JURISMIND_CONTEXTS.join(", ")}.`,
+    );
+    this.name = "InvalidJurisMindContextError";
+    this.received = received;
+  }
+}
+
+/**
+ * Estrito: retorna o valor tipado ou lança `InvalidJurisMindContextError`.
+ * Use em fronteiras de sistema onde um contexto inválido é um bug real
+ * (ex.: parse de payload interno confiável, migrations, testes).
+ */
+export function parseJurisMindContext(
+  value: unknown,
+  source?: string,
+): JurisMindContext {
+  if (isJurisMindContext(value)) return value;
+  throw new InvalidJurisMindContextError(value, source);
+}
+
+/**
+ * Permissivo: valida e devolve o valor tipado; se inválido, loga um `warn`
+ * (com o `source` para rastreio) e cai no `fallback` — nunca lança.
+ * Use em fronteiras não-confiáveis: URL search params, localStorage,
+ * respostas de rede, props vindas de integrações externas.
+ */
+export function coerceJurisMindContext(
+  value: unknown,
+  options?: { fallback?: JurisMindContext; source?: string; silent?: boolean },
+): JurisMindContext {
+  if (isJurisMindContext(value)) return value;
+  const fallback = options?.fallback ?? DEFAULT_JURISMIND_CONTEXT;
+  if (!options?.silent && typeof console !== "undefined") {
+    console.warn(
+      `[JurisMindContext] valor inválido${options?.source ? ` em "${options.source}"` : ""}: ${JSON.stringify(
+        value,
+      )}. Usando fallback "${fallback}".`,
+    );
+  }
+  return fallback;
+}
+
+/**
+ * Asserção estilo `assert` — estreita o tipo in-place. Útil dentro de
+ * funções que já validaram por outro caminho e querem reforçar o invariant.
+ */
+export function assertJurisMindContext(
+  value: unknown,
+  source?: string,
+): asserts value is JurisMindContext {
+  if (!isJurisMindContext(value)) {
+    throw new InvalidJurisMindContextError(value, source);
+  }
+}
+
 // Regra global de contraste do quadrado da marca:
 //   • Fundo CLARO  → quadrado NAVY  (bg-brand-navy    + glyph-white)
 //   • Fundo ESCURO → quadrado BRANCO (bg-brand-surface + glyph-navy)
