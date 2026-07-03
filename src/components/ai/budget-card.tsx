@@ -8,20 +8,11 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { getAiBudgetStatus, updateAiBudget } from "@/lib/ai-usage.functions";
+import {
+  AI_BUDGET_LIMITS as LIMITS,
+  tryDecodeValidationError,
+} from "@/lib/ai-budget-schema";
 import { toast } from "sonner";
-
-
-/**
- * Faixas aceitas (espelham a validação zod do backend em `ai-usage.functions.ts`).
- * Mantê-las em um único objeto facilita alinhamento cliente/servidor.
- */
-const LIMITS = {
-  limit: { min: 0, max: 100000, label: "Limite mensal (USD)" },
-  warn: { min: 1, max: 100, label: "Aviso (%)" },
-  maxTokens: { min: 0, max: 200000, label: "Máx. tokens de resposta" },
-  maxCtx: { min: 0, max: 2000000, label: "Contexto máx." },
-  maxRetries: { min: 0, max: 5, label: "Tentativas por chamada" },
-} as const;
 
 const FormSchema = z.object({
   limit: z.number().min(LIMITS.limit.min).max(LIMITS.limit.max),
@@ -86,6 +77,7 @@ export function BudgetCard() {
   const [maxRetries, setMaxRetries] = useState<string>("1");
   const [forceFallback, setForceFallback] = useState<boolean>(false);
   const [touched, setTouched] = useState<Partial<Record<FieldKey, boolean>>>({});
+  const [serverErrors, setServerErrors] = useState<Errors>({});
 
   useEffect(() => {
     if (data) {
@@ -96,6 +88,7 @@ export function BudgetCard() {
       setMaxRetries(String(data.max_retries ?? 1));
       setForceFallback(Boolean(data.force_fallback_on_retry));
       setTouched({});
+      setServerErrors({});
     }
   }, [data]);
 
@@ -104,9 +97,15 @@ export function BudgetCard() {
     () => validate({ limit, warn, maxTokens, maxCtx, maxRetries }),
     [limit, warn, maxTokens, maxCtx, maxRetries],
   );
+  // Limpar erros do servidor quando o usuário edita qualquer campo.
+  useEffect(() => {
+    setServerErrors({});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [limit, warn, maxTokens, maxCtx, maxRetries, forceFallback]);
   const isValid = parsed !== null;
   const markTouched = (k: FieldKey) => setTouched((t) => ({ ...t, [k]: true }));
-  const errFor = (k: FieldKey) => (touched[k] ? errors[k] : undefined);
+  const errFor = (k: FieldKey) =>
+    serverErrors[k] ?? (touched[k] ? errors[k] : undefined);
 
   const mutation = useMutation({
     mutationFn: () => {
@@ -124,10 +123,21 @@ export function BudgetCard() {
     },
 
     onSuccess: () => {
+      setServerErrors({});
       toast.success("Configurações de IA atualizadas.");
       qc.invalidateQueries({ queryKey: ["ai-budget-status"] });
     },
-    onError: (e) => toast.error(e instanceof Error ? e.message : "Falha ao salvar."),
+    onError: (e) => {
+      const msg = e instanceof Error ? e.message : "Falha ao salvar.";
+      const decoded = tryDecodeValidationError(msg);
+      if (decoded) {
+        setServerErrors(decoded.fieldErrors as Errors);
+        setTouched({ limit: true, warn: true, maxTokens: true, maxCtx: true, maxRetries: true });
+        toast.error(decoded.message);
+      } else {
+        toast.error(msg);
+      }
+    },
   });
 
   const handleSave = () => {
