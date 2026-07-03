@@ -424,6 +424,8 @@ function ProposalPage() {
       const { case_id: _omit, ...payload } = form;
       const r = await gen({ data: payload });
       setOutput(r.content);
+      setStep(4);
+
       try {
         await persistVersion({
           label: `Gerada — ${form.client_name || "Cliente"}`,
