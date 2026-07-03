@@ -160,7 +160,10 @@ export const Route = createFileRoute("/api/public/proposal-share/$token")({
             headerLabel,
             page: (row.page_config ?? {}) as Parameters<typeof renderPdf>[0]["page"],
             cover: (row.cover ?? null) as Parameters<typeof renderPdf>[0]["cover"],
-            watermark: row.watermark,
+            watermark:
+              row.watermark && typeof row.watermark.text === "string" && row.watermark.text
+                ? { text: row.watermark.text, opacity: row.watermark.opacity }
+                : null,
           });
 
           // Fire-and-forget increment; never block delivery on it.

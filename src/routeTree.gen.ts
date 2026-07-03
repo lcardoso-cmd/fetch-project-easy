@@ -83,6 +83,7 @@ import { Route as AuthenticatedPlataformaSolicitacoesIndexRouteImport } from './
 import { Route as AuthenticatedPlataformaCredenciaisIndexRouteImport } from './routes/_authenticated/plataforma.credenciais.index'
 import { Route as AuthenticatedPlataformaClientesIndexRouteImport } from './routes/_authenticated/plataforma.clientes.index'
 import { Route as AuthenticatedPlataformaAuditoriaIndexRouteImport } from './routes/_authenticated/plataforma.auditoria.index'
+import { Route as ApiPublicProposalShareTokenRouteImport } from './routes/api/public/proposal-share.$token'
 import { Route as ApiPublicOutlookCallbackRouteImport } from './routes/api/public/outlook/callback'
 import { Route as ApiPublicGoogleCallbackRouteImport } from './routes/api/public/google/callback'
 import { Route as AuthenticatedPlatformCustomersIdRouteImport } from './routes/_authenticated/platform.customers.$id'
@@ -494,6 +495,12 @@ const AuthenticatedPlataformaAuditoriaIndexRoute =
     path: '/plataforma/auditoria/',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const ApiPublicProposalShareTokenRoute =
+  ApiPublicProposalShareTokenRouteImport.update({
+    id: '/api/public/proposal-share/$token',
+    path: '/api/public/proposal-share/$token',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicOutlookCallbackRoute =
   ApiPublicOutlookCallbackRouteImport.update({
     id: '/api/public/outlook/callback',
@@ -601,6 +608,7 @@ export interface FileRoutesByFullPath {
   '/platform/customers/$id': typeof AuthenticatedPlatformCustomersIdRoute
   '/api/public/google/callback': typeof ApiPublicGoogleCallbackRoute
   '/api/public/outlook/callback': typeof ApiPublicOutlookCallbackRoute
+  '/api/public/proposal-share/$token': typeof ApiPublicProposalShareTokenRoute
   '/plataforma/auditoria/': typeof AuthenticatedPlataformaAuditoriaIndexRoute
   '/plataforma/clientes/': typeof AuthenticatedPlataformaClientesIndexRoute
   '/plataforma/credenciais/': typeof AuthenticatedPlataformaCredenciaisIndexRoute
@@ -680,6 +688,7 @@ export interface FileRoutesByTo {
   '/platform/customers/$id': typeof AuthenticatedPlatformCustomersIdRoute
   '/api/public/google/callback': typeof ApiPublicGoogleCallbackRoute
   '/api/public/outlook/callback': typeof ApiPublicOutlookCallbackRoute
+  '/api/public/proposal-share/$token': typeof ApiPublicProposalShareTokenRoute
   '/plataforma/auditoria': typeof AuthenticatedPlataformaAuditoriaIndexRoute
   '/plataforma/clientes': typeof AuthenticatedPlataformaClientesIndexRoute
   '/plataforma/credenciais': typeof AuthenticatedPlataformaCredenciaisIndexRoute
@@ -763,6 +772,7 @@ export interface FileRoutesById {
   '/_authenticated/platform/customers/$id': typeof AuthenticatedPlatformCustomersIdRoute
   '/api/public/google/callback': typeof ApiPublicGoogleCallbackRoute
   '/api/public/outlook/callback': typeof ApiPublicOutlookCallbackRoute
+  '/api/public/proposal-share/$token': typeof ApiPublicProposalShareTokenRoute
   '/_authenticated/plataforma/auditoria/': typeof AuthenticatedPlataformaAuditoriaIndexRoute
   '/_authenticated/plataforma/clientes/': typeof AuthenticatedPlataformaClientesIndexRoute
   '/_authenticated/plataforma/credenciais/': typeof AuthenticatedPlataformaCredenciaisIndexRoute
@@ -846,6 +856,7 @@ export interface FileRouteTypes {
     | '/platform/customers/$id'
     | '/api/public/google/callback'
     | '/api/public/outlook/callback'
+    | '/api/public/proposal-share/$token'
     | '/plataforma/auditoria/'
     | '/plataforma/clientes/'
     | '/plataforma/credenciais/'
@@ -925,6 +936,7 @@ export interface FileRouteTypes {
     | '/platform/customers/$id'
     | '/api/public/google/callback'
     | '/api/public/outlook/callback'
+    | '/api/public/proposal-share/$token'
     | '/plataforma/auditoria'
     | '/plataforma/clientes'
     | '/plataforma/credenciais'
@@ -1007,6 +1019,7 @@ export interface FileRouteTypes {
     | '/_authenticated/platform/customers/$id'
     | '/api/public/google/callback'
     | '/api/public/outlook/callback'
+    | '/api/public/proposal-share/$token'
     | '/_authenticated/plataforma/auditoria/'
     | '/_authenticated/plataforma/clientes/'
     | '/_authenticated/plataforma/credenciais/'
@@ -1036,6 +1049,7 @@ export interface RootRouteChildren {
   ApiToolsTranscribeStreamRoute: typeof ApiToolsTranscribeStreamRoute
   ApiPublicGoogleCallbackRoute: typeof ApiPublicGoogleCallbackRoute
   ApiPublicOutlookCallbackRoute: typeof ApiPublicOutlookCallbackRoute
+  ApiPublicProposalShareTokenRoute: typeof ApiPublicProposalShareTokenRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -1558,6 +1572,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedPlataformaAuditoriaIndexRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/api/public/proposal-share/$token': {
+      id: '/api/public/proposal-share/$token'
+      path: '/api/public/proposal-share/$token'
+      fullPath: '/api/public/proposal-share/$token'
+      preLoaderRoute: typeof ApiPublicProposalShareTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/outlook/callback': {
       id: '/api/public/outlook/callback'
       path: '/api/public/outlook/callback'
@@ -1839,6 +1860,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiToolsTranscribeStreamRoute: ApiToolsTranscribeStreamRoute,
   ApiPublicGoogleCallbackRoute: ApiPublicGoogleCallbackRoute,
   ApiPublicOutlookCallbackRoute: ApiPublicOutlookCallbackRoute,
+  ApiPublicProposalShareTokenRoute: ApiPublicProposalShareTokenRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
