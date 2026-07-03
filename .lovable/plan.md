@@ -1,37 +1,17 @@
-Do I know what the issue is? Sim: o publicado não está falhando só em `/auth`; `/` também retorna HTTP 500. Os logs de produção mostram repetidamente `TypeError: Cannot destructure property '__extends' of '__toESM(...).default' as it is undefined` e depois `h3 swallowed SSR error`. Isso aponta para import estático, no bundle SSR, de bibliotecas que dependem de `tslib`/CJS interop e quebram no runtime publicado.
+## Diagnóstico
 
-## Plano de correção
+O código atual em `src/routes/_authenticated/agenda.tsx` já usa `Route.useSearch()` com `createFileRoute("/_authenticated/agenda")` (correto). Porém, o erro em runtime menciona `/_authenticated/calendar` — path que só existe como shim redirect em `src/routes/_authenticated/calendar.tsx`.
 
-1. **Remover imports estáticos que quebram o boot SSR**
-   - Trocar import estático de `pdf-lib` em componentes/rotas por `await import(...)` somente no momento de uso.
-   - Trocar import estático de `pptxgenjs` em `/api/tools/presentation` por import dinâmico dentro do `POST`.
-   - Trocar imports estáticos de `renderPdf`/`contentToBlocks` nas rotas de PDF por imports dinâmicos dentro do handler, para `pdf-lib` não entrar na inicialização global do servidor.
+Isso indica cache obsoleto do plugin TanStack Router / Vite (chunk `agenda.tsx?tsr-split=component` gerado antes da correção anterior), não um bug lógico no código atual.
 
-2. **Isolar geradores de arquivo do carregamento global da aplicação**
-   - Garantir que `.docx`, `.pdf` e `.pptx` só carreguem quando o usuário pedir exportação/download.
-   - Manter a página inicial, `/auth`, `/entrar`, `/agenda` e demais páginas livres desses módulos durante SSR.
+## Ações
 
-3. **Corrigir o fallback “This page didn’t load”**
-   - O botão **Go home** hoje aponta para `/`, mas como `/` também está retornando 500, ele parece “não funcionar”.
-   - Ajustar o fallback para deixar claro que **Try again** recarrega e **Go home** usa navegação direta para `/` depois que o boot estiver corrigido; se necessário, adicionar uma alternativa segura para `/entrar` quando `/` continuar indisponível.
+1. **Limpar caches obsoletos**: remover `node_modules/.vite` e qualquer `.tanstack` residual para forçar regeneração do `routeTree.gen.ts` e dos chunks tsr-split.
+2. **Reiniciar o dev server** para servir os novos chunks.
+3. **Verificar /agenda** com Playwright headless em `http://localhost:8080/agenda` (autenticado via sessão Supabase injetada), capturar screenshot e confirmar ausência do erro `Could not find an active match from "/_authenticated/calendar"`.
+4. **Validação extra**: navegar em `/integracoes` (que tem shim análogo em `integrations.tsx`) para confirmar que o mesmo padrão de shim redirect não quebra.
+5. Se após limpar cache o erro persistir, investigar se `Route.useSearch()` em `agenda.tsx` está sendo tree-shaken e substituir por `useSearch({ from: "/_authenticated/agenda" })` explícito.
 
-4. **Validar contra o publicado antes de encerrar**
-   - Testar `GET /`, `GET /auth` e uma rota autenticada pública/redirecionável após a alteração.
-   - Conferir logs publicados para garantir que o erro `__extends` desapareceu.
-   - Só depois considerar resolvido e pedir republicação se necessário.
+## Fora do escopo
 
-## Arquivos prováveis
-
-- `src/routes/api/tools/pdf.ts`
-- `src/routes/api/public/proposal-share.$token.ts`
-- `src/routes/api/tools/presentation.ts`
-- `src/components/documents/file-preview-card.tsx`
-- Se aparecer outro import SSR-visible de `pdf-lib`, `docx` ou `pptxgenjs`, aplicar o mesmo padrão.
-
-<presentation-actions>
-  <presentation-open-history>View History</presentation-open-history>
-</presentation-actions>
-
-<presentation-actions>
-<presentation-link url="https://docs.lovable.dev/tips-tricks/troubleshooting">Troubleshooting docs</presentation-link>
-</presentation-actions>
+- Não altero lógica de negócio de agenda, Google/Outlook sync, nem removo os shims `calendar.tsx`/`integrations.tsx` (mantêm URLs antigas funcionando).
