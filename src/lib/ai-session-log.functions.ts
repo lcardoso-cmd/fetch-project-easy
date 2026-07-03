@@ -103,5 +103,21 @@ export const getSessionEvents = createServerFn({ method: "GET" })
       .eq("session_id", data.session_id)
       .order("created_at", { ascending: true });
     if (error) throw new Error(error.message);
-    return (rows ?? []) as unknown as SessionEventRow[];
+    return (rows ?? []).map((r): SessionEventRow => ({
+      id: r.id as string,
+      session_id: r.session_id as string,
+      thread_id: (r.thread_id as string | null) ?? null,
+      feature: (r.feature as string | null) ?? null,
+      event_type: r.event_type as string,
+      model: (r.model as string | null) ?? null,
+      fallback_model: (r.fallback_model as string | null) ?? null,
+      reason: (r.reason as string | null) ?? null,
+      chars_before: (r.chars_before as number | null) ?? null,
+      chars_after: (r.chars_after as number | null) ?? null,
+      messages_truncated: (r.messages_truncated as number | null) ?? null,
+      latency_ms: (r.latency_ms as number | null) ?? null,
+      payload: r.payload == null ? null : JSON.stringify(r.payload),
+      created_at: r.created_at as string,
+    }));
   });
+
