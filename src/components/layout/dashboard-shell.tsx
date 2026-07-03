@@ -483,7 +483,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
 
           <header className="hidden h-16 items-center justify-end gap-3 border-b bg-card px-6 lg:flex">
             <NotificationBell />
-            <div className="text-xs text-muted-foreground">{user?.email}</div>
+            <UserMenu />
           </header>
 
           <main className="flex-1 overflow-y-auto">
