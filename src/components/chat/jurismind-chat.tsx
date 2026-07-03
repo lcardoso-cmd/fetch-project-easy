@@ -1678,21 +1678,41 @@ export function JurisMindChat({
               </span>
             </div>
           )}
-          <div className="flex shrink-0 items-center gap-2 border-b px-4 py-3">
-            <BrainCircuit className="h-5 w-5 text-primary" />
+          <div className="flex shrink-0 items-center gap-2 border-b px-3 py-2.5 sm:px-4 sm:py-3">
+            <BrainCircuit className="h-5 w-5 shrink-0 text-primary" />
             <div className="min-w-0 flex-1">
-              <p className="truncate font-semibold">JurisMind AI</p>
-              <p className="truncate text-xs text-muted-foreground">
+              <p className="truncate text-sm font-semibold sm:text-base">JurisMind AI</p>
+              <p className="truncate text-[11px] text-muted-foreground sm:text-xs">
                 {selectedDocIds.size > 0
-                  ? `${selectedDocIds.size} de ${readyDocs.length} documento(s) selecionado(s)`
-                  : `Sem seleção — vai buscar em todos os ${readyDocs.length} documento(s)`}
+                  ? `${selectedDocIds.size} de ${readyDocs.length} doc(s) selecionado(s)`
+                  : `${readyDocs.length} doc(s) no caso`}
               </p>
             </div>
+            <Sheet>
+              <SheetTrigger asChild>
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="outline"
+                  className="h-9 w-9 shrink-0 lg:hidden"
+                  aria-label="Ver documentos e detalhes do caso"
+                  title="Documentos e detalhes"
+                >
+                  <FolderOpen className="h-4 w-4" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="right" className="flex w-[92vw] flex-col gap-4 overflow-y-auto p-4 sm:max-w-md">
+                <SheetHeader className="text-left">
+                  <SheetTitle>Documentos e detalhes</SheetTitle>
+                </SheetHeader>
+                {sidebarInner}
+              </SheetContent>
+            </Sheet>
             <Select
               value={modelTier}
               onValueChange={(v) => setModelTier(v as ModelTier)}
             >
-              <SelectTrigger className="h-8 w-[130px]">
+              <SelectTrigger className="h-9 w-[92px] shrink-0 text-xs sm:w-[130px] sm:text-sm">
                 <SelectValue>{MODEL_LABELS[modelTier]}</SelectValue>
               </SelectTrigger>
               <SelectContent align="end">
@@ -1702,12 +1722,13 @@ export function JurisMindChat({
               </SelectContent>
             </Select>
             {!fullscreen && (
-              <Button asChild variant="ghost" size="icon" title="Abrir em tela cheia">
+              <Button asChild variant="ghost" size="icon" className="hidden shrink-0 sm:inline-flex" title="Abrir em tela cheia">
                 <Link to="/assistencias/$caseId/chat" params={{ caseId }}>
                   <Maximize2 className="h-4 w-4" />
                 </Link>
               </Button>
             )}
+
           </div>
 
           <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4">
