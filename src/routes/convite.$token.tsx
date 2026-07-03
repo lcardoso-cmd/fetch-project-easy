@@ -125,6 +125,7 @@ function InvitePage() {
           )}
         </CardContent>
       </Card>
-    </div>
+    </main>
   );
+
 }
