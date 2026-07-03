@@ -166,22 +166,26 @@ export function RichTextEditor({ html, onChange, minHeight = 360, contentClassNa
           <Redo2 className="h-3.5 w-3.5" />
         </ToolBtn>
       </div>
-      <div
-        ref={ref}
-        contentEditable
-        role="textbox"
-        aria-multiline="true"
-        aria-label="Editor de proposta"
-        suppressContentEditableWarning
-        onInput={emit}
-        onPaste={handlePaste}
-        className={
-          contentClassName ??
-          "prose prose-sm max-w-none p-4 font-serif leading-relaxed text-foreground focus:outline-none"
-        }
-
-        style={{ minHeight }}
-      />
+      {/* Folha "papel" sempre clara para garantir legibilidade em ambos os temas
+          e casar visualmente com o .docx exportado. */}
+      <div className="bg-white p-2 dark:bg-slate-200">
+        <div
+          ref={ref}
+          contentEditable
+          role="textbox"
+          aria-multiline="true"
+          aria-label="Editor de proposta"
+          suppressContentEditableWarning
+          onInput={emit}
+          onPaste={handlePaste}
+          className={
+            contentClassName
+              ? `${contentClassName} bg-white text-slate-900`
+              : "prose prose-sm max-w-none rounded bg-white p-4 font-serif leading-relaxed text-slate-900 focus:outline-none"
+          }
+          style={{ minHeight }}
+        />
+      </div>
     </div>
   );
 }
