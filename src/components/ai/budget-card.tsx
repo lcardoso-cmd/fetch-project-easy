@@ -107,6 +107,15 @@ export function BudgetCard() {
   const errFor = (k: FieldKey) =>
     serverErrors[k] ?? (touched[k] ? errors[k] : undefined);
 
+  const rangeHint = (k: FieldKey) => {
+    const l = LIMITS[k];
+    return `${l.label}: ${l.min}–${l.max}`;
+  };
+  const buildRangeDescription = (errKeys: FieldKey[]) =>
+    errKeys.length
+      ? `Valores aceitos:\n• ${errKeys.map(rangeHint).join("\n• ")}`
+      : undefined;
+
   const mutation = useMutation({
     mutationFn: () => {
       if (!parsed) throw new Error("Corrija os campos destacados antes de salvar.");
@@ -115,7 +124,11 @@ export function BudgetCard() {
 
     onSuccess: () => {
       setServerErrors({});
-      toast.success("Configurações de IA atualizadas.");
+      toast.success("Configurações de IA atualizadas.", {
+        description: parsed
+          ? `Limite US$ ${parsed.monthly_limit_usd.toFixed(2)} • aviso em ${parsed.warn_threshold_pct}% • ${parsed.max_retries ?? 0} tentativa(s)`
+          : undefined,
+      });
       qc.invalidateQueries({ queryKey: ["ai-budget-status"] });
     },
     onError: (e) => {
@@ -124,9 +137,12 @@ export function BudgetCard() {
       if (decoded) {
         setServerErrors(decoded.fieldErrors as Errors);
         setTouched({ limit: true, warn: true, maxTokens: true, maxCtx: true, maxRetries: true });
-        toast.error(decoded.message);
+        const keys = Object.keys(decoded.fieldErrors).filter(
+          (k): k is FieldKey => k in LIMITS,
+        ) as FieldKey[];
+        toast.error(decoded.message, { description: buildRangeDescription(keys) });
       } else {
-        toast.error(msg);
+        toast.error("Falha ao salvar", { description: msg });
       }
     },
   });
@@ -134,7 +150,10 @@ export function BudgetCard() {
   const handleSave = () => {
     if (!isValid) {
       setTouched({ limit: true, warn: true, maxTokens: true, maxCtx: true, maxRetries: true });
-      toast.error("Corrija os campos destacados antes de salvar.");
+      const keys = (Object.keys(errors) as FieldKey[]).filter((k) => errors[k]);
+      toast.error("Corrija os campos destacados antes de salvar.", {
+        description: buildRangeDescription(keys),
+      });
       return;
     }
     mutation.mutate();
