@@ -278,7 +278,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
       <div className="flex h-screen w-full overflow-hidden bg-background">
         {/* Simulation banner */}
         {activePreset && (
-          <div className="fixed inset-x-0 top-0 z-50 flex items-center justify-center gap-3 bg-amber-500 py-1 text-center text-xs font-medium text-black shadow">
+          <div className="fixed inset-x-0 top-0 z-50 flex items-center justify-center gap-3 bg-secondary py-1 text-center text-xs font-medium text-secondary-foreground shadow">
             <Eye className="h-3.5 w-3.5" />
             <span>
               Você está vendo o sistema como <strong>{activePreset.label}</strong>. As
@@ -286,7 +286,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
             </span>
             <button
               type="button"
-              className="rounded bg-black/10 px-2 py-0.5 hover:bg-black/20"
+              className="rounded bg-background/20 px-2 py-0.5 hover:bg-background/30"
               onClick={clearSimulation}
             >
               Sair da simulação
@@ -303,7 +303,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
         >
           <button
             onClick={toggle}
-            className="absolute top-16 -right-4 z-20 flex h-9 w-9 items-center justify-center rounded-full bg-sidebar text-sidebar-primary shadow-lg ring-1 ring-sidebar-border transition-transform hover:scale-105"
+            className="absolute top-16 -right-4 z-20 flex h-9 w-9 items-center justify-center rounded-full border border-sidebar-border bg-sidebar text-sidebar-foreground shadow-lg ring-1 ring-sidebar-ring/35 transition-transform hover:scale-105 hover:bg-sidebar-accent"
             aria-label={collapsed ? "Expandir" : "Recolher"}
           >
             {collapsed ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
@@ -372,7 +372,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                       className={cn(
                         "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
                         active
-                          ? "bg-sidebar-primary text-sidebar-primary-foreground"
+                          ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-sm"
                           : "text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground",
                         collapsed && "justify-center px-2",
                       )}
@@ -400,7 +400,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
             {isSuperAdmin && !collapsed && <ViewAsSwitcher />}
             {!collapsed && user && (
               <div className="flex items-center gap-2 px-2">
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-sidebar-accent text-xs font-semibold uppercase">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full border border-sidebar-border bg-sidebar-accent text-xs font-semibold uppercase text-sidebar-foreground">
                   {user.email?.charAt(0) ?? "U"}
                 </div>
                 <div className="min-w-0 flex-1">
@@ -441,7 +441,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
 
         {/* Main column */}
         <div className={cn("flex flex-1 flex-col min-w-0", activePreset && "mt-6")}>
-          <header className="flex h-16 items-center justify-between gap-3 border-b bg-card px-4 lg:hidden">
+          <header className="flex h-16 items-center justify-between gap-3 border-b bg-card/95 px-4 lg:hidden">
             <Link
               to="/painel"
               aria-label="Ir para o Dashboard"
@@ -460,7 +460,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
           </header>
 
 
-          <nav className="flex gap-1 overflow-x-auto border-b bg-card px-2 py-2 lg:hidden">
+          <nav className="flex gap-1 overflow-x-auto border-b bg-card/95 px-2 py-2 lg:hidden">
             {NAV.filter((i) => i.type === "link").map((item) => {
               if (item.type !== "link") return null;
               const Icon = item.icon;
@@ -472,7 +472,9 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                   title={item.description}
                   className={cn(
                     "flex shrink-0 items-center gap-2 rounded-md px-3 py-2 text-xs font-medium",
-                    active ? "bg-primary text-primary-foreground" : "text-muted-foreground",
+                    active
+                      ? "bg-primary text-primary-foreground shadow-sm"
+                      : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
                   )}
                 >
                   <Icon className="h-4 w-4" />
@@ -482,7 +484,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
             })}
           </nav>
 
-          <header className="hidden h-16 items-center justify-end gap-3 border-b bg-card px-6 lg:flex">
+          <header className="hidden h-16 items-center justify-end gap-3 border-b bg-card/95 px-6 lg:flex">
             <NotificationBell />
             <UserMenu />
           </header>
