@@ -60,6 +60,7 @@
    * via CSS ao invés de embutir a cor no PNG. Mantenha em sincronia com
    * os assets brain-glyph-* (glyphs transparentes). */
   --color-brand-navy: var(--brand-navy);
+  --color-brand-cyan: var(--brand-cyan);
   --color-brand-on-navy: var(--brand-on-navy);
   --color-brand-surface: var(--brand-surface);
   --color-brand-on-surface: var(--brand-on-surface);
@@ -71,6 +72,7 @@
 
   /* Cores fixas da marca — idênticas em light/dark. */
   --brand-navy: oklch(0.143 0.13 278);       /* #000038 */
+  --brand-cyan: oklch(0.91 0.155 195);        /* ciano institucional */
   --brand-on-navy: oklch(1 0 0);             /* glyph branco sobre navy */
   --brand-surface: oklch(1 0 0);             /* quadrado branco */
   --brand-on-surface: oklch(0.143 0.13 278); /* glyph navy sobre branco */
@@ -113,41 +115,40 @@
 }
 
 .dark {
-  /* Dark mode profissional — hierarquia de superfícies em navy escalonado.
-   * bg (mais escuro) → card/popover (elevado) → muted (interno).
-   * Sidebar mantém o navy #000038 da marca; primary = cyan como único acento. */
-  --background: oklch(0.19 0.04 275);         /* app background */
-  --foreground: oklch(0.98 0.005 250);
-  --card: oklch(0.235 0.045 275);             /* cards, topbar, panels */
-  --card-foreground: oklch(0.98 0.005 250);
-  --popover: oklch(0.24 0.045 275);
-  --popover-foreground: oklch(0.98 0.005 250);
-  --primary: oklch(0.91 0.155 195);           /* cyan da marca */
-  --primary-foreground: oklch(0.143 0.13 278);
-  --secondary: oklch(0.28 0.05 275);
-  --secondary-foreground: oklch(0.98 0.005 250);
-  --muted: oklch(0.28 0.045 275);
-  --muted-foreground: oklch(0.72 0.02 260);
-  --accent: oklch(0.32 0.06 275);             /* hover */
-  --accent-foreground: oklch(0.98 0.005 250);
-  --destructive: oklch(0.62 0.22 25);
+  /* Dark mode institucional: navy #000038 como base real do sistema,
+   * com superfícies em degraus do mesmo matiz e ciano apenas como ação/foco. */
+  --background: oklch(0.105 0.095 278);
+  --foreground: oklch(0.985 0.004 250);
+  --card: oklch(0.155 0.09 278);
+  --card-foreground: oklch(0.985 0.004 250);
+  --popover: oklch(0.17 0.095 278);
+  --popover-foreground: oklch(0.985 0.004 250);
+  --primary: var(--brand-cyan);
+  --primary-foreground: var(--brand-navy);
+  --secondary: oklch(0.205 0.075 278);
+  --secondary-foreground: oklch(0.985 0.004 250);
+  --muted: oklch(0.205 0.06 278);
+  --muted-foreground: oklch(0.78 0.025 260);
+  --accent: oklch(0.245 0.085 278);
+  --accent-foreground: oklch(0.985 0.004 250);
+  --destructive: oklch(0.64 0.21 25);
   --destructive-foreground: oklch(1 0 0);
-  --border: oklch(1 0 0 / 12%);               /* visível sobre superfícies escuras */
-  --input: oklch(1 0 0 / 16%);
-  --ring: oklch(0.91 0.155 195);
-  --chart-1: oklch(0.91 0.155 195);
-  --chart-2: oklch(0.70 0.10 268);
-  --chart-3: oklch(0.55 0.13 275);
-  --chart-4: oklch(0.40 0.13 278);
-  --chart-5: oklch(0.28 0.13 278);
-  --sidebar: oklch(0.143 0.13 278);           /* #000038 — cor da marca */
-  --sidebar-foreground: oklch(0.98 0.005 250);
-  --sidebar-primary: oklch(0.91 0.155 195);
-  --sidebar-primary-foreground: oklch(0.143 0.13 278);
-  --sidebar-accent: oklch(0.22 0.10 278);
-  --sidebar-accent-foreground: oklch(0.98 0.005 250);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.91 0.155 195);
+  --border: oklch(0.46 0.06 278 / 38%);
+  --input: oklch(0.46 0.06 278 / 44%);
+  --ring: var(--brand-cyan);
+  --chart-1: var(--brand-cyan);
+  --chart-2: oklch(0.74 0.11 220);
+  --chart-3: oklch(0.68 0.12 165);
+  --chart-4: oklch(0.78 0.12 86);
+  --chart-5: oklch(0.70 0.14 330);
+  --sidebar: var(--brand-navy);
+  --sidebar-foreground: oklch(0.985 0.004 250);
+  --sidebar-primary: oklch(0.985 0.004 250);
+  --sidebar-primary-foreground: var(--brand-navy);
+  --sidebar-accent: oklch(0.235 0.12 278);
+  --sidebar-accent-foreground: oklch(0.985 0.004 250);
+  --sidebar-border: oklch(0.52 0.075 278 / 32%);
+  --sidebar-ring: var(--brand-cyan);
 }
 
 @layer base {
@@ -164,12 +165,17 @@
   h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-heading);
     font-weight: 700;
-    letter-spacing: -0.02em;
+    letter-spacing: 0;
   }
 
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);
+  }
+
+  ::selection {
+    background-color: color-mix(in oklab, var(--color-primary) 35%, transparent);
+    color: var(--color-primary-foreground);
   }
 }
 
