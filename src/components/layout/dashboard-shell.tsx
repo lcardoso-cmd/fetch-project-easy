@@ -45,7 +45,7 @@ import {
   PanelLeftOpen,
   Microscope,
   Globe2,
-  
+  Menu,
   Users2,
   Building2,
   KeyRound,
@@ -55,6 +55,8 @@ import {
   type LucideIcon,
   HelpCircle,
 } from "lucide-react";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+
 import { cn } from "@/lib/utils";
 import { NotificationBell } from "@/components/layout/notification-bell";
 
