@@ -384,6 +384,12 @@ export async function chatCompleteStream(
           const fb = fallbackModel(m);
           if (fb) {
             console.warn(`[ai] stream fallback ${m} → ${fb} (TTFB)`);
+            await logSessionEvent({
+              event_type: "fallback",
+              model: m,
+              fallback_model: fb,
+              reason: `TTFB > ${ttfbMs}ms (streaming)`,
+            });
             return attempt(fb, false, retriesUsed + 1);
 
           }
@@ -402,11 +408,18 @@ export async function chatCompleteStream(
         const fb = fallbackModel(m);
         if (fb) {
           console.warn(`[ai] stream fallback ${m} → ${fb}:`, err.message);
+          await logSessionEvent({
+            event_type: "fallback",
+            model: m,
+            fallback_model: fb,
+            reason: err.message,
+          });
           return attempt(fb, false, retriesUsed + 1);
         }
       }
       throw err;
     }
+
 
     const reader = res.body.getReader();
     const decoder = new TextDecoder();
