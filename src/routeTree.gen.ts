@@ -15,6 +15,7 @@ import { Route as EntrarRouteImport } from './routes/entrar'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as PTokenRouteImport } from './routes/p.$token'
 import { Route as InviteTokenRouteImport } from './routes/invite.$token'
 import { Route as ConviteTokenRouteImport } from './routes/convite.$token'
 import { Route as AuthenticatedTarefasRouteImport } from './routes/_authenticated/tarefas'
@@ -118,6 +119,11 @@ const AuthenticatedRoute = AuthenticatedRouteImport.update({
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PTokenRoute = PTokenRouteImport.update({
+  id: '/p/$token',
+  path: '/p/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
 const InviteTokenRoute = InviteTokenRouteImport.update({
@@ -576,6 +582,7 @@ export interface FileRoutesByFullPath {
   '/tarefas': typeof AuthenticatedTarefasRoute
   '/convite/$token': typeof ConviteTokenRoute
   '/invite/$token': typeof InviteTokenRoute
+  '/p/$token': typeof PTokenRoute
   '/ajuda/permissoes': typeof AuthenticatedAjudaPermissoesRoute
   '/assistencias/$caseId': typeof AuthenticatedAssistenciasCaseIdRouteWithChildren
   '/assistencias/lote': typeof AuthenticatedAssistenciasLoteRoute
@@ -656,6 +663,7 @@ export interface FileRoutesByTo {
   '/tarefas': typeof AuthenticatedTarefasRoute
   '/convite/$token': typeof ConviteTokenRoute
   '/invite/$token': typeof InviteTokenRoute
+  '/p/$token': typeof PTokenRoute
   '/ajuda/permissoes': typeof AuthenticatedAjudaPermissoesRoute
   '/assistencias/$caseId': typeof AuthenticatedAssistenciasCaseIdRouteWithChildren
   '/assistencias/lote': typeof AuthenticatedAssistenciasLoteRoute
@@ -740,6 +748,7 @@ export interface FileRoutesById {
   '/_authenticated/tarefas': typeof AuthenticatedTarefasRoute
   '/convite/$token': typeof ConviteTokenRoute
   '/invite/$token': typeof InviteTokenRoute
+  '/p/$token': typeof PTokenRoute
   '/_authenticated/ajuda/permissoes': typeof AuthenticatedAjudaPermissoesRoute
   '/_authenticated/assistencias/$caseId': typeof AuthenticatedAssistenciasCaseIdRouteWithChildren
   '/_authenticated/assistencias/lote': typeof AuthenticatedAssistenciasLoteRoute
@@ -824,6 +833,7 @@ export interface FileRouteTypes {
     | '/tarefas'
     | '/convite/$token'
     | '/invite/$token'
+    | '/p/$token'
     | '/ajuda/permissoes'
     | '/assistencias/$caseId'
     | '/assistencias/lote'
@@ -904,6 +914,7 @@ export interface FileRouteTypes {
     | '/tarefas'
     | '/convite/$token'
     | '/invite/$token'
+    | '/p/$token'
     | '/ajuda/permissoes'
     | '/assistencias/$caseId'
     | '/assistencias/lote'
@@ -987,6 +998,7 @@ export interface FileRouteTypes {
     | '/_authenticated/tarefas'
     | '/convite/$token'
     | '/invite/$token'
+    | '/p/$token'
     | '/_authenticated/ajuda/permissoes'
     | '/_authenticated/assistencias/$caseId'
     | '/_authenticated/assistencias/lote'
@@ -1040,6 +1052,7 @@ export interface RootRouteChildren {
   SemPermissaoRoute: typeof SemPermissaoRoute
   ConviteTokenRoute: typeof ConviteTokenRoute
   InviteTokenRoute: typeof InviteTokenRoute
+  PTokenRoute: typeof PTokenRoute
   ApiChatStreamRoute: typeof ApiChatStreamRoute
   ApiToolsPdfRoute: typeof ApiToolsPdfRoute
   ApiToolsPetitionRoute: typeof ApiToolsPetitionRoute
@@ -1094,6 +1107,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/p/$token': {
+      id: '/p/$token'
+      path: '/p/$token'
+      fullPath: '/p/$token'
+      preLoaderRoute: typeof PTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/invite/$token': {
@@ -1851,6 +1871,7 @@ const rootRouteChildren: RootRouteChildren = {
   SemPermissaoRoute: SemPermissaoRoute,
   ConviteTokenRoute: ConviteTokenRoute,
   InviteTokenRoute: InviteTokenRoute,
+  PTokenRoute: PTokenRoute,
   ApiChatStreamRoute: ApiChatStreamRoute,
   ApiToolsPdfRoute: ApiToolsPdfRoute,
   ApiToolsPetitionRoute: ApiToolsPetitionRoute,
