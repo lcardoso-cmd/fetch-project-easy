@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, Ban, CheckCircle2, Loader2, Wallet } from "lucide-react";
-import { z } from "zod";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -10,20 +9,24 @@ import { Switch } from "@/components/ui/switch";
 import { getAiBudgetStatus, updateAiBudget } from "@/lib/ai-usage.functions";
 import {
   AI_BUDGET_LIMITS as LIMITS,
+  AiBudgetPayloadSchema,
+  type AiBudgetPayload,
+  toFieldErrors,
   tryDecodeValidationError,
 } from "@/lib/ai-budget-schema";
 import { toast } from "sonner";
 
-const FormSchema = z.object({
-  limit: z.number().min(LIMITS.limit.min).max(LIMITS.limit.max),
-  warn: z.number().int().min(LIMITS.warn.min).max(LIMITS.warn.max),
-  maxTokens: z.number().int().min(LIMITS.maxTokens.min).max(LIMITS.maxTokens.max),
-  maxCtx: z.number().int().min(LIMITS.maxCtx.min).max(LIMITS.maxCtx.max),
-  maxRetries: z.number().int().min(LIMITS.maxRetries.min).max(LIMITS.maxRetries.max),
-});
-
 type FieldKey = keyof typeof LIMITS;
 type Errors = Partial<Record<FieldKey, string>>;
+
+// Mapeamento das chaves de formulário para as chaves do payload (SoT no schema).
+const FORM_TO_PAYLOAD: Record<FieldKey, keyof AiBudgetPayload> = {
+  limit: "monthly_limit_usd",
+  warn: "warn_threshold_pct",
+  maxTokens: "max_tokens",
+  maxCtx: "max_context_chars",
+  maxRetries: "max_retries",
+};
 
 function parseNumber(raw: string): number | null {
   if (raw.trim() === "") return null;
@@ -31,33 +34,30 @@ function parseNumber(raw: string): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
-function validate(values: Record<FieldKey, string>): { errors: Errors; parsed: z.infer<typeof FormSchema> | null } {
+function validate(
+  values: Record<FieldKey, string>,
+  forceFallback: boolean,
+): { errors: Errors; parsed: AiBudgetPayload | null } {
   const errors: Errors = {};
-  const nums: Partial<Record<FieldKey, number>> = {};
+  const payload: Record<string, unknown> = { force_fallback_on_retry: forceFallback };
   (Object.keys(LIMITS) as FieldKey[]).forEach((k) => {
     const n = parseNumber(values[k]);
-    const { min, max, label } = LIMITS[k];
     if (n === null) {
-      errors[k] = `${label} é obrigatório.`;
+      errors[k] = `${LIMITS[k].label} é obrigatório.`;
       return;
     }
-    if (k !== "limit" && !Number.isInteger(n)) {
-      errors[k] = `${label} deve ser um inteiro.`;
-      return;
-    }
-    if (n < min || n > max) {
-      errors[k] = `Use um valor entre ${min} e ${max.toLocaleString("pt-BR")}.`;
-      return;
-    }
-    nums[k] = n;
+    payload[FORM_TO_PAYLOAD[k]] = n;
   });
-  if (Object.keys(errors).length > 0) return { errors, parsed: null };
-  const result = FormSchema.safeParse(nums);
+  // Sempre executa o schema compartilhado — mesmo em campos vazios não temos
+  // parsed, mas garantimos que qualquer regra futura fique num único lugar.
+  const result = AiBudgetPayloadSchema.safeParse(payload);
   if (!result.success) {
-    for (const issue of result.error.issues) {
-      const key = issue.path[0] as FieldKey;
-      errors[key] = issue.message;
+    const decoded = toFieldErrors(result.error);
+    for (const [k, msg] of Object.entries(decoded.fieldErrors)) {
+      if (!errors[k as FieldKey]) errors[k as FieldKey] = msg;
     }
+  }
+  if (Object.keys(errors).length > 0 || !result.success) {
     return { errors, parsed: null };
   }
   return { errors, parsed: result.data };
@@ -94,8 +94,8 @@ export function BudgetCard() {
 
 
   const { errors, parsed } = useMemo(
-    () => validate({ limit, warn, maxTokens, maxCtx, maxRetries }),
-    [limit, warn, maxTokens, maxCtx, maxRetries],
+    () => validate({ limit, warn, maxTokens, maxCtx, maxRetries }, forceFallback),
+    [limit, warn, maxTokens, maxCtx, maxRetries, forceFallback],
   );
   // Limpar erros do servidor quando o usuário edita qualquer campo.
   useEffect(() => {
@@ -110,16 +110,7 @@ export function BudgetCard() {
   const mutation = useMutation({
     mutationFn: () => {
       if (!parsed) throw new Error("Corrija os campos destacados antes de salvar.");
-      return updateAiBudget({
-        data: {
-          monthly_limit_usd: parsed.limit,
-          warn_threshold_pct: parsed.warn,
-          max_tokens: parsed.maxTokens,
-          max_context_chars: parsed.maxCtx,
-          max_retries: parsed.maxRetries,
-          force_fallback_on_retry: forceFallback,
-        },
-      });
+      return updateAiBudget({ data: parsed });
     },
 
     onSuccess: () => {
