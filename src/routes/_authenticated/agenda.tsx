@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useNavigate, useSearch } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
@@ -87,7 +87,7 @@ const TYPE_LABEL: Record<string, string> = {
 function CalendarPage() {
   const qc = useQueryClient();
   const navigate = useNavigate();
-  const search = useSearch({ from: "/_authenticated/calendar" });
+  const search = Route.useSearch();
   const listFn = useServerFn(listEvents);
   const createFn = useServerFn(createEvent);
   const deleteFn = useServerFn(deleteEvent);

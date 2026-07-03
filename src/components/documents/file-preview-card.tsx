@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from "react";
-import { PDFDocument } from "pdf-lib";
 import {
   FileText,
   FileSpreadsheet,
@@ -85,6 +84,7 @@ export function FilePreviewCard({
         const name = file.name.toLowerCase();
         if (name.endsWith(".pdf")) {
           try {
+            const { PDFDocument } = await import("pdf-lib");
             const pdf = await PDFDocument.load(buf, {
               ignoreEncryption: true,
               throwOnInvalidObject: false,

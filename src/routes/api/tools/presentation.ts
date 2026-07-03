@@ -1,5 +1,4 @@
 import { createFileRoute } from "@tanstack/react-router";
-import pptxgen from "pptxgenjs";
 
 function sanitize(name: string) {
   return (
@@ -39,6 +38,7 @@ export const Route = createFileRoute("/api/tools/presentation")({
           if (!title || !slides || !Array.isArray(slides)) {
             return new Response("title e slides obrigatórios", { status: 400 });
           }
+          const pptxgen = (await import("pptxgenjs")).default;
           const pres = new pptxgen();
           pres.layout = "LAYOUT_16x9";
           pres.defineSlideMaster({

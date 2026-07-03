@@ -11,8 +11,7 @@
  * server-side before any content is returned.
  */
 import { createFileRoute } from "@tanstack/react-router";
-import { contentToBlocks } from "@/lib/documents/blocks";
-import { renderPdf } from "@/lib/documents/pdf-renderer";
+import type { RenderPdfInput } from "@/lib/documents/pdf-renderer";
 import { hashSharePassword, safeEqualHex } from "@/lib/proposal-shares-crypto";
 
 type ShareRow = {
@@ -149,6 +148,10 @@ export const Route = createFileRoute("/api/public/proposal-share/$token")({
         }
 
         try {
+          const [{ contentToBlocks }, { renderPdf }] = await Promise.all([
+            import("@/lib/documents/blocks"),
+            import("@/lib/documents/pdf-renderer"),
+          ]);
           const blocks = contentToBlocks(row.html);
           const headerLabel = "Proposta comercial";
           const { loadBrandingForUser } = await import("@/lib/docx/branding.server");
@@ -158,8 +161,8 @@ export const Route = createFileRoute("/api/public/proposal-share/$token")({
             blocks,
             branding,
             headerLabel,
-            page: (row.page_config ?? {}) as Parameters<typeof renderPdf>[0]["page"],
-            cover: (row.cover ?? null) as Parameters<typeof renderPdf>[0]["cover"],
+            page: (row.page_config ?? {}) as RenderPdfInput["page"],
+            cover: (row.cover ?? null) as RenderPdfInput["cover"],
             watermark:
               row.watermark && typeof row.watermark.text === "string" && row.watermark.text
                 ? { text: row.watermark.text, opacity: row.watermark.opacity }

@@ -1,6 +1,6 @@
 export function renderErrorPage(): string {
   return `<!doctype html>
-<html lang="en">
+<html lang="pt-BR">
   <head>
     <meta charset="utf-8" />
     <title>This page didn't load</title>
@@ -18,11 +18,11 @@ export function renderErrorPage(): string {
   </head>
   <body>
     <div class="card">
-      <h1>This page didn't load</h1>
-      <p>Something went wrong on our end. You can try refreshing or head back home.</p>
+      <h1>Esta página não carregou</h1>
+      <p>Algo falhou ao carregar o app. Tente recarregar ou volte para o início.</p>
       <div class="actions">
-        <button class="primary" onclick="location.reload()">Try again</button>
-        <a class="secondary" href="/">Go home</a>
+        <button class="primary" onclick="location.reload()">Tentar novamente</button>
+        <button class="secondary" onclick="location.assign('/')">Ir para o início</button>
       </div>
     </div>
   </body>

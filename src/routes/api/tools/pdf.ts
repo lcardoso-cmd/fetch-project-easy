@@ -1,8 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
-import { contentToBlocks } from "@/lib/documents/blocks";
-import { renderPdf } from "@/lib/documents/pdf-renderer";
+import type { RenderPdfInput } from "@/lib/documents/pdf-renderer";
 
 function sanitize(name: string) {
   return (
@@ -76,6 +75,10 @@ export const Route = createFileRoute("/api/tools/pdf")({
           if (!titulo || (!conteudo && !html)) {
             return new Response("titulo e conteudo obrigatórios", { status: 400 });
           }
+          const [{ contentToBlocks }, { renderPdf }] = await Promise.all([
+            import("@/lib/documents/blocks"),
+            import("@/lib/documents/pdf-renderer"),
+          ]);
           const source = (html ?? conteudo ?? "") as string;
           const blocks = contentToBlocks(source);
           const headerLabel = /proposta/i.test(titulo)
@@ -113,7 +116,7 @@ export const Route = createFileRoute("/api/tools/pdf")({
             blocks,
             branding,
             headerLabel,
-            page: pageCfg,
+            page: pageCfg as RenderPdfInput["page"],
             cover: coverClean,
             watermark: wmClean,
           });
