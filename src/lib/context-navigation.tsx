@@ -28,7 +28,7 @@ import {
 } from "@tanstack/react-router";
 
 import {
-  isJurisMindContext,
+  coerceJurisMindContext,
   type JurisMindContext,
 } from "@/components/brand/jurismind-mark";
 
@@ -61,8 +61,15 @@ export interface NavigationTrackingPayload {
 
 const EVENT_NAME = "jurismind:navigate";
 
-function safeContext(context: unknown): JurisMindContext {
-  return isJurisMindContext(context) ? context : "sidebar";
+/**
+ * Normaliza `context` recebido em runtime (props, JSON, query string) para
+ * um `JurisMindContext` válido. Delega em `coerceJurisMindContext` para que
+ * a lógica de validação + telemetria seja a mesma usada por `JurisMindMark`.
+ */
+function safeContext(context: unknown, source?: string): JurisMindContext {
+  return coerceJurisMindContext(context, {
+    source: `context-navigation${source ? `:${source}` : ""}`,
+  });
 }
 
 function emit(payload: NavigationTrackingPayload) {
