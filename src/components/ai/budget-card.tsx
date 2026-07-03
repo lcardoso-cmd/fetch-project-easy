@@ -77,6 +77,7 @@ export function BudgetCard() {
   const [maxRetries, setMaxRetries] = useState<string>("1");
   const [forceFallback, setForceFallback] = useState<boolean>(false);
   const [touched, setTouched] = useState<Partial<Record<FieldKey, boolean>>>({});
+  const [serverErrors, setServerErrors] = useState<Errors>({});
 
   useEffect(() => {
     if (data) {
@@ -87,6 +88,7 @@ export function BudgetCard() {
       setMaxRetries(String(data.max_retries ?? 1));
       setForceFallback(Boolean(data.force_fallback_on_retry));
       setTouched({});
+      setServerErrors({});
     }
   }, [data]);
 
@@ -97,7 +99,8 @@ export function BudgetCard() {
   );
   const isValid = parsed !== null;
   const markTouched = (k: FieldKey) => setTouched((t) => ({ ...t, [k]: true }));
-  const errFor = (k: FieldKey) => (touched[k] ? errors[k] : undefined);
+  const errFor = (k: FieldKey) =>
+    serverErrors[k] ?? (touched[k] ? errors[k] : undefined);
 
   const mutation = useMutation({
     mutationFn: () => {
