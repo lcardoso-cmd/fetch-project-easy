@@ -6,8 +6,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import { getAiBudgetStatus, updateAiBudget } from "@/lib/ai-usage.functions";
 import { toast } from "sonner";
+
 
 /**
  * Faixas aceitas (espelham a validação zod do backend em `ai-usage.functions.ts`).
