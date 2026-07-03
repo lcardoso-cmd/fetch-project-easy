@@ -118,10 +118,21 @@ export function BudgetCard() {
     },
 
     onSuccess: () => {
+      setServerErrors({});
       toast.success("Configurações de IA atualizadas.");
       qc.invalidateQueries({ queryKey: ["ai-budget-status"] });
     },
-    onError: (e) => toast.error(e instanceof Error ? e.message : "Falha ao salvar."),
+    onError: (e) => {
+      const msg = e instanceof Error ? e.message : "Falha ao salvar.";
+      const decoded = tryDecodeValidationError(msg);
+      if (decoded) {
+        setServerErrors(decoded.fieldErrors as Errors);
+        setTouched({ limit: true, warn: true, maxTokens: true, maxCtx: true, maxRetries: true });
+        toast.error(decoded.message);
+      } else {
+        toast.error(msg);
+      }
+    },
   });
 
   const handleSave = () => {
