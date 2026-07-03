@@ -144,13 +144,28 @@ export async function chatComplete(
   const maxRetries = Math.max(0, Math.min(5, opts.maxRetries ?? limits.maxRetries));
   const trunc = truncateMessages(messages, limits.maxContextChars);
   const truncated = trunc.messages;
+  if (trunc.removed > 0) {
+    await logSessionEvent({
+      event_type: "context_truncated",
+      model,
+      chars_before: trunc.charsBefore,
+      chars_after: trunc.charsAfter,
+      messages_truncated: trunc.removed,
+      reason: `limite de contexto ${limits.maxContextChars} caracteres`,
+    });
+  }
 
   const cacheable = !opts.noCache && isCacheable({ model, messages: truncated, temperature, tools: opts.tools });
   const key = cacheable ? cacheKey({ model, messages: truncated, temperature, tools: opts.tools }) : null;
   if (key) {
     const hit = getCached(key);
-    if (hit) return { content: hit.content, tool_calls: hit.tool_calls };
+    if (hit) {
+      await logSessionEvent({ event_type: "cache_hit", model, reason: "resposta idêntica em cache" });
+      return { content: hit.content, tool_calls: hit.tool_calls };
+    }
+    await logSessionEvent({ event_type: "cache_miss", model });
   }
+
 
   const attempt = async (
     m: string,
