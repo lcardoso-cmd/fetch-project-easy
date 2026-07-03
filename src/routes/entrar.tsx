@@ -37,6 +37,23 @@ export const Route = createFileRoute("/entrar")({
   validateSearch: (search: Record<string, unknown>) => ({
     redirect: safeInternalPath(search.redirect) ?? undefined,
   }),
+  head: () => ({
+    meta: [
+      { title: "Entrar no JurisMind — IA para advogados" },
+      {
+        name: "description",
+        content:
+          "Acesse sua conta JurisMind AI para gerenciar casos, documentos e peças com inteligência artificial jurídica.",
+      },
+      { property: "og:title", content: "Entrar no JurisMind — IA para advogados" },
+      {
+        property: "og:description",
+        content: "Acesse sua conta JurisMind AI para gerenciar casos, documentos e peças com IA jurídica.",
+      },
+      { property: "og:url", content: "https://b2bjurismind.lovable.app/entrar" },
+    ],
+    links: [{ rel: "canonical", href: "https://b2bjurismind.lovable.app/entrar" }],
+  }),
   component: AuthPage,
 });
 
@@ -385,7 +402,7 @@ function AuthPage() {
         <div className="w-full max-w-md space-y-6">
           <div className="text-center">
             <JurisMindMark size={48} context={JURISMIND_CONTEXT.auth} rounded className="mb-4" />
-            <h1 className="text-3xl font-bold text-foreground">B2B | JurisMind AI</h1>
+            <h1 className="text-3xl font-bold text-foreground">Entrar no JurisMind</h1>
             <p className="mt-2 text-sm text-muted-foreground">
               Inteligência para advogados, peritos e assistentes técnicos
             </p>

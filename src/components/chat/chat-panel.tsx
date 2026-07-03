@@ -158,7 +158,7 @@ export function ChatPanel({
             className="resize-none"
             disabled={busy}
           />
-          <Button onClick={send} disabled={busy || !input.trim()} size="icon" className="h-auto">
+          <Button onClick={send} disabled={busy || !input.trim()} size="icon" className="h-auto" aria-label="Enviar mensagem">
             <Send className="h-4 w-4" />
           </Button>
         </div>

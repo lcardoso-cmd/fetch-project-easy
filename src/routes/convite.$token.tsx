@@ -10,6 +10,12 @@ import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/convite/$token")({
+  head: () => ({
+    meta: [
+      { title: "Convite de equipe — JurisMind AI" },
+      { name: "robots", content: "noindex" },
+    ],
+  }),
   component: InvitePage,
 });
 

@@ -339,6 +339,7 @@ export function DocumentList({
                             size="icon"
                             className="h-8 w-8 text-muted-foreground hover:text-destructive"
                             onClick={() => onDelete(d.id, d.filename)}
+                            aria-label={`Excluir documento ${d.filename}`}
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>

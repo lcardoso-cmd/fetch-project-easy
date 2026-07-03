@@ -10,6 +10,13 @@ import { ArrowLeft, Lock, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/reset-password")({
+  head: () => ({
+    meta: [
+      { title: "Redefinir senha — JurisMind AI" },
+      { name: "description", content: "Redefina sua senha da conta JurisMind AI." },
+      { name: "robots", content: "noindex" },
+    ],
+  }),
   component: ResetPasswordPage,
 });
 
