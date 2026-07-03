@@ -348,9 +348,6 @@ export function variantForContext(
   return CONTEXT_TO_VARIANT[safe];
 }
 
-function isJurisMindVariant(value: unknown): value is JurisMindVariant {
-  return typeof value === "string" && value in SOURCES;
-}
 
 // ---------------------------------------------------------------------------
 // Telemetria de fallback — quando `JurisMindMark` recebe `context`/`variant`
