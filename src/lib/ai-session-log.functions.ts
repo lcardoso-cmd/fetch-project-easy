@@ -15,8 +15,9 @@ export interface SessionEventRow {
   chars_after: number | null;
   messages_truncated: number | null;
   latency_ms: number | null;
-  payload: Record<string, unknown> | null;
+  payload: unknown;
   created_at: string;
+
 }
 
 export interface SessionSummary {
