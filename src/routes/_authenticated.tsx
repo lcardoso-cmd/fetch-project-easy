@@ -3,6 +3,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useEffect } from "react";
 import { Loader2 } from "lucide-react";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
+import { AiBudgetBanner } from "@/components/layout/ai-budget-banner";
 import { useProfile } from "@/hooks/use-profile";
 import { useCapabilities } from "@/hooks/use-capabilities";
 import { requiredCapabilityForPath } from "@/lib/route-capabilities";
@@ -75,6 +76,7 @@ function Gate({ path }: { path: string }) {
   // Onboarding já concluído mas o usuário voltou para editar perfil → mantemos o shell.
   return (
     <DashboardShell>
+      <AiBudgetBanner />
       <GatedOutlet path={path} />
     </DashboardShell>
   );
