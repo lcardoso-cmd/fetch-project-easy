@@ -96,6 +96,9 @@ function ConsumoPage() {
 
       <BudgetCard />
 
+      <LastInteractionCard />
+
+
       <Card>
         <CardContent className="flex flex-wrap items-center gap-3 py-4">
           <Button variant="outline" size="icon" onClick={() => shift(-1)} className="h-8 w-8">
