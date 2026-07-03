@@ -57,16 +57,13 @@ function capitalize(str: string): string {
 
 function CaseDataRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="grid min-w-0 grid-cols-1 gap-y-0.5 sm:contents">
-      <dt className="min-w-0 text-xs font-medium uppercase tracking-wide text-muted-foreground [overflow-wrap:anywhere] sm:self-start sm:pr-2 sm:text-sm sm:font-normal sm:normal-case sm:tracking-normal sm:text-foreground">
-        {label}:
-      </dt>
-      <dd className="min-w-0 text-foreground [overflow-wrap:anywhere] sm:self-start sm:text-muted-foreground">
-        {value}
-      </dd>
-    </div>
+    <li className="flex min-w-0 items-baseline gap-2 text-sm text-muted-foreground">
+      <span className="shrink-0 font-medium text-foreground">{label}:</span>
+      <span className="min-w-0 flex-1 [overflow-wrap:anywhere]">{value}</span>
+    </li>
   );
 }
+
 
 export const Route = createFileRoute("/_authenticated/assistencias/$caseId")({
   component: CaseDetailPage,
@@ -250,10 +247,10 @@ function CaseDetailPage() {
       {(caseData.client_name || caseData.case_number || caseData.jurisdiction || caseData.case_type) && (
         <Card className="min-w-0 overflow-hidden">
           <CardHeader>
-            <CardTitle className="text-lg">Dados do caso</CardTitle>
+            <CardTitle className="text-lg">Dados do Caso</CardTitle>
           </CardHeader>
           <CardContent className="min-w-0">
-            <dl className="grid min-w-0 grid-cols-1 gap-x-4 gap-y-3 text-sm sm:grid-cols-[minmax(9rem,max-content)_minmax(0,1fr)] sm:gap-y-2">
+            <ul className="space-y-1.5">
               {caseData.client_name && (
                 <CaseDataRow label="Cliente" value={caseData.client_name} />
               )}
@@ -266,7 +263,7 @@ function CaseDetailPage() {
               {caseData.case_type && (
                 <CaseDataRow label="Área" value={caseData.case_type} />
               )}
-            </dl>
+            </ul>
           </CardContent>
         </Card>
       )}
