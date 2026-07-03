@@ -237,9 +237,24 @@ function HireB2bRequestDetail() {
                       </Badge>
                     )}
                   </div>
-                  <Button size="sm" variant="ghost" onClick={() => openAttachment(a.id)}>
-                    <Download className="h-4 w-4" />
-                  </Button>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => setPreviewId(a.id)}
+                      title="Pré-visualizar"
+                    >
+                      <Eye className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => downloadAttachment(a.id, a.file_name)}
+                      title="Baixar"
+                    >
+                      <Download className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </li>
               ))}
             </ul>
