@@ -100,6 +100,10 @@ function ConsumoPage() {
 
       <LastInteractionCard />
 
+      <SessionDiagnosticsCard />
+
+
+
 
       <Card>
         <CardContent className="flex flex-wrap items-center gap-3 py-4">
