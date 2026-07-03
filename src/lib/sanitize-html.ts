@@ -18,7 +18,7 @@ export function sanitizeProposalHtml(input: string | null | undefined): string {
       "table", "thead", "tbody", "tfoot", "tr", "th", "td", "caption",
       "a",
     ],
-    ALLOWED_ATTR: ["href", "title", "colspan", "rowspan", "align", "class"],
+    ALLOWED_ATTR: ["href", "title", "colspan", "rowspan", "align"],
     ALLOWED_URI_REGEXP: /^(?:https?:|mailto:|tel:|#)/i,
     FORBID_TAGS: ["script", "style", "iframe", "object", "embed", "form", "input"],
     FORBID_ATTR: ["style", "srcset", "onerror", "onload", "onclick"],

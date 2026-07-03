@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -80,6 +80,11 @@ function EditorCard({
   const [full, setFull] = useState(false);
   const [busyDocx, setBusyDocx] = useState(false);
   const [busyPdf, setBusyPdf] = useState(false);
+
+  useEffect(() => {
+    setT(titulo);
+    setHtml(initialHtml);
+  }, [titulo, initialHtml]);
 
   const preview = useMemo(() => {
     const text = html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();

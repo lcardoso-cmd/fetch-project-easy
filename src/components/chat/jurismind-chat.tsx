@@ -103,6 +103,61 @@ interface Msg {
   audio_blob_url?: string; // local playback for freshly sent audio
 }
 
+function parseToolResult(step: ToolStep): {
+  kind?: string;
+  titulo?: string;
+  conteudo?: string;
+  rows?: Array<Record<string, unknown>>;
+  title?: string;
+  subtitle?: string;
+  slides?: Array<{ title?: string; content?: string[] }>;
+} | null {
+  try {
+    return JSON.parse(step.result_json) as {
+      kind?: string;
+      titulo?: string;
+      conteudo?: string;
+      rows?: Array<Record<string, unknown>>;
+      title?: string;
+      subtitle?: string;
+      slides?: Array<{ title?: string; content?: string[] }>;
+    };
+  } catch {
+    return null;
+  }
+}
+
+function getGeneratedDocumentKey(step: ToolStep): string | null {
+  const result = parseToolResult(step);
+  if (!result || (result.kind !== "petition" && result.kind !== "pdf")) return null;
+  const body = (result.conteudo ?? "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+  return body || `${result.kind}:${result.titulo ?? ""}`;
+}
+
+function dedupeGeneratedDocumentSteps(steps: ToolStep[]): ToolStep[] {
+  const byKey = new Map<string, number>();
+  const out: ToolStep[] = [];
+  for (const step of steps) {
+    const key = getGeneratedDocumentKey(step);
+    if (!key) {
+      out.push(step);
+      continue;
+    }
+    const existingIndex = byKey.get(key);
+    if (existingIndex == null) {
+      byKey.set(key, out.length);
+      out.push(step);
+      continue;
+    }
+    const existing = parseToolResult(out[existingIndex]);
+    const current = parseToolResult(step);
+    if (existing?.kind === "pdf" && current?.kind === "petition") {
+      out[existingIndex] = step;
+    }
+  }
+  return out;
+}
+
 interface PartyRef {
   role: string;
   name: string;
@@ -1320,7 +1375,7 @@ export function JurisMindChat({
               args_json: "{}",
               result_json: JSON.stringify(p.result ?? null),
             });
-            patchAssistant({ steps: collectedSteps.slice() });
+            patchAssistant({ content: "", steps: dedupeGeneratedDocumentSteps(collectedSteps) });
           }
         } else if (event === "done") {
           doneInfo = payload as typeof doneInfo;
@@ -1355,7 +1410,7 @@ export function JurisMindChat({
         patchAssistant({
           content: finalDone.answer ?? "",
           citations: finalDone.citations ?? collectedCitations,
-          steps: finalDone.steps ?? collectedSteps,
+          steps: dedupeGeneratedDocumentSteps(finalDone.steps ?? collectedSteps),
         });
         if (finalDone.thread_id && finalDone.thread_id !== threadId) {
           onThreadCreated?.(finalDone.thread_id);
@@ -1703,17 +1758,10 @@ export function JurisMindChat({
                         ))}
                       </div>
                     )}
-                    {m.steps?.map((s, idx) => {
+                    {dedupeGeneratedDocumentSteps(m.steps ?? []).map((s, idx) => {
                       try {
-                        const r = JSON.parse(s.result_json) as {
-                          kind?: string;
-                          titulo?: string;
-                          conteudo?: string;
-                          rows?: Array<Record<string, unknown>>;
-                          title?: string;
-                          subtitle?: string;
-                          slides?: Array<{ title?: string; content?: string[] }>;
-                        };
+                        const r = parseToolResult(s);
+                        if (!r) return null;
                         if (r.kind === "petition")
                           return (
                             <PetitionCard

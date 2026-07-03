@@ -1,5 +1,6 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { Button } from "@/components/ui/button";
+import { sanitizeProposalHtml } from "@/lib/sanitize-html";
 import {
   Bold,
   Italic,
@@ -38,14 +39,18 @@ function sanitizePastedHtml(raw: string): string {
   // strip on* handlers e class/id
   s = s.replace(/\s(on[a-z]+|class|id)\s*=\s*"[^"]*"/gi, "");
   s = s.replace(/\s(on[a-z]+|class|id)\s*=\s*'[^']*'/gi, "");
+  s = s.replace(/\sstyle\s*=\s*"[^"]*"/gi, "");
+  s = s.replace(/\sstyle\s*=\s*'[^']*'/gi, "");
   // strip href javascript:
   s = s.replace(/\shref\s*=\s*"javascript:[^"]*"/gi, "");
   return s;
 }
 
 export function RichTextEditor({ html, onChange, minHeight = 360, contentClassName }: Props) {
+  const safeHtml = useMemo(() => sanitizeProposalHtml(html), [html]);
   const ref = useRef<HTMLDivElement>(null);
-  const lastEmittedRef = useRef<string>(html);
+  const initialHtmlRef = useRef<string>(safeHtml);
+  const lastEmittedRef = useRef<string>(safeHtml);
 
   // Sync externo: quando `html` prop muda por fora (IA gerou, restaurou versão,
   // rascunho carregou), refletir no contentEditable. Ignora se a mudança veio do
@@ -53,14 +58,14 @@ export function RichTextEditor({ html, onChange, minHeight = 360, contentClassNa
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    if (html === lastEmittedRef.current) return;
-    if (el.innerHTML === html) {
-      lastEmittedRef.current = html;
+    if (safeHtml === lastEmittedRef.current) return;
+    if (el.innerHTML === safeHtml) {
+      lastEmittedRef.current = safeHtml;
       return;
     }
-    el.innerHTML = html || "";
-    lastEmittedRef.current = html;
-  }, [html]);
+    el.innerHTML = safeHtml || "";
+    lastEmittedRef.current = safeHtml;
+  }, [safeHtml]);
 
   const emit = () => {
     if (!ref.current) return;
@@ -172,6 +177,7 @@ export function RichTextEditor({ html, onChange, minHeight = 360, contentClassNa
         <div
           ref={ref}
           contentEditable
+          dangerouslySetInnerHTML={{ __html: initialHtmlRef.current || "" }}
           role="textbox"
           aria-multiline="true"
           aria-label="Editor de proposta"

@@ -22,6 +22,61 @@ const AskSchema = z.object({
   audio_duration_ms: z.number().int().min(0).max(3_600_000).optional(),
 });
 
+type StreamToolStep = { name: string; args: unknown; result: unknown };
+
+function extractArtifactPayload(step: StreamToolStep): { kind: string; title: string; body: string } | null {
+  const result = step.result;
+  if (!result || typeof result !== "object") return null;
+  const r = result as { kind?: unknown; titulo?: unknown; conteudo?: unknown };
+  const kind = typeof r.kind === "string" ? r.kind : "";
+  if (kind !== "petition" && kind !== "pdf") return null;
+  return {
+    kind,
+    title: typeof r.titulo === "string" ? r.titulo.trim() : "",
+    body: typeof r.conteudo === "string" ? r.conteudo.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim() : "",
+  };
+}
+
+function dedupeGeneratedDocumentSteps(steps: StreamToolStep[]): StreamToolStep[] {
+  const byBody = new Map<string, number>();
+  const out: StreamToolStep[] = [];
+  for (const step of steps) {
+    const payload = extractArtifactPayload(step);
+    if (!payload) {
+      out.push(step);
+      continue;
+    }
+    const key = payload.body || `${payload.kind}:${payload.title}`;
+    const existingIndex = byBody.get(key);
+    if (existingIndex == null) {
+      byBody.set(key, out.length);
+      out.push(step);
+      continue;
+    }
+    const existing = extractArtifactPayload(out[existingIndex]);
+    if (existing?.kind === "pdf" && payload.kind === "petition") {
+      out[existingIndex] = step;
+    }
+  }
+  return out;
+}
+
+function hasGeneratedDocument(steps: StreamToolStep[]): boolean {
+  return steps.some((step) => Boolean(extractArtifactPayload(step)));
+}
+
+function isGeneratedDocumentToolName(name: string): boolean {
+  return name === "create_petition" || name === "create_pdf";
+}
+
+function pickGeneratedDocumentToolCall<T extends { function: { name: string } }>(toolCalls: T[]): T | null {
+  return (
+    toolCalls.find((tc) => tc.function.name === "create_petition") ??
+    toolCalls.find((tc) => tc.function.name === "create_pdf") ??
+    null
+  );
+}
+
 export const Route = createFileRoute("/api/chat/stream")({
   server: {
     handlers: {
@@ -117,12 +172,21 @@ export const Route = createFileRoute("/api/chat/stream")({
                   finalContent = r.content;
                   break;
                 }
+                const generatedToolCall = pickGeneratedDocumentToolCall(r.tool_calls);
+                const toolCallsToRun = generatedToolCall
+                  ? r.tool_calls.filter(
+                      (tc) =>
+                        tc === generatedToolCall ||
+                        !isGeneratedDocumentToolName(tc.function.name),
+                    )
+                  : r.tool_calls;
+
                 convo.push({
                   role: "assistant",
                   content: r.content,
-                  tool_calls: r.tool_calls,
+                  tool_calls: toolCallsToRun,
                 });
-                for (const tc of r.tool_calls) {
+                for (const tc of toolCallsToRun) {
                   if (abortSignal.aborted) break;
                   let args: Record<string, unknown> = {};
                   try {
@@ -146,21 +210,34 @@ export const Route = createFileRoute("/api/chat/stream")({
                     content: JSON.stringify(result),
                   });
                 }
+                if (hasGeneratedDocument(steps)) {
+                  finalContent = "Documento pronto para revisar, editar e baixar.";
+                  break;
+                }
               }
 
               if (!abortSignal.aborted && !finalContent && steps.length > 0) {
                 // Última tentativa forçando resposta final sem tools
+                const generatedDocument = hasGeneratedDocument(steps);
                 const final = await chatCompleteStream(convo, {
                   model: run.model,
                   temperature: 0.2,
                   signal: abortSignal,
-                  onDelta: (delta) => send("token", { text: delta }),
+                  onDelta: generatedDocument ? undefined : (delta) => send("token", { text: delta }),
                 });
                 finalContent = final.content;
               }
 
 
-              const toolSteps = steps.map((s) => ({
+              const visibleSteps = dedupeGeneratedDocumentSteps(steps);
+              if (hasGeneratedDocument(visibleSteps)) {
+                const compact = finalContent.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+                if (!compact || compact.length > 280) {
+                  finalContent = "Documento pronto para revisar, editar e baixar.";
+                }
+              }
+
+              const toolSteps = visibleSteps.map((s) => ({
                 name: s.name,
                 args_json: JSON.stringify(s.args),
                 result_json: JSON.stringify(s.result),
