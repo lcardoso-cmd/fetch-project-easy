@@ -647,6 +647,21 @@ export function ProposalVersionsDialog({
                             <Button size="sm" variant="ghost" className="h-6 px-2 text-xs" onClick={() => startEdit(v)}>
                               <Pencil className="mr-1 h-3 w-3" /> Editar
                             </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-6 px-2 text-xs"
+                              onClick={() => handleDownloadPdf(v)}
+                              disabled={downloadingId === v.id || !v.output}
+                              title="Baixar esta versão em PDF"
+                            >
+                              {downloadingId === v.id ? (
+                                <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                              ) : (
+                                <FileText className="mr-1 h-3 w-3" />
+                              )}
+                              PDF
+                            </Button>
                           </div>
                         )}
                       </div>
