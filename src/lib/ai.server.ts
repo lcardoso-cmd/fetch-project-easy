@@ -337,7 +337,8 @@ export async function chatCompleteStream(
           const fb = fallbackModel(m);
           if (fb) {
             console.warn(`[ai] stream fallback ${m} → ${fb} (TTFB)`);
-            return attempt(fb, false);
+            return attempt(fb, false, retriesUsed + 1);
+
           }
         }
         throw err;
