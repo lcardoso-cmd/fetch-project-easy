@@ -12,7 +12,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Loader2, ChevronLeft, ChevronRight, TrendingUp } from "lucide-react";
-import { getAiUsageSummary, type UsageSummary } from "@/lib/ai-usage.functions";
+import { getAiUsageSummary, getAiBudgetStatus, updateAiBudget, type UsageSummary } from "@/lib/ai-usage.functions";
+import { BudgetCard } from "@/components/ai/budget-card";
 
 export const Route = createFileRoute("/_authenticated/configuracoes/consumo")({
   component: ConsumoPage,
@@ -90,6 +91,8 @@ function ConsumoPage() {
             : "Seu consumo pessoal com estimativa de custo. Admins do escritório veem o total consolidado."}
         </p>
       </div>
+
+      <BudgetCard />
 
       <Card>
         <CardContent className="flex flex-wrap items-center gap-3 py-4">
