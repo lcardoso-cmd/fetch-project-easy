@@ -3,6 +3,7 @@ import { Link, useLocation } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { JurisMindMark, JURISMIND_CONTEXT } from "@/components/brand/jurismind-mark";
 import { useAuth } from "@/hooks/use-auth";
+import { UserMenu } from "@/components/layout/user-menu";
 import { useProfile } from "@/hooks/use-profile";
 import { useCapabilities, VIEW_AS_PRESETS } from "@/hooks/use-capabilities";
 import { labelsForPractice } from "@/lib/practice-labels";
@@ -454,9 +455,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
             </Link>
             <div className="flex shrink-0 items-center gap-1">
               <NotificationBell />
-              <Button variant="ghost" size="icon" onClick={signOut}>
-                <LogOut className="h-4 w-4" />
-              </Button>
+              <UserMenu compact />
             </div>
           </header>
 
@@ -485,7 +484,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
 
           <header className="hidden h-16 items-center justify-end gap-3 border-b bg-card px-6 lg:flex">
             <NotificationBell />
-            <div className="text-xs text-muted-foreground">{user?.email}</div>
+            <UserMenu />
           </header>
 
           <main className="flex-1 overflow-y-auto">
