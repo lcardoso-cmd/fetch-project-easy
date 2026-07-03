@@ -510,12 +510,20 @@ export async function chatCompleteStream(
     return { content, tool_calls: tool_calls.length ? tool_calls : undefined };
   };
 
+  const streamStartedAt = Date.now();
   const result = await attempt(model, !opts.noFallback, 0);
+  await logSessionEvent({
+    event_type: "chat_finish",
+    model,
+    latency_ms: Date.now() - streamStartedAt,
+    payload: { streaming: true, chars: result.content.length },
+  });
   if (key && result.content && (!result.tool_calls || result.tool_calls.length === 0)) {
     setCached(key, { content: result.content, tool_calls: result.tool_calls, model });
   }
   return result;
 }
+
 
 /** Loop multi-step de tool calling. Para quando o modelo retorna texto sem tool_calls. */
 export async function chatWithTools(
