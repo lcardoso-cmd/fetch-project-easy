@@ -23,11 +23,17 @@ export function BudgetCard() {
 
   const [limit, setLimit] = useState<string>("");
   const [warn, setWarn] = useState<string>("80");
+  const [maxTokens, setMaxTokens] = useState<string>("0");
+  const [maxCtx, setMaxCtx] = useState<string>("0");
+  const [maxRetries, setMaxRetries] = useState<string>("1");
 
   useEffect(() => {
     if (data) {
       setLimit(String(data.limit_usd ?? 0));
       setWarn(String(data.warn_threshold_pct ?? 80));
+      setMaxTokens(String(data.max_tokens ?? 0));
+      setMaxCtx(String(data.max_context_chars ?? 0));
+      setMaxRetries(String(data.max_retries ?? 1));
     }
   }, [data]);
 
@@ -37,10 +43,13 @@ export function BudgetCard() {
         data: {
           monthly_limit_usd: Number(limit) || 0,
           warn_threshold_pct: Math.min(100, Math.max(1, Number(warn) || 80)),
+          max_tokens: Math.max(0, Math.min(200000, Math.floor(Number(maxTokens) || 0))),
+          max_context_chars: Math.max(0, Math.min(2000000, Math.floor(Number(maxCtx) || 0))),
+          max_retries: Math.max(0, Math.min(5, Math.floor(Number(maxRetries) || 0))),
         },
       }),
     onSuccess: () => {
-      toast.success("Orçamento atualizado.");
+      toast.success("Configurações de IA atualizadas.");
       qc.invalidateQueries({ queryKey: ["ai-budget-status"] });
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Falha ao salvar."),
