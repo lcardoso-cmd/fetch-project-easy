@@ -9,6 +9,10 @@ import {
 import { type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
+import brainSquareNavy from "@/assets/brain-square-navy.png.asset.json";
+
+const OG_IMAGE_URL =
+  "https://storage.googleapis.com/gpt-engineer-file-uploads/Sls90jSFrMa8ECulf4OjLMG7sRB3/social-images/social-1783001247994-LOGO_JURISMIND_16-9.webp";
 import { AuthProvider } from "@/hooks/use-auth";
 import { ThemeProvider } from "@/hooks/use-theme";
 import { ThemeToggle } from "@/components/theme-toggle";
