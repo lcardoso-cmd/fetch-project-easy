@@ -173,6 +173,9 @@ function LandingPage() {
         </div>
       </header>
 
+      <main>
+
+
       {/* Hero */}
       <section className="relative overflow-hidden bg-primary text-primary-foreground">
         <div
