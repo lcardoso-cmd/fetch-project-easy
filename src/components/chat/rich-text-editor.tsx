@@ -45,6 +45,7 @@ function sanitizePastedHtml(raw: string): string {
 
 export function RichTextEditor({ html, onChange, minHeight = 360, contentClassName }: Props) {
   const ref = useRef<HTMLDivElement>(null);
+  const initialHtmlRef = useRef<string>(html);
   const lastEmittedRef = useRef<string>(html);
 
   // Sync externo: quando `html` prop muda por fora (IA gerou, restaurou versão,
@@ -172,7 +173,7 @@ export function RichTextEditor({ html, onChange, minHeight = 360, contentClassNa
         <div
           ref={ref}
           contentEditable
-          dangerouslySetInnerHTML={{ __html: html || "" }}
+          dangerouslySetInnerHTML={{ __html: initialHtmlRef.current || "" }}
           role="textbox"
           aria-multiline="true"
           aria-label="Editor de proposta"
