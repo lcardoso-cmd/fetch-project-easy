@@ -13,9 +13,11 @@ export const Route = createFileRoute("/convite/$token")({
   head: () => ({
     meta: [
       { title: "Convite de equipe — JurisMind AI" },
+      { name: "description", content: "Aceite seu convite para colaborar em casos da equipe no JurisMind AI." },
       { name: "robots", content: "noindex" },
     ],
   }),
+
   component: InvitePage,
 });
 
