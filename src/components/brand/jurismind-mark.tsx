@@ -270,6 +270,76 @@ function isJurisMindVariant(value: unknown): value is JurisMindVariant {
   return typeof value === "string" && value in SOURCES;
 }
 
+// ---------------------------------------------------------------------------
+// Telemetria de fallback — quando `JurisMindMark` recebe `context`/`variant`
+// inválidos, registramos um warning (uma vez por valor, para não poluir o
+// console) e emitimos `jurismind:mark-fallback` para que dashboards de
+// analytics detectem regressões sem afetar a renderização.
+// ---------------------------------------------------------------------------
+
+export type JurisMindMarkFallbackReason =
+  | "invalid-context"
+  | "invalid-variant";
+
+export interface JurisMindMarkFallbackEvent {
+  reason: JurisMindMarkFallbackReason;
+  /** Valor recebido (pode ser qualquer coisa — string errada, null, número...). */
+  received: unknown;
+  /** Valor efetivamente usado na renderização após o fallback. */
+  usedContext: JurisMindContext;
+  at: string;
+}
+
+export const JURISMIND_MARK_FALLBACK_EVENT = "jurismind:mark-fallback";
+
+const warnedFallbacks = new Set<string>();
+
+function reportMarkFallback(event: JurisMindMarkFallbackEvent) {
+  const key = `${event.reason}:${
+    typeof event.received === "string" ? event.received : JSON.stringify(event.received)
+  }`;
+  if (!warnedFallbacks.has(key)) {
+    warnedFallbacks.add(key);
+    if (typeof console !== "undefined") {
+      console.warn(
+        `[JurisMindMark] ${event.reason} — recebido ${JSON.stringify(
+          event.received,
+        )}; usando fallback "${event.usedContext}".`,
+      );
+    }
+  }
+  if (typeof window === "undefined") return;
+  try {
+    window.dispatchEvent(
+      new CustomEvent<JurisMindMarkFallbackEvent>(JURISMIND_MARK_FALLBACK_EVENT, {
+        detail: event,
+      }),
+    );
+  } catch {
+    /* noop — telemetria nunca pode quebrar a renderização. */
+  }
+}
+
+/** Assine para consumir eventos de fallback (envio a analytics, Sentry, etc.). */
+export function subscribeToJurisMindMarkFallback(
+  handler: (event: JurisMindMarkFallbackEvent) => void,
+): () => void {
+  if (typeof window === "undefined") return () => {};
+  const listener = (event: Event) => {
+    const detail = (event as CustomEvent<JurisMindMarkFallbackEvent>).detail;
+    if (detail) handler(detail);
+  };
+  window.addEventListener(JURISMIND_MARK_FALLBACK_EVENT, listener);
+  return () =>
+    window.removeEventListener(JURISMIND_MARK_FALLBACK_EVENT, listener);
+}
+
+/** Reset do cache de dedupe — usado apenas em testes. */
+export function __resetJurisMindMarkFallbackCache() {
+  warnedFallbacks.clear();
+}
+
+
 /**
  * Shared rounding token for square brand marks. Keep in sync with `IconBox`
  * so that mark + icon backgrounds visually match at the same size.
@@ -388,6 +458,19 @@ export function JurisMindMark({
 }) {
   const explicitVariant = isJurisMindVariant(variant) ? variant : null;
 
+  // Consumidor tentou passar `variant`, mas não é um dos aceitos → telemetria.
+  if (variant != null && !explicitVariant) {
+    const fallbackCtx = isJurisMindContext(context)
+      ? context
+      : DEFAULT_JURISMIND_CONTEXT;
+    reportMarkFallback({
+      reason: "invalid-variant",
+      received: variant,
+      usedContext: fallbackCtx,
+      at: new Date().toISOString(),
+    });
+  }
+
   // Override explícito → mantém o PNG legado (compat total).
   if (explicitVariant) {
     const isSquare =
@@ -415,9 +498,21 @@ export function JurisMindMark({
     );
   }
 
-  const safeContext: JurisMindContext = isJurisMindContext(context)
-    ? context
+  const contextIsValid = isJurisMindContext(context);
+  const safeContext: JurisMindContext = contextIsValid
+    ? (context as JurisMindContext)
     : DEFAULT_JURISMIND_CONTEXT;
+
+  // Consumidor passou `context`, mas fora da união → telemetria.
+  if (context != null && !contextIsValid) {
+    reportMarkFallback({
+      reason: "invalid-context",
+      received: context,
+      usedContext: safeContext,
+      at: new Date().toISOString(),
+    });
+  }
+
   const composition = CONTEXT_COMPOSITION[safeContext];
 
   if (composition.kind === "glyph") {
