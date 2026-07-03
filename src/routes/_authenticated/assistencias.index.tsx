@@ -135,6 +135,7 @@ function CasesPage() {
                       size="icon"
                       className="h-8 w-8 text-muted-foreground hover:text-destructive"
                       onClick={() => handleDelete(caseItem.id)}
+                      aria-label={`Excluir caso ${caseItem.title}`}
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
