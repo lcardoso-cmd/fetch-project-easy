@@ -94,8 +94,8 @@ export function BudgetCard() {
 
 
   const { errors, parsed } = useMemo(
-    () => validate({ limit, warn, maxTokens, maxCtx, maxRetries }),
-    [limit, warn, maxTokens, maxCtx, maxRetries],
+    () => validate({ limit, warn, maxTokens, maxCtx, maxRetries }, forceFallback),
+    [limit, warn, maxTokens, maxCtx, maxRetries, forceFallback],
   );
   // Limpar erros do servidor quando o usuário edita qualquer campo.
   useEffect(() => {
@@ -110,16 +110,7 @@ export function BudgetCard() {
   const mutation = useMutation({
     mutationFn: () => {
       if (!parsed) throw new Error("Corrija os campos destacados antes de salvar.");
-      return updateAiBudget({
-        data: {
-          monthly_limit_usd: parsed.limit,
-          warn_threshold_pct: parsed.warn,
-          max_tokens: parsed.maxTokens,
-          max_context_chars: parsed.maxCtx,
-          max_retries: parsed.maxRetries,
-          force_fallback_on_retry: forceFallback,
-        },
-      });
+      return updateAiBudget({ data: parsed });
     },
 
     onSuccess: () => {
