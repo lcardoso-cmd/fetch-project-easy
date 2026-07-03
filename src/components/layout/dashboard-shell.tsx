@@ -443,47 +443,110 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
         {/* Main column */}
         <div className={cn("flex flex-1 flex-col min-w-0", activePreset && "mt-6")}>
           <header className="flex h-16 items-center justify-between gap-3 border-b bg-card/95 px-4 lg:hidden">
-            <Link
-              to="/painel"
-              aria-label="Ir para o Dashboard"
-              className="group flex min-w-0 flex-1 items-center gap-2 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-            >
-              <JurisMindMark size={28} context={JURISMIND_CONTEXT.header} interactive />
-
-              <span className="font-heading text-base font-bold whitespace-nowrap truncate sm:text-lg">
-                B2B | JurisMind AI
-              </span>
-            </Link>
+            <div className="flex min-w-0 flex-1 items-center gap-2">
+              <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
+                <SheetTrigger asChild>
+                  <button
+                    type="button"
+                    aria-label="Abrir menu"
+                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md text-foreground/70 transition hover:bg-accent hover:text-foreground"
+                  >
+                    <Menu className="h-5 w-5" />
+                  </button>
+                </SheetTrigger>
+                <SheetContent
+                  side="left"
+                  className="w-72 border-r border-sidebar-border bg-sidebar p-0 text-sidebar-foreground"
+                >
+                  <div className="flex h-14 items-center gap-2 px-3">
+                    <JurisMindMark size={26} context={JURISMIND_CONTEXT.sidebar} interactive />
+                    <span className="truncate font-heading text-[13px] font-semibold text-foreground">
+                      JurisMind
+                    </span>
+                  </div>
+                  <nav className="h-[calc(100vh-3.5rem-4rem)] space-y-0.5 overflow-y-auto overflow-x-hidden px-2 py-2">
+                    {NAV.map((item, idx) => {
+                      if (item.type === "separator") {
+                        return <div key={idx} className="my-2" />;
+                      }
+                      if (item.type === "label") {
+                        return (
+                          <div
+                            key={idx}
+                            className="px-2 pb-1 pt-3 text-[10px] font-medium uppercase tracking-[0.14em] text-sidebar-foreground/45"
+                          >
+                            {item.label}
+                          </div>
+                        );
+                      }
+                      const Icon = item.icon;
+                      const active = isActive(item.to, item.match);
+                      return (
+                        <Link
+                          key={item.to}
+                          to={item.to}
+                          onClick={() => setMobileOpen(false)}
+                          className={cn(
+                            "relative flex h-9 items-center gap-2.5 rounded-md px-2 text-[13px] transition-colors",
+                            active
+                              ? "bg-sidebar-accent font-medium text-foreground"
+                              : "text-sidebar-foreground/80 hover:bg-sidebar-accent/60 hover:text-foreground",
+                          )}
+                        >
+                          {active && (
+                            <span className="absolute left-0 top-1/2 h-4 w-[2px] -translate-y-1/2 rounded-r bg-sidebar-primary" />
+                          )}
+                          <Icon className="h-[15px] w-[15px] shrink-0" strokeWidth={1.75} />
+                          <span className="truncate">{item.label}</span>
+                        </Link>
+                      );
+                    })}
+                  </nav>
+                  <div className="border-t border-sidebar-border p-2 space-y-1">
+                    {isSuperAdmin && <ViewAsSwitcher />}
+                    <Button
+                      asChild
+                      variant="ghost"
+                      size="sm"
+                      className="w-full justify-start gap-2 h-8 text-[12px] font-normal px-2 text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-foreground"
+                    >
+                      <Link to="/ajuda/permissoes" onClick={() => setMobileOpen(false)}>
+                        <HelpCircle className="h-3.5 w-3.5" />
+                        Ajuda
+                      </Link>
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setMobileOpen(false);
+                        signOut();
+                      }}
+                      className="w-full justify-start gap-2 h-8 text-[12px] font-normal px-2 text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-foreground"
+                    >
+                      <LogOut className="h-3.5 w-3.5" />
+                      Sair
+                    </Button>
+                  </div>
+                </SheetContent>
+              </Sheet>
+              <Link
+                to="/painel"
+                aria-label="Ir para o Dashboard"
+                className="group flex min-w-0 items-center gap-2 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              >
+                <JurisMindMark size={28} context={JURISMIND_CONTEXT.header} interactive />
+                <span className="font-heading text-base font-bold whitespace-nowrap truncate sm:text-lg">
+                  B2B | JurisMind AI
+                </span>
+              </Link>
+            </div>
             <div className="flex shrink-0 items-center gap-1">
               <NotificationBell />
               <UserMenu compact />
             </div>
           </header>
 
-
-          <nav className="flex gap-1 overflow-x-auto border-b bg-card/95 px-2 py-2 lg:hidden">
-            {NAV.filter((i) => i.type === "link").map((item) => {
-              if (item.type !== "link") return null;
-              const Icon = item.icon;
-              const active = isActive(item.to, item.match);
-              return (
-                <Link
-                  key={item.to}
-                  to={item.to}
-                  title={item.description}
-                  className={cn(
-                    "flex shrink-0 items-center gap-2 rounded-md px-3 py-2 text-xs font-medium",
-                    active
-                      ? "bg-primary text-primary-foreground shadow-sm"
-                      : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
-                  )}
-                >
-                  <Icon className="h-4 w-4" />
-                  {item.label}
-                </Link>
-              );
-            })}
-          </nav>
 
           <header className="hidden h-16 items-center justify-end gap-3 border-b bg-card/95 px-6 lg:flex">
             <NotificationBell />
