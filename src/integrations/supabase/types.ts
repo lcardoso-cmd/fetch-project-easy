@@ -16,18 +16,27 @@ export type Database = {
     Tables: {
       ai_budgets: {
         Row: {
+          max_context_chars: number
+          max_retries: number
+          max_tokens: number
           monthly_limit_usd: number
           updated_at: string
           user_id: string
           warn_threshold_pct: number
         }
         Insert: {
+          max_context_chars?: number
+          max_retries?: number
+          max_tokens?: number
           monthly_limit_usd?: number
           updated_at?: string
           user_id: string
           warn_threshold_pct?: number
         }
         Update: {
+          max_context_chars?: number
+          max_retries?: number
+          max_tokens?: number
           monthly_limit_usd?: number
           updated_at?: string
           user_id?: string
