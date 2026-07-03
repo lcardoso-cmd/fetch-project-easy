@@ -18,6 +18,8 @@ import {
   DEFAULT_LATENCY_TIMEOUT_MS,
   DEFAULT_STREAM_TTFB_MS,
 } from "./ai-cache";
+import { logSessionEvent } from "./ai-session-log.server";
+
 
 /**
  * Trunca o histórico de mensagens preservando a `system` inicial e as
