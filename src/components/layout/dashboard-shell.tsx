@@ -258,6 +258,13 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   );
   const NAV = useMemo(() => applyCapabilities(raw, has), [raw, has]);
   const [collapsed, setCollapsed] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
+
+  // Fecha o menu mobile ao navegar
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [pathname]);
+
 
   useEffect(() => {
     const saved = localStorage.getItem("sidebar-collapsed");
