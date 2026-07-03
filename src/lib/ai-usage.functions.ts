@@ -193,3 +193,51 @@ export const getAiUsageSummary = createServerFn({ method: "POST" })
 function round6(n: number) {
   return Math.round(n * 1_000_000) / 1_000_000;
 }
+
+// ============================================================
+// Orçamento mensal (alerta + bloqueio)
+// ============================================================
+
+export interface AiBudgetStatus {
+  limit_usd: number;
+  spent_usd: number;
+  warn_threshold_pct: number;
+  pct: number;
+  warn: boolean;
+  blocked: boolean;
+}
+
+export const getAiBudgetStatus = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<AiBudgetStatus> => {
+    const { getAiBudgetSnapshot } = await import("./ai-usage.server");
+    return getAiBudgetSnapshot(context.userId);
+  });
+
+const UpdateBudgetSchema = z.object({
+  monthly_limit_usd: z.number().min(0).max(100000),
+  warn_threshold_pct: z.number().int().min(1).max(100),
+});
+
+export const updateAiBudget = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((raw: unknown) => UpdateBudgetSchema.parse(raw))
+  .handler(async ({ context, data }): Promise<AiBudgetStatus> => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const admin = supabaseAdmin as unknown as { from: (t: string) => any };
+    const { error } = await admin
+      .from("ai_budgets")
+      .upsert(
+        {
+          user_id: context.userId,
+          monthly_limit_usd: data.monthly_limit_usd,
+          warn_threshold_pct: data.warn_threshold_pct,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "user_id" },
+      );
+    if (error) throw new Error(error.message);
+    const { invalidateBudgetCache, getAiBudgetSnapshot } = await import("./ai-usage.server");
+    invalidateBudgetCache(context.userId);
+    return getAiBudgetSnapshot(context.userId);
+  });

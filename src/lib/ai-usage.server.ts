@@ -67,7 +67,87 @@ export async function logAiUsage(args: LogArgs): Promise<void> {
       thread_id: ctx.threadId ?? null,
     });
     if (error) console.warn("[ai-usage] insert falhou:", error.message);
+    // Invalida cache para refletir o novo gasto na próxima checagem.
+    budgetCache.delete(ctx.userId);
   } catch (e) {
     console.warn("[ai-usage] erro:", e instanceof Error ? e.message : String(e));
   }
+}
+
+// ============================================================
+// Orçamento mensal — cache curto para evitar hit no DB por call.
+// ============================================================
+
+interface BudgetSnapshot {
+  limit: number;
+  warnPct: number;
+  spent: number;
+  fetchedAt: number;
+}
+const budgetCache = new Map<string, BudgetSnapshot>();
+const BUDGET_TTL_MS = 30_000;
+
+export class AiBudgetExceededError extends Error {
+  code = "AI_BUDGET_EXCEEDED" as const;
+  constructor(public limit: number, public spent: number) {
+    super(
+      `Orçamento mensal de IA atingido (US$ ${spent.toFixed(4)} de US$ ${limit.toFixed(2)}). ` +
+        "Ajuste o limite em Configurações → Consumo de IA para liberar novas chamadas.",
+    );
+    this.name = "AiBudgetExceededError";
+  }
+}
+
+async function loadBudget(userId: string): Promise<BudgetSnapshot> {
+  const cached = budgetCache.get(userId);
+  if (cached && Date.now() - cached.fetchedAt < BUDGET_TTL_MS) return cached;
+
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const admin = supabaseAdmin as unknown as { from: (t: string) => any; rpc: (n: string, a?: any) => any };
+
+  const { data: row } = await admin
+    .from("ai_budgets")
+    .select("monthly_limit_usd, warn_threshold_pct")
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  const limit = Number(row?.monthly_limit_usd ?? 0);
+  const warnPct = Number(row?.warn_threshold_pct ?? 80);
+
+  let spent = 0;
+  if (limit > 0) {
+    const { data } = await admin.rpc("ai_usage_current_month_cost", { _user_id: userId });
+    spent = Number(data ?? 0);
+  }
+
+  const snap: BudgetSnapshot = { limit, warnPct, spent, fetchedAt: Date.now() };
+  budgetCache.set(userId, snap);
+  return snap;
+}
+
+/** Lança `AiBudgetExceededError` se o usuário já ultrapassou o limite mensal. */
+export async function assertAiBudget(): Promise<void> {
+  const ctx = getUsageContext();
+  if (!ctx?.userId) return;
+  const b = await loadBudget(ctx.userId);
+  if (b.limit > 0 && b.spent >= b.limit) {
+    throw new AiBudgetExceededError(b.limit, b.spent);
+  }
+}
+
+/** Snapshot para exibição no cliente (sem cache-invalidação — leitura rápida). */
+export async function getAiBudgetSnapshot(userId: string) {
+  const b = await loadBudget(userId);
+  return {
+    limit_usd: b.limit,
+    warn_threshold_pct: b.warnPct,
+    spent_usd: b.spent,
+    pct: b.limit > 0 ? Math.min(100, Math.round((b.spent / b.limit) * 1000) / 10) : 0,
+    warn: b.limit > 0 && b.spent >= (b.limit * b.warnPct) / 100,
+    blocked: b.limit > 0 && b.spent >= b.limit,
+  };
+}
+
+export function invalidateBudgetCache(userId: string) {
+  budgetCache.delete(userId);
 }

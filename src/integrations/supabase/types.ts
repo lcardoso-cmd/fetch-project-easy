@@ -14,6 +14,27 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_budgets: {
+        Row: {
+          monthly_limit_usd: number
+          updated_at: string
+          user_id: string
+          warn_threshold_pct: number
+        }
+        Insert: {
+          monthly_limit_usd?: number
+          updated_at?: string
+          user_id: string
+          warn_threshold_pct?: number
+        }
+        Update: {
+          monthly_limit_usd?: number
+          updated_at?: string
+          user_id?: string
+          warn_threshold_pct?: number
+        }
+        Relationships: []
+      }
       ai_chat_messages: {
         Row: {
           audio_duration_ms: number | null
@@ -1591,6 +1612,10 @@ export type Database = {
           total_tokens: number
           user_id: string
         }[]
+      }
+      ai_usage_current_month_cost: {
+        Args: { _user_id: string }
+        Returns: number
       }
       ai_usage_summary: {
         Args: { _from: string; _to: string }

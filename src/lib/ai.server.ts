@@ -2,7 +2,7 @@
 // Endpoint OpenAI-compatible em https://ai.gateway.lovable.dev/v1
 // Usa LOVABLE_API_KEY (já configurada como secret no projeto).
 
-import { logAiUsage, type RawUsage } from "./ai-usage.server";
+import { logAiUsage, assertAiBudget, type RawUsage } from "./ai-usage.server";
 
 const AI_BASE = "https://ai.gateway.lovable.dev/v1";
 
@@ -14,6 +14,7 @@ function apiKey() {
 
 export async function embedTexts(inputs: string[]): Promise<number[][]> {
   if (inputs.length === 0) return [];
+  await assertAiBudget();
   const model = "openai/text-embedding-3-small";
   const res = await fetch(`${AI_BASE}/embeddings`, {
     method: "POST",
@@ -63,6 +64,7 @@ export async function chatComplete(
   messages: ChatMessage[],
   opts: { model?: string; temperature?: number; tools?: ToolDef[]; feature?: string } = {},
 ): Promise<{ content: string; tool_calls?: ToolCall[] }> {
+  await assertAiBudget();
   const model = opts.model ?? "google/gemini-2.5-flash";
   const body: Record<string, unknown> = {
     model,
@@ -108,6 +110,7 @@ export async function chatCompleteStream(
     feature?: string;
   } = {},
 ): Promise<{ content: string; tool_calls?: ToolCall[] }> {
+  await assertAiBudget();
   const model = opts.model ?? "google/gemini-2.5-flash";
   const body: Record<string, unknown> = {
     model,
