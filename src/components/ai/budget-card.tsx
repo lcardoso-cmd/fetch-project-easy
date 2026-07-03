@@ -84,6 +84,7 @@ export function BudgetCard() {
   const [maxTokens, setMaxTokens] = useState<string>("0");
   const [maxCtx, setMaxCtx] = useState<string>("0");
   const [maxRetries, setMaxRetries] = useState<string>("1");
+  const [forceFallback, setForceFallback] = useState<boolean>(false);
   const [touched, setTouched] = useState<Partial<Record<FieldKey, boolean>>>({});
 
   useEffect(() => {
@@ -93,9 +94,11 @@ export function BudgetCard() {
       setMaxTokens(String(data.max_tokens ?? 0));
       setMaxCtx(String(data.max_context_chars ?? 0));
       setMaxRetries(String(data.max_retries ?? 1));
+      setForceFallback(Boolean(data.force_fallback_on_retry));
       setTouched({});
     }
   }, [data]);
+
 
   const { errors, parsed } = useMemo(
     () => validate({ limit, warn, maxTokens, maxCtx, maxRetries }),
