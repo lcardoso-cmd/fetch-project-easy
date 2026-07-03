@@ -61,10 +61,11 @@ export interface ToolDef {
 
 export async function chatComplete(
   messages: ChatMessage[],
-  opts: { model?: string; temperature?: number; tools?: ToolDef[] } = {},
+  opts: { model?: string; temperature?: number; tools?: ToolDef[]; feature?: string } = {},
 ): Promise<{ content: string; tool_calls?: ToolCall[] }> {
+  const model = opts.model ?? "google/gemini-2.5-flash";
   const body: Record<string, unknown> = {
-    model: opts.model ?? "google/gemini-2.5-flash",
+    model,
     messages,
     temperature: opts.temperature ?? 0.3,
   };
@@ -84,7 +85,10 @@ export async function chatComplete(
   }
   const json = (await res.json()) as {
     choices: { message: { content: string | null; tool_calls?: ToolCall[] } }[];
+    usage?: RawUsage;
   };
+  const runId = res.headers.get("X-Lovable-AIG-Run-ID");
+  await logAiUsage({ feature: opts.feature, model, usage: json.usage, gatewayRunId: runId });
   const msg = json.choices[0]?.message;
   return { content: msg?.content ?? "", tool_calls: msg?.tool_calls };
 }
