@@ -18,6 +18,8 @@ import {
   DEFAULT_LATENCY_TIMEOUT_MS,
   DEFAULT_STREAM_TTFB_MS,
 } from "./ai-cache";
+import { logSessionEvent } from "./ai-session-log.server";
+
 
 /**
  * Trunca o histórico de mensagens preservando a `system` inicial e as
@@ -142,13 +144,28 @@ export async function chatComplete(
   const maxRetries = Math.max(0, Math.min(5, opts.maxRetries ?? limits.maxRetries));
   const trunc = truncateMessages(messages, limits.maxContextChars);
   const truncated = trunc.messages;
+  if (trunc.removed > 0) {
+    await logSessionEvent({
+      event_type: "context_truncated",
+      model,
+      chars_before: trunc.charsBefore,
+      chars_after: trunc.charsAfter,
+      messages_truncated: trunc.removed,
+      reason: `limite de contexto ${limits.maxContextChars} caracteres`,
+    });
+  }
 
   const cacheable = !opts.noCache && isCacheable({ model, messages: truncated, temperature, tools: opts.tools });
   const key = cacheable ? cacheKey({ model, messages: truncated, temperature, tools: opts.tools }) : null;
   if (key) {
     const hit = getCached(key);
-    if (hit) return { content: hit.content, tool_calls: hit.tool_calls };
+    if (hit) {
+      await logSessionEvent({ event_type: "cache_hit", model, reason: "resposta idêntica em cache" });
+      return { content: hit.content, tool_calls: hit.tool_calls };
+    }
+    await logSessionEvent({ event_type: "cache_miss", model });
   }
+
 
   const attempt = async (
     m: string,
@@ -213,6 +230,7 @@ export async function chatComplete(
   let lastErr: unknown;
   let currentModel = model;
   const totalAttempts = 1 + maxRetries;
+  const startedAt = Date.now();
   for (let i = 0; i < totalAttempts; i++) {
     try {
       result = await attempt(currentModel, i);
@@ -229,7 +247,14 @@ export async function chatComplete(
       if (!opts.noFallback) {
         const fb = fallbackModel(currentModel);
         if (fb) {
-          console.warn(`[ai] fallback ${currentModel} → ${fb}:`, err instanceof Error ? err.message : err);
+          const reason = err instanceof Error ? err.message : String(err);
+          console.warn(`[ai] fallback ${currentModel} → ${fb}:`, reason);
+          await logSessionEvent({
+            event_type: "fallback",
+            model: currentModel,
+            fallback_model: fb,
+            reason,
+          });
           currentModel = fb;
         }
       }
@@ -237,9 +262,17 @@ export async function chatComplete(
   }
   if (!result) throw lastErr instanceof Error ? lastErr : new Error(String(lastErr));
 
+  await logSessionEvent({
+    event_type: "chat_finish",
+    model: currentModel,
+    latency_ms: Date.now() - startedAt,
+    payload: { streaming: false },
+  });
+
   if (key) setCached(key, { content: result.content, tool_calls: result.tool_calls, model });
   return result;
 }
+
 
 /**
  * Streaming chat completion (SSE). Chama onDelta a cada pedaço de texto.
@@ -272,6 +305,16 @@ export async function chatCompleteStream(
   const maxTokens = opts.maxTokens ?? limits.maxTokens;
   const trunc = truncateMessages(messages, limits.maxContextChars);
   const truncated = trunc.messages;
+  if (trunc.removed > 0) {
+    await logSessionEvent({
+      event_type: "context_truncated",
+      model,
+      chars_before: trunc.charsBefore,
+      chars_after: trunc.charsAfter,
+      messages_truncated: trunc.removed,
+      reason: `limite de contexto ${limits.maxContextChars} caracteres`,
+    });
+  }
 
   // Cache replay
   const cacheable = !opts.noCache && isCacheable({ model, messages: truncated, temperature, tools: opts.tools });
@@ -280,17 +323,21 @@ export async function chatCompleteStream(
   if (key) {
     const hit = getCached(key);
     if (hit) {
+      await logSessionEvent({ event_type: "cache_hit", model, reason: "resposta idêntica em cache (replay)" });
       // Replay em chunks curtos para simular streaming
       if (opts.onDelta && hit.content) {
         const step = 24;
         for (let i = 0; i < hit.content.length; i += step) {
           if (opts.signal?.aborted) break;
+
           opts.onDelta(hit.content.slice(i, i + step));
         }
       }
       return { content: hit.content, tool_calls: hit.tool_calls };
     }
+    await logSessionEvent({ event_type: "cache_miss", model });
   }
+
 
   const attempt = async (
     m: string,
@@ -337,6 +384,12 @@ export async function chatCompleteStream(
           const fb = fallbackModel(m);
           if (fb) {
             console.warn(`[ai] stream fallback ${m} → ${fb} (TTFB)`);
+            await logSessionEvent({
+              event_type: "fallback",
+              model: m,
+              fallback_model: fb,
+              reason: `TTFB > ${ttfbMs}ms (streaming)`,
+            });
             return attempt(fb, false, retriesUsed + 1);
 
           }
@@ -355,11 +408,18 @@ export async function chatCompleteStream(
         const fb = fallbackModel(m);
         if (fb) {
           console.warn(`[ai] stream fallback ${m} → ${fb}:`, err.message);
+          await logSessionEvent({
+            event_type: "fallback",
+            model: m,
+            fallback_model: fb,
+            reason: err.message,
+          });
           return attempt(fb, false, retriesUsed + 1);
         }
       }
       throw err;
     }
+
 
     const reader = res.body.getReader();
     const decoder = new TextDecoder();
@@ -450,12 +510,20 @@ export async function chatCompleteStream(
     return { content, tool_calls: tool_calls.length ? tool_calls : undefined };
   };
 
+  const streamStartedAt = Date.now();
   const result = await attempt(model, !opts.noFallback, 0);
+  await logSessionEvent({
+    event_type: "chat_finish",
+    model,
+    latency_ms: Date.now() - streamStartedAt,
+    payload: { streaming: true, chars: result.content.length },
+  });
   if (key && result.content && (!result.tool_calls || result.tool_calls.length === 0)) {
     setCached(key, { content: result.content, tool_calls: result.tool_calls, model });
   }
   return result;
 }
+
 
 /** Loop multi-step de tool calling. Para quando o modelo retorna texto sem tool_calls. */
 export async function chatWithTools(

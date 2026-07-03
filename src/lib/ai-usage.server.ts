@@ -11,7 +11,10 @@ export interface UsageContext {
   caseId?: string | null;
   threadId?: string | null;
   feature?: string;
+  /** Identificador único de uma sessão de IA (ex.: um request de streaming). */
+  sessionId?: string | null;
 }
+
 
 const storage = new AsyncLocalStorage<UsageContext>();
 

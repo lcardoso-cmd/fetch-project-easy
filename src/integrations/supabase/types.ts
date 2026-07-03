@@ -138,6 +138,63 @@ export type Database = {
           },
         ]
       }
+      ai_session_events: {
+        Row: {
+          case_id: string | null
+          chars_after: number | null
+          chars_before: number | null
+          created_at: string
+          event_type: string
+          fallback_model: string | null
+          feature: string | null
+          id: string
+          latency_ms: number | null
+          messages_truncated: number | null
+          model: string | null
+          payload: Json | null
+          reason: string | null
+          session_id: string
+          thread_id: string | null
+          user_id: string
+        }
+        Insert: {
+          case_id?: string | null
+          chars_after?: number | null
+          chars_before?: number | null
+          created_at?: string
+          event_type: string
+          fallback_model?: string | null
+          feature?: string | null
+          id?: string
+          latency_ms?: number | null
+          messages_truncated?: number | null
+          model?: string | null
+          payload?: Json | null
+          reason?: string | null
+          session_id: string
+          thread_id?: string | null
+          user_id: string
+        }
+        Update: {
+          case_id?: string | null
+          chars_after?: number | null
+          chars_before?: number | null
+          created_at?: string
+          event_type?: string
+          fallback_model?: string | null
+          feature?: string | null
+          id?: string
+          latency_ms?: number | null
+          messages_truncated?: number | null
+          model?: string | null
+          payload?: Json | null
+          reason?: string | null
+          session_id?: string
+          thread_id?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       ai_usage_events: {
         Row: {
           case_id: string | null

@@ -107,6 +107,10 @@ export const Route = createFileRoute("/api/chat/stream")({
         const encoder = new TextEncoder();
         const abortSignal = request.signal;
 
+        const sessionId =
+          (globalThis.crypto?.randomUUID?.() as string | undefined) ??
+          `sess_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
+
         const stream = new ReadableStream<Uint8Array>({
           async start(controller) {
             return runWithUsageContext(
@@ -115,11 +119,13 @@ export const Route = createFileRoute("/api/chat/stream")({
                 caseId: body.case_id,
                 threadId: body.thread_id ?? null,
                 feature: "chat_stream",
+                sessionId,
               },
               () => runStream(controller),
             );
           },
         });
+
 
         async function runStream(controller: ReadableStreamDefaultController<Uint8Array>) {
             let closed = false;
@@ -159,6 +165,7 @@ export const Route = createFileRoute("/api/chat/stream")({
             abortSignal.addEventListener("abort", onAbort, { once: true });
 
             try {
+              send("session", { session_id: sessionId });
               const run = await prepareRagRun({
                 supabase: auth.supabase,
                 userId: auth.userId,
@@ -167,6 +174,7 @@ export const Route = createFileRoute("/api/chat/stream")({
               if (abortSignal.aborted) return;
 
               send("citations", { citations: run.citations });
+
 
               const convo: ChatMessage[] = [...run.messages];
               const steps: { name: string; args: unknown; result: unknown }[] = [];
