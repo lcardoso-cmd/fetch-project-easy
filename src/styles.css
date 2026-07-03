@@ -113,39 +113,40 @@
 }
 
 .dark {
-  /* Fundo = navy padrão da marca (#000038). Cards claros para contraste
-   * imediato, tipografia navy dentro deles. */
-  --background: oklch(0.143 0.13 278);       /* #000038 */
-  --foreground: oklch(0.98 0.003 250);
-  --card: oklch(0.985 0.003 250);            /* branco levemente frio */
-  --card-foreground: oklch(0.18 0.12 275);   /* navy sobre branco */
-  --popover: oklch(0.985 0.003 250);
-  --popover-foreground: oklch(0.18 0.12 275);
-  --primary: oklch(0.91 0.155 195);          /* cyan da marca */
+  /* Dark mode profissional — hierarquia de superfícies em navy escalonado.
+   * bg (mais escuro) → card/popover (elevado) → muted (interno).
+   * Sidebar mantém o navy #000038 da marca; primary = cyan como único acento. */
+  --background: oklch(0.19 0.04 275);         /* app background */
+  --foreground: oklch(0.98 0.005 250);
+  --card: oklch(0.235 0.045 275);             /* cards, topbar, panels */
+  --card-foreground: oklch(0.98 0.005 250);
+  --popover: oklch(0.24 0.045 275);
+  --popover-foreground: oklch(0.98 0.005 250);
+  --primary: oklch(0.91 0.155 195);           /* cyan da marca */
   --primary-foreground: oklch(0.143 0.13 278);
-  --secondary: oklch(0.22 0.13 278);         /* superfície secundária navy */
-  --secondary-foreground: oklch(0.98 0.003 250);
-  --muted: oklch(0.94 0.01 250);             /* dentro de cards claros */
-  --muted-foreground: oklch(0.45 0.05 275);
-  --accent: oklch(0.26 0.13 278);            /* hover sobre superfícies navy */
-  --accent-foreground: oklch(0.98 0.003 250);
-  --destructive: oklch(0.65 0.22 25);
+  --secondary: oklch(0.28 0.05 275);
+  --secondary-foreground: oklch(0.98 0.005 250);
+  --muted: oklch(0.28 0.045 275);
+  --muted-foreground: oklch(0.72 0.02 260);
+  --accent: oklch(0.32 0.06 275);             /* hover */
+  --accent-foreground: oklch(0.98 0.005 250);
+  --destructive: oklch(0.62 0.22 25);
   --destructive-foreground: oklch(1 0 0);
-  --border: oklch(1 0 0 / 14%);
-  --input: oklch(1 0 0 / 20%);
-  --ring: oklch(0.91 0.155 195);             /* foco cyan, ≥3:1 */
+  --border: oklch(1 0 0 / 12%);               /* visível sobre superfícies escuras */
+  --input: oklch(1 0 0 / 16%);
+  --ring: oklch(0.91 0.155 195);
   --chart-1: oklch(0.91 0.155 195);
   --chart-2: oklch(0.70 0.10 268);
   --chart-3: oklch(0.55 0.13 275);
   --chart-4: oklch(0.40 0.13 278);
   --chart-5: oklch(0.28 0.13 278);
-  --sidebar: oklch(0.10 0.10 278);           /* sidebar mais escuro que o fundo */
-  --sidebar-foreground: oklch(0.98 0.003 250);
+  --sidebar: oklch(0.143 0.13 278);           /* #000038 — cor da marca */
+  --sidebar-foreground: oklch(0.98 0.005 250);
   --sidebar-primary: oklch(0.91 0.155 195);
   --sidebar-primary-foreground: oklch(0.143 0.13 278);
-  --sidebar-accent: oklch(0.22 0.13 278);
-  --sidebar-accent-foreground: oklch(0.98 0.003 250);
-  --sidebar-border: oklch(1 0 0 / 12%);
+  --sidebar-accent: oklch(0.22 0.10 278);
+  --sidebar-accent-foreground: oklch(0.98 0.005 250);
+  --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.91 0.155 195);
 }
 
