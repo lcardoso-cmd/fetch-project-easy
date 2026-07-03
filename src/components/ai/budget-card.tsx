@@ -8,20 +8,11 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { getAiBudgetStatus, updateAiBudget } from "@/lib/ai-usage.functions";
+import {
+  AI_BUDGET_LIMITS as LIMITS,
+  tryDecodeValidationError,
+} from "@/lib/ai-budget-schema";
 import { toast } from "sonner";
-
-
-/**
- * Faixas aceitas (espelham a validação zod do backend em `ai-usage.functions.ts`).
- * Mantê-las em um único objeto facilita alinhamento cliente/servidor.
- */
-const LIMITS = {
-  limit: { min: 0, max: 100000, label: "Limite mensal (USD)" },
-  warn: { min: 1, max: 100, label: "Aviso (%)" },
-  maxTokens: { min: 0, max: 200000, label: "Máx. tokens de resposta" },
-  maxCtx: { min: 0, max: 2000000, label: "Contexto máx." },
-  maxRetries: { min: 0, max: 5, label: "Tentativas por chamada" },
-} as const;
 
 const FormSchema = z.object({
   limit: z.number().min(LIMITS.limit.min).max(LIMITS.limit.max),
