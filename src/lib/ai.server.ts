@@ -27,12 +27,13 @@ import {
 function truncateMessages<T extends { role: string; content: unknown }>(
   messages: T[],
   maxChars: number,
-): T[] {
-  if (!maxChars || maxChars <= 0) return messages;
+): { messages: T[]; charsBefore: number; charsAfter: number; removed: number } {
   const size = (m: T) =>
     typeof m.content === "string" ? m.content.length : JSON.stringify(m.content ?? "").length;
-  const total = messages.reduce((n, m) => n + size(m), 0);
-  if (total <= maxChars) return messages;
+  const charsBefore = messages.reduce((n, m) => n + size(m), 0);
+  if (!maxChars || maxChars <= 0 || charsBefore <= maxChars) {
+    return { messages, charsBefore, charsAfter: charsBefore, removed: 0 };
+  }
 
   const system = messages[0]?.role === "system" ? [messages[0]] : [];
   const rest = system.length ? messages.slice(1) : messages.slice();
@@ -46,13 +47,17 @@ function truncateMessages<T extends { role: string; content: unknown }>(
   }
   const removed = rest.length - kept.length;
   if (removed > 0) {
-    kept.unshift({
+    const marker = {
       role: "system",
       content: `[Contexto anterior omitido: ${removed} mensagem(ns) removidas por limite de contexto configurado pelo usuário.]`,
-    } as unknown as T);
+    } as unknown as T;
+    kept.unshift(marker);
+    used += size(marker);
   }
-  return [...system, ...kept];
+  const out = [...system, ...kept];
+  return { messages: out, charsBefore, charsAfter: used, removed };
 }
+
 
 const AI_BASE = "https://ai.gateway.lovable.dev/v1";
 
