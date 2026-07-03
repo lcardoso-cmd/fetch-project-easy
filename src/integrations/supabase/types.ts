@@ -142,13 +142,18 @@ export type Database = {
         Row: {
           case_id: string | null
           completion_tokens: number
+          context_chars_after: number | null
+          context_chars_before: number | null
           cost_usd: number
           created_at: string
           feature: string
           gateway_run_id: string | null
           id: string
+          max_tokens_applied: number | null
+          messages_truncated: number | null
           model: string
           prompt_tokens: number
+          retries_used: number | null
           thread_id: string | null
           total_tokens: number
           user_id: string
@@ -156,13 +161,18 @@ export type Database = {
         Insert: {
           case_id?: string | null
           completion_tokens?: number
+          context_chars_after?: number | null
+          context_chars_before?: number | null
           cost_usd?: number
           created_at?: string
           feature: string
           gateway_run_id?: string | null
           id?: string
+          max_tokens_applied?: number | null
+          messages_truncated?: number | null
           model: string
           prompt_tokens?: number
+          retries_used?: number | null
           thread_id?: string | null
           total_tokens?: number
           user_id: string
@@ -170,13 +180,18 @@ export type Database = {
         Update: {
           case_id?: string | null
           completion_tokens?: number
+          context_chars_after?: number | null
+          context_chars_before?: number | null
           cost_usd?: number
           created_at?: string
           feature?: string
           gateway_run_id?: string | null
           id?: string
+          max_tokens_applied?: number | null
+          messages_truncated?: number | null
           model?: string
           prompt_tokens?: number
+          retries_used?: number | null
           thread_id?: string | null
           total_tokens?: number
           user_id?: string

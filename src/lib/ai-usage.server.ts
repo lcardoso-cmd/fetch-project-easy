@@ -29,11 +29,21 @@ export interface RawUsage {
   total_tokens?: number | null;
 }
 
+/** Limites efetivamente aplicados na chamada (auditoria). */
+export interface AppliedLimits {
+  max_tokens_applied?: number | null;
+  context_chars_before?: number | null;
+  context_chars_after?: number | null;
+  messages_truncated?: number | null;
+  retries_used?: number | null;
+}
+
 interface LogArgs {
   feature?: string; // sobrescreve o feature do contexto
   model: string;
   usage: RawUsage | null | undefined;
   gatewayRunId?: string | null;
+  applied?: AppliedLimits;
 }
 
 export async function logAiUsage(args: LogArgs): Promise<void> {
@@ -55,7 +65,7 @@ export async function logAiUsage(args: LogArgs): Promise<void> {
       };
     };
 
-    const { error } = await client.from("ai_usage_events").insert({
+    const row: Record<string, unknown> = {
       user_id: ctx.userId,
       feature,
       model: args.model,
@@ -65,7 +75,21 @@ export async function logAiUsage(args: LogArgs): Promise<void> {
       gateway_run_id: args.gatewayRunId ?? null,
       case_id: ctx.caseId ?? null,
       thread_id: ctx.threadId ?? null,
-    });
+    };
+    if (args.applied) {
+      if (args.applied.max_tokens_applied !== undefined)
+        row.max_tokens_applied = args.applied.max_tokens_applied;
+      if (args.applied.context_chars_before !== undefined)
+        row.context_chars_before = args.applied.context_chars_before;
+      if (args.applied.context_chars_after !== undefined)
+        row.context_chars_after = args.applied.context_chars_after;
+      if (args.applied.messages_truncated !== undefined)
+        row.messages_truncated = args.applied.messages_truncated;
+      if (args.applied.retries_used !== undefined)
+        row.retries_used = args.applied.retries_used;
+    }
+
+    const { error } = await client.from("ai_usage_events").insert(row);
     if (error) console.warn("[ai-usage] insert falhou:", error.message);
     // Invalida cache para refletir o novo gasto na próxima checagem.
     budgetCache.delete(ctx.userId);
@@ -73,6 +97,7 @@ export async function logAiUsage(args: LogArgs): Promise<void> {
     console.warn("[ai-usage] erro:", e instanceof Error ? e.message : String(e));
   }
 }
+
 
 // ============================================================
 // Orçamento mensal — cache curto para evitar hit no DB por call.

@@ -14,6 +14,8 @@ import {
 import { Loader2, ChevronLeft, ChevronRight, TrendingUp } from "lucide-react";
 import { getAiUsageSummary, type UsageSummary } from "@/lib/ai-usage.functions";
 import { BudgetCard } from "@/components/ai/budget-card";
+import { LastInteractionCard } from "@/components/ai/last-interaction-card";
+
 
 export const Route = createFileRoute("/_authenticated/configuracoes/consumo")({
   component: ConsumoPage,
@@ -93,6 +95,9 @@ function ConsumoPage() {
       </div>
 
       <BudgetCard />
+
+      <LastInteractionCard />
+
 
       <Card>
         <CardContent className="flex flex-wrap items-center gap-3 py-4">

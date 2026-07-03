@@ -27,12 +27,13 @@ import {
 function truncateMessages<T extends { role: string; content: unknown }>(
   messages: T[],
   maxChars: number,
-): T[] {
-  if (!maxChars || maxChars <= 0) return messages;
+): { messages: T[]; charsBefore: number; charsAfter: number; removed: number } {
   const size = (m: T) =>
     typeof m.content === "string" ? m.content.length : JSON.stringify(m.content ?? "").length;
-  const total = messages.reduce((n, m) => n + size(m), 0);
-  if (total <= maxChars) return messages;
+  const charsBefore = messages.reduce((n, m) => n + size(m), 0);
+  if (!maxChars || maxChars <= 0 || charsBefore <= maxChars) {
+    return { messages, charsBefore, charsAfter: charsBefore, removed: 0 };
+  }
 
   const system = messages[0]?.role === "system" ? [messages[0]] : [];
   const rest = system.length ? messages.slice(1) : messages.slice();
@@ -46,13 +47,17 @@ function truncateMessages<T extends { role: string; content: unknown }>(
   }
   const removed = rest.length - kept.length;
   if (removed > 0) {
-    kept.unshift({
+    const marker = {
       role: "system",
       content: `[Contexto anterior omitido: ${removed} mensagem(ns) removidas por limite de contexto configurado pelo usuário.]`,
-    } as unknown as T);
+    } as unknown as T;
+    kept.unshift(marker);
+    used += size(marker);
   }
-  return [...system, ...kept];
+  const out = [...system, ...kept];
+  return { messages: out, charsBefore, charsAfter: used, removed };
 }
+
 
 const AI_BASE = "https://ai.gateway.lovable.dev/v1";
 
@@ -135,7 +140,8 @@ export async function chatComplete(
   const temperature = opts.temperature ?? 0.3;
   const maxTokens = opts.maxTokens ?? limits.maxTokens;
   const maxRetries = Math.max(0, Math.min(5, opts.maxRetries ?? limits.maxRetries));
-  const truncated = truncateMessages(messages, limits.maxContextChars);
+  const trunc = truncateMessages(messages, limits.maxContextChars);
+  const truncated = trunc.messages;
 
   const cacheable = !opts.noCache && isCacheable({ model, messages: truncated, temperature, tools: opts.tools });
   const key = cacheable ? cacheKey({ model, messages: truncated, temperature, tools: opts.tools }) : null;
@@ -144,7 +150,10 @@ export async function chatComplete(
     if (hit) return { content: hit.content, tool_calls: hit.tool_calls };
   }
 
-  const attempt = async (m: string): Promise<{ content: string; tool_calls?: ToolCall[] }> => {
+  const attempt = async (
+    m: string,
+    retriesUsed: number,
+  ): Promise<{ content: string; tool_calls?: ToolCall[] }> => {
     const body: Record<string, unknown> = {
       model: m,
       messages: truncated,
@@ -182,10 +191,23 @@ export async function chatComplete(
       usage?: RawUsage;
     };
     const runId = res.headers.get("X-Lovable-AIG-Run-ID");
-    await logAiUsage({ feature: opts.feature, model: m, usage: json.usage, gatewayRunId: runId });
+    await logAiUsage({
+      feature: opts.feature,
+      model: m,
+      usage: json.usage,
+      gatewayRunId: runId,
+      applied: {
+        max_tokens_applied: maxTokens > 0 ? maxTokens : null,
+        context_chars_before: trunc.charsBefore,
+        context_chars_after: trunc.charsAfter,
+        messages_truncated: trunc.removed,
+        retries_used: retriesUsed,
+      },
+    });
     const msg = json.choices[0]?.message;
     return { content: msg?.content ?? "", tool_calls: msg?.tool_calls };
   };
+
 
   let result: { content: string; tool_calls?: ToolCall[] } | null = null;
   let lastErr: unknown;
@@ -193,8 +215,9 @@ export async function chatComplete(
   const totalAttempts = 1 + maxRetries;
   for (let i = 0; i < totalAttempts; i++) {
     try {
-      result = await attempt(currentModel);
+      result = await attempt(currentModel, i);
       break;
+
     } catch (err) {
       lastErr = err;
       const isLast = i === totalAttempts - 1;
@@ -247,11 +270,13 @@ export async function chatCompleteStream(
   const model = opts.model ?? "google/gemini-2.5-flash";
   const temperature = opts.temperature ?? 0.3;
   const maxTokens = opts.maxTokens ?? limits.maxTokens;
-  const truncated = truncateMessages(messages, limits.maxContextChars);
+  const trunc = truncateMessages(messages, limits.maxContextChars);
+  const truncated = trunc.messages;
 
   // Cache replay
   const cacheable = !opts.noCache && isCacheable({ model, messages: truncated, temperature, tools: opts.tools });
   const key = cacheable ? cacheKey({ model, messages: truncated, temperature, tools: opts.tools }) : null;
+
   if (key) {
     const hit = getCached(key);
     if (hit) {
@@ -270,7 +295,9 @@ export async function chatCompleteStream(
   const attempt = async (
     m: string,
     allowFallback: boolean,
+    retriesUsed: number,
   ): Promise<{ content: string; tool_calls?: ToolCall[] }> => {
+
     const body: Record<string, unknown> = {
       model: m,
       messages: truncated,
@@ -310,7 +337,8 @@ export async function chatCompleteStream(
           const fb = fallbackModel(m);
           if (fb) {
             console.warn(`[ai] stream fallback ${m} → ${fb} (TTFB)`);
-            return attempt(fb, false);
+            return attempt(fb, false, retriesUsed + 1);
+
           }
         }
         throw err;
@@ -327,7 +355,7 @@ export async function chatCompleteStream(
         const fb = fallbackModel(m);
         if (fb) {
           console.warn(`[ai] stream fallback ${m} → ${fb}:`, err.message);
-          return attempt(fb, false);
+          return attempt(fb, false, retriesUsed + 1);
         }
       }
       throw err;
@@ -395,7 +423,20 @@ export async function chatCompleteStream(
     }
 
     const runId = res.headers.get("X-Lovable-AIG-Run-ID");
-    await logAiUsage({ feature: opts.feature, model: m, usage, gatewayRunId: runId });
+    await logAiUsage({
+      feature: opts.feature,
+      model: m,
+      usage,
+      gatewayRunId: runId,
+      applied: {
+        max_tokens_applied: maxTokens > 0 ? maxTokens : null,
+        context_chars_before: trunc.charsBefore,
+        context_chars_after: trunc.charsAfter,
+        messages_truncated: trunc.removed,
+        retries_used: retriesUsed,
+      },
+    });
+
 
     const tool_calls: ToolCall[] = [];
     for (const [, v] of Array.from(toolCallsByIndex.entries()).sort((a, b) => a[0] - b[0])) {
@@ -409,7 +450,7 @@ export async function chatCompleteStream(
     return { content, tool_calls: tool_calls.length ? tool_calls : undefined };
   };
 
-  const result = await attempt(model, !opts.noFallback);
+  const result = await attempt(model, !opts.noFallback, 0);
   if (key && result.content && (!result.tool_calls || result.tool_calls.length === 0)) {
     setCached(key, { content: result.content, tool_calls: result.tool_calls, model });
   }
