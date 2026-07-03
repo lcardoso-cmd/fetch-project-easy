@@ -152,6 +152,10 @@ function AuthPage() {
         description: `Verifique a caixa de entrada de ${pendingEmail}.`,
       });
       setResendCooldown(60);
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem(resendStorageKey(pendingEmail), String(Date.now() + 60_000));
+      }
+
     } catch (err) {
       const message = err instanceof Error ? err.message : "Falha ao reenviar";
       toast.error("Não foi possível reenviar", { description: message });
