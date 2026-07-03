@@ -1867,53 +1867,59 @@ export function JurisMindChat({
 
           <div className="shrink-0 border-t p-3">
             {messages.length === 0 && (
-              <div className="mb-2 flex flex-wrap items-center gap-1.5">
-                {PRIMARY_ACTIONS.map((qa) => (
-                  <button
-                    key={qa.label}
-                    type="button"
-                    disabled={busy}
-                    onClick={() => send(qa.prompt)}
-                    className="rounded-full border bg-background px-2.5 py-1 text-xs text-foreground hover:bg-muted disabled:opacity-50"
-                  >
-                    {qa.label}
-                  </button>
-                ))}
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
+              <div className="mb-3">
+                <p className="mb-2 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                  Sugestões
+                </p>
+                <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3">
+                  {PRIMARY_ACTIONS.map((qa) => (
                     <button
+                      key={qa.label}
                       type="button"
                       disabled={busy}
-                      className="inline-flex items-center gap-1 rounded-full border bg-background px-2.5 py-1 text-xs text-foreground hover:bg-muted disabled:opacity-50"
+                      onClick={() => send(qa.prompt)}
+                      className="truncate rounded-md border bg-background px-2.5 py-2 text-center text-xs font-medium text-foreground transition-colors hover:bg-muted disabled:opacity-50"
                     >
-                      Mais ações
-                      <ChevronDown className="h-3 w-3" />
+                      {qa.label}
                     </button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start" className="w-64">
-                    {ACTION_GROUPS.map((group, gi) => (
-                      <div key={group.label}>
-                        {gi > 0 && <DropdownMenuSeparator />}
-                        <DropdownMenuLabel className="text-xs text-muted-foreground">
-                          {group.label}
-                        </DropdownMenuLabel>
-                        {group.actions.map((qa) => (
-                          <DropdownMenuItem
-                            key={qa.label}
-                            onSelect={(e) => {
-                              e.preventDefault();
-                              send(qa.prompt);
-                            }}
-                          >
-                            {qa.label}
-                          </DropdownMenuItem>
-                        ))}
-                      </div>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                  ))}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button
+                        type="button"
+                        disabled={busy}
+                        className="inline-flex items-center justify-center gap-1 truncate rounded-md border bg-background px-2.5 py-2 text-center text-xs font-medium text-foreground transition-colors hover:bg-muted disabled:opacity-50"
+                      >
+                        Mais ações
+                        <ChevronDown className="h-3 w-3" />
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start" className="w-64">
+                      {ACTION_GROUPS.map((group, gi) => (
+                        <div key={group.label}>
+                          {gi > 0 && <DropdownMenuSeparator />}
+                          <DropdownMenuLabel className="text-xs text-muted-foreground">
+                            {group.label}
+                          </DropdownMenuLabel>
+                          {group.actions.map((qa) => (
+                            <DropdownMenuItem
+                              key={qa.label}
+                              onSelect={(e) => {
+                                e.preventDefault();
+                                send(qa.prompt);
+                              }}
+                            >
+                              {qa.label}
+                            </DropdownMenuItem>
+                          ))}
+                        </div>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
               </div>
             )}
+
             {images.length > 0 && (
               <div className="mb-2 flex flex-wrap gap-2">
                 {images.map((src, idx) => (
