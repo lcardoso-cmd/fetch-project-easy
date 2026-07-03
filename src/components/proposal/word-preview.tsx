@@ -37,6 +37,8 @@ export function WordPreview({ html, title, headerLabel = "Proposta comercial" }:
     .join(" · ");
   const shellRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
+  const safeHtml = useMemo(() => sanitizeProposalHtml(html) || "<p></p>", [html]);
+
 
   useEffect(() => {
     if (!shellRef.current) return;
@@ -97,8 +99,9 @@ export function WordPreview({ html, title, headerLabel = "Proposta comercial" }:
             <h1 className="word-title">{title}</h1>
             <div
               className="word-doc"
-              dangerouslySetInnerHTML={{ __html: useMemo(() => sanitizeProposalHtml(html) || "<p></p>", [html]) }}
+              dangerouslySetInnerHTML={{ __html: safeHtml }}
             />
+
 
           </div>
 
