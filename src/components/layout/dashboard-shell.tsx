@@ -454,9 +454,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
             </Link>
             <div className="flex shrink-0 items-center gap-1">
               <NotificationBell />
-              <Button variant="ghost" size="icon" onClick={signOut}>
-                <LogOut className="h-4 w-4" />
-              </Button>
+              <UserMenu compact />
             </div>
           </header>
 
