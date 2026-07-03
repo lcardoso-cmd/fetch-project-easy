@@ -123,13 +123,22 @@ export async function chatComplete(
     latencyTimeoutMs?: number;
     /** Desativa fallback automático. */
     noFallback?: boolean;
+    /** Sobrepõe max_tokens configurado pelo usuário (0 = sem limite). */
+    maxTokens?: number;
+    /** Sobrepõe tentativas configuradas pelo usuário (0..5). */
+    maxRetries?: number;
   } = {},
 ): Promise<{ content: string; tool_calls?: ToolCall[] }> {
   await assertAiBudget();
+  const limits = await getAiLimitsForCurrentUser();
   const model = opts.model ?? "google/gemini-2.5-flash";
   const temperature = opts.temperature ?? 0.3;
-  const cacheable = !opts.noCache && isCacheable({ model, messages, temperature, tools: opts.tools });
-  const key = cacheable ? cacheKey({ model, messages, temperature, tools: opts.tools }) : null;
+  const maxTokens = opts.maxTokens ?? limits.maxTokens;
+  const maxRetries = Math.max(0, Math.min(5, opts.maxRetries ?? limits.maxRetries));
+  const truncated = truncateMessages(messages, limits.maxContextChars);
+
+  const cacheable = !opts.noCache && isCacheable({ model, messages: truncated, temperature, tools: opts.tools });
+  const key = cacheable ? cacheKey({ model, messages: truncated, temperature, tools: opts.tools }) : null;
   if (key) {
     const hit = getCached(key);
     if (hit) return { content: hit.content, tool_calls: hit.tool_calls };
@@ -138,9 +147,10 @@ export async function chatComplete(
   const attempt = async (m: string): Promise<{ content: string; tool_calls?: ToolCall[] }> => {
     const body: Record<string, unknown> = {
       model: m,
-      messages,
+      messages: truncated,
       temperature,
     };
+    if (maxTokens > 0) body.max_tokens = maxTokens;
     if (opts.tools && opts.tools.length > 0) body.tools = opts.tools;
 
     const controller = new AbortController();
@@ -177,18 +187,32 @@ export async function chatComplete(
     return { content: msg?.content ?? "", tool_calls: msg?.tool_calls };
   };
 
-  let result: { content: string; tool_calls?: ToolCall[] };
-  try {
-    result = await attempt(model);
-  } catch (err) {
-    const fb = opts.noFallback ? null : fallbackModel(model);
-    if (fb && shouldFallback(err)) {
-      console.warn(`[ai] fallback ${model} → ${fb}:`, err instanceof Error ? err.message : err);
-      result = await attempt(fb);
-    } else {
-      throw err;
+  let result: { content: string; tool_calls?: ToolCall[] } | null = null;
+  let lastErr: unknown;
+  let currentModel = model;
+  const totalAttempts = 1 + maxRetries;
+  for (let i = 0; i < totalAttempts; i++) {
+    try {
+      result = await attempt(currentModel);
+      break;
+    } catch (err) {
+      lastErr = err;
+      const isLast = i === totalAttempts - 1;
+      if (isLast || !shouldFallback(err)) {
+        if (!isLast) continue; // erro não-retentável: para
+        break;
+      }
+      // troca para modelo mais barato quando disponível
+      if (!opts.noFallback) {
+        const fb = fallbackModel(currentModel);
+        if (fb) {
+          console.warn(`[ai] fallback ${currentModel} → ${fb}:`, err instanceof Error ? err.message : err);
+          currentModel = fb;
+        }
+      }
     }
   }
+  if (!result) throw lastErr instanceof Error ? lastErr : new Error(String(lastErr));
 
   if (key) setCached(key, { content: result.content, tool_calls: result.tool_calls, model });
   return result;
