@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { sanitizeProposalHtml } from "@/lib/sanitize-html";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
@@ -731,10 +732,11 @@ export function ProposalVersionsDialog({
                       <div
                         className="proposal-preview p-6 text-sm leading-relaxed"
                         dangerouslySetInnerHTML={{
-                          __html: selected.output || "<p><em>Sem conteúdo gerado nesta versão.</em></p>",
+                          __html: sanitizeProposalHtml(selected.output) || "<p><em>Sem conteúdo gerado nesta versão.</em></p>",
                         }}
                       />
                     </ScrollArea>
+
                   </TabsContent>
 
                   <TabsContent value="compare" className="min-h-0 flex-1 space-y-3 p-3">
@@ -746,10 +748,11 @@ export function ProposalVersionsDialog({
                         <div
                           className="p-4 text-sm leading-relaxed whitespace-pre-wrap"
                           dangerouslySetInnerHTML={{
-                            __html: textDiff || "<em class='text-muted-foreground'>Sem diferenças no texto.</em>",
+                            __html: sanitizeProposalHtml(textDiff) || "<em class='text-muted-foreground'>Sem diferenças no texto.</em>",
                           }}
                         />
                       </ScrollArea>
+
                     </div>
                     <div>
                       <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
@@ -822,10 +825,11 @@ export function ProposalVersionsDialog({
                                 <div
                                   className="proposal-preview p-4 text-sm leading-relaxed"
                                   dangerouslySetInnerHTML={{
-                                    __html: v.output || "<p><em>Sem conteúdo.</em></p>",
+                                    __html: sanitizeProposalHtml(v.output) || "<p><em>Sem conteúdo.</em></p>",
                                   }}
                                 />
                               </div>
+
                             </div>
                           ))}
                         </div>
@@ -839,11 +843,12 @@ export function ProposalVersionsDialog({
                               className="p-4 text-sm leading-relaxed whitespace-pre-wrap"
                               dangerouslySetInnerHTML={{
                                 __html:
-                                  abTextDiff ||
+                                  sanitizeProposalHtml(abTextDiff) ||
                                   "<em class='text-muted-foreground'>Textos idênticos.</em>",
                               }}
                             />
                           </ScrollArea>
+
                         </div>
 
                         {abFormDiff.length > 0 && (
