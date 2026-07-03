@@ -45,7 +45,7 @@ import {
   PanelLeftOpen,
   Microscope,
   Globe2,
-  Info,
+  
   Users2,
   Building2,
   KeyRound,
