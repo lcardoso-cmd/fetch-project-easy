@@ -359,6 +359,19 @@ function HireB2bRequestDetail() {
           .
         </div>
       )}
+
+      {previewAtt && (
+        <AttachmentPreviewDialog
+          open={!!previewId}
+          onOpenChange={(v) => !v && setPreviewId(null)}
+          fileName={previewAtt.file_name}
+          mimeType={previewAtt.mime_type}
+          resolveUrl={async () => {
+            const { url } = await urlFn({ data: { id: previewAtt.id } });
+            return url;
+          }}
+        />
+      )}
     </div>
   );
 }
