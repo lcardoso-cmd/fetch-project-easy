@@ -82,7 +82,8 @@ export const Route = createFileRoute("/api/chat/stream")({
     handlers: {
       POST: async ({ request }) => {
         const { authenticateRequest } = await import("@/lib/route-auth.server");
-        let auth;
+        type Auth = Awaited<ReturnType<typeof authenticateRequest>>;
+        let auth: Auth;
         try {
           auth = await authenticateRequest(request);
         } catch (e) {
