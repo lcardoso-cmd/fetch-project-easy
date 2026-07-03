@@ -342,14 +342,24 @@ function RequestPanel({ requestId }: { requestId: string }) {
     .slice()
     .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
 
-  async function openAttachment(id: string) {
+  async function downloadAttachment(id: string, fileName: string) {
     try {
       const { url } = await getAttUrl({ data: { id } });
-      window.open(url, "_blank", "noopener");
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = fileName;
+      a.rel = "noopener";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
     } catch (e) {
       console.error(e);
     }
   }
+
+  const previewAtt = previewId
+    ? visibleAtt.find((a) => a.id === previewId) ?? null
+    : null;
 
   return (
     <div className="space-y-4 pt-2">
