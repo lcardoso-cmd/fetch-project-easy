@@ -14,6 +14,7 @@ function apiKey() {
 
 export async function embedTexts(inputs: string[]): Promise<number[][]> {
   if (inputs.length === 0) return [];
+  const model = "openai/text-embedding-3-small";
   const res = await fetch(`${AI_BASE}/embeddings`, {
     method: "POST",
     headers: {
@@ -21,7 +22,7 @@ export async function embedTexts(inputs: string[]): Promise<number[][]> {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      model: "openai/text-embedding-3-small",
+      model,
       input: inputs,
     }),
   });
@@ -29,7 +30,9 @@ export async function embedTexts(inputs: string[]): Promise<number[][]> {
     const txt = await res.text();
     throw new Error(`Embeddings falhou (${res.status}): ${txt}`);
   }
-  const json = (await res.json()) as { data: { embedding: number[] }[] };
+  const json = (await res.json()) as { data: { embedding: number[] }[]; usage?: RawUsage };
+  const runId = res.headers.get("X-Lovable-AIG-Run-ID");
+  await logAiUsage({ feature: "embeddings", model, usage: json.usage, gatewayRunId: runId });
   return json.data.map((d) => d.embedding);
 }
 
