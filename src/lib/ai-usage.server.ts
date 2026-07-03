@@ -140,7 +140,7 @@ async function loadBudget(userId: string): Promise<BudgetSnapshot> {
 
   const { data: row } = await admin
     .from("ai_budgets")
-    .select("monthly_limit_usd, warn_threshold_pct, max_tokens, max_context_chars, max_retries")
+    .select("monthly_limit_usd, warn_threshold_pct, max_tokens, max_context_chars, max_retries, force_fallback_on_retry")
     .eq("user_id", userId)
     .maybeSingle();
 
@@ -149,6 +149,7 @@ async function loadBudget(userId: string): Promise<BudgetSnapshot> {
   const maxTokens = Math.max(0, Number(row?.max_tokens ?? 0));
   const maxContextChars = Math.max(0, Number(row?.max_context_chars ?? 0));
   const maxRetries = Math.max(0, Math.min(5, Number(row?.max_retries ?? 1)));
+  const forceFallback = Boolean(row?.force_fallback_on_retry ?? false);
 
   let spent = 0;
   if (limit > 0) {
@@ -163,10 +164,12 @@ async function loadBudget(userId: string): Promise<BudgetSnapshot> {
     maxTokens,
     maxContextChars,
     maxRetries,
+    forceFallback,
     fetchedAt: Date.now(),
   };
   budgetCache.set(userId, snap);
   return snap;
+
 }
 
 /** Lança `AiBudgetExceededError` se o usuário já ultrapassou o limite mensal. */
