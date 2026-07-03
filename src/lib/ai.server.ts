@@ -2,7 +2,7 @@
 // Endpoint OpenAI-compatible em https://ai.gateway.lovable.dev/v1
 // Usa LOVABLE_API_KEY (já configurada como secret no projeto).
 
-import { logAiUsage, type RawUsage } from "./ai-usage.server";
+import { logAiUsage, assertAiBudget, type RawUsage } from "./ai-usage.server";
 
 const AI_BASE = "https://ai.gateway.lovable.dev/v1";
 
