@@ -66,9 +66,9 @@ const EVENT_NAME = "jurismind:navigate";
  * um `JurisMindContext` válido. Delega em `coerceJurisMindContext` para que
  * a lógica de validação + telemetria seja a mesma usada por `JurisMindMark`.
  */
-function safeContext(context: unknown, source: string): JurisMindContext {
+function safeContext(context: unknown, source?: string): JurisMindContext {
   return coerceJurisMindContext(context, {
-    source: `context-navigation:${source}`,
+    source: `context-navigation${source ? `:${source}` : ""}`,
   });
 }
 
