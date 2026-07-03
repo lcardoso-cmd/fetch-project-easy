@@ -119,10 +119,12 @@ function SharedProposalPage() {
   }
 
   return (
-    <div className="min-h-screen bg-muted/40 flex items-center justify-center p-4">
+    <main className="min-h-screen bg-muted/40 flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader>
+          <h1 className="sr-only">Proposta comercial compartilhada</h1>
           <CardTitle className="font-heading flex items-center gap-2">
+
             <FileText className="h-5 w-5 text-primary" />
             Proposta comercial
           </CardTitle>
