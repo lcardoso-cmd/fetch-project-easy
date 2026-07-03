@@ -1210,6 +1210,66 @@ export type Database = {
           },
         ]
       }
+      proposal_shares: {
+        Row: {
+          client_name: string | null
+          cover: Json | null
+          created_at: string
+          download_count: number
+          expires_at: string | null
+          html: string
+          id: string
+          last_accessed_at: string | null
+          max_downloads: number | null
+          page_config: Json
+          password_hash: string | null
+          password_salt: string | null
+          revoked_at: string | null
+          title: string
+          token: string
+          user_id: string
+          watermark: Json | null
+        }
+        Insert: {
+          client_name?: string | null
+          cover?: Json | null
+          created_at?: string
+          download_count?: number
+          expires_at?: string | null
+          html: string
+          id?: string
+          last_accessed_at?: string | null
+          max_downloads?: number | null
+          page_config?: Json
+          password_hash?: string | null
+          password_salt?: string | null
+          revoked_at?: string | null
+          title: string
+          token: string
+          user_id: string
+          watermark?: Json | null
+        }
+        Update: {
+          client_name?: string | null
+          cover?: Json | null
+          created_at?: string
+          download_count?: number
+          expires_at?: string | null
+          html?: string
+          id?: string
+          last_accessed_at?: string | null
+          max_downloads?: number | null
+          page_config?: Json
+          password_hash?: string | null
+          password_salt?: string | null
+          revoked_at?: string | null
+          title?: string
+          token?: string
+          user_id?: string
+          watermark?: Json | null
+        }
+        Relationships: []
+      }
       proposal_versions: {
         Row: {
           case_id: string | null
