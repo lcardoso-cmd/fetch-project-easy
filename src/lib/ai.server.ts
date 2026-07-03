@@ -239,8 +239,10 @@ export async function chatComplete(
     } catch (err) {
       lastErr = err;
       const isLast = i === totalAttempts - 1;
-      if (isLast || !shouldFallback(err)) {
-        if (!isLast) continue; // erro não-retentável: para
+      const forced = limits.forceFallback;
+      const canFallback = shouldFallback(err) || forced;
+      if (isLast || !canFallback) {
+        if (!isLast) continue; // erro não-retentável e sem force: para
         break;
       }
       // troca para modelo mais barato quando disponível
@@ -248,16 +250,18 @@ export async function chatComplete(
         const fb = fallbackModel(currentModel);
         if (fb) {
           const reason = err instanceof Error ? err.message : String(err);
-          console.warn(`[ai] fallback ${currentModel} → ${fb}:`, reason);
+          const label = forced && !shouldFallback(err) ? `[forçado] ${reason}` : reason;
+          console.warn(`[ai] fallback ${currentModel} → ${fb}:`, label);
           await logSessionEvent({
             event_type: "fallback",
             model: currentModel,
             fallback_model: fb,
-            reason,
+            reason: label,
           });
           currentModel = fb;
         }
       }
+
     }
   }
   if (!result) throw lastErr instanceof Error ? lastErr : new Error(String(lastErr));
