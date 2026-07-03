@@ -334,7 +334,10 @@ function RequestPanel({ requestId }: { requestId: string }) {
 
   const { request, events, attachments } = data;
   const visibleAtt = attachments.filter((a) => a.visibility === "client");
-  const visibleEvents = events.filter((e) => e.kind !== "note_internal");
+  const visibleEvents = events
+    .filter((e) => e.kind !== "note_internal")
+    .slice()
+    .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
 
   async function openAttachment(id: string) {
     try {
