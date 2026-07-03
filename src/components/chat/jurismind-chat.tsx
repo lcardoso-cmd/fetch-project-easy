@@ -25,6 +25,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 import type { DateRange } from "react-day-picker";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -45,6 +52,7 @@ import {
   Settings2,
   Square,
   X,
+  FolderOpen,
 } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
@@ -1468,188 +1476,195 @@ export function JurisMindChat({
     };
   }, [images.length]);
 
+  const sidebarInner = (
+    <>
+      <Card className="shrink-0">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">Detalhes do caso</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-1.5 text-sm text-muted-foreground">
+          {caseInfo.client_name && (
+            <p>
+              <span className="font-medium text-foreground">Cliente:</span>{" "}
+              {caseInfo.client_name}
+            </p>
+          )}
+          {caseInfo.represented_party?.name && (
+            <p>
+              <span className="font-medium text-foreground">
+                Parte representada:
+              </span>{" "}
+              {caseInfo.represented_party.name}
+              {caseInfo.represented_party.role
+                ? ` (${capitalize(caseInfo.represented_party.role)})`
+                : ""}
+            </p>
+          )}
+          {caseInfo.case_number && (
+            <p>
+              <span className="font-medium text-foreground">Nº processo:</span>{" "}
+              {caseInfo.case_number}
+            </p>
+          )}
+          {caseInfo.jurisdiction && (
+            <p>
+              <span className="font-medium text-foreground">Jurisdição:</span>{" "}
+              {caseInfo.jurisdiction}
+            </p>
+          )}
+          {caseInfo.case_type && (
+            <p>
+              <span className="font-medium text-foreground">Tipo:</span>{" "}
+              {caseInfo.case_type}
+            </p>
+          )}
+          {caseInfo.parties && caseInfo.parties.length > 0 && (
+            <div className="pt-1">
+              <p className="mb-1 font-medium text-foreground">
+                Partes envolvidas
+              </p>
+              <ul className="space-y-0.5 text-xs">
+                {caseInfo.parties.map((p, i) => (
+                  <li key={i} className="flex gap-1.5">
+                    <span className="rounded bg-muted px-1.5 py-0.5 font-medium text-foreground">
+                      {capitalize(p.role)}
+                    </span>
+                    <span className="truncate">{p.name}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card className="flex min-h-0 flex-1 flex-col">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">Documentos do caso</CardTitle>
+          <CardDescription>
+            Todos vêm marcados. Desmarque para focar em alguns.
+          </CardDescription>
+          <div className="space-y-2 pt-2">
+            <div className="relative">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                className="pl-8"
+                placeholder="Buscar documento..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </div>
+            <div className="relative w-full">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !dateRange && "text-muted-foreground",
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {dateRange?.from ? (
+                      dateRange.to ? (
+                        <>
+                          {format(dateRange.from, "dd/MM/yy", { locale: ptBR })} —{" "}
+                          {format(dateRange.to, "dd/MM/yy", { locale: ptBR })}
+                        </>
+                      ) : (
+                        format(dateRange.from, "dd/MM/yy", { locale: ptBR })
+                      )
+                    ) : (
+                      <span>Filtrar por data</span>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                {dateRange && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7"
+                    onClick={() => setDateRange(undefined)}
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </Button>
+                )}
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="range"
+                    defaultMonth={dateRange?.from}
+                    selected={dateRange}
+                    onSelect={setDateRange}
+                    numberOfMonths={1}
+                    locale={ptBR}
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+            <div className="flex gap-3 text-xs">
+              <Button
+                variant="link"
+                size="sm"
+                className="h-auto p-0"
+                onClick={onSelectAll}
+              >
+                Marcar todos
+              </Button>
+              <Button
+                variant="link"
+                size="sm"
+                className="h-auto p-0 text-muted-foreground"
+                onClick={onDeselectAll}
+              >
+                Desmarcar
+              </Button>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="min-h-0 flex-1 overflow-y-auto p-2">
+          <div className="space-y-1">
+            {filteredDocs.length === 0 ? (
+              <p className="py-4 text-center text-sm text-muted-foreground">
+                Nenhum documento pronto encontrado.
+              </p>
+            ) : (
+              filteredDocs.map((d) => (
+                <label
+                  key={d.id}
+                  className="flex cursor-pointer items-start gap-2 rounded-md p-2 hover:bg-muted"
+                >
+                  <Checkbox
+                    className="mt-0.5"
+                    checked={selectedDocIds.has(d.id)}
+                    onCheckedChange={() => onToggleSelect(d.id)}
+                  />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm">{d.filename}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {d.created_at
+                        ? new Date(d.created_at).toLocaleDateString("pt-BR")
+                        : ""}
+                    </p>
+                  </div>
+                </label>
+              ))
+            )}
+          </div>
+        </CardContent>
+      </Card>
+    </>
+  );
+
   return (
     <div
       ref={chatRef}
-      className="grid h-full min-h-0 grid-cols-1 gap-4 p-4 lg:grid-cols-3"
+      className="grid h-full min-h-0 grid-cols-1 gap-4 p-3 sm:p-4 lg:grid-cols-3"
     >
-      {/* Sidebar */}
-      <aside className="flex min-h-0 flex-col gap-4 lg:col-span-1">
-        <Card className="shrink-0">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base">Detalhes do caso</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-1.5 text-sm text-muted-foreground">
-            {caseInfo.client_name && (
-              <p>
-                <span className="font-medium text-foreground">Cliente:</span>{" "}
-                {caseInfo.client_name}
-              </p>
-            )}
-            {caseInfo.represented_party?.name && (
-              <p>
-                <span className="font-medium text-foreground">
-                  Parte representada:
-                </span>{" "}
-                {caseInfo.represented_party.name}
-                {caseInfo.represented_party.role
-                  ? ` (${capitalize(caseInfo.represented_party.role)})`
-                  : ""}
-              </p>
-            )}
-            {caseInfo.case_number && (
-              <p>
-                <span className="font-medium text-foreground">Nº processo:</span>{" "}
-                {caseInfo.case_number}
-              </p>
-            )}
-            {caseInfo.jurisdiction && (
-              <p>
-                <span className="font-medium text-foreground">Jurisdição:</span>{" "}
-                {caseInfo.jurisdiction}
-              </p>
-            )}
-            {caseInfo.case_type && (
-              <p>
-                <span className="font-medium text-foreground">Tipo:</span>{" "}
-                {caseInfo.case_type}
-              </p>
-            )}
-            {caseInfo.parties && caseInfo.parties.length > 0 && (
-              <div className="pt-1">
-                <p className="mb-1 font-medium text-foreground">
-                  Partes envolvidas
-                </p>
-                <ul className="space-y-0.5 text-xs">
-                  {caseInfo.parties.map((p, i) => (
-                    <li key={i} className="flex gap-1.5">
-                      <span className="rounded bg-muted px-1.5 py-0.5 font-medium text-foreground">
-                        {capitalize(p.role)}
-                      </span>
-                      <span className="truncate">{p.name}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card className="flex min-h-0 flex-1 flex-col">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">Documentos do caso</CardTitle>
-            <CardDescription>
-              Todos vêm marcados. Desmarque para focar em alguns.
-            </CardDescription>
-            <div className="space-y-2 pt-2">
-              <div className="relative">
-                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  className="pl-8"
-                  placeholder="Buscar documento..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                />
-              </div>
-              <div className="relative w-full">
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className={cn(
-                        "w-full justify-start text-left font-normal",
-                        !dateRange && "text-muted-foreground",
-                      )}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {dateRange?.from ? (
-                        dateRange.to ? (
-                          <>
-                            {format(dateRange.from, "dd/MM/yy", { locale: ptBR })} —{" "}
-                            {format(dateRange.to, "dd/MM/yy", { locale: ptBR })}
-                          </>
-                        ) : (
-                          format(dateRange.from, "dd/MM/yy", { locale: ptBR })
-                        )
-                      ) : (
-                        <span>Filtrar por data</span>
-                      )}
-                    </Button>
-                  </PopoverTrigger>
-                  {dateRange && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7"
-                      onClick={() => setDateRange(undefined)}
-                    >
-                      <X className="h-3.5 w-3.5" />
-                    </Button>
-                  )}
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="range"
-                      defaultMonth={dateRange?.from}
-                      selected={dateRange}
-                      onSelect={setDateRange}
-                      numberOfMonths={1}
-                      locale={ptBR}
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
-              <div className="flex gap-3 text-xs">
-                <Button
-                  variant="link"
-                  size="sm"
-                  className="h-auto p-0"
-                  onClick={onSelectAll}
-                >
-                  Marcar todos
-                </Button>
-                <Button
-                  variant="link"
-                  size="sm"
-                  className="h-auto p-0 text-muted-foreground"
-                  onClick={onDeselectAll}
-                >
-                  Desmarcar
-                </Button>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="min-h-0 flex-1 overflow-y-auto p-2">
-            <div className="space-y-1">
-              {filteredDocs.length === 0 ? (
-                <p className="py-4 text-center text-sm text-muted-foreground">
-                  Nenhum documento pronto encontrado.
-                </p>
-              ) : (
-                filteredDocs.map((d) => (
-                  <label
-                    key={d.id}
-                    className="flex cursor-pointer items-start gap-2 rounded-md p-2 hover:bg-muted"
-                  >
-                    <Checkbox
-                      className="mt-0.5"
-                      checked={selectedDocIds.has(d.id)}
-                      onCheckedChange={() => onToggleSelect(d.id)}
-                    />
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm">{d.filename}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {d.created_at
-                          ? new Date(d.created_at).toLocaleDateString("pt-BR")
-                          : ""}
-                      </p>
-                    </div>
-                  </label>
-                ))
-              )}
-            </div>
-          </CardContent>
-        </Card>
+      {/* Sidebar desktop */}
+      <aside className="hidden min-h-0 flex-col gap-4 lg:col-span-1 lg:flex">
+        {sidebarInner}
       </aside>
+
 
       {/* Main chat */}
       <div className="flex min-h-0 flex-col lg:col-span-2">
@@ -1663,21 +1678,41 @@ export function JurisMindChat({
               </span>
             </div>
           )}
-          <div className="flex shrink-0 items-center gap-2 border-b px-4 py-3">
-            <BrainCircuit className="h-5 w-5 text-primary" />
+          <div className="flex shrink-0 items-center gap-2 border-b px-3 py-2.5 sm:px-4 sm:py-3">
+            <BrainCircuit className="h-5 w-5 shrink-0 text-primary" />
             <div className="min-w-0 flex-1">
-              <p className="truncate font-semibold">JurisMind AI</p>
-              <p className="truncate text-xs text-muted-foreground">
+              <p className="truncate text-sm font-semibold sm:text-base">JurisMind AI</p>
+              <p className="truncate text-[11px] text-muted-foreground sm:text-xs">
                 {selectedDocIds.size > 0
-                  ? `${selectedDocIds.size} de ${readyDocs.length} documento(s) selecionado(s)`
-                  : `Sem seleção — vai buscar em todos os ${readyDocs.length} documento(s)`}
+                  ? `${selectedDocIds.size} de ${readyDocs.length} doc(s) selecionado(s)`
+                  : `${readyDocs.length} doc(s) no caso`}
               </p>
             </div>
+            <Sheet>
+              <SheetTrigger asChild>
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="outline"
+                  className="h-9 w-9 shrink-0 lg:hidden"
+                  aria-label="Ver documentos e detalhes do caso"
+                  title="Documentos e detalhes"
+                >
+                  <FolderOpen className="h-4 w-4" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="right" className="flex w-[92vw] flex-col gap-4 overflow-y-auto p-4 sm:max-w-md">
+                <SheetHeader className="text-left">
+                  <SheetTitle>Documentos e detalhes</SheetTitle>
+                </SheetHeader>
+                {sidebarInner}
+              </SheetContent>
+            </Sheet>
             <Select
               value={modelTier}
               onValueChange={(v) => setModelTier(v as ModelTier)}
             >
-              <SelectTrigger className="h-8 w-[130px]">
+              <SelectTrigger className="h-9 w-[92px] shrink-0 text-xs sm:w-[130px] sm:text-sm">
                 <SelectValue>{MODEL_LABELS[modelTier]}</SelectValue>
               </SelectTrigger>
               <SelectContent align="end">
@@ -1687,12 +1722,13 @@ export function JurisMindChat({
               </SelectContent>
             </Select>
             {!fullscreen && (
-              <Button asChild variant="ghost" size="icon" title="Abrir em tela cheia">
+              <Button asChild variant="ghost" size="icon" className="hidden shrink-0 sm:inline-flex" title="Abrir em tela cheia">
                 <Link to="/assistencias/$caseId/chat" params={{ caseId }}>
                   <Maximize2 className="h-4 w-4" />
                 </Link>
               </Button>
             )}
+
           </div>
 
           <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4">
@@ -1831,53 +1867,59 @@ export function JurisMindChat({
 
           <div className="shrink-0 border-t p-3">
             {messages.length === 0 && (
-              <div className="mb-2 flex flex-wrap items-center gap-1.5">
-                {PRIMARY_ACTIONS.map((qa) => (
-                  <button
-                    key={qa.label}
-                    type="button"
-                    disabled={busy}
-                    onClick={() => send(qa.prompt)}
-                    className="rounded-full border bg-background px-2.5 py-1 text-xs text-foreground hover:bg-muted disabled:opacity-50"
-                  >
-                    {qa.label}
-                  </button>
-                ))}
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
+              <div className="mb-3">
+                <p className="mb-2 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                  Sugestões
+                </p>
+                <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3">
+                  {PRIMARY_ACTIONS.map((qa) => (
                     <button
+                      key={qa.label}
                       type="button"
                       disabled={busy}
-                      className="inline-flex items-center gap-1 rounded-full border bg-background px-2.5 py-1 text-xs text-foreground hover:bg-muted disabled:opacity-50"
+                      onClick={() => send(qa.prompt)}
+                      className="truncate rounded-md border bg-background px-2.5 py-2 text-center text-xs font-medium text-foreground transition-colors hover:bg-muted disabled:opacity-50"
                     >
-                      Mais ações
-                      <ChevronDown className="h-3 w-3" />
+                      {qa.label}
                     </button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start" className="w-64">
-                    {ACTION_GROUPS.map((group, gi) => (
-                      <div key={group.label}>
-                        {gi > 0 && <DropdownMenuSeparator />}
-                        <DropdownMenuLabel className="text-xs text-muted-foreground">
-                          {group.label}
-                        </DropdownMenuLabel>
-                        {group.actions.map((qa) => (
-                          <DropdownMenuItem
-                            key={qa.label}
-                            onSelect={(e) => {
-                              e.preventDefault();
-                              send(qa.prompt);
-                            }}
-                          >
-                            {qa.label}
-                          </DropdownMenuItem>
-                        ))}
-                      </div>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                  ))}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button
+                        type="button"
+                        disabled={busy}
+                        className="inline-flex items-center justify-center gap-1 truncate rounded-md border bg-background px-2.5 py-2 text-center text-xs font-medium text-foreground transition-colors hover:bg-muted disabled:opacity-50"
+                      >
+                        Mais ações
+                        <ChevronDown className="h-3 w-3" />
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start" className="w-64">
+                      {ACTION_GROUPS.map((group, gi) => (
+                        <div key={group.label}>
+                          {gi > 0 && <DropdownMenuSeparator />}
+                          <DropdownMenuLabel className="text-xs text-muted-foreground">
+                            {group.label}
+                          </DropdownMenuLabel>
+                          {group.actions.map((qa) => (
+                            <DropdownMenuItem
+                              key={qa.label}
+                              onSelect={(e) => {
+                                e.preventDefault();
+                                send(qa.prompt);
+                              }}
+                            >
+                              {qa.label}
+                            </DropdownMenuItem>
+                          ))}
+                        </div>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
               </div>
             )}
+
             {images.length > 0 && (
               <div className="mb-2 flex flex-wrap gap-2">
                 {images.map((src, idx) => (
@@ -1998,26 +2040,26 @@ export function JurisMindChat({
                 )}
               </div>
             )}
-            <div className="flex items-end gap-2">
-              <input
-                ref={fileRef}
-                type="file"
-                accept="image/*"
-                multiple
-                hidden
-                onChange={(e) => {
-                  onPickImages(e.target.files);
-                  e.target.value = "";
-                }}
-              />
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/*"
+              multiple
+              hidden
+              onChange={(e) => {
+                onPickImages(e.target.files);
+                e.target.value = "";
+              }}
+            />
+            <div className="flex items-center gap-1.5 pb-2">
               <Button
                 type="button"
                 size="icon"
-                variant="outline"
+                variant="ghost"
                 onClick={() => fileRef.current?.click()}
                 disabled={busy || images.length >= 6}
                 title="Anexar imagens (ou arraste / cole)"
-                className="h-10 w-10 shrink-0"
+                className="h-9 w-9 shrink-0"
               >
                 <ImagePlus className="h-4 w-4" />
               </Button>
@@ -2025,7 +2067,7 @@ export function JurisMindChat({
                 ref={micButtonRef}
                 type="button"
                 size="icon"
-                variant={recording ? "destructive" : "outline"}
+                variant={recording ? "destructive" : "ghost"}
                 onClick={() => (recording ? stopRecording() : void startRecording())}
                 disabled={busy || transcribing}
                 aria-pressed={recording}
@@ -2044,7 +2086,7 @@ export function JurisMindChat({
                       : "Ditar mensagem"
                 }
                 className={cn(
-                  "h-10 w-10 shrink-0",
+                  "h-9 w-9 shrink-0",
                   recording && "animate-pulse",
                 )}
               >
@@ -2061,7 +2103,7 @@ export function JurisMindChat({
                   <Button
                     type="button"
                     size="icon"
-                    variant="outline"
+                    variant="ghost"
                     disabled={recording || transcribing}
                     aria-label="Escolher microfone"
                     title={
@@ -2069,13 +2111,13 @@ export function JurisMindChat({
                         ? "Pare a gravação para trocar o microfone"
                         : "Escolher microfone"
                     }
-                    className="h-10 w-10 shrink-0"
+                    className="h-9 w-9 shrink-0"
                     onClick={() => void refreshMics()}
                   >
                     <Settings2 className="h-4 w-4" />
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent align="end" className="w-72 p-3" aria-label="Selecionar microfone">
+                <PopoverContent align="start" className="w-72 p-3" aria-label="Selecionar microfone">
                   <div className="mb-2 flex items-center justify-between">
                     <div className="text-sm font-medium">Microfone</div>
                     <button
@@ -2162,6 +2204,11 @@ export function JurisMindChat({
                   )}
                 </PopoverContent>
               </Popover>
+              <div className="ml-auto text-[11px] text-muted-foreground">
+                Enter envia · Shift+Enter quebra
+              </div>
+            </div>
+            <div className="flex items-end gap-2">
               <Textarea
                 ref={inputRef}
                 value={input}
@@ -2174,7 +2221,7 @@ export function JurisMindChat({
                 }}
                 placeholder="Pergunte, peça peça jurídica, planilha, apresentação ou PDF…"
                 rows={2}
-                className="min-h-[42px] resize-none"
+                className="min-h-[44px] flex-1 resize-none"
                 disabled={busy}
               />
               {busy ? (
@@ -2182,7 +2229,7 @@ export function JurisMindChat({
                   onClick={stopStreaming}
                   size="icon"
                   variant="secondary"
-                  className="h-10 w-10 shrink-0"
+                  className="h-11 w-11 shrink-0"
                   title="Parar geração"
                 >
                   <Square className="h-4 w-4" />
@@ -2192,12 +2239,13 @@ export function JurisMindChat({
                   onClick={() => void send()}
                   disabled={!input.trim() && images.length === 0}
                   size="icon"
-                  className="h-10 w-10 shrink-0"
+                  className="h-11 w-11 shrink-0"
                 >
                   <Send className="h-4 w-4" />
                 </Button>
               )}
             </div>
+
           </div>
         </div>
       </div>
