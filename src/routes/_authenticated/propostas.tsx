@@ -1156,6 +1156,11 @@ function ProposalPage() {
         </Card>
       </div>
       {unsavedDialog}
+      <ShareProposalDialog
+        open={shareOpen}
+        onOpenChange={setShareOpen}
+        snapshot={shareSnapshot}
+      />
     </div>
   );
 }
