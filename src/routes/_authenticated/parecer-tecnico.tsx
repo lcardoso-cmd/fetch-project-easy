@@ -455,6 +455,19 @@ function RequestPanel({ requestId }: { requestId: string }) {
           </Link>
         </Button>
       </div>
+
+      {previewAtt && (
+        <AttachmentPreviewDialog
+          open={!!previewId}
+          onOpenChange={(v) => !v && setPreviewId(null)}
+          fileName={previewAtt.file_name}
+          mimeType={previewAtt.mime_type}
+          resolveUrl={async () => {
+            const { url } = await getAttUrl({ data: { id: previewAtt.id } });
+            return url;
+          }}
+        />
+      )}
     </div>
   );
 }
