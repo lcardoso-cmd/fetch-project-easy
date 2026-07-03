@@ -192,11 +192,17 @@ export function BudgetCard() {
                 <Input
                   id="ai-budget-limit"
                   type="number"
-                  min="0"
+                  inputMode="decimal"
+                  min={LIMITS.limit.min}
+                  max={LIMITS.limit.max}
                   step="0.5"
                   value={limit}
+                  aria-invalid={!!errFor("limit")}
                   onChange={(e) => setLimit(e.target.value)}
+                  onBlur={() => markTouched("limit")}
+                  className={errFor("limit") ? "border-destructive focus-visible:ring-destructive" : ""}
                 />
+                {errFor("limit") && <p className="text-xs text-destructive">{errFor("limit")}</p>}
               </div>
               <div className="space-y-1">
                 <Label htmlFor="ai-budget-warn" className="text-xs">
@@ -205,12 +211,17 @@ export function BudgetCard() {
                 <Input
                   id="ai-budget-warn"
                   type="number"
-                  min="1"
-                  max="100"
+                  inputMode="numeric"
+                  min={LIMITS.warn.min}
+                  max={LIMITS.warn.max}
                   step="1"
                   value={warn}
+                  aria-invalid={!!errFor("warn")}
                   onChange={(e) => setWarn(e.target.value)}
+                  onBlur={() => markTouched("warn")}
+                  className={errFor("warn") ? "border-destructive focus-visible:ring-destructive" : ""}
                 />
+                {errFor("warn") && <p className="text-xs text-destructive">{errFor("warn")}</p>}
               </div>
             </div>
 
@@ -226,12 +237,17 @@ export function BudgetCard() {
                   <Input
                     id="ai-max-tokens"
                     type="number"
-                    min="0"
-                    max="200000"
+                    inputMode="numeric"
+                    min={LIMITS.maxTokens.min}
+                    max={LIMITS.maxTokens.max}
                     step="256"
                     value={maxTokens}
+                    aria-invalid={!!errFor("maxTokens")}
                     onChange={(e) => setMaxTokens(e.target.value)}
+                    onBlur={() => markTouched("maxTokens")}
+                    className={errFor("maxTokens") ? "border-destructive focus-visible:ring-destructive" : ""}
                   />
+                  {errFor("maxTokens") && <p className="text-xs text-destructive">{errFor("maxTokens")}</p>}
                 </div>
                 <div className="space-y-1">
                   <Label htmlFor="ai-max-ctx" className="text-xs">
@@ -240,12 +256,17 @@ export function BudgetCard() {
                   <Input
                     id="ai-max-ctx"
                     type="number"
-                    min="0"
-                    max="2000000"
+                    inputMode="numeric"
+                    min={LIMITS.maxCtx.min}
+                    max={LIMITS.maxCtx.max}
                     step="1000"
                     value={maxCtx}
+                    aria-invalid={!!errFor("maxCtx")}
                     onChange={(e) => setMaxCtx(e.target.value)}
+                    onBlur={() => markTouched("maxCtx")}
+                    className={errFor("maxCtx") ? "border-destructive focus-visible:ring-destructive" : ""}
                   />
+                  {errFor("maxCtx") && <p className="text-xs text-destructive">{errFor("maxCtx")}</p>}
                 </div>
                 <div className="space-y-1">
                   <Label htmlFor="ai-max-retries" className="text-xs">
@@ -254,12 +275,17 @@ export function BudgetCard() {
                   <Input
                     id="ai-max-retries"
                     type="number"
-                    min="0"
-                    max="5"
+                    inputMode="numeric"
+                    min={LIMITS.maxRetries.min}
+                    max={LIMITS.maxRetries.max}
                     step="1"
                     value={maxRetries}
+                    aria-invalid={!!errFor("maxRetries")}
                     onChange={(e) => setMaxRetries(e.target.value)}
+                    onBlur={() => markTouched("maxRetries")}
+                    className={errFor("maxRetries") ? "border-destructive focus-visible:ring-destructive" : ""}
                   />
+                  {errFor("maxRetries") && <p className="text-xs text-destructive">{errFor("maxRetries")}</p>}
                 </div>
               </div>
               <p className="text-xs text-muted-foreground">
@@ -268,12 +294,18 @@ export function BudgetCard() {
               </p>
             </div>
 
-            <div className="flex justify-end">
-              <Button onClick={() => mutation.mutate()} disabled={mutation.isPending}>
+            <div className="flex items-center justify-end gap-3">
+              {!isValid && (
+                <span className="text-xs text-destructive">
+                  Ajuste os campos destacados para habilitar o salvamento.
+                </span>
+              )}
+              <Button onClick={handleSave} disabled={mutation.isPending || !isValid}>
                 {mutation.isPending && <Loader2 className="mr-2 h-3 w-3 animate-spin" />}
                 Salvar
               </Button>
             </div>
+
 
           </>
         )}
