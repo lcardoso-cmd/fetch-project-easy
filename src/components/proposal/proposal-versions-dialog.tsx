@@ -275,6 +275,55 @@ export function ProposalVersionsDialog({
     onOpenChange(false);
   };
 
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  const handleDownloadPdf = async (v: ProposalVersion) => {
+    if (!v.output) {
+      toast.error("Esta versão não tem conteúdo para exportar.");
+      return;
+    }
+    setDownloadingId(v.id);
+    try {
+      const f = (v.form ?? {}) as Record<string, string>;
+      const cliente = clientOf(v) || "cliente";
+      const titulo = `Proposta - ${clientOf(v) || "Cliente"} (${v.label})`;
+      const filename = `proposta-${cliente.replace(/\s+/g, "-").toLowerCase()}-${v.label.replace(/\s+/g, "-").toLowerCase()}.pdf`;
+      const { supabase } = await import("@/integrations/supabase/client");
+      const { data: sess } = await supabase.auth.getSession();
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (sess.session?.access_token) headers.Authorization = `Bearer ${sess.session.access_token}`;
+      const res = await fetch("/api/tools/pdf", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          titulo,
+          html: v.output,
+          cover: clientOf(v)
+            ? {
+                clientName: f.client_name || clientOf(v),
+                clientDocument: f.client_document,
+                clientAddress: [f.client_address, f.client_city_state].filter(Boolean).join(" — "),
+                matter: f.matter,
+              }
+            : null,
+          watermark: { text: `VERSÃO ${v.label}`, opacity: 0.1 },
+        }),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success("PDF gerado com sucesso.");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Falha ao gerar PDF");
+    } finally {
+      setDownloadingId(null);
+    }
+  };
+
   // ---------- Diffs ----------
   const formDiff = useMemo(
     () => (selected ? diffForms(selected.form as Record<string, string>, currentForm) : []),
