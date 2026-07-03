@@ -113,8 +113,10 @@ interface BudgetSnapshot {
   maxTokens: number;
   maxContextChars: number;
   maxRetries: number;
+  forceFallback: boolean;
   fetchedAt: number;
 }
+
 const budgetCache = new Map<string, BudgetSnapshot>();
 const BUDGET_TTL_MS = 30_000;
 
@@ -138,7 +140,7 @@ async function loadBudget(userId: string): Promise<BudgetSnapshot> {
 
   const { data: row } = await admin
     .from("ai_budgets")
-    .select("monthly_limit_usd, warn_threshold_pct, max_tokens, max_context_chars, max_retries")
+    .select("monthly_limit_usd, warn_threshold_pct, max_tokens, max_context_chars, max_retries, force_fallback_on_retry")
     .eq("user_id", userId)
     .maybeSingle();
 
@@ -147,6 +149,7 @@ async function loadBudget(userId: string): Promise<BudgetSnapshot> {
   const maxTokens = Math.max(0, Number(row?.max_tokens ?? 0));
   const maxContextChars = Math.max(0, Number(row?.max_context_chars ?? 0));
   const maxRetries = Math.max(0, Math.min(5, Number(row?.max_retries ?? 1)));
+  const forceFallback = Boolean(row?.force_fallback_on_retry ?? false);
 
   let spent = 0;
   if (limit > 0) {
@@ -161,10 +164,12 @@ async function loadBudget(userId: string): Promise<BudgetSnapshot> {
     maxTokens,
     maxContextChars,
     maxRetries,
+    forceFallback,
     fetchedAt: Date.now(),
   };
   budgetCache.set(userId, snap);
   return snap;
+
 }
 
 /** Lança `AiBudgetExceededError` se o usuário já ultrapassou o limite mensal. */
@@ -181,14 +186,20 @@ export interface AiLimits {
   maxTokens: number; // 0 = sem limite
   maxContextChars: number; // 0 = sem limite
   maxRetries: number; // tentativas EXTRAS após a inicial (0..5)
+  forceFallback: boolean; // se true, erro retentável cai imediatamente no fallback
 }
 
 /** Limites de chamada configurados pelo dono do contexto atual (ou defaults). */
 export async function getAiLimitsForCurrentUser(): Promise<AiLimits> {
   const ctx = getUsageContext();
-  if (!ctx?.userId) return { maxTokens: 0, maxContextChars: 0, maxRetries: 1 };
+  if (!ctx?.userId) return { maxTokens: 0, maxContextChars: 0, maxRetries: 1, forceFallback: false };
   const b = await loadBudget(ctx.userId);
-  return { maxTokens: b.maxTokens, maxContextChars: b.maxContextChars, maxRetries: b.maxRetries };
+  return {
+    maxTokens: b.maxTokens,
+    maxContextChars: b.maxContextChars,
+    maxRetries: b.maxRetries,
+    forceFallback: b.forceFallback,
+  };
 }
 
 /** Snapshot para exibição no cliente (sem cache-invalidação — leitura rápida). */
@@ -201,11 +212,13 @@ export async function getAiBudgetSnapshot(userId: string) {
     max_tokens: b.maxTokens,
     max_context_chars: b.maxContextChars,
     max_retries: b.maxRetries,
+    force_fallback_on_retry: b.forceFallback,
     pct: b.limit > 0 ? Math.min(100, Math.round((b.spent / b.limit) * 1000) / 10) : 0,
     warn: b.limit > 0 && b.spent >= (b.limit * b.warnPct) / 100,
     blocked: b.limit > 0 && b.spent >= b.limit,
   };
 }
+
 
 export function invalidateBudgetCache(userId: string) {
   budgetCache.delete(userId);

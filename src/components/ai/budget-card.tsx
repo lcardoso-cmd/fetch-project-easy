@@ -6,8 +6,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import { getAiBudgetStatus, updateAiBudget } from "@/lib/ai-usage.functions";
 import { toast } from "sonner";
+
 
 /**
  * Faixas aceitas (espelham a validação zod do backend em `ai-usage.functions.ts`).
@@ -82,6 +84,7 @@ export function BudgetCard() {
   const [maxTokens, setMaxTokens] = useState<string>("0");
   const [maxCtx, setMaxCtx] = useState<string>("0");
   const [maxRetries, setMaxRetries] = useState<string>("1");
+  const [forceFallback, setForceFallback] = useState<boolean>(false);
   const [touched, setTouched] = useState<Partial<Record<FieldKey, boolean>>>({});
 
   useEffect(() => {
@@ -91,9 +94,11 @@ export function BudgetCard() {
       setMaxTokens(String(data.max_tokens ?? 0));
       setMaxCtx(String(data.max_context_chars ?? 0));
       setMaxRetries(String(data.max_retries ?? 1));
+      setForceFallback(Boolean(data.force_fallback_on_retry));
       setTouched({});
     }
   }, [data]);
+
 
   const { errors, parsed } = useMemo(
     () => validate({ limit, warn, maxTokens, maxCtx, maxRetries }),
@@ -113,9 +118,11 @@ export function BudgetCard() {
           max_tokens: parsed.maxTokens,
           max_context_chars: parsed.maxCtx,
           max_retries: parsed.maxRetries,
+          force_fallback_on_retry: forceFallback,
         },
       });
     },
+
     onSuccess: () => {
       toast.success("Configurações de IA atualizadas.");
       qc.invalidateQueries({ queryKey: ["ai-budget-status"] });
@@ -292,7 +299,25 @@ export function BudgetCard() {
                 Ao passar do contexto, mensagens antigas são resumidas em um marcador; ao passar
                 do teto de tokens, a resposta é truncada pelo próprio modelo.
               </p>
+              <div className="flex items-start justify-between gap-3 rounded-md border border-border/60 bg-background p-3">
+                <div className="space-y-0.5">
+                  <Label htmlFor="ai-force-fallback" className="text-sm">
+                    Forçar fallback automático em erros retentáveis
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    Quando ativo, qualquer erro (mesmo os que normalmente seriam apenas
+                    re-tentados) muda imediatamente para o modelo mais barato — mantendo o
+                    streaming quando o gateway permitir.
+                  </p>
+                </div>
+                <Switch
+                  id="ai-force-fallback"
+                  checked={forceFallback}
+                  onCheckedChange={setForceFallback}
+                />
+              </div>
             </div>
+
 
             <div className="flex items-center justify-end gap-3">
               {!isValid && (
