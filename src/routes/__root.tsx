@@ -52,33 +52,41 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { title: "B2B | JurisMind AI" },
       { name: "description", content: "B2B | JurisMind AI é uma plataforma jurídica para advogados: RAG de documentos jurídicos e gestão inteligente de prazos." },
       { name: "author", content: "B2B | JurisMind AI" },
-      { property: "og:title", content: "B2B | JurisMind AI" },
-      { property: "og:description", content: "B2B | JurisMind AI é uma plataforma jurídica para advogados: RAG de documentos jurídicos e gestão inteligente de prazos." },
+      { property: "og:site_name", content: "JurisMind AI" },
       { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary" },
+      { name: "twitter:card", content: "summary_large_image" },
       { name: "twitter:site", content: "@JurisMind" },
-      { name: "twitter:title", content: "B2B | JurisMind AI" },
-      { name: "twitter:description", content: "B2B | JurisMind AI é uma plataforma jurídica para advogados: RAG de documentos jurídicos e gestão inteligente de prazos." },
-      { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/Sls90jSFrMa8ECulf4OjLMG7sRB3/social-images/social-1783001247994-LOGO_JURISMIND_16-9.webp" },
-      { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/Sls90jSFrMa8ECulf4OjLMG7sRB3/social-images/social-1783001247994-LOGO_JURISMIND_16-9.webp" },
     ],
     links: [
-      {
-        rel: "stylesheet",
-        href: appCss,
-      },
-      {
-        rel: "preconnect",
-        href: "https://fonts.googleapis.com",
-      },
-      {
-        rel: "preconnect",
-        href: "https://fonts.gstatic.com",
-        crossOrigin: "anonymous",
-      },
+      { rel: "stylesheet", href: appCss },
+      { rel: "preconnect", href: "https://fonts.googleapis.com" },
+      { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       {
         rel: "stylesheet",
         href: "https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Jost:wght@300;400;500;600;700&display=swap",
+      },
+    ],
+    scripts: [
+      {
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@graph": [
+            {
+              "@type": "Organization",
+              name: "JurisMind AI",
+              url: "https://b2bjurismind.lovable.app",
+              logo: "https://storage.googleapis.com/gpt-engineer-file-uploads/Sls90jSFrMa8ECulf4OjLMG7sRB3/social-images/social-1783001247994-LOGO_JURISMIND_16-9.webp",
+              sameAs: ["https://b2bjurismind.lovable.app"],
+            },
+            {
+              "@type": "WebSite",
+              name: "JurisMind AI",
+              url: "https://b2bjurismind.lovable.app",
+              inLanguage: "pt-BR",
+            },
+          ],
+        }),
       },
     ],
   }),
