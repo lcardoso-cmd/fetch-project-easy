@@ -423,7 +423,20 @@ export async function chatCompleteStream(
     }
 
     const runId = res.headers.get("X-Lovable-AIG-Run-ID");
-    await logAiUsage({ feature: opts.feature, model: m, usage, gatewayRunId: runId });
+    await logAiUsage({
+      feature: opts.feature,
+      model: m,
+      usage,
+      gatewayRunId: runId,
+      applied: {
+        max_tokens_applied: maxTokens > 0 ? maxTokens : null,
+        context_chars_before: trunc.charsBefore,
+        context_chars_after: trunc.charsAfter,
+        messages_truncated: trunc.removed,
+        retries_used: retriesUsed,
+      },
+    });
+
 
     const tool_calls: ToolCall[] = [];
     for (const [, v] of Array.from(toolCallsByIndex.entries()).sort((a, b) => a[0] - b[0])) {
