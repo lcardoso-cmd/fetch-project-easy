@@ -118,9 +118,11 @@ export function BudgetCard() {
           max_tokens: parsed.maxTokens,
           max_context_chars: parsed.maxCtx,
           max_retries: parsed.maxRetries,
+          force_fallback_on_retry: forceFallback,
         },
       });
     },
+
     onSuccess: () => {
       toast.success("Configurações de IA atualizadas.");
       qc.invalidateQueries({ queryKey: ["ai-budget-status"] });
