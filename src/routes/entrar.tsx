@@ -37,6 +37,23 @@ export const Route = createFileRoute("/entrar")({
   validateSearch: (search: Record<string, unknown>) => ({
     redirect: safeInternalPath(search.redirect) ?? undefined,
   }),
+  head: () => ({
+    meta: [
+      { title: "Entrar no JurisMind — IA para advogados" },
+      {
+        name: "description",
+        content:
+          "Acesse sua conta JurisMind AI para gerenciar casos, documentos e peças com inteligência artificial jurídica.",
+      },
+      { property: "og:title", content: "Entrar no JurisMind — IA para advogados" },
+      {
+        property: "og:description",
+        content: "Acesse sua conta JurisMind AI para gerenciar casos, documentos e peças com IA jurídica.",
+      },
+      { property: "og:url", content: "https://b2bjurismind.lovable.app/entrar" },
+    ],
+    links: [{ rel: "canonical", href: "https://b2bjurismind.lovable.app/entrar" }],
+  }),
   component: AuthPage,
 });
 
