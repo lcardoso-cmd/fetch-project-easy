@@ -95,6 +95,7 @@ export const listMemberCapabilities = createServerFn({ method: "GET" })
   .validator(z.object({ user_id: z.string().uuid() }))
   .handler(async ({ context, data }): Promise<Capability[]> => {
     await assertOfficeAdmin(context.userId);
+    await assertTeamMember(context.userId, data.user_id);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: rows, error } = await (supabaseAdmin as unknown as {
       from: (t: string) => {
@@ -116,6 +117,7 @@ export const listMemberCapabilities = createServerFn({ method: "GET" })
     return (rows ?? []).map((r) => r.capability);
   });
 
+
 export const setMemberCapabilities = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator(
@@ -126,7 +128,9 @@ export const setMemberCapabilities = createServerFn({ method: "POST" })
   )
   .handler(async ({ context, data }) => {
     await assertOfficeAdmin(context.userId);
+    await assertTeamMember(context.userId, data.user_id);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
     // Substitui o conjunto do escritório: office_admin nunca revoga permissões da B2B.
     const OFFICE_SCOPED = [
       "cases",
@@ -215,7 +219,9 @@ export const listMemberCapabilityAudit = createServerFn({ method: "POST" })
   )
   .handler(async ({ context, data }) => {
     await assertOfficeAdmin(context.userId);
+    await assertTeamMember(context.userId, data.user_id);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
     const admin = supabaseAdmin as unknown as { from: (t: string) => any };
     const { data: rows, error } = await admin
       .from("platform_audit_log")
@@ -264,4 +270,25 @@ async function assertOfficeAdmin(userId: string) {
     .maybeSingle();
   if (error) throw new Error(error.message);
   if (!data) throw new Error("Acesso restrito a administradores do escritório");
+}
+
+/**
+ * Garante que `targetUserId` faz parte da equipe do `ownerUserId`
+ * (office_admin). Permite também o próprio caller consultar/alterar
+ * suas próprias capacidades. Evita que um office_admin de um
+ * escritório manipule capacidades de usuários de outro escritório.
+ */
+async function assertTeamMember(ownerUserId: string, targetUserId: string) {
+  if (ownerUserId === targetUserId) return;
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const admin = supabaseAdmin as unknown as { from: (t: string) => any };
+  const { data, error } = await admin
+    .from("team_members")
+    .select("id")
+    .eq("user_id", ownerUserId)
+    .eq("member_user_id", targetUserId)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!data) throw new Error("Usuário não pertence à sua equipe");
+
 }

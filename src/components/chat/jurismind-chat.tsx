@@ -680,12 +680,17 @@ export function JurisMindChat({
 
     let segmentText = "";
     try {
+      const { supabase } = await import("@/integrations/supabase/client");
+      const { data: sess } = await supabase.auth.getSession();
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (sess.session?.access_token) headers.Authorization = `Bearer ${sess.session.access_token}`;
       const res = await fetch("/api/tools/transcribe-stream", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify({ audio_base64: b64, format: "wav" }),
         signal: timeoutCtrl.signal,
       });
+
       if (!res.ok || !res.body) {
         const retryAfterMs = parseRetryAfterMs(res.headers.get("retry-after"));
         const err = new Error(`transcribe_http_${res.status}`) as Error & {

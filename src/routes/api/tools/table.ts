@@ -18,6 +18,14 @@ export const Route = createFileRoute("/api/tools/table")({
     handlers: {
       POST: async ({ request }) => {
         try {
+          const { authenticateRequest } = await import("@/lib/route-auth.server");
+          try {
+            await authenticateRequest(request);
+          } catch (r) {
+            if (r instanceof Response) return r;
+            return new Response("Unauthorized", { status: 401 });
+          }
+
           const { titulo = "tabela", rows } = (await request.json()) as {
             titulo?: string;
             rows?: Array<Record<string, unknown>>;
