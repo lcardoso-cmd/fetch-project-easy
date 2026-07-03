@@ -165,6 +165,7 @@ export const Route = createFileRoute("/api/chat/stream")({
             abortSignal.addEventListener("abort", onAbort, { once: true });
 
             try {
+              send("session", { session_id: sessionId });
               const run = await prepareRagRun({
                 supabase: auth.supabase,
                 userId: auth.userId,
@@ -173,6 +174,7 @@ export const Route = createFileRoute("/api/chat/stream")({
               if (abortSignal.aborted) return;
 
               send("citations", { citations: run.citations });
+
 
               const convo: ChatMessage[] = [...run.messages];
               const steps: { name: string; args: unknown; result: unknown }[] = [];
