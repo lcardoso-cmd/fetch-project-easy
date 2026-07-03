@@ -458,6 +458,19 @@ export function JurisMindMark({
 }) {
   const explicitVariant = isJurisMindVariant(variant) ? variant : null;
 
+  // Consumidor tentou passar `variant`, mas não é um dos aceitos → telemetria.
+  if (variant != null && !explicitVariant) {
+    const fallbackCtx = isJurisMindContext(context)
+      ? context
+      : DEFAULT_JURISMIND_CONTEXT;
+    reportMarkFallback({
+      reason: "invalid-variant",
+      received: variant,
+      usedContext: fallbackCtx,
+      at: new Date().toISOString(),
+    });
+  }
+
   // Override explícito → mantém o PNG legado (compat total).
   if (explicitVariant) {
     const isSquare =
@@ -485,9 +498,21 @@ export function JurisMindMark({
     );
   }
 
-  const safeContext: JurisMindContext = isJurisMindContext(context)
-    ? context
+  const contextIsValid = isJurisMindContext(context);
+  const safeContext: JurisMindContext = contextIsValid
+    ? (context as JurisMindContext)
     : DEFAULT_JURISMIND_CONTEXT;
+
+  // Consumidor passou `context`, mas fora da união → telemetria.
+  if (context != null && !contextIsValid) {
+    reportMarkFallback({
+      reason: "invalid-context",
+      received: context,
+      usedContext: safeContext,
+      at: new Date().toISOString(),
+    });
+  }
+
   const composition = CONTEXT_COMPOSITION[safeContext];
 
   if (composition.kind === "glyph") {
