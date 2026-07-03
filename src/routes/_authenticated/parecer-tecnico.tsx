@@ -17,11 +17,13 @@ import {
   Paperclip,
   Clock,
   Download,
+  Eye,
   MessageSquare,
   FileText,
   CircleDot,
   Inbox,
 } from "lucide-react";
+import { AttachmentPreviewDialog } from "@/components/attachments/attachment-preview-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { createServerFn, useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
