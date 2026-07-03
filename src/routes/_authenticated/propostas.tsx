@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Handshake, Loader2, Copy, Download, FileText, Check, Trash2, History, Save, Cloud, CloudOff, Eraser, Settings2 } from "lucide-react";
+import { Handshake, Loader2, Copy, Download, FileText, Check, Trash2, History, Save, Cloud, CloudOff, Eraser, Settings2, Link2 } from "lucide-react";
 import { toast } from "sonner";
 import { generateProposal } from "@/lib/generators.functions";
 import { getCases } from "@/lib/cases.functions";
@@ -20,6 +20,7 @@ import { ProposalVersionsDialog } from "@/components/proposal/proposal-versions-
 import { ProposalAttachmentsPanel } from "@/components/proposal/proposal-attachments-panel";
 import { ConvertToCasePopover } from "@/components/proposal/convert-to-case-popover";
 import { WordPreview } from "@/components/proposal/word-preview";
+import { ShareProposalDialog, type PdfShareSnapshot } from "@/components/proposal/share-proposal-dialog";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useAuth } from "@/hooks/use-auth";
 import { useUnsavedChangesGuard } from "@/hooks/use-unsaved-changes-guard";
@@ -154,6 +155,7 @@ function ProposalPage() {
   const [pdfCoverEnabled, setPdfCoverEnabled] = useState(true);
   const [pdfWatermarkMode, setPdfWatermarkMode] = useState<"none" | "draft" | "version">("none");
   const [pdfWatermarkVersion, setPdfWatermarkVersion] = useState("1");
+  const [shareOpen, setShareOpen] = useState(false);
   const [form, setForm] = useState<FormState>(EMPTY);
   const [errors, setErrors] = useState<FieldErrors>({});
   const [savedAt, setSavedAt] = useState<number | null>(null);
@@ -579,6 +581,41 @@ function ProposalPage() {
       toast.error(err instanceof Error ? err.message : "Falha ao gerar PDF");
     }
   };
+
+  const mmToPtNum = (mm: number) => Math.round(mm * 2.83464567);
+  const shareSnapshot: PdfShareSnapshot | null = output
+    ? {
+        title: `Proposta - ${form.client_name || "Cliente"}`,
+        clientName: form.client_name || null,
+        html: output,
+        page: {
+          format: pdfFormat,
+          orientation: pdfOrientation,
+          margins: {
+            top: mmToPtNum(pdfMargins.top),
+            right: mmToPtNum(pdfMargins.right),
+            bottom: mmToPtNum(pdfMargins.bottom),
+            left: mmToPtNum(pdfMargins.left),
+          },
+        },
+        cover: pdfCoverEnabled
+          ? {
+              clientName: form.client_name,
+              clientDocument: form.client_document,
+              clientAddress: [form.client_address, form.client_city_state]
+                .filter(Boolean)
+                .join(" — "),
+              matter: form.matter,
+            }
+          : null,
+        watermark:
+          pdfWatermarkMode === "draft"
+            ? { text: "RASCUNHO", opacity: 0.12 }
+            : pdfWatermarkMode === "version"
+              ? { text: `VERSÃO ${pdfWatermarkVersion || "1"}`, opacity: 0.12 }
+              : null,
+      }
+    : null;
 
   return (
     <div className="space-y-6">
@@ -1067,6 +1104,14 @@ function ProposalPage() {
                 <Button size="sm" variant="outline" onClick={downloadPdf}>
                   <FileText className="h-4 w-4 mr-1" /> Baixar PDF
                 </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setShareOpen(true)}
+                  title="Compartilhar por link seguro (sem anexar arquivo)"
+                >
+                  <Link2 className="h-4 w-4 mr-1" /> Compartilhar link
+                </Button>
                 <Button size="sm" onClick={download}>
                   <Download className="h-4 w-4 mr-1" /> Baixar .docx
                 </Button>
@@ -1111,6 +1156,11 @@ function ProposalPage() {
         </Card>
       </div>
       {unsavedDialog}
+      <ShareProposalDialog
+        open={shareOpen}
+        onOpenChange={setShareOpen}
+        snapshot={shareSnapshot}
+      />
     </div>
   );
 }
