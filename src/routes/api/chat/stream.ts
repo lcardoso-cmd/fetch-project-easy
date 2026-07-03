@@ -22,6 +22,37 @@ const AskSchema = z.object({
   audio_duration_ms: z.number().int().min(0).max(3_600_000).optional(),
 });
 
+type StreamToolStep = { name: string; args: unknown; result: unknown };
+
+function extractArtifactPayload(step: StreamToolStep): { kind: string; title: string; body: string } | null {
+  const result = step.result;
+  if (!result || typeof result !== "object") return null;
+  const r = result as { kind?: unknown; titulo?: unknown; conteudo?: unknown };
+  const kind = typeof r.kind === "string" ? r.kind : "";
+  if (kind !== "petition" && kind !== "pdf") return null;
+  return {
+    kind,
+    title: typeof r.titulo === "string" ? r.titulo.trim() : "",
+    body: typeof r.conteudo === "string" ? r.conteudo.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim() : "",
+  };
+}
+
+function dedupeGeneratedDocumentSteps(steps: StreamToolStep[]): StreamToolStep[] {
+  const seenBodies = new Set<string>();
+  return steps.filter((step) => {
+    const payload = extractArtifactPayload(step);
+    if (!payload) return true;
+    const key = payload.body || `${payload.kind}:${payload.title}`;
+    if (seenBodies.has(key)) return false;
+    seenBodies.add(key);
+    return true;
+  });
+}
+
+function hasGeneratedDocument(steps: StreamToolStep[]): boolean {
+  return steps.some((step) => Boolean(extractArtifactPayload(step)));
+}
+
 export const Route = createFileRoute("/api/chat/stream")({
   server: {
     handlers: {
@@ -160,7 +191,15 @@ export const Route = createFileRoute("/api/chat/stream")({
               }
 
 
-              const toolSteps = steps.map((s) => ({
+              const visibleSteps = dedupeGeneratedDocumentSteps(steps);
+              if (hasGeneratedDocument(visibleSteps)) {
+                const compact = finalContent.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+                if (!compact || compact.length > 280) {
+                  finalContent = "Documento pronto para revisar, editar e baixar.";
+                }
+              }
+
+              const toolSteps = visibleSteps.map((s) => ({
                 name: s.name,
                 args_json: JSON.stringify(s.args),
                 result_json: JSON.stringify(s.result),

@@ -343,8 +343,8 @@ export async function prepareRagRun(opts: {
       type: "function",
       function: {
         name: "create_pdf",
-        description:
-          "Entrega o mesmo conteúdo formatado pronto para baixar como PDF. Use quando o usuário pedir explicitamente PDF, ou como complemento do create_petition.",
+    description:
+      "Entrega conteúdo formatado pronto para baixar como PDF. Use SOMENTE quando o usuário pedir PDF explicitamente. Não chame junto com create_petition para o mesmo texto, pois o card de peça já permite download.",
         parameters: {
           type: "object",
           properties: {
@@ -452,7 +452,7 @@ INSTRUÇÕES:
 - Sempre que uma afirmação vier de um trecho, cite a fonte no formato [n] (o mesmo número entre colchetes acima).
 - Se o contexto for insuficiente, diga claramente e sugira quais documentos podem faltar.
 - Se o usuário enviar imagens, analise o que está visível (documento fotografado, print, foto de local, gráfico, assinatura) e leve em conta na resposta.
-- QUANDO O USUÁRIO PEDIR UMA PEÇA (petição, contestação, parecer, laudo, contrato, notificação, alegações, contrarrazões, memoriais, quesitos), CHAME create_petition (e opcionalmente create_pdf) com o texto integral e finalizado. Não coloque placeholders "[…]" se você tem o dado.
+- QUANDO O USUÁRIO PEDIR UMA PEÇA (petição, contestação, parecer, laudo, contrato, notificação, alegações, contrarrazões, memoriais, quesitos), CHAME create_petition com o texto integral e finalizado. Não chame create_pdf para o mesmo conteúdo, a menos que o usuário peça PDF explicitamente. Não coloque placeholders "[…]" se você tem o dado.
 - QUANDO PEDIR TABELA, PLANILHA, CÁLCULO, CRONOGRAMA, COMPARATIVO — chame create_table.
 - QUANDO PEDIR APRESENTAÇÃO / SLIDES — chame create_presentation.
 - QUANDO IDENTIFICAR PRAZO OU AUDIÊNCIA — chame create_event.

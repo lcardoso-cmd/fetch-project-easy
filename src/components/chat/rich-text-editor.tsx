@@ -172,6 +172,7 @@ export function RichTextEditor({ html, onChange, minHeight = 360, contentClassNa
         <div
           ref={ref}
           contentEditable
+          dangerouslySetInnerHTML={{ __html: html || "" }}
           role="textbox"
           aria-multiline="true"
           aria-label="Editor de proposta"
