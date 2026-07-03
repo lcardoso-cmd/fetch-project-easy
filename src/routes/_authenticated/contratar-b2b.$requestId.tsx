@@ -102,14 +102,24 @@ function HireB2bRequestDetail() {
     }
   };
 
-  const openAttachment = async (id: string) => {
+  const downloadAttachment = async (id: string, fileName: string) => {
     try {
       const { url } = await urlFn({ data: { id } });
-      window.open(url, "_blank", "noopener,noreferrer");
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = fileName;
+      a.rel = "noopener";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Falha ao abrir");
+      toast.error(err instanceof Error ? err.message : "Falha ao baixar");
     }
   };
+
+  const previewAtt = previewId
+    ? attachments.find((a) => a.id === previewId) ?? null
+    : null;
 
   return (
     <div className="max-w-4xl space-y-6">
