@@ -140,7 +140,8 @@ export async function chatComplete(
   const temperature = opts.temperature ?? 0.3;
   const maxTokens = opts.maxTokens ?? limits.maxTokens;
   const maxRetries = Math.max(0, Math.min(5, opts.maxRetries ?? limits.maxRetries));
-  const truncated = truncateMessages(messages, limits.maxContextChars);
+  const trunc = truncateMessages(messages, limits.maxContextChars);
+  const truncated = trunc.messages;
 
   const cacheable = !opts.noCache && isCacheable({ model, messages: truncated, temperature, tools: opts.tools });
   const key = cacheable ? cacheKey({ model, messages: truncated, temperature, tools: opts.tools }) : null;
@@ -149,7 +150,10 @@ export async function chatComplete(
     if (hit) return { content: hit.content, tool_calls: hit.tool_calls };
   }
 
-  const attempt = async (m: string): Promise<{ content: string; tool_calls?: ToolCall[] }> => {
+  const attempt = async (
+    m: string,
+    retriesUsed: number,
+  ): Promise<{ content: string; tool_calls?: ToolCall[] }> => {
     const body: Record<string, unknown> = {
       model: m,
       messages: truncated,
@@ -187,10 +191,23 @@ export async function chatComplete(
       usage?: RawUsage;
     };
     const runId = res.headers.get("X-Lovable-AIG-Run-ID");
-    await logAiUsage({ feature: opts.feature, model: m, usage: json.usage, gatewayRunId: runId });
+    await logAiUsage({
+      feature: opts.feature,
+      model: m,
+      usage: json.usage,
+      gatewayRunId: runId,
+      applied: {
+        max_tokens_applied: maxTokens > 0 ? maxTokens : null,
+        context_chars_before: trunc.charsBefore,
+        context_chars_after: trunc.charsAfter,
+        messages_truncated: trunc.removed,
+        retries_used: retriesUsed,
+      },
+    });
     const msg = json.choices[0]?.message;
     return { content: msg?.content ?? "", tool_calls: msg?.tool_calls };
   };
+
 
   let result: { content: string; tool_calls?: ToolCall[] } | null = null;
   let lastErr: unknown;
