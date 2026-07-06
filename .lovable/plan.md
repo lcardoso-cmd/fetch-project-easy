@@ -1,89 +1,51 @@
-# Painel de consumo de IA (tokens + custo mensal)
+## 1. Corrigir o editor da Proposta Comercial (bug de digitação)
 
-## Objetivo
-Registrar cada chamada de IA (chat, embeddings, visão) com tokens e custo estimado, e mostrar num painel mensal com totais do workspace e quebra por usuário/modelo.
+**Sintoma:** ao digitar no editor da proposta, o texto não fica ou o cursor "pula".
 
-## 1. Registro de uso (backend)
+**Causa:** em `src/components/chat/rich-text-editor.tsx`, o `useEffect` de sync externo compara `safeHtml` (HTML já sanitizado pelo DOMPurify) com `lastEmittedRef.current` (HTML cru vindo do `contentEditable`). A cada tecla, o pai reemite o HTML, o DOMPurify normaliza atributos/tags, `safeHtml !== lastEmittedRef.current`, e o efeito sobrescreve o `innerHTML` — resetando o cursor para o início.
 
-**Nova tabela `ai_usage_events`** (migration):
+**Correção:** normalizar o valor emitido pelo próprio DOMPurify antes de guardar em `lastEmittedRef` e comparar contra o mesmo formato normalizado; adicionalmente, quando o valor entrante já bate com o `innerHTML` atual do nó (mesmo que difira do último emitido) não fazer nada. Efeito colateral zero no autosave.
 
-| coluna | tipo | notas |
-|---|---|---|
-| id | uuid PK | |
-| user_id | uuid → auth.users | quem chamou |
-| feature | text | `chat`, `chat_stream`, `embeddings`, `vision_ocr`, `rerank`, `rewrite`, `tools_petition`, etc. |
-| model | text | ex.: `google/gemini-2.5-flash` |
-| prompt_tokens | int | |
-| completion_tokens | int | |
-| total_tokens | int | (gerado) |
-| cost_usd | numeric(12,6) | calculado a partir da tabela de preços |
-| cost_credits | numeric(12,4) | opcional, quando o gateway devolver |
-| gateway_run_id | text | header `X-Lovable-AIG-Run-ID` |
-| case_id / thread_id | uuid nullable | contexto |
-| created_at | timestamptz default now() |
+## 2. Página Marketing (nova experiência)
 
-- RLS: dono lê o próprio; office_admin/platform_admin veem tudo.
-- Grants `authenticated` + `service_role`.
-- Índices: `(created_at desc)`, `(user_id, created_at desc)`, `(model, created_at desc)`.
+Refatorar `src/routes/_authenticated/marketing.tsx` para deixar de ser "Markdown cru + Copiar" e ficar no mesmo nível da Proposta:
 
-**Instrumentação em `src/lib/ai.server.ts`**
-- `chatComplete`, `chatCompleteStream`, `embedTexts`, `visionExtractPdf` já recebem a resposta do gateway. Ler `json.usage` (SSE: último chunk com `usage` quando disponível; fallback: soma dos deltas ou 0).
-- Novo helper `logAiUsage({ userId, feature, model, usage, gatewayRunId, caseId, threadId })` que insere via `supabaseAdmin` no `ai_usage_events`.
-- Novo helper `estimateCostUsd(model, promptTokens, completionTokens)` com tabela estática de preços (`src/lib/ai-pricing.ts`) — Gemini Flash, Flash Lite, Pro, GPT-5 mini/nano, embeddings 3-small. Preços atualizáveis num único arquivo.
-- Cada função de IA passa a receber `userId` (opcional para calls internas) e chama `logAiUsage` após sucesso. Falha no log não bloqueia a resposta (try/catch silencioso + `console.warn`).
-- Propagar `userId` a partir de `chat-rag.server.ts`, `route-auth.server.ts`, `/api/tools/*.ts` e `/api/chat/stream.ts`.
+### 2.1 Resultado editável
+- Substituir o `<ReactMarkdown>` por `RichTextEditor` (mesmo componente do proposta).
+- Converter o markdown gerado em HTML (usando um helper `markdownToHtml` simples ou `marked`) antes de entregar ao editor.
+- Estado `outputHtml` editável; botões: **Copiar texto**, **Baixar .docx** (usa `/api/tools/petition`), **Baixar .pdf** (`/api/tools/pdf`).
 
-## 2. Server functions de leitura (`src/lib/usage.functions.ts`)
+### 2.2 Geração de imagens (novo server fn)
+Criar `generateMarketingImages` em `src/lib/generators.functions.ts` que:
+- Recebe `{ topic, format, tone, content }`.
+- Chama a AI Gateway `/v1/images/generations` (modelo `openai/gpt-image-2`, `quality: "low"`, streaming desativado no server, mas retornando `b64_json`) duas vezes:
+  - **16:9** (1536×864 aprox — usar `size: "1536x1024"`).
+  - **9:16** (1024×1536).
+- Prompt visual sóbrio/executivo: paleta neutra (navy/marfim), tipografia sutil, sem texto explícito na imagem, alinhado com o tema do post. Sem rostos reais, sem logos.
+- Retorna `{ image_16x9_b64, image_9x16_b64 }`.
+- Chamado logo após o texto ser gerado (paralelo, com loading próprio) e também botão **Gerar imagens** para regerar.
 
-Todas com `requireSupabaseAuth` + `requireCapability('view_usage_panel')` (nova capability, default ligada para `office_admin` e `platform_admin`).
+### 2.3 UI de imagens
+Nova seção **Artes para publicação** na página:
+- Dois cards lado a lado (16:9 e 9:16) com preview.
+- Botões por card: **Baixar PNG**, **Enviar por WhatsApp**.
+- **WhatsApp**: abre `https://wa.me/?text=<texto+link>`. Como o WhatsApp Web não aceita anexar imagem via URL diretamente, o botão faz download da imagem + copia o texto do post + abre `wa.me` com o texto pronto, mostrando um toast: "Imagem baixada — anexe manualmente no WhatsApp". (Alternativa nativa mobile: `navigator.share` com `files` quando disponível — usar quando presente.)
+- Estados: loading, erro, "regerar imagens".
 
-- `getUsageSummary({ month })` → totais do mês (tokens in/out, custo USD, nº chamadas), variação vs mês anterior, série diária.
-- `getUsageByUser({ month })` → linha por usuário (nome, email, tokens, custo, calls).
-- `getUsageByModel({ month })` → linha por modelo.
-- `getUsageByFeature({ month })` → linha por feature.
-- `listUsageEvents({ month, userId?, model?, limit, offset })` → paginação para drill-down.
+### 2.4 Ajustes de fluxo
+- Layout passa a duas colunas maiores (form à esquerda, resultado + artes à direita empilhados).
+- Preservar todos os campos atuais do briefing.
+- Toasts de sucesso/erro consistentes.
 
-`month` = `YYYY-MM`; default = mês corrente do fuso do servidor.
+## Arquivos afetados
 
-## 3. UI do painel
+- `src/components/chat/rich-text-editor.tsx` — fix do sync do `lastEmittedRef`.
+- `src/lib/generators.functions.ts` — novo `generateMarketingImages` (server fn) chamando AI Gateway server-side.
+- `src/routes/_authenticated/marketing.tsx` — nova UI (editor + cards de imagem + WhatsApp/Download).
+- (opcional) `src/lib/markdown-to-html.ts` — helper simples para converter markdown do gerador para HTML no editor.
 
-**Nova rota** `src/routes/_authenticated/configuracoes/consumo.tsx` (link no menu Configurações, visível só com `view_usage_panel`).
+## Fora de escopo
 
-Layout "Minimal Editorial":
-- Header com título + seletor de mês (dropdown com últimos 12 meses).
-- 4 KPIs no topo: total de chamadas, tokens (in / out), custo estimado (USD), custo médio por chamada. Cada card mostra delta vs mês anterior.
-- Gráfico de linha diária (Recharts) — custo por dia no mês.
-- Duas tabelas lado a lado (grid `md:grid-cols-2`):
-  - **Por usuário**: avatar + nome, calls, tokens, custo, barra proporcional.
-  - **Por modelo**: modelo, calls, tokens, custo.
-- Tabela expansível "Por feature" abaixo.
-- Botão "Exportar CSV" (client-side a partir dos dados carregados).
-
-Estados: skeleton no carregamento, empty state "Sem consumo neste mês".
-
-## 4. Preços (arquivo único `src/lib/ai-pricing.ts`)
-
-```
-gemini-2.5-flash:       in $0.30 / out $2.50 por 1M
-gemini-2.5-flash-lite:  in $0.10 / out $0.40 por 1M
-gemini-2.5-pro:         in $1.25 / out $10.00 por 1M
-gemini-3-flash-preview: in $0.30 / out $2.50 por 1M
-gpt-5-nano:             in $0.05 / out $0.40 por 1M
-text-embedding-3-small: in $0.02 por 1M
-```
-
-Fallback para modelo desconhecido: registra tokens, custo 0 e loga aviso.
-
-## 5. Detalhes técnicos
-
-- Streaming SSE: pedir `stream_options: { include_usage: true }` no body do gateway pra receber o chunk final com `usage`.
-- Embeddings retornam `usage.prompt_tokens` — soma pelos batches.
-- Vision OCR: usa mesma rota de chat, já vem `usage`.
-- Índice `(created_at, user_id)` para agregações mensais rápidas via SQL (`date_trunc('day', created_at)`).
-- Timezone das agregações: `America/Sao_Paulo` (parametrizável).
-- Todos os selects agregados via RPC SQL functions (uma por consulta) para evitar N+1 e respeitar RLS via `security definer` + checagem de capability dentro da função.
-
-## Fora do escopo desta entrega
-- Alertas de gasto / limites (pode ser um follow-up).
-- Faturamento por cliente (`customer_accounts`).
-- Preços em BRL — só USD nesta versão; conversão fica pra depois.
+- Não altero a lógica de geração de texto (`generateMarketing` continua igual).
+- Não altero backend do `/api/tools/pdf` nem `/api/tools/petition` — reaproveito.
+- Não altero o autosave/versionamento da proposta.
