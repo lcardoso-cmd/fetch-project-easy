@@ -447,3 +447,64 @@ Gere o documento completo agora.`;
   });
 
 
+/**
+ * Gera duas artes (16:9 e 9:16) via AI Gateway (openai/gpt-image-2) para
+ * acompanhar um post/artigo de marketing jurídico. Fundo sóbrio, executivo,
+ * paleta neutra, sem texto/rostos/logos — pronto para o advogado sobrepor
+ * o próprio branding se quiser.
+ */
+const MarketingImagesSchema = z.object({
+  topic: z.string().trim().min(1).max(500),
+  tone: z.string().trim().max(60).optional().default("educativo"),
+});
+
+async function generateOneImage(prompt: string, size: string): Promise<string> {
+  const key = process.env.LOVABLE_API_KEY;
+  if (!key) throw new Error("LOVABLE_API_KEY não configurada");
+  const res = await fetch("https://ai.gateway.lovable.dev/v1/images/generations", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${key}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: "openai/gpt-image-2",
+      prompt,
+      quality: "low",
+      size,
+      n: 1,
+    }),
+  });
+  if (!res.ok) {
+    const errBody = await res.text().catch(() => "");
+    throw new Error(`Falha ao gerar imagem [${res.status}]: ${errBody.slice(0, 300)}`);
+  }
+  const json = (await res.json()) as { data?: Array<{ b64_json?: string }> };
+  const b64 = json.data?.[0]?.b64_json;
+  if (!b64) throw new Error("Resposta sem imagem");
+  return b64;
+}
+
+export const generateMarketingImages = createServerFn({ method: "POST" })
+  .middleware([requireCapability("marketing")])
+  .inputValidator((input: unknown) => MarketingImagesSchema.parse(input))
+  .handler(async ({ data }) => {
+    const basePrompt = `Arte editorial sóbria e executiva para post de marketing jurídico brasileiro.
+Tema: ${data.topic}.
+Tom visual: ${data.tone}, elegante, corporativo, sério, moderno.
+Composição abstrata e minimalista: formas geométricas suaves, gradientes discretos, texturas de papel/mármore, luz difusa cinematográfica.
+Paleta: navy profundo, marfim, dourado envelhecido, tons neutros; alto contraste sutil.
+Estilo: fotografia de estúdio de revista de negócios / editorial fine-art / branding premium para escritório de advocacia.
+NÃO inclua: nenhum texto, letras, números, logotipos, marcas d'água, rostos reconhecíveis, martelos de juiz, balanças da justiça clichês, bandeiras, emojis, watermark.
+Deixe áreas de respiro para sobreposição de texto posterior.`;
+
+    // Geradas em paralelo (mesmo custo total, latência ~metade).
+    const [image_16x9_b64, image_9x16_b64] = await Promise.all([
+      generateOneImage(`${basePrompt}\nFormato: paisagem widescreen 16:9, composição horizontal.`, "1536x1024"),
+      generateOneImage(`${basePrompt}\nFormato: retrato vertical 9:16 (story/reels), composição vertical.`, "1024x1536"),
+    ]);
+    return { image_16x9_b64, image_9x16_b64 };
+  });
+
+
+

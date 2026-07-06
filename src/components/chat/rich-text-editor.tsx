@@ -70,7 +70,11 @@ export function RichTextEditor({ html, onChange, minHeight = 360, contentClassNa
   const emit = () => {
     if (!ref.current) return;
     const current = ref.current.innerHTML;
-    lastEmittedRef.current = current;
+    // Guarda a versão *sanitizada* — o pai vai reemitir `html`, o efeito
+    // recomputa `safeHtml = sanitize(html)` e compara com este ref. Se
+    // guardássemos `current` cru, DOMPurify poderia normalizar atributos
+    // e reescrever `innerHTML` a cada tecla, resetando o cursor.
+    lastEmittedRef.current = sanitizeProposalHtml(current);
     onChange(current);
   };
 
