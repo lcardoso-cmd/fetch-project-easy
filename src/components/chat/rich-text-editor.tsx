@@ -51,6 +51,7 @@ export function RichTextEditor({ html, onChange, minHeight = 360, contentClassNa
   const ref = useRef<HTMLDivElement>(null);
   const initialHtmlRef = useRef<string>(safeHtml);
   const lastEmittedRef = useRef<string>(safeHtml);
+  const emitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Sync externo: quando `html` prop muda por fora (IA gerou, restaurou versão,
   // rascunho carregou), refletir no contentEditable. Ignora se a mudança veio do
@@ -71,7 +72,13 @@ export function RichTextEditor({ html, onChange, minHeight = 360, contentClassNa
     lastEmittedRef.current = safeHtml;
   }, [safeHtml]);
 
-  const emit = () => {
+  useEffect(() => {
+    return () => {
+      if (emitTimerRef.current) clearTimeout(emitTimerRef.current);
+    };
+  }, []);
+
+  const emit = (immediate = false) => {
     if (!ref.current) return;
     const current = ref.current.innerHTML;
     // Guarda a versão *sanitizada* — o pai vai reemitir `html`, o efeito
@@ -80,13 +87,20 @@ export function RichTextEditor({ html, onChange, minHeight = 360, contentClassNa
     // e reescrever `innerHTML` a cada tecla, resetando o cursor.
     const sanitized = sanitizeProposalHtml(current);
     lastEmittedRef.current = sanitized;
-    onChange(sanitized);
+    if (emitTimerRef.current) clearTimeout(emitTimerRef.current);
+    if (immediate) {
+      onChange(sanitized);
+      return;
+    }
+    emitTimerRef.current = setTimeout(() => {
+      onChange(sanitized);
+    }, 250);
   };
 
   const exec = (cmd: string, value?: string) => {
     ref.current?.focus();
     document.execCommand(cmd, false, value);
-    emit();
+    emit(true);
   };
 
   const handlePaste = (e: React.ClipboardEvent<HTMLDivElement>) => {
@@ -98,7 +112,7 @@ export function RichTextEditor({ html, onChange, minHeight = 360, contentClassNa
       e.preventDefault();
       const clean = sanitizePastedHtml(asHtml);
       document.execCommand("insertHTML", false, clean);
-      emit();
+      emit(true);
     } else if (asText) {
       e.preventDefault();
       const paragraphs = asText
@@ -106,7 +120,7 @@ export function RichTextEditor({ html, onChange, minHeight = 360, contentClassNa
         .map((p) => `<p>${p.replace(/\n/g, "<br>").replace(/</g, "&lt;")}</p>`)
         .join("");
       document.execCommand("insertHTML", false, paragraphs);
-      emit();
+      emit(true);
     }
   };
 
@@ -192,7 +206,7 @@ export function RichTextEditor({ html, onChange, minHeight = 360, contentClassNa
           aria-label="Editor de proposta"
           suppressContentEditableWarning
           onInput={emit}
-          onBlur={emit}
+          onBlur={() => emit(true)}
           onPaste={handlePaste}
           className={
             contentClassName
