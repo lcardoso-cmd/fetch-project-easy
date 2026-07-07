@@ -59,6 +59,10 @@ export function RichTextEditor({ html, onChange, minHeight = 360, contentClassNa
     const el = ref.current;
     if (!el) return;
     if (safeHtml === lastEmittedRef.current) return;
+    // Enquanto o usuário está digitando, nunca sobrescreva o DOM do
+    // contentEditable a partir da prop. Mesmo pequenas normalizações do
+    // DOMPurify/browser mudam a string HTML e resetam o caret/foco.
+    if (document.activeElement === el) return;
     if (el.innerHTML === safeHtml) {
       lastEmittedRef.current = safeHtml;
       return;
@@ -74,8 +78,9 @@ export function RichTextEditor({ html, onChange, minHeight = 360, contentClassNa
     // recomputa `safeHtml = sanitize(html)` e compara com este ref. Se
     // guardássemos `current` cru, DOMPurify poderia normalizar atributos
     // e reescrever `innerHTML` a cada tecla, resetando o cursor.
-    lastEmittedRef.current = sanitizeProposalHtml(current);
-    onChange(current);
+    const sanitized = sanitizeProposalHtml(current);
+    lastEmittedRef.current = sanitized;
+    onChange(sanitized);
   };
 
   const exec = (cmd: string, value?: string) => {
@@ -187,6 +192,7 @@ export function RichTextEditor({ html, onChange, minHeight = 360, contentClassNa
           aria-label="Editor de proposta"
           suppressContentEditableWarning
           onInput={emit}
+          onBlur={emit}
           onPaste={handlePaste}
           className={
             contentClassName

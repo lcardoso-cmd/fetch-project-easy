@@ -85,7 +85,7 @@ function Gate({ path }: { path: string }) {
 function GatedOutlet({ path }: { path: string }) {
   const required = requiredCapabilityForPath(path);
   const { has, isLoading } = useCapabilities();
-  if (!required) return <Outlet />;
+  if (!required) return <Outlet key={path} />;
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-16">
@@ -96,5 +96,5 @@ function GatedOutlet({ path }: { path: string }) {
   if (!has(required)) {
     return <AccessDenied requires={required} attemptedPath={path} />;
   }
-  return <Outlet />;
+  return <Outlet key={path} />;
 }
