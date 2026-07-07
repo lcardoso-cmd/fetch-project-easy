@@ -274,7 +274,7 @@ function MarketingPage() {
                   variant="outline"
                   className="w-full"
                   disabled={loadingImages || !form.topic.trim()}
-                  onClick={() => generateImagesFor(form.topic, form.tone)}
+                  onClick={() => generateImagesFor(form.topic, form.tone, outputHtml)}
                 >
                   {loadingImages ? (
                     <>
