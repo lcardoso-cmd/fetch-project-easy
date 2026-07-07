@@ -155,11 +155,11 @@ function MarketingPage() {
     [outputHtml],
   );
 
-  const generateImagesFor = async (topic: string, tone: Tone) => {
+  const generateImagesFor = async (topic: string, tone: Tone, content: string) => {
     setLoadingImages(true);
     setImages(null);
     try {
-      const r = await genImages({ data: { topic, tone } });
+      const r = await genImages({ data: { topic, tone, content } });
       setImages({ i16: r.image_16x9_b64, i9: r.image_9x16_b64 });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Falha ao gerar imagens");
@@ -179,9 +179,10 @@ function MarketingPage() {
     setImages(null);
     try {
       const r = await gen({ data: form });
-      setOutputHtml(markdownToHtml(r.content));
-      // Dispara imagens em paralelo, mas não bloqueia o texto.
-      void generateImagesFor(form.topic, form.tone);
+      const html = markdownToHtml(r.content);
+      setOutputHtml(html);
+      // Dispara imagens em paralelo passando o texto gerado como contexto.
+      void generateImagesFor(form.topic, form.tone, html);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Falha ao gerar");
     } finally {
