@@ -456,6 +456,7 @@ Gere o documento completo agora.`;
 const MarketingImagesSchema = z.object({
   topic: z.string().trim().min(1).max(500),
   tone: z.string().trim().max(60).optional().default("educativo"),
+  content: z.string().trim().max(8000).optional().default(""),
 });
 
 async function generateOneImage(prompt: string, size: string): Promise<string> {
@@ -470,7 +471,7 @@ async function generateOneImage(prompt: string, size: string): Promise<string> {
     body: JSON.stringify({
       model: "openai/gpt-image-2",
       prompt,
-      quality: "low",
+      quality: "medium",
       size,
       n: 1,
     }),
@@ -485,25 +486,77 @@ async function generateOneImage(prompt: string, size: string): Promise<string> {
   return b64;
 }
 
+/**
+ * A partir do texto gerado, extrai uma manchete curta (headline) e um
+ * subtítulo/chamada, para serem renderizados COMO TEXTO na arte.
+ */
+async function deriveHeadline(topic: string, content: string): Promise<{ headline: string; subheadline: string }> {
+  const clean = content.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim().slice(0, 2000);
+  const sys = `Você cria manchetes curtas e sóbrias para artes de marketing jurídico brasileiro (Provimento 205/2021 OAB — sem promessa de resultado, sem sensacionalismo). Responda APENAS em JSON válido no formato {"headline": "...", "subheadline": "..."} sem markdown.
+Regras:
+- headline: no máximo 7 palavras, tom institucional, sem ponto final, sem emojis, em português.
+- subheadline: no máximo 12 palavras, complementa a headline, sem ponto final.
+- Nada de aspas, hashtags ou caracteres especiais fora de letras/acentos.`;
+  const usr = `Tema: ${topic}\n\nTexto do post:\n${clean || "(sem texto — use o tema)"}`;
+  try {
+    const r = await chatComplete(
+      [
+        { role: "system", content: sys },
+        { role: "user", content: usr },
+      ],
+      { model: "google/gemini-2.5-flash", temperature: 0.4 },
+    );
+    const raw = r.content.trim().replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/i, "").trim();
+    const parsed = JSON.parse(raw) as { headline?: string; subheadline?: string };
+    return {
+      headline: (parsed.headline || topic).slice(0, 80),
+      subheadline: (parsed.subheadline || "").slice(0, 120),
+    };
+  } catch {
+    return { headline: topic.slice(0, 80), subheadline: "" };
+  }
+}
+
 export const generateMarketingImages = createServerFn({ method: "POST" })
   .middleware([requireCapability("marketing")])
   .inputValidator((input: unknown) => MarketingImagesSchema.parse(input))
   .handler(async ({ data }) => {
-    const basePrompt = `Arte editorial sóbria e executiva para post de marketing jurídico brasileiro.
-Tema: ${data.topic}.
-Tom visual: ${data.tone}, elegante, corporativo, sério, moderno.
-Composição abstrata e minimalista: formas geométricas suaves, gradientes discretos, texturas de papel/mármore, luz difusa cinematográfica.
-Paleta: navy profundo, marfim, dourado envelhecido, tons neutros; alto contraste sutil.
-Estilo: fotografia de estúdio de revista de negócios / editorial fine-art / branding premium para escritório de advocacia.
-NÃO inclua: nenhum texto, letras, números, logotipos, marcas d'água, rostos reconhecíveis, martelos de juiz, balanças da justiça clichês, bandeiras, emojis, watermark.
-Deixe áreas de respiro para sobreposição de texto posterior.`;
+    const { headline, subheadline } = await deriveHeadline(data.topic, data.content);
 
-    // Geradas em paralelo (mesmo custo total, latência ~metade).
+    const buildPrompt = (orientation: "16:9 landscape" | "9:16 portrait", layoutHint: string) => `
+Design a professional, sober editorial banner for a Brazilian law-firm social media post. This is a MARKETING BANNER — the typography IS the subject, rendered crisply and legibly.
+
+TEXT TO RENDER (must appear on the image, spelled EXACTLY, in Portuguese):
+- HEADLINE (large, bold, prominent): "${headline}"
+${subheadline ? `- SUBHEADLINE (smaller, one line under the headline): "${subheadline}"` : ""}
+
+TYPOGRAPHY:
+- Elegant modern serif or high-contrast sans-serif (think Playfair Display, Canela, or Neue Haas Grotesk). High legibility.
+- Headline dominates the composition. Generous letter-spacing on subheadline.
+- Perfect spelling — do NOT invent, translate, abbreviate or alter any character of the text above.
+
+VISUAL STYLE:
+- Sober, executive, premium law-firm aesthetic. Editorial magazine feel.
+- Palette: deep navy, ivory/off-white, muted gold accents, warm neutrals. Subtle film grain.
+- Background: abstract, minimalist — soft geometric shapes, marble/paper texture, cinematic diffused light, gentle gradients. NO literal courtroom clichés (no gavels, scales of justice, columns, flags).
+- Layout: ${layoutHint}. Strong hierarchy, lots of breathing room, tasteful margins.
+- Tone: ${data.tone}, institutional, trustworthy, contemporary.
+
+FORBIDDEN: watermarks, logos, brand marks, human faces, hands, emojis, hashtags, URLs, decorative junk text, misspellings, jury/gavel clichés.
+
+Format: ${orientation}.`;
+
     const [image_16x9_b64, image_9x16_b64] = await Promise.all([
-      generateOneImage(`${basePrompt}\nFormato: paisagem widescreen 16:9, composição horizontal.`, "1536x1024"),
-      generateOneImage(`${basePrompt}\nFormato: retrato vertical 9:16 (story/reels), composição vertical.`, "1024x1536"),
+      generateOneImage(
+        buildPrompt("16:9 landscape", "headline left-aligned on the left third, breathing space on the right"),
+        "1536x1024",
+      ),
+      generateOneImage(
+        buildPrompt("9:16 portrait", "headline centered in the upper-middle third, subheadline below, ample bottom margin"),
+        "1024x1536",
+      ),
     ]);
-    return { image_16x9_b64, image_9x16_b64 };
+    return { image_16x9_b64, image_9x16_b64, headline, subheadline };
   });
 
 

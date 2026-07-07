@@ -109,23 +109,22 @@ function ImageArtCard({
 }) {
   const src = `data:image/png;base64,${b64}`;
   return (
-    <div className="rounded-md border bg-background p-3">
-      <div className="mb-2 flex items-center justify-between">
+    <div className="rounded-lg border bg-background p-4 shadow-sm">
+      <div className="mb-3 flex items-center justify-between">
         <p className="text-sm font-semibold">{title}</p>
       </div>
-      <div className={`${aspectClass} overflow-hidden rounded border bg-muted`}>
+      <div className={`${aspectClass} mx-auto w-full max-w-2xl overflow-hidden rounded-md border bg-muted`}>
         <img src={src} alt={title} className="h-full w-full object-cover" />
       </div>
-      <div className="mt-2 flex flex-wrap justify-end gap-2">
+      <div className="mt-4 flex flex-wrap justify-center gap-3">
         <Button
-          size="sm"
           variant="outline"
           onClick={() => downloadBlobAs(b64ToBlob(b64), filename)}
         >
-          <Download className="mr-1.5 h-4 w-4" /> PNG
+          <Download className="mr-2 h-4 w-4" /> Baixar PNG
         </Button>
-        <Button size="sm" onClick={() => sendToWhatsApp(captionText, b64, filename)}>
-          <MessageCircle className="mr-1.5 h-4 w-4" /> WhatsApp
+        <Button onClick={() => sendToWhatsApp(captionText, b64, filename)}>
+          <MessageCircle className="mr-2 h-4 w-4" /> Enviar por WhatsApp
         </Button>
       </div>
     </div>
@@ -156,11 +155,11 @@ function MarketingPage() {
     [outputHtml],
   );
 
-  const generateImagesFor = async (topic: string, tone: Tone) => {
+  const generateImagesFor = async (topic: string, tone: Tone, content: string) => {
     setLoadingImages(true);
     setImages(null);
     try {
-      const r = await genImages({ data: { topic, tone } });
+      const r = await genImages({ data: { topic, tone, content } });
       setImages({ i16: r.image_16x9_b64, i9: r.image_9x16_b64 });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Falha ao gerar imagens");
@@ -180,9 +179,10 @@ function MarketingPage() {
     setImages(null);
     try {
       const r = await gen({ data: form });
-      setOutputHtml(markdownToHtml(r.content));
-      // Dispara imagens em paralelo, mas não bloqueia o texto.
-      void generateImagesFor(form.topic, form.tone);
+      const html = markdownToHtml(r.content);
+      setOutputHtml(html);
+      // Dispara imagens em paralelo passando o texto gerado como contexto.
+      void generateImagesFor(form.topic, form.tone, html);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Falha ao gerar");
     } finally {
@@ -274,7 +274,7 @@ function MarketingPage() {
                   variant="outline"
                   className="w-full"
                   disabled={loadingImages || !form.topic.trim()}
-                  onClick={() => generateImagesFor(form.topic, form.tone)}
+                  onClick={() => generateImagesFor(form.topic, form.tone, outputHtml)}
                 >
                   {loadingImages ? (
                     <>
@@ -373,7 +373,7 @@ function MarketingPage() {
                 </p>
               )}
               {images && (
-                <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-6">
                   <ImageArtCard
                     title="Feed / LinkedIn (16:9)"
                     aspectClass="aspect-video"
@@ -383,7 +383,7 @@ function MarketingPage() {
                   />
                   <ImageArtCard
                     title="Story / Reels (9:16)"
-                    aspectClass="aspect-[9/16] max-h-[420px]"
+                    aspectClass="aspect-[9/16] max-w-sm"
                     b64={images.i9}
                     filename={`${filenameBase}-9x16.png`}
                     captionText={captionText}
