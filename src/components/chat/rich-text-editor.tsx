@@ -51,6 +51,7 @@ export function RichTextEditor({ html, onChange, minHeight = 360, contentClassNa
   const ref = useRef<HTMLDivElement>(null);
   const initialHtmlRef = useRef<string>(safeHtml);
   const lastEmittedRef = useRef<string>(safeHtml);
+  const emitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Sync externo: quando `html` prop muda por fora (IA gerou, restaurou versão,
   // rascunho carregou), refletir no contentEditable. Ignora se a mudança veio do
@@ -59,6 +60,10 @@ export function RichTextEditor({ html, onChange, minHeight = 360, contentClassNa
     const el = ref.current;
     if (!el) return;
     if (safeHtml === lastEmittedRef.current) return;
+    // Enquanto o usuário está digitando, nunca sobrescreva o DOM do
+    // contentEditable a partir da prop. Mesmo pequenas normalizações do
+    // DOMPurify/browser mudam a string HTML e resetam o caret/foco.
+    if (document.activeElement === el) return;
     if (el.innerHTML === safeHtml) {
       lastEmittedRef.current = safeHtml;
       return;
@@ -67,21 +72,35 @@ export function RichTextEditor({ html, onChange, minHeight = 360, contentClassNa
     lastEmittedRef.current = safeHtml;
   }, [safeHtml]);
 
-  const emit = () => {
+  useEffect(() => {
+    return () => {
+      if (emitTimerRef.current) clearTimeout(emitTimerRef.current);
+    };
+  }, []);
+
+  const emit = (immediate = false) => {
     if (!ref.current) return;
     const current = ref.current.innerHTML;
     // Guarda a versão *sanitizada* — o pai vai reemitir `html`, o efeito
     // recomputa `safeHtml = sanitize(html)` e compara com este ref. Se
     // guardássemos `current` cru, DOMPurify poderia normalizar atributos
     // e reescrever `innerHTML` a cada tecla, resetando o cursor.
-    lastEmittedRef.current = sanitizeProposalHtml(current);
-    onChange(current);
+    const sanitized = sanitizeProposalHtml(current);
+    lastEmittedRef.current = sanitized;
+    if (emitTimerRef.current) clearTimeout(emitTimerRef.current);
+    if (immediate) {
+      onChange(sanitized);
+      return;
+    }
+    emitTimerRef.current = setTimeout(() => {
+      onChange(sanitized);
+    }, 250);
   };
 
   const exec = (cmd: string, value?: string) => {
     ref.current?.focus();
     document.execCommand(cmd, false, value);
-    emit();
+    emit(true);
   };
 
   const handlePaste = (e: React.ClipboardEvent<HTMLDivElement>) => {
@@ -93,7 +112,7 @@ export function RichTextEditor({ html, onChange, minHeight = 360, contentClassNa
       e.preventDefault();
       const clean = sanitizePastedHtml(asHtml);
       document.execCommand("insertHTML", false, clean);
-      emit();
+      emit(true);
     } else if (asText) {
       e.preventDefault();
       const paragraphs = asText
@@ -101,7 +120,7 @@ export function RichTextEditor({ html, onChange, minHeight = 360, contentClassNa
         .map((p) => `<p>${p.replace(/\n/g, "<br>").replace(/</g, "&lt;")}</p>`)
         .join("");
       document.execCommand("insertHTML", false, paragraphs);
-      emit();
+      emit(true);
     }
   };
 
@@ -186,7 +205,8 @@ export function RichTextEditor({ html, onChange, minHeight = 360, contentClassNa
           aria-multiline="true"
           aria-label="Editor de proposta"
           suppressContentEditableWarning
-          onInput={emit}
+          onInput={() => emit()}
+          onBlur={() => emit(true)}
           onPaste={handlePaste}
           className={
             contentClassName
