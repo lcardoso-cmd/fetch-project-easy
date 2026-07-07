@@ -373,7 +373,7 @@ function MarketingPage() {
                 </p>
               )}
               {images && (
-                <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-6">
                   <ImageArtCard
                     title="Feed / LinkedIn (16:9)"
                     aspectClass="aspect-video"
@@ -383,7 +383,7 @@ function MarketingPage() {
                   />
                   <ImageArtCard
                     title="Story / Reels (9:16)"
-                    aspectClass="aspect-[9/16] max-h-[420px]"
+                    aspectClass="aspect-[9/16] max-w-sm"
                     b64={images.i9}
                     filename={`${filenameBase}-9x16.png`}
                     captionText={captionText}
