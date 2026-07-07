@@ -109,23 +109,22 @@ function ImageArtCard({
 }) {
   const src = `data:image/png;base64,${b64}`;
   return (
-    <div className="rounded-md border bg-background p-3">
-      <div className="mb-2 flex items-center justify-between">
+    <div className="rounded-lg border bg-background p-4 shadow-sm">
+      <div className="mb-3 flex items-center justify-between">
         <p className="text-sm font-semibold">{title}</p>
       </div>
-      <div className={`${aspectClass} overflow-hidden rounded border bg-muted`}>
+      <div className={`${aspectClass} mx-auto w-full max-w-2xl overflow-hidden rounded-md border bg-muted`}>
         <img src={src} alt={title} className="h-full w-full object-cover" />
       </div>
-      <div className="mt-2 flex flex-wrap justify-end gap-2">
+      <div className="mt-4 flex flex-wrap justify-center gap-3">
         <Button
-          size="sm"
           variant="outline"
           onClick={() => downloadBlobAs(b64ToBlob(b64), filename)}
         >
-          <Download className="mr-1.5 h-4 w-4" /> PNG
+          <Download className="mr-2 h-4 w-4" /> Baixar PNG
         </Button>
-        <Button size="sm" onClick={() => sendToWhatsApp(captionText, b64, filename)}>
-          <MessageCircle className="mr-1.5 h-4 w-4" /> WhatsApp
+        <Button onClick={() => sendToWhatsApp(captionText, b64, filename)}>
+          <MessageCircle className="mr-2 h-4 w-4" /> Enviar por WhatsApp
         </Button>
       </div>
     </div>
