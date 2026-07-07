@@ -205,7 +205,7 @@ export function RichTextEditor({ html, onChange, minHeight = 360, contentClassNa
           aria-multiline="true"
           aria-label="Editor de proposta"
           suppressContentEditableWarning
-          onInput={emit}
+          onInput={() => emit()}
           onBlur={() => emit(true)}
           onPaste={handlePaste}
           className={
