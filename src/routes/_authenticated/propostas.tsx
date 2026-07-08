@@ -56,7 +56,7 @@ import {
 
 
 const LEGACY_DRAFT_KEY = "jurismind:proposal-draft:v1";
-const DRAFT_DEBOUNCE_MS = 900;
+const DRAFT_DEBOUNCE_MS = 2500;
 
 function formatSavedAt(ts: number): string {
   const diff = Math.max(0, Date.now() - ts);
@@ -1028,6 +1028,7 @@ function ProposalPage() {
                 html={output}
                 onChange={setOutput}
                 minHeight={640}
+                changeDelayMs={1200}
                 contentClassName="word-doc max-w-none px-10 py-12 bg-white text-slate-900 focus:outline-none"
               />
             ) : (
