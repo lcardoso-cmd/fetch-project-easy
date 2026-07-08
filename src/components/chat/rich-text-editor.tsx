@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { sanitizeProposalHtml } from "@/lib/sanitize-html";
 import {
@@ -26,6 +26,12 @@ interface Props {
    * do .docx exportado.
    */
   contentClassName?: string;
+  /**
+   * Tempo para avisar o componente pai depois de digitação normal.
+   * O DOM editável fica local e imediato; isso evita que autosave/re-render
+   * do pai restaure o HTML antigo e jogue o cursor para trás.
+   */
+  changeDelayMs?: number;
 }
 
 
@@ -46,12 +52,20 @@ function sanitizePastedHtml(raw: string): string {
   return s;
 }
 
-export function RichTextEditor({ html, onChange, minHeight = 360, contentClassName }: Props) {
+export function RichTextEditor({ html, onChange, minHeight = 360, contentClassName, changeDelayMs = 900 }: Props) {
   const safeHtml = useMemo(() => sanitizeProposalHtml(html), [html]);
   const ref = useRef<HTMLDivElement>(null);
-  const initialHtmlRef = useRef<string>(safeHtml);
   const lastEmittedRef = useRef<string>(safeHtml);
+  const lastExternalHtmlRef = useRef<string>(safeHtml);
   const emitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const composingRef = useRef(false);
+
+  const setEditorRef = useCallback((node: HTMLDivElement | null) => {
+    ref.current = node;
+    if (node && node.innerHTML !== lastExternalHtmlRef.current) {
+      node.innerHTML = lastExternalHtmlRef.current || "";
+    }
+  }, []);
 
   // Sync externo: quando `html` prop muda por fora (IA gerou, restaurou versão,
   // rascunho carregou), refletir no contentEditable. Ignora se a mudança veio do
@@ -59,6 +73,8 @@ export function RichTextEditor({ html, onChange, minHeight = 360, contentClassNa
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
+    if (safeHtml === lastExternalHtmlRef.current) return;
+    lastExternalHtmlRef.current = safeHtml;
     if (safeHtml === lastEmittedRef.current) return;
     // Enquanto o usuário está digitando, nunca sobrescreva o DOM do
     // contentEditable a partir da prop. Mesmo pequenas normalizações do
@@ -79,7 +95,7 @@ export function RichTextEditor({ html, onChange, minHeight = 360, contentClassNa
   }, []);
 
   const emit = (immediate = false) => {
-    if (!ref.current) return;
+    if (!ref.current || composingRef.current) return;
     const current = ref.current.innerHTML;
     // Guarda a versão *sanitizada* — o pai vai reemitir `html`, o efeito
     // recomputa `safeHtml = sanitize(html)` e compara com este ref. Se
@@ -94,7 +110,7 @@ export function RichTextEditor({ html, onChange, minHeight = 360, contentClassNa
     }
     emitTimerRef.current = setTimeout(() => {
       onChange(sanitized);
-    }, 250);
+    }, changeDelayMs);
   };
 
   const exec = (cmd: string, value?: string) => {
@@ -198,15 +214,16 @@ export function RichTextEditor({ html, onChange, minHeight = 360, contentClassNa
           e casar visualmente com o .docx exportado. */}
       <div className="bg-white p-2 dark:bg-slate-200">
         <div
-          ref={ref}
+          ref={setEditorRef}
           contentEditable
-          dangerouslySetInnerHTML={{ __html: initialHtmlRef.current || "" }}
           role="textbox"
           aria-multiline="true"
           aria-label="Editor de proposta"
           suppressContentEditableWarning
           onInput={() => emit()}
           onBlur={() => emit(true)}
+          onCompositionStart={() => { composingRef.current = true; }}
+          onCompositionEnd={() => { composingRef.current = false; emit(); }}
           onPaste={handlePaste}
           className={
             contentClassName
