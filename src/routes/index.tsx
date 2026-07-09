@@ -188,16 +188,16 @@ function LandingPage() {
         <div className="relative mx-auto max-w-6xl px-4 py-24 text-center">
           <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-accent/20 px-3 py-1 text-xs font-semibold text-accent">
             <JurisMindMark size={14} context={JURISMIND_CONTEXT.inlineDark} />
-            Para advogados, peritos e assistentes técnicos
+            Feito para escritórios de advocacia
           </div>
           <h1 className="font-heading text-5xl font-extrabold tracking-tight md:text-6xl">
-            Inteligência jurídica e técnica,
+            Inteligência jurídica,
             <br />
             de ponta a ponta.
           </h1>
           <p className="mx-auto mt-6 max-w-2xl text-lg text-primary-foreground/80">
-            B2B | JurisMind AI reúne processos, laudos e contratos em um só lugar: pergunte,
-            gere petições, quesitos, pareceres técnicos e planilhas — sempre com citação das fontes.
+            B2B | JurisMind AI reúne processos, contratos e provas em um só lugar: pergunte,
+            gere petições e propostas — sempre com citação das fontes.
           </p>
           <div className="mt-8 flex flex-wrap justify-center gap-3">
             <Button size="lg" asChild className="bg-accent text-accent-foreground hover:bg-accent/90">
