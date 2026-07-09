@@ -4,7 +4,6 @@ import { IconBox } from "@/components/ui/icon-box";
 import {
   ArrowRight,
   Scale,
-  Microscope,
   FileText,
   MessageSquare,
   Handshake,
@@ -26,26 +25,26 @@ export const Route = createFileRoute("/")({
   component: LandingPage,
   head: () => ({
     meta: [
-      { title: "B2B | JurisMind AI — Inteligência jurídica com IA" },
+      { title: "B2B | JurisMind AI — Inteligência jurídica com IA para advogados" },
       {
         name: "description",
         content:
-          "Plataforma de IA jurídica para advogados, peritos e assistentes técnicos: RAG de documentos, geração de peças, laudos, pareceres e propostas comerciais.",
+          "Plataforma de IA jurídica para escritórios de advocacia: RAG de documentos, geração de peças processuais, propostas comerciais, agenda integrada e monitoramento de publicações.",
       },
-      { property: "og:title", content: "B2B | JurisMind AI — Inteligência jurídica com IA" },
+      { property: "og:title", content: "B2B | JurisMind AI — Inteligência jurídica com IA para advogados" },
       {
         property: "og:description",
         content:
-          "Plataforma de IA jurídica para advogados, peritos e assistentes técnicos: RAG de documentos, geração de peças, laudos, pareceres e propostas comerciais.",
+          "Plataforma de IA jurídica para escritórios de advocacia: RAG de documentos, geração de peças processuais, propostas comerciais, agenda integrada e monitoramento de publicações.",
       },
       { property: "og:url", content: "https://b2bjurismind.lovable.app/" },
       { property: "og:type", content: "website" },
       { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/Sls90jSFrMa8ECulf4OjLMG7sRB3/social-images/social-1783001247994-LOGO_JURISMIND_16-9.webp" },
-      { name: "twitter:title", content: "B2B | JurisMind AI — Inteligência jurídica com IA" },
+      { name: "twitter:title", content: "B2B | JurisMind AI — Inteligência jurídica com IA para advogados" },
       {
         name: "twitter:description",
         content:
-          "Plataforma B2B de IA jurídica: RAG de documentos, geração de peças, laudos, pareceres e propostas.",
+          "Plataforma B2B de IA jurídica para escritórios de advocacia: RAG de documentos, geração de peças e propostas.",
       },
       { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/Sls90jSFrMa8ECulf4OjLMG7sRB3/social-images/social-1783001247994-LOGO_JURISMIND_16-9.webp" },
     ],
@@ -66,14 +65,14 @@ const PILLARS: Pillar[] = [
     icon: Sparkles,
     title: "Assistente JurisMind por caso",
     description:
-      "RAG híbrido dedicado ao processo: pergunte sobre laudos, quesitos, contratos e receba respostas citando os trechos e páginas dos documentos.",
+      "RAG híbrido dedicado ao processo: pergunte sobre contratos, provas e petições e receba respostas citando os trechos e páginas dos documentos.",
     span: "md:col-span-2",
   },
   {
     icon: FileText,
-    title: "Peças, laudos e pareceres",
+    title: "Peças processuais com IA",
     description:
-      "Petições, contestações, quesitos, laudos periciais e pareceres técnicos — padronizados em DOCX/PDF com a marca do escritório.",
+      "Petições, contestações, contrarrazões e alegações finais — padronizadas em DOCX/PDF com a marca do escritório.",
   },
   {
     icon: Handshake,
@@ -111,7 +110,7 @@ const STEPS = [
   {
     icon: MessageSquare,
     title: "Trabalhe",
-    text: "Chat com os documentos do caso, geração de peças, laudos e pareceres com citação das fontes.",
+    text: "Chat com os documentos do caso e geração de peças processuais com citação das fontes.",
   },
   {
     icon: FileCheck2,
@@ -188,16 +187,16 @@ function LandingPage() {
         <div className="relative mx-auto max-w-6xl px-4 py-24 text-center">
           <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-accent/20 px-3 py-1 text-xs font-semibold text-accent">
             <JurisMindMark size={14} context={JURISMIND_CONTEXT.inlineDark} />
-            Para advogados, peritos e assistentes técnicos
+            Feito para escritórios de advocacia
           </div>
           <h1 className="font-heading text-5xl font-extrabold tracking-tight md:text-6xl">
-            Inteligência jurídica e técnica,
+            Inteligência jurídica,
             <br />
             de ponta a ponta.
           </h1>
           <p className="mx-auto mt-6 max-w-2xl text-lg text-primary-foreground/80">
-            B2B | JurisMind AI reúne processos, laudos e contratos em um só lugar: pergunte,
-            gere petições, quesitos, pareceres técnicos e planilhas — sempre com citação das fontes.
+            B2B | JurisMind AI reúne processos, contratos e provas em um só lugar: pergunte,
+            gere petições e propostas — sempre com citação das fontes.
           </p>
           <div className="mt-8 flex flex-wrap justify-center gap-3">
             <Button size="lg" asChild className="bg-accent text-accent-foreground hover:bg-accent/90">
@@ -227,14 +226,14 @@ function LandingPage() {
               text: "Petições, contestações, contrarrazões, alegações finais e análise de risco.",
             },
             {
-              icon: Microscope,
-              title: "Peritos judiciais",
-              text: "Laudos periciais, resposta a quesitos e organização de nomeações do juízo.",
+              icon: FileText,
+              title: "Escritórios de advocacia",
+              text: "Gestão de casos, equipe e clientes com governança e permissões granulares.",
             },
             {
-              icon: FileText,
-              title: "Assistentes técnicos",
-              text: "Pareceres técnicos, manifestações e apoio à parte contratante no processo.",
+              icon: Handshake,
+              title: "Área comercial",
+              text: "Propostas comerciais versionadas, conversão em caso e marketing jurídico.",
             },
           ].map((p) => {
             const Icon = p.icon;
@@ -255,10 +254,10 @@ function LandingPage() {
       <section id="plataforma" className="mx-auto max-w-6xl px-4 py-20">
         <div className="mx-auto max-w-2xl text-center">
           <h2 className="font-heading text-3xl font-bold tracking-tight text-foreground md:text-4xl">
-            Uma plataforma completa para o escritório jurídico
+            Uma plataforma completa para o escritório de advocacia
           </h2>
           <p className="mt-3 text-muted-foreground">
-            Do primeiro contato com o cliente até a entrega do laudo: tudo integrado, sem trocar de
+            Do primeiro contato com o cliente até a entrega da peça: tudo integrado, sem trocar de
             ferramenta.
           </p>
         </div>
@@ -368,7 +367,7 @@ function LandingPage() {
       <footer className="border-t">
 
         <div className="mx-auto max-w-6xl px-4 py-6 text-center text-sm text-muted-foreground">
-          © {new Date().getFullYear()} B2B | JurisMind AI. Feito para advogados, peritos e assistentes técnicos.
+          © {new Date().getFullYear()} B2B | JurisMind AI. Feito para escritórios de advocacia.
         </div>
       </footer>
     </div>

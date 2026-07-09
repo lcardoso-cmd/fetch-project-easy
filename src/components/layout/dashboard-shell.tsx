@@ -6,7 +6,6 @@ import { useAuth } from "@/hooks/use-auth";
 import { UserMenu } from "@/components/layout/user-menu";
 import { useProfile } from "@/hooks/use-profile";
 import { useCapabilities, VIEW_AS_PRESETS } from "@/hooks/use-capabilities";
-import { labelsForPractice } from "@/lib/practice-labels";
 import type { PracticeType } from "@/lib/profile.functions";
 import type { Capability } from "@/lib/capabilities.functions";
 import {
@@ -43,7 +42,7 @@ import {
   MessageSquare,
   PanelLeftClose,
   PanelLeftOpen,
-  Microscope,
+  
   Globe2,
   Menu,
   Users2,
@@ -76,10 +75,7 @@ type NavLabel = {
 };
 type NavItem = NavLabel | { type: "separator" } | NavLink;
 
-function buildNav(practice: PracticeType | null | undefined): NavItem[] {
-  const labels = labelsForPractice(practice);
-  const isLawyer = !practice || practice === "advogado";
-
+function buildNav(_practice: PracticeType | null | undefined): NavItem[] {
   const link = (
     key: NavKey,
     to: string,
@@ -119,17 +115,11 @@ function buildNav(practice: PracticeType | null | undefined): NavItem[] {
     link(
       "cases",
       "/assistencias",
-      isLawyer ? "Casos" : labels.entityPlural,
+      "Casos",
       FolderKanban,
       "startsWith",
     ),
-    link("drafter", "/pecas", isLawyer ? "Peças Jurídicas" : labels.outputLabel, Scale),
-    // Evita duplicar "Parecer Técnico" para o assistente técnico, cujo
-    // drafter já usa esse mesmo rótulo. Perito e advogado seguem vendo o
-    // módulo dedicado.
-    ...(practice === "assistente_tecnico"
-      ? []
-      : [link("expert-opinion", "/parecer-tecnico", "Parecer Técnico", Microscope)]),
+    link("drafter", "/pecas", "Peças Jurídicas", Scale),
 
     // ─── NEGÓCIO ───
     { type: "separator" },

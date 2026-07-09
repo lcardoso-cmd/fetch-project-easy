@@ -432,7 +432,7 @@ function SettingsPage() {
               <ShieldCheck className="h-5 w-5" /> Capacidades por visão
             </CardTitle>
             <CardDescription>
-              Resumo do acesso de JurisMind B2B, admin de escritório e perito, com aplicação de
+              Resumo do acesso de JurisMind B2B e admin de escritório, com aplicação de
               presets em massa.
             </CardDescription>
           </CardHeader>
