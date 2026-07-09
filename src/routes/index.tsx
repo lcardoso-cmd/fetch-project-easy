@@ -26,26 +26,26 @@ export const Route = createFileRoute("/")({
   component: LandingPage,
   head: () => ({
     meta: [
-      { title: "B2B | JurisMind AI — Inteligência jurídica com IA" },
+      { title: "B2B | JurisMind AI — Inteligência jurídica com IA para advogados" },
       {
         name: "description",
         content:
-          "Plataforma de IA jurídica para advogados, peritos e assistentes técnicos: RAG de documentos, geração de peças, laudos, pareceres e propostas comerciais.",
+          "Plataforma de IA jurídica para escritórios de advocacia: RAG de documentos, geração de peças processuais, propostas comerciais, agenda integrada e monitoramento de publicações.",
       },
-      { property: "og:title", content: "B2B | JurisMind AI — Inteligência jurídica com IA" },
+      { property: "og:title", content: "B2B | JurisMind AI — Inteligência jurídica com IA para advogados" },
       {
         property: "og:description",
         content:
-          "Plataforma de IA jurídica para advogados, peritos e assistentes técnicos: RAG de documentos, geração de peças, laudos, pareceres e propostas comerciais.",
+          "Plataforma de IA jurídica para escritórios de advocacia: RAG de documentos, geração de peças processuais, propostas comerciais, agenda integrada e monitoramento de publicações.",
       },
       { property: "og:url", content: "https://b2bjurismind.lovable.app/" },
       { property: "og:type", content: "website" },
       { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/Sls90jSFrMa8ECulf4OjLMG7sRB3/social-images/social-1783001247994-LOGO_JURISMIND_16-9.webp" },
-      { name: "twitter:title", content: "B2B | JurisMind AI — Inteligência jurídica com IA" },
+      { name: "twitter:title", content: "B2B | JurisMind AI — Inteligência jurídica com IA para advogados" },
       {
         name: "twitter:description",
         content:
-          "Plataforma B2B de IA jurídica: RAG de documentos, geração de peças, laudos, pareceres e propostas.",
+          "Plataforma B2B de IA jurídica para escritórios de advocacia: RAG de documentos, geração de peças e propostas.",
       },
       { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/Sls90jSFrMa8ECulf4OjLMG7sRB3/social-images/social-1783001247994-LOGO_JURISMIND_16-9.webp" },
     ],
