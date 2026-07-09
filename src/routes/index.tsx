@@ -66,14 +66,14 @@ const PILLARS: Pillar[] = [
     icon: Sparkles,
     title: "Assistente JurisMind por caso",
     description:
-      "RAG híbrido dedicado ao processo: pergunte sobre laudos, quesitos, contratos e receba respostas citando os trechos e páginas dos documentos.",
+      "RAG híbrido dedicado ao processo: pergunte sobre contratos, provas e petições e receba respostas citando os trechos e páginas dos documentos.",
     span: "md:col-span-2",
   },
   {
     icon: FileText,
-    title: "Peças, laudos e pareceres",
+    title: "Peças processuais com IA",
     description:
-      "Petições, contestações, quesitos, laudos periciais e pareceres técnicos — padronizados em DOCX/PDF com a marca do escritório.",
+      "Petições, contestações, contrarrazões e alegações finais — padronizadas em DOCX/PDF com a marca do escritório.",
   },
   {
     icon: Handshake,
