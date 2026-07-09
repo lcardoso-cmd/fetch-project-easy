@@ -227,14 +227,14 @@ function LandingPage() {
               text: "Petições, contestações, contrarrazões, alegações finais e análise de risco.",
             },
             {
-              icon: Microscope,
-              title: "Peritos judiciais",
-              text: "Laudos periciais, resposta a quesitos e organização de nomeações do juízo.",
+              icon: FileText,
+              title: "Escritórios de advocacia",
+              text: "Gestão de casos, equipe e clientes com governança e permissões granulares.",
             },
             {
-              icon: FileText,
-              title: "Assistentes técnicos",
-              text: "Pareceres técnicos, manifestações e apoio à parte contratante no processo.",
+              icon: Handshake,
+              title: "Área comercial",
+              text: "Propostas comerciais versionadas, conversão em caso e marketing jurídico.",
             },
           ].map((p) => {
             const Icon = p.icon;
