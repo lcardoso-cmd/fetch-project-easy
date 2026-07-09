@@ -111,7 +111,7 @@ const STEPS = [
   {
     icon: MessageSquare,
     title: "Trabalhe",
-    text: "Chat com os documentos do caso, geração de peças, laudos e pareceres com citação das fontes.",
+    text: "Chat com os documentos do caso e geração de peças processuais com citação das fontes.",
   },
   {
     icon: FileCheck2,
