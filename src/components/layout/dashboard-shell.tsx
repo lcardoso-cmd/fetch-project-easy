@@ -6,7 +6,6 @@ import { useAuth } from "@/hooks/use-auth";
 import { UserMenu } from "@/components/layout/user-menu";
 import { useProfile } from "@/hooks/use-profile";
 import { useCapabilities, VIEW_AS_PRESETS } from "@/hooks/use-capabilities";
-import { labelsForPractice } from "@/lib/practice-labels";
 import type { PracticeType } from "@/lib/profile.functions";
 import type { Capability } from "@/lib/capabilities.functions";
 import {
