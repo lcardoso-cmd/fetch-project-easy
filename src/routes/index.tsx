@@ -4,7 +4,6 @@ import { IconBox } from "@/components/ui/icon-box";
 import {
   ArrowRight,
   Scale,
-  Microscope,
   FileText,
   MessageSquare,
   Handshake,
