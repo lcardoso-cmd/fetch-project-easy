@@ -42,7 +42,7 @@ import {
   MessageSquare,
   PanelLeftClose,
   PanelLeftOpen,
-  Microscope,
+  
   Globe2,
   Menu,
   Users2,
