@@ -76,10 +76,7 @@ type NavLabel = {
 };
 type NavItem = NavLabel | { type: "separator" } | NavLink;
 
-function buildNav(practice: PracticeType | null | undefined): NavItem[] {
-  const labels = labelsForPractice(practice);
-  const isLawyer = !practice || practice === "advogado";
-
+function buildNav(_practice: PracticeType | null | undefined): NavItem[] {
   const link = (
     key: NavKey,
     to: string,
@@ -119,7 +116,7 @@ function buildNav(practice: PracticeType | null | undefined): NavItem[] {
     link(
       "cases",
       "/assistencias",
-      isLawyer ? "Casos" : labels.entityPlural,
+      "Casos",
       FolderKanban,
       "startsWith",
     ),
