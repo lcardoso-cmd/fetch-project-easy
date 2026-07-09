@@ -123,13 +123,7 @@ function buildNav(practice: PracticeType | null | undefined): NavItem[] {
       FolderKanban,
       "startsWith",
     ),
-    link("drafter", "/pecas", isLawyer ? "Peças Jurídicas" : labels.outputLabel, Scale),
-    // Evita duplicar "Parecer Técnico" para o assistente técnico, cujo
-    // drafter já usa esse mesmo rótulo. Perito e advogado seguem vendo o
-    // módulo dedicado.
-    ...(practice === "assistente_tecnico"
-      ? []
-      : [link("expert-opinion", "/parecer-tecnico", "Parecer Técnico", Microscope)]),
+    link("drafter", "/pecas", "Peças Jurídicas", Scale),
 
     // ─── NEGÓCIO ───
     { type: "separator" },
