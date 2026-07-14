@@ -195,6 +195,9 @@ function DashboardPage() {
           </CardContent>
         </Card>
       </div>
+      </div>
+
+      {isSuperAdmin ? <MarketingDeckAdminCard /> : null}
     </div>
   );
 }
