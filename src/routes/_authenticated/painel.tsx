@@ -29,7 +29,7 @@ export const Route = createFileRoute("/_authenticated/painel")({
 function DashboardPage() {
   const navigate = useNavigate();
   const { next } = Route.useSearch();
-  const { has, isLoading: capsLoading } = useCapabilities();
+  const { has, isLoading: capsLoading, isSuperAdmin } = useCapabilities();
 
   // Resolve retorno: prioriza `?next=` do query; caso contrário, o valor persistido.
   const pendingReturn =
