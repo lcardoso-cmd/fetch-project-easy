@@ -15,6 +15,7 @@ import { Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { useCapabilities } from "@/hooks/use-capabilities";
 import { requiredCapabilityForPath } from "@/lib/route-capabilities";
+import { MarketingDeckAdminCard } from "@/components/marketing-deck-admin-card";
 
 const RETURN_STORAGE_KEY = "jm.accessReturn";
 
