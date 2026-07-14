@@ -15,6 +15,7 @@ import { Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { useCapabilities } from "@/hooks/use-capabilities";
 import { requiredCapabilityForPath } from "@/lib/route-capabilities";
+import { MarketingDeckAdminCard } from "@/components/marketing-deck-admin-card";
 
 const RETURN_STORAGE_KEY = "jm.accessReturn";
 
@@ -28,7 +29,7 @@ export const Route = createFileRoute("/_authenticated/painel")({
 function DashboardPage() {
   const navigate = useNavigate();
   const { next } = Route.useSearch();
-  const { has, isLoading: capsLoading } = useCapabilities();
+  const { has, isLoading: capsLoading, isSuperAdmin } = useCapabilities();
 
   // Resolve retorno: prioriza `?next=` do query; caso contrário, o valor persistido.
   const pendingReturn =
@@ -194,6 +195,8 @@ function DashboardPage() {
           </CardContent>
         </Card>
       </div>
+
+      {isSuperAdmin ? <MarketingDeckAdminCard /> : null}
     </div>
   );
 }
