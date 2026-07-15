@@ -324,7 +324,7 @@ function LandingPage() {
             <div>
               <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-accent/20 px-3 py-1 text-xs font-semibold text-accent">
                 <JurisMindMark size={14} context={JURISMIND_CONTEXT.inlineDark} />
-                Deck executivo · Para advogados e escritórios de advocacia
+                Para advogados e escritórios de advocacia
               </div>
               <h1 className="font-heading text-5xl font-extrabold tracking-tight md:text-6xl">
                 IA jurídica para advogados,
