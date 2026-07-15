@@ -88,7 +88,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.32.0",
-    "@lovable.dev/vite-tanstack-config": "2.7.1",
+    "@lovable.dev/vite-tanstack-config": "2.7.3",
     "@storybook/addon-essentials": "8.6.15",
     "@storybook/addon-interactions": "8.6.15",
     "@storybook/react-vite": "8.6.15",
