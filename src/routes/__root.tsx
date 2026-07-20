@@ -11,8 +11,8 @@ import { type ReactNode } from "react";
 import appCss from "../styles.css?url";
 import brainSquareNavy from "@/assets/brain-square-navy.png.asset.json";
 
-const OG_IMAGE_URL =
-  "https://storage.googleapis.com/gpt-engineer-file-uploads/Sls90jSFrMa8ECulf4OjLMG7sRB3/social-images/social-1783001247994-LOGO_JURISMIND_16-9.webp";
+import ogBrain from "@/assets/og-brain.jpg.asset.json";
+const OG_IMAGE_URL = `https://jurismind.b2bconsulting.com.br${ogBrain.url}`;
 import { AuthProvider } from "@/hooks/use-auth";
 import { ThemeProvider } from "@/hooks/use-theme";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -62,7 +62,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { property: "og:description", content: "Plataforma jurídica com IA: RAG de documentos e gestão inteligente de prazos." },
       { property: "og:image", content: OG_IMAGE_URL },
       { property: "og:image:width", content: "1200" },
-      { property: "og:image:height", content: "675" },
+      { property: "og:image:height", content: "630" },
       { name: "twitter:card", content: "summary_large_image" },
       { name: "twitter:site", content: "@JurisMind" },
       { name: "twitter:title", content: "B2B | JurisMind AI" },
