@@ -99,6 +99,7 @@ function AuthPage() {
   const [fullName, setFullName] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [mode, setMode] = useState<"login" | "signup">("login");
   const [pendingEmail, setPendingEmail] = useState<string | null>(null);
   const [resendCooldown, setResendCooldown] = useState(0);
@@ -107,6 +108,7 @@ function AuthPage() {
   const [forgotOpen, setForgotOpen] = useState(false);
   const [forgotEmail, setForgotEmail] = useState("");
   const [isSendingReset, setIsSendingReset] = useState(false);
+
 
   const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -378,20 +380,122 @@ function AuthPage() {
     }
   };
 
+  const describeGoogleError = (err: unknown): { title: string; description: string } => {
+    const raw = (err instanceof Error ? err.message : typeof err === "string" ? err : "")
+      .toString()
+      .toLowerCase();
+    if (!raw) {
+      return {
+        title: "Não foi possível entrar com Google",
+        description: "Tente novamente em instantes. Se persistir, use email e senha.",
+      };
+    }
+    if (raw.includes("popup") && (raw.includes("block") || raw.includes("bloque"))) {
+      return {
+        title: "Pop-up bloqueado pelo navegador",
+        description: "Habilite pop-ups para este site e tente novamente.",
+      };
+    }
+    if (raw.includes("popup_closed") || raw.includes("closed by user") || raw.includes("user closed") || raw.includes("cancel")) {
+      return {
+        title: "Login cancelado",
+        description: "A janela do Google foi fechada antes de concluir.",
+      };
+    }
+    if (raw.includes("access_denied") || raw.includes("consent")) {
+      return {
+        title: "Permissão negada",
+        description: "Você precisa autorizar o acesso da conta Google para entrar.",
+      };
+    }
+    if (raw.includes("network") || raw.includes("failed to fetch") || raw.includes("timeout")) {
+      return {
+        title: "Sem conexão",
+        description: "Verifique sua internet e tente novamente.",
+      };
+    }
+    if (raw.includes("unsupported provider") || raw.includes("provider is not enabled") || raw.includes("provider_not_enabled")) {
+      return {
+        title: "Google indisponível",
+        description: "O login com Google não está habilitado neste ambiente. Use email e senha ou fale com o suporte.",
+      };
+    }
+    if (raw.includes("redirect") && (raw.includes("uri") || raw.includes("mismatch") || raw.includes("allow"))) {
+      return {
+        title: "URL de redirecionamento não autorizada",
+        description: "Este domínio precisa estar liberado no provedor Google. Fale com o suporte.",
+      };
+    }
+    if (raw.includes("invalid_client") || raw.includes("client_id")) {
+      return {
+        title: "Configuração do Google inválida",
+        description: "As credenciais OAuth não estão configuradas corretamente. Fale com o suporte.",
+      };
+    }
+    if (raw.includes("rate limit") || raw.includes("too many")) {
+      return {
+        title: "Muitas tentativas",
+        description: "Aguarde alguns minutos antes de tentar novamente.",
+      };
+    }
+    return {
+      title: "Falha no login com Google",
+      description: err instanceof Error ? err.message : "Tente novamente em instantes.",
+    };
+  };
+
   const handleGoogle = async () => {
+    if (isGoogleLoading) return;
     setError(null);
+    setIsGoogleLoading(true);
     // Persiste destino para após o retorno do OAuth (roundtrip perde ?redirect=).
     const target = safeInternalPath(search.redirect);
     if (target && typeof window !== "undefined") {
       sessionStorage.setItem(OAUTH_REDIRECT_KEY, target);
     }
-    const result = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: window.location.origin,
-    });
-    if (result.error) {
-      setError(result.error instanceof Error ? result.error.message : "Erro ao entrar com Google");
+    try {
+      const result = await lovable.auth.signInWithOAuth("google", {
+        redirect_uri: window.location.origin,
+      });
+      if (result.error) {
+        const { title, description } = describeGoogleError(result.error);
+        setError(description);
+        toast.error(title, { description });
+        setIsGoogleLoading(false);
+        return;
+      }
+      // Se result.redirected, o navegador está indo para o Google — mantém loading.
+      if (!result.redirected) {
+        // Sessão já estabelecida (popup). O efeito de `user` cuidará do redirect.
+        setIsGoogleLoading(false);
+      }
+    } catch (err) {
+      const { title, description } = describeGoogleError(err);
+      setError(description);
+      toast.error(title, { description });
+      setIsGoogleLoading(false);
     }
   };
+
+  // Detecta erros de OAuth vindos por hash/query após retorno do provedor.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.hash.startsWith("#")
+      ? window.location.hash.slice(1)
+      : window.location.search);
+    const oauthError = params.get("error") || params.get("error_code");
+    if (!oauthError) return;
+    const desc = params.get("error_description") || oauthError;
+    const { title, description } = describeGoogleError(desc);
+    setError(description);
+    toast.error(title, { description });
+    // Limpa a URL para não repetir o toast em navegações futuras.
+    const cleanUrl = window.location.origin + window.location.pathname;
+    window.history.replaceState({}, "", cleanUrl);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+
 
 
   const cardClass = cn(
@@ -517,10 +621,11 @@ function AuthPage() {
                   <IconBox icon={LogIn} size="xs" bgColor="bg-primary-foreground/15" iconColor="text-primary-foreground" />
                   {isLoading ? "Entrando..." : "Entrar"}
                 </Button>
-                <Button type="button" variant="outline" className="w-full gap-2" onClick={handleGoogle}>
+                <Button type="button" variant="outline" className="w-full gap-2" onClick={handleGoogle} disabled={isGoogleLoading || isLoading}>
                   <GoogleIcon className="h-4 w-4" />
-                  Entrar com Google
+                  {isGoogleLoading ? "Conectando ao Google..." : "Entrar com Google"}
                 </Button>
+
               </form>
               <p className="mt-4 text-center text-sm text-muted-foreground">
                 Ainda não tem uma conta?{" "}
@@ -574,10 +679,11 @@ function AuthPage() {
                   <IconBox icon={UserPlus} size="xs" bgColor="bg-primary-foreground/15" iconColor="text-primary-foreground" />
                   {isLoading ? "Criando..." : "Criar conta"}
                 </Button>
-                <Button type="button" variant="outline" className="w-full gap-2" onClick={handleGoogle}>
+                <Button type="button" variant="outline" className="w-full gap-2" onClick={handleGoogle} disabled={isGoogleLoading || isLoading}>
                   <GoogleIcon className="h-4 w-4" />
-                  Criar conta com Google
+                  {isGoogleLoading ? "Conectando ao Google..." : "Criar conta com Google"}
                 </Button>
+
               </form>
               <p className="mt-4 text-center text-sm text-muted-foreground">
                 Já tem uma conta?{" "}
