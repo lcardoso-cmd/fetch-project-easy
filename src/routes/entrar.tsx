@@ -503,23 +503,10 @@ function AuthPage() {
     }
   };
 
-  // Detecta erros de OAuth vindos por hash/query após retorno do provedor.
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const params = new URLSearchParams(window.location.hash.startsWith("#")
-      ? window.location.hash.slice(1)
-      : window.location.search);
-    const oauthError = params.get("error") || params.get("error_code");
-    if (!oauthError) return;
-    const desc = params.get("error_description") || oauthError;
-    const { title, description } = describeGoogleError(desc);
-    setError(description);
-    toast.error(title, { description });
-    // Limpa a URL para não repetir o toast em navegações futuras.
-    const cleanUrl = window.location.origin + window.location.pathname;
-    window.history.replaceState({}, "", cleanUrl);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+
+
+
+
 
 
 
