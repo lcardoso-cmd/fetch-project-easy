@@ -19,7 +19,7 @@
       {
         "name": "list_cases",
         "title": "Listar casos",
-        "description": "Lista os casos (processos, perícias e assistências técnicas) do usuário autenticado no JurisMind. Retorna id, título, cliente, número CNJ, jurisdição, tipo e status.",
+        "description": "Lista casos do usuário com paginação, ordenação e filtros (status, tipo, jurisdição/tribunal, busca textual, intervalo de datas de criação). Retorna também 'total' e 'nextOffset' para paginação consistente.",
         "annotations": {
           "readOnlyHint": true,
           "idempotentHint": true,
@@ -30,7 +30,6 @@
           "type": "object",
           "properties": {
             "status": {
-              "description": "Filtra por status. Padrão: todos.",
               "type": "string",
               "enum": [
                 "active",
@@ -39,11 +38,56 @@
                 "all"
               ]
             },
+            "case_type": {
+              "description": "Filtra por tipo de caso.",
+              "type": "string"
+            },
+            "jurisdiction": {
+              "description": "Filtra por jurisdição/tribunal (ex.: 'STF', 'TJSP'). Substring, case-insensitive.",
+              "type": "string"
+            },
+            "search": {
+              "description": "Busca textual em título, cliente ou número CNJ.",
+              "type": "string"
+            },
+            "created_from": {
+              "description": "Data ISO inicial (created_at >=).",
+              "type": "string"
+            },
+            "created_to": {
+              "description": "Data ISO final (created_at <).",
+              "type": "string"
+            },
+            "sort_by": {
+              "description": "Padrão: created_at.",
+              "type": "string",
+              "enum": [
+                "created_at",
+                "updated_at",
+                "title",
+                "client_name",
+                "status"
+              ]
+            },
+            "sort_dir": {
+              "description": "Padrão: desc.",
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ]
+            },
             "limit": {
-              "description": "Máx. de casos (padrão 50).",
+              "description": "Padrão 25.",
               "type": "integer",
               "minimum": 1,
               "maximum": 100
+            },
+            "offset": {
+              "description": "Padrão 0.",
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
             }
           }
         },
