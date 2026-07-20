@@ -31,7 +31,7 @@ export default defineTool({
     offset: z.number().int().min(0).optional(),
   },
   annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
-  handler: async (input, ctx) => {
+  handler: withAudit("list_tasks", async (input, ctx) => {
     if (!ctx.isAuthenticated()) {
       return { content: [{ type: "text", text: "Não autenticado" }], isError: true };
     }
@@ -77,5 +77,5 @@ export default defineTool({
       ],
       structuredContent: { total, count: rows.length, offset, nextOffset, tasks: rows },
     };
-  },
+  }),
 });
