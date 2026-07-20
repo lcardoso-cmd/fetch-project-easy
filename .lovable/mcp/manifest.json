@@ -19,7 +19,7 @@
       {
         "name": "list_cases",
         "title": "Listar casos",
-        "description": "Lista os casos (processos, perícias e assistências técnicas) do usuário autenticado no JurisMind. Retorna id, título, cliente, número CNJ, jurisdição, tipo e status.",
+        "description": "Lista casos do usuário com paginação, ordenação e filtros (status, tipo, jurisdição/tribunal, busca textual, intervalo de datas de criação). Retorna também 'total' e 'nextOffset' para paginação consistente.",
         "annotations": {
           "readOnlyHint": true,
           "idempotentHint": true,
@@ -30,7 +30,6 @@
           "type": "object",
           "properties": {
             "status": {
-              "description": "Filtra por status. Padrão: todos.",
               "type": "string",
               "enum": [
                 "active",
@@ -39,11 +38,56 @@
                 "all"
               ]
             },
+            "case_type": {
+              "description": "Filtra por tipo de caso.",
+              "type": "string"
+            },
+            "jurisdiction": {
+              "description": "Filtra por jurisdição/tribunal (ex.: 'STF', 'TJSP'). Substring, case-insensitive.",
+              "type": "string"
+            },
+            "search": {
+              "description": "Busca textual em título, cliente ou número CNJ.",
+              "type": "string"
+            },
+            "created_from": {
+              "description": "Data ISO inicial (created_at >=).",
+              "type": "string"
+            },
+            "created_to": {
+              "description": "Data ISO final (created_at <).",
+              "type": "string"
+            },
+            "sort_by": {
+              "description": "Padrão: created_at.",
+              "type": "string",
+              "enum": [
+                "created_at",
+                "updated_at",
+                "title",
+                "client_name",
+                "status"
+              ]
+            },
+            "sort_dir": {
+              "description": "Padrão: desc.",
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ]
+            },
             "limit": {
-              "description": "Máx. de casos (padrão 50).",
+              "description": "Padrão 25.",
               "type": "integer",
               "minimum": 1,
               "maximum": 100
+            },
+            "offset": {
+              "description": "Padrão 0.",
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
             }
           }
         },
@@ -77,8 +121,8 @@
       },
       {
         "name": "list_documents",
-        "title": "Listar documentos do caso",
-        "description": "Lista os documentos anexados a um caso do JurisMind (petições, contratos, laudos etc.). Retorna id, nome do arquivo, tipo, tamanho e status de indexação.",
+        "title": "Listar documentos",
+        "description": "Lista documentos do usuário com paginação, ordenação e filtros (caso, status de indexação, tipo de arquivo, busca por nome, período). O 'case_id' é opcional — sem ele lista todos os documentos do usuário. Retorna 'total' e 'nextOffset'.",
         "annotations": {
           "readOnlyHint": true,
           "idempotentHint": true,
@@ -89,15 +133,69 @@
           "type": "object",
           "properties": {
             "case_id": {
+              "description": "Filtra por caso.",
               "type": "string",
               "format": "uuid",
-              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
-              "description": "UUID do caso."
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            },
+            "processing_status": {
+              "description": "Filtra por status de indexação.",
+              "type": "string",
+              "enum": [
+                "pending",
+                "processing",
+                "ready",
+                "error",
+                "all"
+              ]
+            },
+            "file_type": {
+              "description": "Filtra por MIME/tipo (substring, case-insensitive).",
+              "type": "string"
+            },
+            "search": {
+              "description": "Busca em filename.",
+              "type": "string"
+            },
+            "created_from": {
+              "description": "created_at >= (ISO).",
+              "type": "string"
+            },
+            "created_to": {
+              "description": "created_at < (ISO).",
+              "type": "string"
+            },
+            "sort_by": {
+              "description": "Padrão: created_at.",
+              "type": "string",
+              "enum": [
+                "created_at",
+                "updated_at",
+                "filename",
+                "file_size",
+                "processing_status"
+              ]
+            },
+            "sort_dir": {
+              "description": "Padrão: desc.",
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ]
+            },
+            "limit": {
+              "description": "Padrão 50.",
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200
+            },
+            "offset": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
             }
-          },
-          "required": [
-            "case_id"
-          ]
+          }
         },
         "outputSchema": null
       },
@@ -142,7 +240,7 @@
       {
         "name": "list_tasks",
         "title": "Listar tarefas",
-        "description": "Lista as tarefas do usuário no JurisMind, opcionalmente filtradas por caso e por status (pending, in_progress, blocked, done).",
+        "description": "Lista tarefas do usuário com paginação, ordenação e filtros (caso, status, prioridade, intervalo de due_date, busca textual). Retorna 'total' e 'nextOffset'.",
         "annotations": {
           "readOnlyHint": true,
           "idempotentHint": true,
@@ -153,13 +251,11 @@
           "type": "object",
           "properties": {
             "case_id": {
-              "description": "Filtra por caso.",
               "type": "string",
               "format": "uuid",
               "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
             },
             "status": {
-              "description": "Filtra por status.",
               "type": "string",
               "enum": [
                 "pending",
@@ -169,10 +265,61 @@
                 "all"
               ]
             },
+            "priority": {
+              "type": "string",
+              "enum": [
+                "low",
+                "medium",
+                "high",
+                "urgent",
+                "all"
+              ]
+            },
+            "due_from": {
+              "description": "due_date >= (ISO).",
+              "type": "string"
+            },
+            "due_to": {
+              "description": "due_date < (ISO).",
+              "type": "string"
+            },
+            "overdue": {
+              "description": "Se true, retorna apenas tarefas vencidas não concluídas.",
+              "type": "boolean"
+            },
+            "search": {
+              "description": "Busca em título/descrição.",
+              "type": "string"
+            },
+            "sort_by": {
+              "description": "Padrão: created_at.",
+              "type": "string",
+              "enum": [
+                "created_at",
+                "updated_at",
+                "due_date",
+                "priority",
+                "status",
+                "title"
+              ]
+            },
+            "sort_dir": {
+              "description": "Padrão: desc.",
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ]
+            },
             "limit": {
               "type": "integer",
               "minimum": 1,
               "maximum": 200
+            },
+            "offset": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
             }
           }
         },
