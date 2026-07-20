@@ -16,11 +16,11 @@ const L = AI_BUDGET_LIMITS;
 // Payload cru enviado pelo cliente (chaves como salvas no banco).
 export const AiBudgetPayloadSchema = z.object({
   monthly_limit_usd: z
-    .number({ invalid_type_error: `${L.limit.label} é obrigatório.` })
+    .number({ error: `${L.limit.label} é obrigatório.` })
     .min(L.limit.min, `Use um valor entre ${L.limit.min} e ${L.limit.max}.`)
     .max(L.limit.max, `Use um valor entre ${L.limit.min} e ${L.limit.max}.`),
   warn_threshold_pct: z
-    .number({ invalid_type_error: `${L.warn.label} é obrigatório.` })
+    .number({ error: `${L.warn.label} é obrigatório.` })
     .int(`${L.warn.label} deve ser um inteiro.`)
     .min(L.warn.min, `Use um valor entre ${L.warn.min} e ${L.warn.max}.`)
     .max(L.warn.max, `Use um valor entre ${L.warn.min} e ${L.warn.max}.`),

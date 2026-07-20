@@ -119,7 +119,7 @@ function ConsentScreen() {
             <div>
               <div className="text-xs uppercase text-muted-foreground">Permissões solicitadas</div>
               <ul className="mt-1 list-disc pl-5 text-foreground">
-                {scope.map((s) => (
+                {scope.map((s: string) => (
                   <li key={s}>{s}</li>
                 ))}
               </ul>
