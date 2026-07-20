@@ -1,6 +1,7 @@
 import { defineTool, type ToolContext } from "@lovable.dev/mcp-js";
 import { z } from "zod";
 import { createClient } from "@supabase/supabase-js";
+import { withAudit } from "../with-audit";
 
 function supabaseForUser(ctx: ToolContext) {
   return createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_PUBLISHABLE_KEY!, {
@@ -18,7 +19,7 @@ export default defineTool({
     case_id: z.string().uuid().describe("UUID do caso."),
   },
   annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
-  handler: async ({ case_id }, ctx) => {
+  handler: withAudit("get_case", async ({ case_id }, ctx) => {
     if (!ctx.isAuthenticated()) {
       return { content: [{ type: "text", text: "Não autenticado" }], isError: true };
     }
@@ -35,5 +36,5 @@ export default defineTool({
       content: [{ type: "text", text: JSON.stringify(data, null, 2) }],
       structuredContent: { case: data },
     };
-  },
+  }),
 });

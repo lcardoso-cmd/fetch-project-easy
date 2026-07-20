@@ -1,6 +1,7 @@
 import { defineTool, type ToolContext } from "@lovable.dev/mcp-js";
 import { z } from "zod";
 import { createClient } from "@supabase/supabase-js";
+import { withAudit } from "../with-audit";
 
 /**
  * search_jurisprudence — busca decisões judiciais em sites oficiais
@@ -138,7 +139,7 @@ export default defineTool({
     limit: z.number().int().min(1).max(15).optional().describe("Máx. de resultados (padrão 8)."),
   },
   annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
-  handler: async ({ query, courts, limit }, ctx) => {
+  handler: withAudit("search_jurisprudence", async ({ query, courts, limit }, ctx) => {
     if (!ctx.isAuthenticated()) {
       return { content: [{ type: "text", text: "Não autenticado" }], isError: true };
     }
@@ -195,5 +196,5 @@ export default defineTool({
       content: [{ type: "text", text }],
       structuredContent: { query, courts: targetCourts, results: hits },
     };
-  },
+  }),
 });

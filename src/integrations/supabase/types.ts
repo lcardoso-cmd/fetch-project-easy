@@ -982,6 +982,48 @@ export type Database = {
         }
         Relationships: []
       }
+      mcp_tool_audit_log: {
+        Row: {
+          case_id: string | null
+          client_id: string | null
+          created_at: string
+          duration_ms: number | null
+          error_message: string | null
+          id: string
+          params: Json
+          result_count: number | null
+          status: string
+          tool_name: string
+          user_id: string
+        }
+        Insert: {
+          case_id?: string | null
+          client_id?: string | null
+          created_at?: string
+          duration_ms?: number | null
+          error_message?: string | null
+          id?: string
+          params?: Json
+          result_count?: number | null
+          status?: string
+          tool_name: string
+          user_id: string
+        }
+        Update: {
+          case_id?: string | null
+          client_id?: string | null
+          created_at?: string
+          duration_ms?: number | null
+          error_message?: string | null
+          id?: string
+          params?: Json
+          result_count?: number | null
+          status?: string
+          tool_name?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       message_mentions: {
         Row: {
           conversation_id: string

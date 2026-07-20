@@ -1,6 +1,7 @@
 import { defineTool, type ToolContext } from "@lovable.dev/mcp-js";
 import { z } from "zod";
 import { createClient } from "@supabase/supabase-js";
+import { withAudit } from "../with-audit";
 
 function supabaseForUser(ctx: ToolContext) {
   return createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_PUBLISHABLE_KEY!, {
@@ -27,7 +28,7 @@ export default defineTool({
     idempotentHint: false,
     openWorldHint: false,
   },
-  handler: async (input, ctx) => {
+  handler: withAudit("create_task", async (input, ctx) => {
     if (!ctx.isAuthenticated()) {
       return { content: [{ type: "text", text: "Não autenticado" }], isError: true };
     }
@@ -50,5 +51,5 @@ export default defineTool({
       content: [{ type: "text", text: `Tarefa criada: ${data.id}` }],
       structuredContent: { task: data },
     };
-  },
+  }),
 });
