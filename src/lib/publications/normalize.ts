@@ -52,3 +52,56 @@ export type NormalizedPublication = {
   content: string;
   url_original: string | null;
 };
+
+const CONNECTIVES = new Set(["da", "de", "do", "das", "dos", "e", "di", "du"]);
+
+/**
+ * Gera variações normalizadas de um nome de pessoa/empresa para busca e
+ * matching tolerante a acentos, caixa, conectivos e ordem inversa.
+ * Ex.: "José da Silva Souza" -> ["jose da silva souza", "jose silva souza",
+ *      "souza, jose da silva", "j silva souza", "jose s souza", ...]
+ */
+export function nameVariants(input: string): string[] {
+  const base = stripAccents(input).replace(/[^\p{L}\p{N}\s,.'-]/gu, " ").replace(/\s+/g, " ").trim();
+  if (!base) return [];
+  const tokens = base.split(" ").filter(Boolean);
+  const meaningful = tokens.filter((t) => !CONNECTIVES.has(t));
+  const set = new Set<string>();
+  const push = (s: string) => {
+    const v = s.replace(/\s+/g, " ").trim();
+    if (v.length >= 3) set.add(v);
+  };
+
+  push(base);
+  push(tokens.join(" "));
+  push(meaningful.join(" "));
+
+  if (meaningful.length >= 2) {
+    const first = meaningful[0];
+    const last = meaningful[meaningful.length - 1];
+    push(`${first} ${last}`);
+    // "Sobrenome, Nome ..." (padrão de listagens forenses)
+    push(`${last}, ${meaningful.slice(0, -1).join(" ")}`);
+    // Abreviação do primeiro nome
+    push(`${first[0]} ${meaningful.slice(1).join(" ")}`);
+    // Abreviação dos meios
+    if (meaningful.length >= 3) {
+      const mids = meaningful.slice(1, -1).map((m) => m[0]).join(" ");
+      push(`${first} ${mids} ${last}`);
+    }
+  }
+
+  return Array.from(set);
+}
+
+/** Verifica se algum variante ocorre no conteúdo (comparando sem acentos). */
+export function contentMatchesAnyVariant(content: string, variants: string[]): string | null {
+  const c = stripAccents(content).replace(/\s+/g, " ");
+  for (const v of variants) {
+    if (v.length < 3) continue;
+    // borda de palavra para reduzir falso-positivo
+    const re = new RegExp(`\\b${v.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "i");
+    if (re.test(c)) return v;
+  }
+  return null;
+}
