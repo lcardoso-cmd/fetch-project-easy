@@ -2,7 +2,15 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
 import { fetchFromDJEN } from "./sources/djen";
 import { fetchFromFirecrawl } from "./sources/firecrawl";
-import { normalizeOab, publicationHash, makeSnippet, stripAccents, type NormalizedPublication } from "./normalize";
+import {
+  normalizeOab,
+  publicationHash,
+  makeSnippet,
+  stripAccents,
+  nameVariants,
+  contentMatchesAnyVariant,
+  type NormalizedPublication,
+} from "./normalize";
 
 type TermRow = Database["public"]["Tables"]["monitoring_terms"]["Row"];
 
@@ -17,24 +25,57 @@ export async function runPipelineForTerm(
 ): Promise<{ captured: number; matched: number; sourcesTried: string[] }> {
   const sourcesTried: string[] = [];
   const collected: Array<{ pub: NormalizedPublication; matchedField: string; matchedSnippet: string }> = [];
+  const seenHashes = new Set<string>();
 
-  // 1) DJEN
+  // Para parte/advogado: gerar variações do nome uma vez.
+  const variants =
+    term.kind === "parte" || term.kind === "advogado" ? nameVariants(term.value) : [];
+
+  // 1) DJEN — para nomes, iterar variações principais (limitado a 4 para custo)
   sourcesTried.push("djen");
-  const djen = await tryDjen(term);
-  await logFetch(supabase, term, "djen", djen.ok, djen.httpStatus, djen.latencyMs, djen.publications.length, djen.error);
-  if (djen.ok && djen.publications.length > 0) {
+  const djenQueries =
+    variants.length > 0 ? variants.slice(0, 4) : [null];
+  let djenTotal = 0;
+  let djenLastStatus: number | undefined;
+  let djenLastError: string | undefined;
+  let djenLatency = 0;
+
+  for (const variant of djenQueries) {
+    const djen = await tryDjen(term, variant);
+    djenLastStatus = djen.httpStatus;
+    djenLastError = djen.error;
+    djenLatency += djen.latencyMs;
+    if (!djen.ok) continue;
     for (const p of djen.publications) {
-      collected.push({ pub: p, matchedField: matchedFieldFor(term), matchedSnippet: makeSnippet(p.content) });
+      const h = publicationHash(p);
+      if (seenHashes.has(h)) continue;
+      // Se variante veio de nome, validar por regex de palavra inteira
+      if (variants.length > 0) {
+        const matched = contentMatchesAnyVariant(p.content, variants);
+        if (!matched) continue;
+      }
+      seenHashes.add(h);
+      djenTotal++;
+      collected.push({
+        pub: p,
+        matchedField: matchedFieldFor(term),
+        matchedSnippet: makeSnippet(p.content),
+      });
     }
   }
+  await logFetch(supabase, term, "djen", djenTotal > 0 || djenLastStatus === 200, djenLastStatus, djenLatency, djenTotal, djenLastError);
 
   // 2) Firecrawl fallback quando DJEN vazio ou falhou
-  if (djen.publications.length === 0 && termQueryString(term).length >= 3) {
+  if (djenTotal === 0 && termQueryString(term).length >= 3) {
     sourcesTried.push("firecrawl");
     const fc = await fetchFromFirecrawl({ query: termQueryString(term), limit: 8 });
     await logFetch(supabase, term, "firecrawl", fc.ok, fc.httpStatus, fc.latencyMs, fc.publications.length, fc.error, 0.001);
     if (fc.ok) {
       for (const p of fc.publications) {
+        if (variants.length > 0 && !contentMatchesAnyVariant(p.content, variants)) continue;
+        const h = publicationHash(p);
+        if (seenHashes.has(h)) continue;
+        seenHashes.add(h);
         collected.push({ pub: p, matchedField: matchedFieldFor(term), matchedSnippet: makeSnippet(p.content) });
       }
     }
