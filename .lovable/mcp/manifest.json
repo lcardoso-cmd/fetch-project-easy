@@ -121,8 +121,8 @@
       },
       {
         "name": "list_documents",
-        "title": "Listar documentos do caso",
-        "description": "Lista os documentos anexados a um caso do JurisMind (petições, contratos, laudos etc.). Retorna id, nome do arquivo, tipo, tamanho e status de indexação.",
+        "title": "Listar documentos",
+        "description": "Lista documentos do usuário com paginação, ordenação e filtros (caso, status de indexação, tipo de arquivo, busca por nome, período). O 'case_id' é opcional — sem ele lista todos os documentos do usuário. Retorna 'total' e 'nextOffset'.",
         "annotations": {
           "readOnlyHint": true,
           "idempotentHint": true,
@@ -133,15 +133,69 @@
           "type": "object",
           "properties": {
             "case_id": {
+              "description": "Filtra por caso.",
               "type": "string",
               "format": "uuid",
-              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
-              "description": "UUID do caso."
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            },
+            "processing_status": {
+              "description": "Filtra por status de indexação.",
+              "type": "string",
+              "enum": [
+                "pending",
+                "processing",
+                "ready",
+                "error",
+                "all"
+              ]
+            },
+            "file_type": {
+              "description": "Filtra por MIME/tipo (substring, case-insensitive).",
+              "type": "string"
+            },
+            "search": {
+              "description": "Busca em filename.",
+              "type": "string"
+            },
+            "created_from": {
+              "description": "created_at >= (ISO).",
+              "type": "string"
+            },
+            "created_to": {
+              "description": "created_at < (ISO).",
+              "type": "string"
+            },
+            "sort_by": {
+              "description": "Padrão: created_at.",
+              "type": "string",
+              "enum": [
+                "created_at",
+                "updated_at",
+                "filename",
+                "file_size",
+                "processing_status"
+              ]
+            },
+            "sort_dir": {
+              "description": "Padrão: desc.",
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ]
+            },
+            "limit": {
+              "description": "Padrão 50.",
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200
+            },
+            "offset": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
             }
-          },
-          "required": [
-            "case_id"
-          ]
+          }
         },
         "outputSchema": null
       },
