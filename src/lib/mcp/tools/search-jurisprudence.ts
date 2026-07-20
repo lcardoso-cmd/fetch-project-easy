@@ -1,6 +1,7 @@
 import { defineTool, type ToolContext } from "@lovable.dev/mcp-js";
 import { z } from "zod";
 import { createClient } from "@supabase/supabase-js";
+import { withAudit } from "../with-audit";
 
 /**
  * search_jurisprudence — busca decisões judiciais em sites oficiais
