@@ -207,16 +207,6 @@ async function tryDjen(term: TermRow, variantOverride?: string | null) {
   if (term.kind === "cnj") return fetchFromDJEN({ ...base, numeroProcesso: term.value });
   return { ok: false, latencyMs: 0, error: "kind desconhecido", publications: [] };
 }
-  const base = { itensPorPagina: 50 as number };
-  if (term.kind === "oab") {
-    const [num, uf] = term.value.includes("/") ? term.value.split("/") : [term.value, term.uf ?? ""];
-    return fetchFromDJEN({ ...base, numeroOab: `${num.replace(/\D/g, "")}/${(uf ?? "").toUpperCase()}` });
-  }
-  if (term.kind === "advogado") return fetchFromDJEN({ ...base, nomeAdvogado: term.value });
-  if (term.kind === "parte") return fetchFromDJEN({ ...base, nomeParte: term.value });
-  if (term.kind === "cnj") return fetchFromDJEN({ ...base, numeroProcesso: term.value });
-  return { ok: false, latencyMs: 0, error: "kind desconhecido", publications: [] };
-}
 
 async function logFetch(
   supabase: SupabaseClient<Database>,
