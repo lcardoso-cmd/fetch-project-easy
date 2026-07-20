@@ -62,7 +62,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { property: "og:description", content: "Plataforma jurídica com IA: RAG de documentos e gestão inteligente de prazos." },
       { property: "og:image", content: OG_IMAGE_URL },
       { property: "og:image:width", content: "1200" },
-      { property: "og:image:height", content: "675" },
+      { property: "og:image:height", content: "630" },
       { name: "twitter:card", content: "summary_large_image" },
       { name: "twitter:site", content: "@JurisMind" },
       { name: "twitter:title", content: "B2B | JurisMind AI" },
