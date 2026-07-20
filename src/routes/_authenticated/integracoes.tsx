@@ -27,7 +27,7 @@ export const Route = createFileRoute("/_authenticated/integracoes")({
 });
 
 function IntegrationsPage() {
-  const search = useSearch({ from: "/_authenticated/integrations" });
+  const search = useSearch({ from: "/_authenticated/integracoes" });
   const qc = useQueryClient();
   const getConn = useServerFn(getGoogleConnection);
   const getUrl = useServerFn(getGoogleAuthUrl);
