@@ -196,7 +196,17 @@ function matchedFieldFor(term: TermRow): string {
   return term.kind;
 }
 
-async function tryDjen(term: TermRow) {
+async function tryDjen(term: TermRow, variantOverride?: string | null) {
+  const base = { itensPorPagina: 50 as number };
+  if (term.kind === "oab") {
+    const [num, uf] = term.value.includes("/") ? term.value.split("/") : [term.value, term.uf ?? ""];
+    return fetchFromDJEN({ ...base, numeroOab: `${num.replace(/\D/g, "")}/${(uf ?? "").toUpperCase()}` });
+  }
+  if (term.kind === "advogado") return fetchFromDJEN({ ...base, nomeAdvogado: variantOverride ?? term.value });
+  if (term.kind === "parte") return fetchFromDJEN({ ...base, nomeParte: variantOverride ?? term.value });
+  if (term.kind === "cnj") return fetchFromDJEN({ ...base, numeroProcesso: term.value });
+  return { ok: false, latencyMs: 0, error: "kind desconhecido", publications: [] };
+}
   const base = { itensPorPagina: 50 as number };
   if (term.kind === "oab") {
     const [num, uf] = term.value.includes("/") ? term.value.split("/") : [term.value, term.uf ?? ""];
