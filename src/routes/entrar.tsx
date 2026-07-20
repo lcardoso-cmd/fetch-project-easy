@@ -564,7 +564,7 @@ function AuthPage() {
                   {isLoading ? "Criando..." : "Criar conta"}
                 </Button>
                 <Button type="button" variant="outline" className="w-full gap-2" onClick={handleGoogle}>
-                  <IconBox icon={Mail} size="xs" bgColor="bg-muted" iconColor="text-foreground" />
+                  <GoogleIcon className="h-4 w-4" />
                   Criar conta com Google
                 </Button>
               </form>
