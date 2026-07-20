@@ -621,10 +621,11 @@ function AuthPage() {
                   <IconBox icon={LogIn} size="xs" bgColor="bg-primary-foreground/15" iconColor="text-primary-foreground" />
                   {isLoading ? "Entrando..." : "Entrar"}
                 </Button>
-                <Button type="button" variant="outline" className="w-full gap-2" onClick={handleGoogle}>
+                <Button type="button" variant="outline" className="w-full gap-2" onClick={handleGoogle} disabled={isGoogleLoading || isLoading}>
                   <GoogleIcon className="h-4 w-4" />
-                  Entrar com Google
+                  {isGoogleLoading ? "Conectando ao Google..." : "Entrar com Google"}
                 </Button>
+
               </form>
               <p className="mt-4 text-center text-sm text-muted-foreground">
                 Ainda não tem uma conta?{" "}
