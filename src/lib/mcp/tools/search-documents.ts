@@ -34,7 +34,7 @@ export default defineTool({
     limit: z.number().int().min(1).max(20).optional().describe("Máx. de trechos (padrão 8)."),
   },
   annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
-  handler: async ({ query, case_id, limit }, ctx) => {
+  handler: withAudit("search_documents", async ({ query, case_id, limit }, ctx) => {
     if (!ctx.isAuthenticated()) {
       return { content: [{ type: "text", text: "Não autenticado" }], isError: true };
     }
@@ -94,5 +94,5 @@ export default defineTool({
       content: [{ type: "text", text }],
       structuredContent: { hits },
     };
-  },
+  }),
 });

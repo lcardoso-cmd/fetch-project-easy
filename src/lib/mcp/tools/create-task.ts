@@ -28,7 +28,7 @@ export default defineTool({
     idempotentHint: false,
     openWorldHint: false,
   },
-  handler: async (input, ctx) => {
+  handler: withAudit("create_task", async (input, ctx) => {
     if (!ctx.isAuthenticated()) {
       return { content: [{ type: "text", text: "Não autenticado" }], isError: true };
     }
@@ -51,5 +51,5 @@ export default defineTool({
       content: [{ type: "text", text: `Tarefa criada: ${data.id}` }],
       structuredContent: { task: data },
     };
-  },
+  }),
 });
