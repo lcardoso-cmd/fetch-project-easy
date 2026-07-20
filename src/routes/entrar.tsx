@@ -315,7 +315,33 @@ function AuthPage() {
     };
   }, [pendingEmail]);
 
+  // Detecta erros de OAuth vindos por hash/query após retorno do provedor.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.hash.startsWith("#")
+      ? window.location.hash.slice(1)
+      : window.location.search);
+    const oauthError = params.get("error") || params.get("error_code");
+    if (!oauthError) return;
+    const desc = params.get("error_description") || oauthError;
+    const raw = desc.toLowerCase();
+    let title = "Falha no login com Google";
+    let description = desc;
+    if (raw.includes("access_denied")) {
+      title = "Permissão negada";
+      description = "Você precisa autorizar o acesso da conta Google para entrar.";
+    } else if (raw.includes("provider") && raw.includes("not enabled")) {
+      title = "Google indisponível";
+      description = "O login com Google não está habilitado neste ambiente.";
+    }
+    setError(description);
+    toast.error(title, { description });
+    const cleanUrl = window.location.origin + window.location.pathname;
+    window.history.replaceState({}, "", cleanUrl);
+  }, []);
+
   if (user) return null;
+
 
 
 
