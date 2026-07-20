@@ -5,6 +5,7 @@ import listDocuments from "./tools/list-documents";
 import searchDocuments from "./tools/search-documents";
 import listTasks from "./tools/list-tasks";
 import createTask from "./tools/create-task";
+import searchJurisprudence from "./tools/search-jurisprudence";
 
 // Direct Supabase issuer (not the .lovable.cloud proxy). Read from Vite-inlined
 // literal so it survives publish; the fallback keeps the URL well-formed during
@@ -21,5 +22,5 @@ export default defineMcp({
     issuer: `https://${projectRef}.supabase.co/auth/v1`,
     acceptedAudiences: "authenticated",
   }),
-  tools: [listCases, getCase, listDocuments, searchDocuments, listTasks, createTask],
+  tools: [listCases, getCase, listDocuments, searchDocuments, listTasks, createTask, searchJurisprudence],
 });
