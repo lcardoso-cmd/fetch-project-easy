@@ -2,7 +2,7 @@ import type { ToolContext } from "@lovable.dev/mcp-js";
 import { recordMcpAudit } from "./audit";
 
 type ToolResult = {
-  content: Array<{ type: string; text?: string }>;
+  content: Array<{ type: "text"; text: string } | { type: string; [k: string]: unknown }>;
   structuredContent?: Record<string, unknown>;
   isError?: boolean;
 };
