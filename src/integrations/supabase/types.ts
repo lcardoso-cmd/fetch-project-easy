@@ -1144,6 +1144,65 @@ export type Database = {
           },
         ]
       }
+      monitoring_terms: {
+        Row: {
+          active: boolean
+          case_id: string | null
+          created_at: string
+          deadline_days: number
+          id: string
+          kind: string
+          label: string | null
+          last_run_at: string | null
+          responsible_user_id: string | null
+          uf: string | null
+          updated_at: string
+          use_paid_fallback: boolean
+          user_id: string
+          value: string
+        }
+        Insert: {
+          active?: boolean
+          case_id?: string | null
+          created_at?: string
+          deadline_days?: number
+          id?: string
+          kind: string
+          label?: string | null
+          last_run_at?: string | null
+          responsible_user_id?: string | null
+          uf?: string | null
+          updated_at?: string
+          use_paid_fallback?: boolean
+          user_id: string
+          value: string
+        }
+        Update: {
+          active?: boolean
+          case_id?: string | null
+          created_at?: string
+          deadline_days?: number
+          id?: string
+          kind?: string
+          label?: string | null
+          last_run_at?: string | null
+          responsible_user_id?: string | null
+          uf?: string | null
+          updated_at?: string
+          use_paid_fallback?: boolean
+          user_id?: string
+          value?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "monitoring_terms_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       outlook_connections: {
         Row: {
           access_token: string
@@ -1505,6 +1564,173 @@ export type Database = {
             columns: ["case_id"]
             isOneToOne: false
             referencedRelation: "cases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      publication_fetch_log: {
+        Row: {
+          cost_usd: number
+          created_at: string
+          error: string | null
+          http_status: number | null
+          id: string
+          latency_ms: number | null
+          ok: boolean
+          results_count: number
+          source: string
+          term_id: string | null
+          user_id: string
+        }
+        Insert: {
+          cost_usd?: number
+          created_at?: string
+          error?: string | null
+          http_status?: number | null
+          id?: string
+          latency_ms?: number | null
+          ok?: boolean
+          results_count?: number
+          source: string
+          term_id?: string | null
+          user_id: string
+        }
+        Update: {
+          cost_usd?: number
+          created_at?: string
+          error?: string | null
+          http_status?: number | null
+          id?: string
+          latency_ms?: number | null
+          ok?: boolean
+          results_count?: number
+          source?: string
+          term_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "publication_fetch_log_term_id_fkey"
+            columns: ["term_id"]
+            isOneToOne: false
+            referencedRelation: "monitoring_terms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      publication_term_matches: {
+        Row: {
+          created_at: string
+          id: string
+          matched_field: string | null
+          matched_snippet: string | null
+          publication_id: string
+          term_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          matched_field?: string | null
+          matched_snippet?: string | null
+          publication_id: string
+          term_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          matched_field?: string | null
+          matched_snippet?: string | null
+          publication_id?: string
+          term_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "publication_term_matches_publication_id_fkey"
+            columns: ["publication_id"]
+            isOneToOne: false
+            referencedRelation: "publications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "publication_term_matches_term_id_fkey"
+            columns: ["term_id"]
+            isOneToOne: false
+            referencedRelation: "monitoring_terms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      publications: {
+        Row: {
+          captured_at: string
+          case_id: string | null
+          cnj: string | null
+          content: string
+          created_at: string
+          external_id: string | null
+          hash: string
+          id: string
+          orgao: string | null
+          publication_date: string | null
+          snippet: string | null
+          source: string
+          status: string
+          task_id: string | null
+          tribunal: string | null
+          url_original: string | null
+          user_id: string
+        }
+        Insert: {
+          captured_at?: string
+          case_id?: string | null
+          cnj?: string | null
+          content: string
+          created_at?: string
+          external_id?: string | null
+          hash: string
+          id?: string
+          orgao?: string | null
+          publication_date?: string | null
+          snippet?: string | null
+          source: string
+          status?: string
+          task_id?: string | null
+          tribunal?: string | null
+          url_original?: string | null
+          user_id: string
+        }
+        Update: {
+          captured_at?: string
+          case_id?: string | null
+          cnj?: string | null
+          content?: string
+          created_at?: string
+          external_id?: string | null
+          hash?: string
+          id?: string
+          orgao?: string | null
+          publication_date?: string | null
+          snippet?: string | null
+          source?: string
+          status?: string
+          task_id?: string | null
+          tribunal?: string | null
+          url_original?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "publications_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "publications_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
             referencedColumns: ["id"]
           },
         ]
