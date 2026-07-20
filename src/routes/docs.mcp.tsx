@@ -261,23 +261,63 @@ function McpDocsPage() {
                 <TabsTrigger value="cursor">Cursor / Codex</TabsTrigger>
               </TabsList>
 
-              <TabsContent value="chatgpt" className="mt-4 space-y-3">
-                <ol className="ml-5 list-decimal space-y-2 text-foreground">
-                  <li>Abra <strong>ChatGPT → Settings → Connectors → Add custom connector</strong>.</li>
-                  <li>Escolha o tipo <strong>Streamable HTTP (MCP)</strong>.</li>
-                  <li>
-                    Cole a URL:
-                    <div className="mt-2">
-                      <CodeBlock code={MCP_URL} />
-                    </div>
-                  </li>
-                  <li>Selecione <strong>OAuth</strong> como método de autenticação (padrão).</li>
-                  <li>Clique em <strong>Connect</strong> — a janela do JurisMind abre para consentimento.</li>
-                  <li>Depois de aprovar, ative o conector no seletor de ferramentas do chat.</li>
-                </ol>
-                <p className="text-sm text-muted-foreground">
-                  Disponível em contas ChatGPT Plus/Business/Enterprise que suportam conectores personalizados.
-                </p>
+              <TabsContent value="chatgpt" className="mt-4 space-y-4">
+                <div className="rounded-lg border border-amber-500/40 bg-amber-500/5 p-3 text-sm">
+                  <p className="font-medium text-foreground">
+                    A aba <strong>Connectors</strong> só aparece em alguns planos.
+                  </p>
+                  <p className="mt-1 text-muted-foreground">
+                    Se você não vê "Connectors" em <em>Configurações</em> (só aparecem Geral,
+                    Notificações, Personalização, Plugins, Voz, Uso, Controles de dados, Navegador na
+                    nuvem, Armazenamento, Segurança e login, Conta e Teclado), sua conta ainda não tem
+                    o recurso. Conectores MCP personalizados estão disponíveis hoje em{" "}
+                    <strong>ChatGPT Business, Enterprise, Edu e Team</strong>, e em contas{" "}
+                    <strong>Pro</strong> com o <em>Developer Mode</em> ativado em{" "}
+                    <em>Settings → Connectors → Advanced</em>. Planos <strong>Plus</strong> e{" "}
+                    <strong>Free</strong> ainda não expõem MCP personalizado.
+                  </p>
+                </div>
+
+                <div>
+                  <h3 className="font-medium text-foreground">Opção A — Se você vê "Connectors"</h3>
+                  <ol className="ml-5 mt-2 list-decimal space-y-2 text-foreground">
+                    <li>Abra <strong>ChatGPT → Settings → Connectors → Add custom connector</strong>.</li>
+                    <li>Escolha o tipo <strong>Streamable HTTP (MCP)</strong>.</li>
+                    <li>
+                      Cole a URL:
+                      <div className="mt-2">
+                        <CodeBlock code={MCP_URL} />
+                      </div>
+                    </li>
+                    <li>Deixe <strong>OAuth</strong> como método de autenticação (padrão).</li>
+                    <li>Clique em <strong>Connect</strong> — abre o popup do JurisMind para consentimento.</li>
+                    <li>No chat, ative o conector no seletor de ferramentas (ícone <em>Tools</em>).</li>
+                  </ol>
+                </div>
+
+                <div>
+                  <h3 className="font-medium text-foreground">Opção B — Enquanto seu plano não tem MCP nativo</h3>
+                  <ul className="ml-5 mt-2 list-disc space-y-2 text-foreground">
+                    <li>
+                      <strong>Use Claude ou Cursor</strong> (abas ao lado) — ambos suportam MCP em todos
+                      os planos, inclusive gratuitos. É o caminho mais rápido para testar o JurisMind.
+                    </li>
+                    <li>
+                      <strong>Ative o Developer Mode</strong> (planos Pro): em{" "}
+                      <em>Settings → Connectors</em>, role até <em>Advanced settings</em> e habilite
+                      "Developer mode". A opção <em>Add custom connector</em> aparece em seguida.
+                    </li>
+                    <li>
+                      <strong>Crie um GPT com Actions</strong> apontando para uma API REST sua — funciona
+                      no Plus, mas não é MCP nativo (exige adaptar cada tool para OpenAPI e não reaproveita
+                      este endpoint <code>/mcp</code>).
+                    </li>
+                    <li>
+                      Aguarde a OpenAI liberar conectores personalizados para o Plus. Quando a aba
+                      "Connectors" aparecer na sua conta, siga a Opção A.
+                    </li>
+                  </ul>
+                </div>
               </TabsContent>
 
               <TabsContent value="claude" className="mt-4 space-y-3">
