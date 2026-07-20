@@ -1,0 +1,234 @@
+{
+  "version": 1,
+  "sdk_version": "0.24.0",
+  "path": "/mcp",
+  "auth": {
+    "type": "oauth",
+    "issuer": "https://vpauzmjmyzumodntpbdg.supabase.co/auth/v1",
+    "accepted_audiences": [
+      "authenticated"
+    ]
+  },
+  "mcp": {
+    "server": {
+      "name": "jurismind-mcp",
+      "version": "0.1.0",
+      "title": "JurisMind"
+    },
+    "tools": [
+      {
+        "name": "list_cases",
+        "title": "Listar casos",
+        "description": "Lista os casos (processos, perícias e assistências técnicas) do usuário autenticado no JurisMind. Retorna id, título, cliente, número CNJ, jurisdição, tipo e status.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "status": {
+              "description": "Filtra por status. Padrão: todos.",
+              "type": "string",
+              "enum": [
+                "active",
+                "archived",
+                "closed",
+                "all"
+              ]
+            },
+            "limit": {
+              "description": "Máx. de casos (padrão 50).",
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          }
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_case",
+        "title": "Detalhes do caso",
+        "description": "Retorna todos os campos de um caso do JurisMind pelo id (partes envolvidas, descrição, número CNJ, jurisdição, honorários e prazos periciais).",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "case_id": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "description": "UUID do caso."
+            }
+          },
+          "required": [
+            "case_id"
+          ]
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_documents",
+        "title": "Listar documentos do caso",
+        "description": "Lista os documentos anexados a um caso do JurisMind (petições, contratos, laudos etc.). Retorna id, nome do arquivo, tipo, tamanho e status de indexação.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "case_id": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "description": "UUID do caso."
+            }
+          },
+          "required": [
+            "case_id"
+          ]
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "search_documents",
+        "title": "Buscar nos documentos (RAG)",
+        "description": "Faz busca semântica + textual (RAG híbrido) nos documentos do usuário no JurisMind. Retorna trechos relevantes com o id do documento e do caso. Pode ser escopado a um caso específico.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "query": {
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 500,
+              "description": "Pergunta ou termo a buscar."
+            },
+            "case_id": {
+              "description": "Se informado, restringe a busca a esse caso.",
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            },
+            "limit": {
+              "description": "Máx. de trechos (padrão 8).",
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 20
+            }
+          },
+          "required": [
+            "query"
+          ]
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_tasks",
+        "title": "Listar tarefas",
+        "description": "Lista as tarefas do usuário no JurisMind, opcionalmente filtradas por caso e por status (pending, in_progress, blocked, done).",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "case_id": {
+              "description": "Filtra por caso.",
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            },
+            "status": {
+              "description": "Filtra por status.",
+              "type": "string",
+              "enum": [
+                "pending",
+                "in_progress",
+                "blocked",
+                "done",
+                "all"
+              ]
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200
+            }
+          }
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "create_task",
+        "title": "Criar tarefa",
+        "description": "Cria uma nova tarefa para o usuário autenticado no JurisMind, opcionalmente vinculada a um caso.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "title": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 300,
+              "description": "Título da tarefa."
+            },
+            "description": {
+              "description": "Descrição opcional.",
+              "type": "string",
+              "maxLength": 4000
+            },
+            "case_id": {
+              "description": "UUID do caso vinculado (opcional).",
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            },
+            "priority": {
+              "type": "string",
+              "enum": [
+                "low",
+                "medium",
+                "high",
+                "urgent"
+              ]
+            },
+            "due_date": {
+              "description": "Data ISO (YYYY-MM-DD) do prazo.",
+              "type": "string"
+            }
+          },
+          "required": [
+            "title"
+          ]
+        },
+        "outputSchema": null
+      }
+    ]
+  }
+}
