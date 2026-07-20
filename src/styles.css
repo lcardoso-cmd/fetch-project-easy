@@ -159,8 +159,18 @@
 
   html {
     font-family: var(--font-body);
+    /* Aumenta a legibilidade global: escala todas as unidades rem
+     * (Tailwind text-sm, text-base, text-lg, etc.) sem tocar em
+     * cada componente. 16px é o default do browser; 17.5px casa
+     * com a densidade do menu Lovable e melhora leitura no site. */
+    font-size: 17.5px;
+    line-height: 1.55;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+  }
+
+  @media (max-width: 640px) {
+    html { font-size: 16.5px; }
   }
 
   h1, h2, h3, h4, h5, h6 {
