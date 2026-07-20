@@ -228,6 +228,57 @@
           ]
         },
         "outputSchema": null
+      },
+      {
+        "name": "search_jurisprudence",
+        "title": "Buscar jurisprudência",
+        "description": "Pesquisa decisões judiciais em tribunais brasileiros (STF, STJ, TST, TSE, TJs). Retorna URL, tribunal, data e trechos relevantes. Requer capacidade 'cases' do usuário autenticado.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "query": {
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 500,
+              "description": "Termos de busca (ex: 'dano moral extravio bagagem STJ')."
+            },
+            "courts": {
+              "description": "Restringe a tribunais específicos. Vazio = todos os suportados.",
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "STF",
+                  "STJ",
+                  "TST",
+                  "TSE",
+                  "TJSP",
+                  "TJRJ",
+                  "TJMG",
+                  "TJRS",
+                  "TJPR",
+                  "TJDFT"
+                ]
+              }
+            },
+            "limit": {
+              "description": "Máx. de resultados (padrão 8).",
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 15
+            }
+          },
+          "required": [
+            "query"
+          ]
+        },
+        "outputSchema": null
       }
     ]
   }
