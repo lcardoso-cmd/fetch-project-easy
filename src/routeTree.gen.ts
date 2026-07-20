@@ -19,6 +19,7 @@ import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as PTokenRouteImport } from './routes/p.$token'
 import { Route as InviteTokenRouteImport } from './routes/invite.$token'
+import { Route as DocsMcpRouteImport } from './routes/docs.mcp'
 import { Route as ConviteTokenRouteImport } from './routes/convite.$token'
 import { Route as AuthenticatedTarefasRouteImport } from './routes/_authenticated/tarefas'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
@@ -146,6 +147,11 @@ const PTokenRoute = PTokenRouteImport.update({
 const InviteTokenRoute = InviteTokenRouteImport.update({
   id: '/invite/$token',
   path: '/invite/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DocsMcpRoute = DocsMcpRouteImport.update({
+  id: '/docs/mcp',
+  path: '/docs/mcp',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ConviteTokenRoute = ConviteTokenRouteImport.update({
@@ -631,6 +637,7 @@ export interface FileRoutesByFullPath {
   '/settings': typeof AuthenticatedSettingsRouteWithChildren
   '/tarefas': typeof AuthenticatedTarefasRoute
   '/convite/$token': typeof ConviteTokenRoute
+  '/docs/mcp': typeof DocsMcpRoute
   '/invite/$token': typeof InviteTokenRoute
   '/p/$token': typeof PTokenRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
@@ -719,6 +726,7 @@ export interface FileRoutesByTo {
   '/settings': typeof AuthenticatedSettingsRouteWithChildren
   '/tarefas': typeof AuthenticatedTarefasRoute
   '/convite/$token': typeof ConviteTokenRoute
+  '/docs/mcp': typeof DocsMcpRoute
   '/invite/$token': typeof InviteTokenRoute
   '/p/$token': typeof PTokenRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
@@ -811,6 +819,7 @@ export interface FileRoutesById {
   '/_authenticated/settings': typeof AuthenticatedSettingsRouteWithChildren
   '/_authenticated/tarefas': typeof AuthenticatedTarefasRoute
   '/convite/$token': typeof ConviteTokenRoute
+  '/docs/mcp': typeof DocsMcpRoute
   '/invite/$token': typeof InviteTokenRoute
   '/p/$token': typeof PTokenRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
@@ -903,6 +912,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/tarefas'
     | '/convite/$token'
+    | '/docs/mcp'
     | '/invite/$token'
     | '/p/$token'
     | '/.lovable/oauth/consent'
@@ -991,6 +1001,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/tarefas'
     | '/convite/$token'
+    | '/docs/mcp'
     | '/invite/$token'
     | '/p/$token'
     | '/.lovable/oauth/consent'
@@ -1082,6 +1093,7 @@ export interface FileRouteTypes {
     | '/_authenticated/settings'
     | '/_authenticated/tarefas'
     | '/convite/$token'
+    | '/docs/mcp'
     | '/invite/$token'
     | '/p/$token'
     | '/.lovable/oauth/consent'
@@ -1143,6 +1155,7 @@ export interface RootRouteChildren {
   Char91DotmcpChar93ListToolsRoute: typeof Char91DotmcpChar93ListToolsRoute
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   ConviteTokenRoute: typeof ConviteTokenRoute
+  DocsMcpRoute: typeof DocsMcpRoute
   InviteTokenRoute: typeof InviteTokenRoute
   PTokenRoute: typeof PTokenRoute
   DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
@@ -1229,6 +1242,13 @@ declare module '@tanstack/react-router' {
       path: '/invite/$token'
       fullPath: '/invite/$token'
       preLoaderRoute: typeof InviteTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/docs/mcp': {
+      id: '/docs/mcp'
+      path: '/docs/mcp'
+      fullPath: '/docs/mcp'
+      preLoaderRoute: typeof DocsMcpRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/convite/$token': {
@@ -2021,6 +2041,7 @@ const rootRouteChildren: RootRouteChildren = {
   Char91DotwellKnownChar93OauthProtectedResourceRoute:
     Char91DotwellKnownChar93OauthProtectedResourceRoute,
   ConviteTokenRoute: ConviteTokenRoute,
+  DocsMcpRoute: DocsMcpRoute,
   InviteTokenRoute: InviteTokenRoute,
   PTokenRoute: PTokenRoute,
   DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
