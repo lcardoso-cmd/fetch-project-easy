@@ -66,7 +66,7 @@ function MonitoringPage() {
           <TabsTrigger value="log">Log de captura</TabsTrigger>
         </TabsList>
         <TabsContent value="feed" className="mt-4">
-          <FeedTab />
+          <FeedTab onNeedTerms={() => setTab("termos")} />
         </TabsContent>
         <TabsContent value="termos" className="mt-4">
           <TermsTab />
@@ -81,11 +81,12 @@ function MonitoringPage() {
 
 /* ---------- Feed ---------- */
 
-function FeedTab() {
+function FeedTab({ onNeedTerms }: { onNeedTerms: () => void }) {
   const qc = useQueryClient();
   const list = useServerFn(listPublications);
   const update = useServerFn(updatePublication);
   const run = useServerFn(runFetchNow);
+  const listTermsFn = useServerFn(listTerms);
   const [status, setStatus] = useState<"new" | "read" | "archived" | "all">("all");
   const [search, setSearch] = useState("");
 
@@ -100,12 +101,32 @@ function FeedTab() {
   });
 
   const run$ = useMutation({
-    mutationFn: () => run({ data: {} }),
-    onSuccess: (r) => {
-      toast.success(`${r.totalCaptured} novas publicação(ões) capturada(s).`);
-      qc.invalidateQueries({ queryKey: ["publications"] });
+    mutationFn: async () => {
+      const terms = await listTermsFn();
+      const active = (terms ?? []).filter((t) => t.active);
+      if (active.length === 0) {
+        const err = new Error("Nenhum termo ativo cadastrado. Adicione um termo primeiro.") as Error & { code?: string };
+        err.code = "NO_TERMS";
+        throw err;
+      }
+      return run({ data: {} });
     },
-    onError: (e) => toast.error(e instanceof Error ? e.message : "Falha"),
+    onSuccess: (r) => {
+      if (r.totalCaptured > 0) {
+        toast.success(`${r.totalCaptured} nova(s) publicação(ões) capturada(s).`);
+      } else {
+        toast.info("Busca concluída — nenhuma publicação nova encontrada. Veja o Log de captura para detalhes.");
+      }
+      qc.invalidateQueries({ queryKey: ["publications"] });
+      qc.invalidateQueries({ queryKey: ["fetch_log"] });
+    },
+    onError: (e) => {
+      if ((e as Error & { code?: string }).code === "NO_TERMS") {
+        toast.error(e.message, { action: { label: "Cadastrar termo", onClick: onNeedTerms } });
+      } else {
+        toast.error(e instanceof Error ? e.message : "Falha");
+      }
+    },
   });
 
   return (
@@ -141,7 +162,8 @@ function FeedTab() {
       ) : (q.data?.rows.length ?? 0) === 0 ? (
         <Card><CardContent className="py-12 text-center text-muted-foreground">
           <FileSearch className="h-10 w-10 mx-auto mb-3 opacity-40" />
-          Nenhuma publicação. Cadastre termos e clique em "Buscar agora".
+          <p className="mb-4">Nenhuma publicação. Cadastre termos e clique em "Buscar agora".</p>
+          <Button variant="secondary" onClick={onNeedTerms}><Plus className="h-4 w-4 mr-2" />Cadastrar termo</Button>
         </CardContent></Card>
       ) : (
         <div className="space-y-3">
