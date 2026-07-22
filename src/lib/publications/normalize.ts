@@ -56,7 +56,7 @@ export function publicationHash(input: {
     input.external_id ?? "",
     stripAccents(input.content).replace(/\s+/g, " ").slice(0, 400),
   ].join("|");
-  return createHash("sha256").update(key).digest("hex");
+  return fnv1a64Hex(key);
 }
 
 export type NormalizedPublication = {
