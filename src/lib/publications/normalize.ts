@@ -1,4 +1,21 @@
-import { createHash } from "crypto";
+/**
+ * Hash determinístico (FNV-1a 64-bit) em JS puro.
+ * Suficiente para deduplicação de publicações (não é criptográfico).
+ * Evita importar `node:crypto` para manter o módulo isomórfico
+ * (usado por código server e potencialmente bundlado pelo client via chains).
+ */
+function fnv1a64Hex(input: string): string {
+  // Usamos BigInt para caber 64 bits.
+  const FNV_OFFSET = 0xcbf29ce484222325n;
+  const FNV_PRIME = 0x100000001b3n;
+  const MASK = 0xffffffffffffffffn;
+  let hash = FNV_OFFSET;
+  for (let i = 0; i < input.length; i++) {
+    hash ^= BigInt(input.charCodeAt(i));
+    hash = (hash * FNV_PRIME) & MASK;
+  }
+  return hash.toString(16).padStart(16, "0");
+}
 
 /** Normaliza CNJ para 20 dígitos numéricos, ou null. */
 export function normalizeCnj(input: string | null | undefined): string | null {
@@ -39,7 +56,7 @@ export function publicationHash(input: {
     input.external_id ?? "",
     stripAccents(input.content).replace(/\s+/g, " ").slice(0, 400),
   ].join("|");
-  return createHash("sha256").update(key).digest("hex");
+  return fnv1a64Hex(key);
 }
 
 export type NormalizedPublication = {
