@@ -293,9 +293,42 @@ export const extractCaseDataFromDocument = createServerFn({ method: "POST" })
       .download(data.storage_path);
     if (dlErr || !blob) throw new Error("Falha ao baixar arquivo enviado");
 
-    const fullText = await extractTextFromBlob(blob, data.filename, data.file_type);
-    const text = (fullText || "").trim();
-    if (!text) throw new Error("Não foi possível extrair texto do documento");
+    const isPdf =
+      data.file_type === "application/pdf" || data.filename.toLowerCase().endsWith(".pdf");
+
+    let text = "";
+    let usedOcr = false;
+    try {
+      text = (await extractTextFromBlob(blob, data.filename, data.file_type))?.trim() ?? "";
+    } catch {
+      text = "";
+    }
+
+    // PDF escaneado / sem camada de texto: OCR das primeiras páginas.
+    if (isPdf && text.length < 200) {
+      try {
+        const { ocrPdfPages } = await import("./rag/ocr.server");
+        const bytes = new Uint8Array(await blob.arrayBuffer());
+        const pages = Array.from({ length: PDF_OCR_PAGE_LIMIT }, (_, i) => i + 1);
+        const out = await ocrPdfPages({ bytes, filename: data.filename, pages, batchSize: 2 });
+        const ocrText = out.blocks.map((b) => b.content).join("\n\n").trim();
+        if (ocrText.length > text.length) {
+          text = ocrText;
+          usedOcr = true;
+        }
+      } catch {
+        // mantém o texto que houver
+      }
+    }
+
+    if (!text) {
+      throw new Error(
+        isPdf
+          ? "Não foi possível ler o conteúdo deste PDF (provavelmente digitalizado sem texto ou protegido). Anexe o documento ao caso e preencha os dados manualmente."
+          : "Não foi possível extrair texto do documento",
+      );
+    }
+
 
     // Fallback regex pra CNJ direto no texto — reforça o que o JurisMind achar
     const cnjFromText = text.match(CNJ_REGEX)?.[0] ?? null;
