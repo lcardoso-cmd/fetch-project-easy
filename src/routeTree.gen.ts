@@ -95,6 +95,7 @@ import { Route as AuthenticatedPlataformaCredenciaisIndexRouteImport } from './r
 import { Route as AuthenticatedPlataformaClientesIndexRouteImport } from './routes/_authenticated/plataforma.clientes.index'
 import { Route as AuthenticatedPlataformaAuditoriaIndexRouteImport } from './routes/_authenticated/plataforma.auditoria.index'
 import { Route as ApiPublicProposalShareTokenRouteImport } from './routes/api/public/proposal-share.$token'
+import { Route as ApiPublicProposalResponseTokenRouteImport } from './routes/api/public/proposal-response.$token'
 import { Route as ApiPublicOutlookCallbackRouteImport } from './routes/api/public/outlook/callback'
 import { Route as ApiPublicHooksFetchPublicationsRouteImport } from './routes/api/public/hooks/fetch-publications'
 import { Route as ApiPublicGoogleCallbackRouteImport } from './routes/api/public/google/callback'
@@ -572,6 +573,12 @@ const ApiPublicProposalShareTokenRoute =
     path: '/api/public/proposal-share/$token',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicProposalResponseTokenRoute =
+  ApiPublicProposalResponseTokenRouteImport.update({
+    id: '/api/public/proposal-response/$token',
+    path: '/api/public/proposal-response/$token',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicOutlookCallbackRoute =
   ApiPublicOutlookCallbackRouteImport.update({
     id: '/api/public/outlook/callback',
@@ -697,6 +704,7 @@ export interface FileRoutesByFullPath {
   '/api/public/google/callback': typeof ApiPublicGoogleCallbackRoute
   '/api/public/hooks/fetch-publications': typeof ApiPublicHooksFetchPublicationsRoute
   '/api/public/outlook/callback': typeof ApiPublicOutlookCallbackRoute
+  '/api/public/proposal-response/$token': typeof ApiPublicProposalResponseTokenRoute
   '/api/public/proposal-share/$token': typeof ApiPublicProposalShareTokenRoute
   '/plataforma/auditoria/': typeof AuthenticatedPlataformaAuditoriaIndexRoute
   '/plataforma/clientes/': typeof AuthenticatedPlataformaClientesIndexRoute
@@ -789,6 +797,7 @@ export interface FileRoutesByTo {
   '/api/public/google/callback': typeof ApiPublicGoogleCallbackRoute
   '/api/public/hooks/fetch-publications': typeof ApiPublicHooksFetchPublicationsRoute
   '/api/public/outlook/callback': typeof ApiPublicOutlookCallbackRoute
+  '/api/public/proposal-response/$token': typeof ApiPublicProposalResponseTokenRoute
   '/api/public/proposal-share/$token': typeof ApiPublicProposalShareTokenRoute
   '/plataforma/auditoria': typeof AuthenticatedPlataformaAuditoriaIndexRoute
   '/plataforma/clientes': typeof AuthenticatedPlataformaClientesIndexRoute
@@ -885,6 +894,7 @@ export interface FileRoutesById {
   '/api/public/google/callback': typeof ApiPublicGoogleCallbackRoute
   '/api/public/hooks/fetch-publications': typeof ApiPublicHooksFetchPublicationsRoute
   '/api/public/outlook/callback': typeof ApiPublicOutlookCallbackRoute
+  '/api/public/proposal-response/$token': typeof ApiPublicProposalResponseTokenRoute
   '/api/public/proposal-share/$token': typeof ApiPublicProposalShareTokenRoute
   '/_authenticated/plataforma/auditoria/': typeof AuthenticatedPlataformaAuditoriaIndexRoute
   '/_authenticated/plataforma/clientes/': typeof AuthenticatedPlataformaClientesIndexRoute
@@ -981,6 +991,7 @@ export interface FileRouteTypes {
     | '/api/public/google/callback'
     | '/api/public/hooks/fetch-publications'
     | '/api/public/outlook/callback'
+    | '/api/public/proposal-response/$token'
     | '/api/public/proposal-share/$token'
     | '/plataforma/auditoria/'
     | '/plataforma/clientes/'
@@ -1073,6 +1084,7 @@ export interface FileRouteTypes {
     | '/api/public/google/callback'
     | '/api/public/hooks/fetch-publications'
     | '/api/public/outlook/callback'
+    | '/api/public/proposal-response/$token'
     | '/api/public/proposal-share/$token'
     | '/plataforma/auditoria'
     | '/plataforma/clientes'
@@ -1168,6 +1180,7 @@ export interface FileRouteTypes {
     | '/api/public/google/callback'
     | '/api/public/hooks/fetch-publications'
     | '/api/public/outlook/callback'
+    | '/api/public/proposal-response/$token'
     | '/api/public/proposal-share/$token'
     | '/_authenticated/plataforma/auditoria/'
     | '/_authenticated/plataforma/clientes/'
@@ -1209,6 +1222,7 @@ export interface RootRouteChildren {
   ApiPublicGoogleCallbackRoute: typeof ApiPublicGoogleCallbackRoute
   ApiPublicHooksFetchPublicationsRoute: typeof ApiPublicHooksFetchPublicationsRoute
   ApiPublicOutlookCallbackRoute: typeof ApiPublicOutlookCallbackRoute
+  ApiPublicProposalResponseTokenRoute: typeof ApiPublicProposalResponseTokenRoute
   ApiPublicProposalShareTokenRoute: typeof ApiPublicProposalShareTokenRoute
 }
 
@@ -1816,6 +1830,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicProposalShareTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/proposal-response/$token': {
+      id: '/api/public/proposal-response/$token'
+      path: '/api/public/proposal-response/$token'
+      fullPath: '/api/public/proposal-response/$token'
+      preLoaderRoute: typeof ApiPublicProposalResponseTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/outlook/callback': {
       id: '/api/public/outlook/callback'
       path: '/api/public/outlook/callback'
@@ -2119,6 +2140,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicGoogleCallbackRoute: ApiPublicGoogleCallbackRoute,
   ApiPublicHooksFetchPublicationsRoute: ApiPublicHooksFetchPublicationsRoute,
   ApiPublicOutlookCallbackRoute: ApiPublicOutlookCallbackRoute,
+  ApiPublicProposalResponseTokenRoute: ApiPublicProposalResponseTokenRoute,
   ApiPublicProposalShareTokenRoute: ApiPublicProposalShareTokenRoute,
 }
 export const routeTree = rootRouteImport

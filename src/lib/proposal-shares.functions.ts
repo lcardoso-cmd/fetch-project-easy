@@ -91,6 +91,7 @@ export const createProposalShare = createServerFn({ method: "POST" })
   .inputValidator((i: unknown) =>
     z
       .object({
+        proposal_id: z.string().uuid().optional().nullable(),
         title: z.string().trim().min(1).max(200),
         client_name: z.string().max(200).optional().nullable(),
         html: z.string().min(1).max(500_000),
@@ -123,6 +124,7 @@ export const createProposalShare = createServerFn({ method: "POST" })
           organization_id: context.organizationId,
         created_by_user_id: context.userId,
           token,
+          proposal_id: data.proposal_id ?? null,
           title: data.title,
           client_name: data.client_name ?? null,
           html: data.html,
@@ -138,7 +140,26 @@ export const createProposalShare = createServerFn({ method: "POST" })
           "id, token, title, client_name, max_downloads, download_count, expires_at, revoked_at, last_accessed_at, password_hash, created_at",
         )
         .single();
-      if (!error && row) return mapRow(row);
+      if (!error && row) {
+        // Compartilhar uma proposta a marca como enviada e registra o evento.
+        if (data.proposal_id) {
+          const nowIso = new Date().toISOString();
+          await context.supabase
+            .from("proposals")
+            .update({ status: "shared", sent_at: nowIso })
+            .eq("organization_id", context.organizationId)
+            .eq("id", data.proposal_id)
+            .in("status", ["draft", "in_review", "approved", "shared", "viewed"]);
+          await context.supabase.from("proposal_events").insert({
+            organization_id: context.organizationId,
+            proposal_id: data.proposal_id,
+            kind: "shared",
+            actor_user_id: context.userId,
+            metadata: { share_id: row.id },
+          });
+        }
+        return mapRow(row);
+      }
       if (error && !/duplicate|unique/i.test(error.message)) throw error;
     }
     throw new Error("Não foi possível gerar um token único, tente novamente.");
