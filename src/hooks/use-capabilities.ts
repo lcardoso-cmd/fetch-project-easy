@@ -54,12 +54,6 @@ export const VIEW_AS_PRESETS: Array<{
     caps: ["cases"],
   },
   {
-    id: "expert",
-    label: "Perito",
-    description: "Perito com acesso a pareceres técnicos.",
-    caps: ["expert_opinion", "cases"],
-  },
-  {
     id: "commercial",
     label: "Comercial",
     description: "Responsável por propostas comerciais.",

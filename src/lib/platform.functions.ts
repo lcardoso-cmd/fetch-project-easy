@@ -383,12 +383,6 @@ export const CAPABILITY_PRESETS = {
     capabilities: ["cases", "commercial", "marketing", "office_admin"] as Capability[],
     requiresSuperAdmin: false,
   },
-  perito: {
-    label: "Perito",
-    description: "Perito técnico: casos e elaboração de pareceres.",
-    capabilities: ["cases", "expert_opinion"] as Capability[],
-    requiresSuperAdmin: false,
-  },
 } as const;
 
 export type PresetKey = keyof typeof CAPABILITY_PRESETS;
@@ -450,7 +444,7 @@ export const applyCapabilityPreset = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator(
     z.object({
-      preset: z.enum(["b2b", "office_admin", "perito"]),
+      preset: z.enum(["b2b", "office_admin"]),
       user_ids: z.array(z.string().uuid()).min(1).max(200),
       mode: z.enum(["add", "replace"]).default("add"),
     }),

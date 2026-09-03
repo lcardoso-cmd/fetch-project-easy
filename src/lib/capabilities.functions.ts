@@ -16,7 +16,7 @@ export type Capability = (typeof CAPABILITIES)[number];
 
 export const CAPABILITY_LABELS: Record<Capability, string> = {
   cases: "Casos e trabalho diário",
-  expert_opinion: "Parecer técnico (peritos)",
+  expert_opinion: "Parecer técnico (legado)",
   commercial: "Proposta comercial",
   marketing: "Marketing e publicações",
   office_admin: "Gestão do escritório",
@@ -34,7 +34,7 @@ export const CAPABILITY_DESCRIPTIONS: Record<Capability, string> = {
   cases:
     "Acesso aos casos, clientes e documentos vinculados do escritório.",
   expert_opinion:
-    "Elaboração de pareceres técnicos — reservado a peritos.",
+    "Permissão legada de pareceres técnicos — mantida apenas para acessos antigos; não é mais concedida.",
   commercial:
     "Criação e versionamento de propostas comerciais.",
   marketing:
@@ -134,13 +134,13 @@ export const setMemberCapabilities = createServerFn({ method: "POST" })
     // Substitui o conjunto do escritório: office_admin nunca revoga permissões da B2B.
     const OFFICE_SCOPED = [
       "cases",
-      "expert_opinion",
       "commercial",
       "marketing",
       "office_admin",
     ] as const;
+    // expert_opinion é legado: não pode mais ser concedido nem revogado por aqui.
     const filtered = data.capabilities.filter(
-      (c) => c !== "platform_admin" && c !== "super_admin",
+      (c) => c !== "platform_admin" && c !== "super_admin" && c !== "expert_opinion",
     );
 
     const admin = supabaseAdmin as unknown as {

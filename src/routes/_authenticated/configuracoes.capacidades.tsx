@@ -3,7 +3,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { ArrowLeft, Loader2, Search, Users, ShieldCheck, Briefcase, Microscope } from "lucide-react";
+import { ArrowLeft, Loader2, Search, Users, ShieldCheck, Briefcase } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -35,12 +35,11 @@ import {
   listPlatformUsers,
 } from "@/lib/platform.functions";
 
-type PresetKey = "b2b" | "office_admin" | "perito";
+type PresetKey = "b2b" | "office_admin";
 
 const PRESET_ICON: Record<PresetKey, typeof ShieldCheck> = {
   b2b: ShieldCheck,
   office_admin: Briefcase,
-  perito: Microscope,
 };
 
 export const Route = createFileRoute("/_authenticated/configuracoes/capacidades")({
@@ -218,7 +217,6 @@ function ApplyPresetDialog({
   const presetLabelMap: Record<PresetKey, string> = {
     b2b: "JurisMind B2B (staff)",
     office_admin: "Admin de escritório",
-    perito: "Perito",
   };
 
   return (

@@ -2,10 +2,12 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
-export const PRACTICE_TYPES = ["advogado", "perito_judicial", "assistente_tecnico"] as const;
+/**
+ * Legado: a coluna `practice_type` existe no banco por compatibilidade histórica,
+ * mas o JurisMind é exclusivo para advogados — toda gravação usa "advogado".
+ */
+export const PRACTICE_TYPES = ["advogado"] as const;
 export type PracticeType = (typeof PRACTICE_TYPES)[number];
-
-const PracticeTypeEnum = z.enum(PRACTICE_TYPES);
 
 export const getMyProfile = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
@@ -41,15 +43,13 @@ export const updateMyProfile = createServerFn({ method: "POST" })
         full_name: z.string().trim().max(160).optional().nullable(),
         oab_number: z.string().trim().max(40).optional().nullable(),
         phone: z.string().trim().max(40).optional().nullable(),
-        practice_type: PracticeTypeEnum.optional(),
-        specialty: z.string().trim().max(120).optional().nullable(),
       })
       .parse(i),
   )
   .handler(async ({ data, context }) => {
     const { data: updated, error } = await context.supabase
       .from("profiles")
-      .update(data)
+      .update({ ...data, practice_type: "advogado", specialty: null })
       .eq("id", context.userId)
       .select(
         "id, full_name, oab_number, phone, practice_type, specialty, onboarding_completed",
@@ -64,8 +64,6 @@ export const completeOnboarding = createServerFn({ method: "POST" })
   .inputValidator((i: unknown) =>
     z
       .object({
-        practice_type: PracticeTypeEnum,
-        specialty: z.string().trim().max(120).optional().nullable(),
         full_name: z.string().trim().max(160).optional().nullable(),
       })
       .parse(i),
@@ -79,8 +77,8 @@ export const completeOnboarding = createServerFn({ method: "POST" })
     const { data: updated, error } = await context.supabase
       .from("profiles")
       .update({
-        practice_type: data.practice_type,
-        specialty: data.specialty ?? null,
+        practice_type: "advogado",
+        specialty: null,
         full_name: data.full_name ?? null,
         onboarding_completed: true,
       })

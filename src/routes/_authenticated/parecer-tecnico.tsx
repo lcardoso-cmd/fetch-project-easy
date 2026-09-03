@@ -120,7 +120,7 @@ function ExpertOpinionPage() {
             <Microscope className="h-5 w-5 text-primary" strokeWidth={1.5} /> Parecer Técnico
           </span>
         }
-        subtitle="Área dedicada a peritos para elaborar e exportar pareceres técnicos com o padrão de formatação do escritório."
+        subtitle="Área do escritório para solicitar e acompanhar pareceres técnicos elaborados pela B2B Consulting."
       />
 
 
@@ -129,7 +129,7 @@ function ExpertOpinionPage() {
         <CardHeader>
           <CardTitle className="text-lg flex items-center gap-2">
             <Briefcase className="h-5 w-5 text-primary" />
-            Não tem perito no escritório?
+            Precisa de um parecer técnico especializado?
           </CardTitle>
           <CardDescription>
             Contrate a B2B Consulting para elaborar o parecer técnico do seu caso —

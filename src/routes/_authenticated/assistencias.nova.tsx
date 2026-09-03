@@ -38,13 +38,7 @@ import { JurisMindMark, JURISMIND_CONTEXT } from "@/components/brand/jurismind-m
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
-import { useProfile } from "@/hooks/use-profile";
-import {
-  defaultMatterKindFor,
-  labelsForMatter,
-  MATTER_KIND_LABELS,
-  type MatterKind,
-} from "@/lib/practice-labels";
+import { labelsForMatter, type MatterKind } from "@/lib/practice-labels";
 import { PARTY_RELATIONS, representedRelationFor, guessRelation } from "@/lib/party-relations";
 import {
   createCase,
@@ -106,7 +100,6 @@ function NewCasePage() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const qc = useQueryClient();
-  const { data: profile } = useProfile();
 
   const createCaseFn = useServerFn(createCase);
   const extractFn = useServerFn(extractCaseDataFromDocument);
@@ -121,17 +114,9 @@ function NewCasePage() {
     queryFn: () => listTeamFn(),
   });
 
-  // matter_kind herda do perfil mas é editável por caso.
-  const profilePractice = (profile?.practice_type ?? null) as
-    | "advogado"
-    | "perito_judicial"
-    | "assistente_tecnico"
-    | null;
-  const defaultKind = defaultMatterKindFor(profilePractice);
-  const [matterKind, setMatterKind] = useState<MatterKind>(defaultKind);
-  useEffect(() => {
-    setMatterKind(defaultMatterKindFor(profilePractice));
-  }, [profilePractice]);
+  // JurisMind é exclusivo para advogados/escritórios: todo registro é um caso
+  // jurídico ("processo"). Não há mais seleção de tipo de atuação.
+  const matterKind: MatterKind = "processo";
   const labels = labelsForMatter(matterKind);
 
   // form state
@@ -151,12 +136,6 @@ function NewCasePage() {
   const [description, setDescription] = useState("");
   const [parties, setParties] = useState<Party[]>([]);
   const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
-
-  // Campos extras de perícia
-  const [peritoFee, setPeritoFee] = useState(""); // em reais (string), convertido em cents na submissão
-  const [peritoAppointmentDate, setPeritoAppointmentDate] = useState("");
-  const [peritoDeadlineDate, setPeritoDeadlineDate] = useState("");
-  const [peritoNominationRef, setPeritoNominationRef] = useState("");
 
   // upload state
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -457,8 +436,7 @@ function NewCasePage() {
       errors.parties = "Adicione ao menos uma parte com nome preenchido.";
     } else {
       const repRel = representedRelationFor(matterKind);
-      // Perícia: representante não é obrigatório (perito é imparcial).
-      if (repRel && matterKind !== "pericia") {
+      if (repRel) {
         const repCount = cleanParties.filter((p) => p.relation === repRel).length;
         const repLabel =
           PARTY_RELATIONS[matterKind].find((r) => r.value === repRel)?.label ?? "representante";
@@ -471,13 +449,6 @@ function NewCasePage() {
       const unclassified = cleanParties.filter((p) => !p.relation);
       if (unclassified.length > 0) {
         errors.parties = "Classifique a relação de cada parte (cliente, contrária, perito, etc).";
-      }
-    }
-
-    if (matterKind === "pericia" && peritoFee.trim()) {
-      const reais = parseFloat(peritoFee.replace(",", "."));
-      if (isNaN(reais) || reais < 0) {
-        errors.perito_fee = "Honorários inválidos — use valor numérico em reais.";
       }
     }
 
@@ -516,13 +487,6 @@ function NewCasePage() {
       const represented = repRel
         ? cleanParties.find((p) => p.relation === repRel) ?? null
         : null;
-      const assistedFromParties =
-        matterKind === "assistencia_tecnica" ? represented?.name ?? null : null;
-
-      const feeReais = parseFloat(peritoFee.replace(",", "."));
-      const feeCents =
-        !isNaN(feeReais) && peritoFee.trim() ? Math.round(feeReais * 100) : null;
-
       const newCase = await createCaseFn({
         data: {
           title: title.trim(),
@@ -535,20 +499,8 @@ function NewCasePage() {
           represented_party: represented,
           team_member_ids: selectedMembers,
           status: "active",
-          matter_kind: matterKind,
-          practice_type:
-            matterKind === "pericia"
-              ? "perito_judicial"
-              : matterKind === "assistencia_tecnica"
-                ? "assistente_tecnico"
-                : "advogado",
-          assisted_party_name: assistedFromParties,
-          perito_fee_cents: matterKind === "pericia" ? feeCents : null,
-          perito_appointment_date:
-            matterKind === "pericia" ? peritoAppointmentDate || null : null,
-          perito_deadline_date: matterKind === "pericia" ? peritoDeadlineDate || null : null,
-          perito_nomination_ref:
-            matterKind === "pericia" ? peritoNominationRef.trim() || null : null,
+          matter_kind: "processo",
+          practice_type: "advogado",
         },
       });
 
@@ -648,22 +600,13 @@ function NewCasePage() {
             <ArrowLeft className="mr-1 h-4 w-4" /> Voltar
           </Link>
         </Button>
-        <h1 className="text-3xl font-bold font-heading tracking-tight">
-          Nova {labels.entitySingular.toLowerCase()}
-        </h1>
+        <h1 className="text-3xl font-bold font-heading tracking-tight">Novo caso</h1>
         <p className="mt-1 text-muted-foreground">
           Importe um documento para preencher automaticamente, ou preencha manualmente.
         </p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Tipo de matéria — compacto, default vindo do perfil, editável via "Trocar" */}
-        <MatterKindBar
-          matterKind={matterKind}
-          setMatterKind={setMatterKind}
-          fromProfile={!!profilePractice}
-        />
-
         {/* Importar documento */}
         <Card>
           <CardHeader>
@@ -834,9 +777,7 @@ function NewCasePage() {
         <Card>
           <CardHeader>
             <CardTitle className="text-lg">
-              {uploaded
-                ? `Dados ${matterKind === "processo" ? "do caso" : "da " + labels.entitySingular.toLowerCase()} — edite o que precisar`
-                : `Dados ${matterKind === "processo" ? "do caso" : "da " + labels.entitySingular.toLowerCase()}`}
+              {uploaded ? "Dados do caso — edite o que precisar" : "Dados do caso"}
             </CardTitle>
             {uploaded && (
               <CardDescription>
@@ -867,15 +808,11 @@ function NewCasePage() {
                 maxLength={200}
                 aria-invalid={showError("title") || undefined}
                 className={errorRing("title")}
-                placeholder={
-                  matterKind === "pericia"
-                    ? "Ex.: Requerida vs Requerente (gerado a partir das partes)"
-                    : "Ex.: Parte assistida vs Parte contrária (gerado a partir das partes)"
-                }
+                placeholder="Ex.: Parte representada vs Parte contrária (gerado a partir das partes)"
               />
               <p className="text-xs text-muted-foreground">
                 {titleAuto
-                  ? "O título é gerado automaticamente assim que você classificar a parte assistida/requerida e a parte contrária/requerente."
+                  ? "O título é gerado automaticamente assim que você classificar a parte representada e a parte contrária."
                   : "Você está editando o título manualmente."}
               </p>
               <ErrorMsg k="title" />
@@ -970,62 +907,6 @@ function NewCasePage() {
           </CardContent>
         </Card>
 
-        {/* Campos específicos: Perícia */}
-        {matterKind === "pericia" && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Dados da nomeação pericial</CardTitle>
-              <CardDescription>
-                Honorários, prazos e referência da nomeação.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="perito_nomination_ref">Referência da nomeação</Label>
-                <Input
-                  id="perito_nomination_ref"
-                  value={peritoNominationRef}
-                  onChange={(e) => setPeritoNominationRef(e.target.value)}
-                  placeholder="Ex.: despacho de 12/03/2026"
-                  maxLength={200}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="perito_fee">Honorários periciais (R$)</Label>
-                <Input
-                  id="perito_fee"
-                  value={peritoFee}
-                  onChange={(e) => setPeritoFee(e.target.value)}
-                  onBlur={() => markTouched("perito_fee")}
-                  placeholder="Ex.: 3500,00"
-                  inputMode="decimal"
-                  aria-invalid={showError("perito_fee") || undefined}
-                  className={errorRing("perito_fee")}
-                />
-                <ErrorMsg k="perito_fee" />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="perito_appointment_date">Data de nomeação</Label>
-                <Input
-                  id="perito_appointment_date"
-                  type="date"
-                  value={peritoAppointmentDate}
-                  onChange={(e) => setPeritoAppointmentDate(e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="perito_deadline_date">Prazo para entrega do laudo</Label>
-                <Input
-                  id="perito_deadline_date"
-                  type="date"
-                  value={peritoDeadlineDate}
-                  onChange={(e) => setPeritoDeadlineDate(e.target.value)}
-                />
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
         {/* Partes */}
         <Card
           className={
@@ -1039,11 +920,8 @@ function NewCasePage() {
           <CardHeader>
             <CardTitle className="text-lg">Partes envolvidas *</CardTitle>
             <CardDescription>
-              Adicione cada player do processo e classifique a relação dele com você (cliente, parte
-              contrária, perito do juízo, assistente técnico contrário, etc.).
-              {matterKind === "assistencia_tecnica" && (
-                <> A parte marcada como <strong>"Parte que assisto"</strong> é usada como parte assistida nos pareceres do JurisMind.</>
-              )}
+              Adicione cada participante do processo e classifique a relação dele com o escritório
+              (cliente, parte contrária, perito do juízo, assistente técnico, advogado adverso, etc.).
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
@@ -1282,72 +1160,6 @@ function NewCasePage() {
         </DialogContent>
       </Dialog>
       {unsavedDialog}
-    </div>
-  );
-}
-
-function MatterKindBar({
-  matterKind,
-  setMatterKind,
-  fromProfile,
-}: {
-  matterKind: MatterKind;
-  setMatterKind: (k: MatterKind) => void;
-  fromProfile: boolean;
-}) {
-  const [editing, setEditing] = useState(false);
-  return (
-    <div className="flex flex-wrap items-center gap-3 rounded-2xl border-2 border-accent/30 bg-accent/5 px-4 py-3 shadow-sm">
-      <span className="text-sm font-semibold text-foreground">Tipo de atuação:</span>
-      {editing ? (
-        <>
-          <Select
-            value={matterKind}
-            onValueChange={(v) => {
-              setMatterKind(v as MatterKind);
-              setEditing(false);
-            }}
-          >
-            <SelectTrigger className="h-8 w-[260px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {(Object.keys(MATTER_KIND_LABELS) as MatterKind[]).map((k) => (
-                <SelectItem key={k} value={k}>
-                  {MATTER_KIND_LABELS[k]}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="h-8"
-            onClick={() => setEditing(false)}
-          >
-            Cancelar
-          </Button>
-        </>
-      ) : (
-        <>
-          <Badge variant="default" className="text-sm font-semibold px-3 py-1">
-            {MATTER_KIND_LABELS[matterKind]}
-          </Badge>
-          {fromProfile && (
-            <span className="text-xs text-muted-foreground">(do seu perfil)</span>
-          )}
-          <Button
-            type="button"
-            variant="destructive"
-            size="sm"
-            className="h-7 px-3 text-xs font-semibold"
-            onClick={() => setEditing(true)}
-          >
-            Trocar
-          </Button>
-        </>
-      )}
     </div>
   );
 }

@@ -273,8 +273,7 @@ function ProposalPage() {
     setForm((f) => ({
       ...f,
       firm_name: f.firm_name || profile.full_name || "",
-      firm_practice_areas:
-        f.firm_practice_areas || profile.specialty || profile.practice_type || "",
+      firm_practice_areas: f.firm_practice_areas,
       firm_phone: f.firm_phone || profile.phone || "",
       firm_email: f.firm_email || user?.email || "",
       lawyer_name: f.lawyer_name || profile.full_name || "",

@@ -288,11 +288,10 @@ const PieceSchema = z.object({
     "memoriais",
     "parecer",
     "notificacao-extrajudicial",
-    "laudo-pericial",
-    "esclarecimentos-perito",
-    "parecer-tecnico",
+    "manifestacao-laudo",
     "impugnacao-laudo",
     "quesitos-suplementares",
+    "pedido-esclarecimentos",
   ]),
   instructions: z.string().max(3000).optional().default(""),
 });
@@ -314,16 +313,14 @@ const PIECE_GUIDE: Record<string, string> = {
     "Parecer jurídico: Consulta, Análise dos Fatos, Análise Jurídica (legislação, doutrina, jurisprudência), Conclusão objetiva.",
   "notificacao-extrajudicial":
     "Notificação extrajudicial: identificação das partes, exposição dos fatos, fundamento, requerimento, prazo para cumprimento, consequências do descumprimento.",
-  "laudo-pericial":
-    "Laudo pericial estruturado (CPC arts. 464-480) com seções: 1) Identificação (perito, processo, juízo nomeante, partes, data da nomeação); 2) Objeto da perícia; 3) Metodologia e diligências realizadas; 4) Análise técnica; 5) Resposta fundamentada aos quesitos (agrupados por origem: juízo, autor, réu); 6) Conclusão objetiva; 7) Anexos sugeridos. Linguagem técnica, impessoal e imparcial.",
-  "esclarecimentos-perito":
-    "Esclarecimentos do perito a pedido de parte ou do juízo: resposta pontual a cada quesito complementar mantendo o teor técnico do laudo já apresentado.",
-  "parecer-tecnico":
-    "Parecer técnico do assistente técnico contratado pela parte: 1) Identificação do assistente e da parte assistida; 2) Documentos analisados; 3) Metodologia; 4) Análise técnica dos pontos relevantes; 5) Resposta aos quesitos da parte assistida; 6) Considerações sobre o laudo oficial (se houver); 7) Conclusão técnica favorável aos interesses da parte assistida, mantendo rigor técnico.",
+  "manifestacao-laudo":
+    "Manifestação do advogado sobre o laudo pericial juntado aos autos: 1) Síntese do laudo; 2) Análise crítica das premissas, metodologia e conclusões; 3) Fundamentação jurídica (CPC arts. 464-480); 4) Requerimentos (esclarecimentos, complementação ou nova perícia, se cabível).",
   "impugnacao-laudo":
-    "Impugnação ao laudo pericial oficial pela parte assistida: 1) Síntese do laudo oficial; 2) Pontos controversos (metodologia, premissas, cálculos, interpretação); 3) Fundamentação técnica da divergência item a item; 4) Quesitos suplementares sugeridos; 5) Conclusão pleiteando complementação/refazimento do laudo ou prevalência do parecer do assistente.",
+    "Impugnação ao laudo pericial pela parte representada, redigida pelo advogado: 1) Síntese do laudo; 2) Pontos controversos (metodologia, premissas, cálculos, interpretação); 3) Fundamentação técnico-jurídica da divergência item a item; 4) Quesitos suplementares sugeridos; 5) Conclusão pleiteando complementação ou refazimento do laudo.",
   "quesitos-suplementares":
-    "Lista de quesitos suplementares formulados pela parte assistida, numerados, claros, técnicos e ligados a pontos não respondidos ou mal esclarecidos no laudo oficial.",
+    "Lista de quesitos suplementares formulados pelo advogado da parte representada, numerados, claros e ligados a pontos não respondidos ou mal esclarecidos no laudo.",
+  "pedido-esclarecimentos":
+    "Pedido de esclarecimentos ao perito do juízo (CPC art. 477, §2º): indicação objetiva dos pontos obscuros ou contraditórios do laudo e formulação das perguntas a serem respondidas.",
 };
 
 export const draftLegalPiece = createServerFn({ method: "POST" })
@@ -335,7 +332,7 @@ export const draftLegalPiece = createServerFn({ method: "POST" })
     const { data: caseRow, error: caseErr } = await context.supabase
       .from("cases")
       .select(
-        "id, title, client_name, case_type, jurisdiction, summary, description, matter_kind, assisted_party_name, perito_nomination_ref, perito_deadline_date",
+        "id, title, client_name, case_type, jurisdiction, summary, description",
       )
       .eq("id", data.case_id)
       .eq("organization_id", context.organizationId)
@@ -393,18 +390,10 @@ export const draftLegalPiece = createServerFn({ method: "POST" })
       }
     }
 
-    const isPerito =
-      data.piece_type === "laudo-pericial" || data.piece_type === "esclarecimentos-perito";
-    const isAssistente =
-      data.piece_type === "parecer-tecnico" ||
-      data.piece_type === "impugnacao-laudo" ||
-      data.piece_type === "quesitos-suplementares";
-
-    const persona = isPerito
-      ? "Você é um(a) perito(a) judicial brasileiro(a) experiente, redigindo documento técnico, impessoal e imparcial, em obediência aos arts. 464-480 do CPC."
-      : isAssistente
-        ? "Você é um(a) assistente técnico(a) contratado(a) por uma das partes. Redija documento técnico rigoroso, defendendo os interesses legítimos da parte assistida sem comprometer o rigor metodológico."
-        : "Você é um(a) advogado(a) brasileiro(a) experiente. Redija a peça em português formal, fiel ao CPC/2015 e à praxe forense.";
+    // O usuário do JurisMind é sempre advogado(a): nenhuma peça é redigida na
+    // persona de perito do juízo ou de assistente técnico.
+    const persona =
+      "Você é um(a) advogado(a) brasileiro(a) experiente. Redija a peça em português formal, fiel ao CPC/2015 e à praxe forense.";
 
     const system = `${persona} ${PIECE_GUIDE[data.piece_type]}
 REGRAS:
@@ -412,21 +401,14 @@ REGRAS:
 - Não invente nomes, CPF/CNPJ, valores, datas, jurisprudência ou conclusões técnicas. Use placeholders [INSERIR ...] / [CITAR JURISPRUDÊNCIA] / [DADO TÉCNICO PENDENTE] quando necessário.
 - Saída em Markdown, cabeçalhos em ## e parágrafos claros.`;
 
-    const clientLabel = isPerito
-      ? "Juízo nomeante"
-      : isAssistente
-        ? "Parte assistida"
-        : "Cliente";
-    const clientValue =
-      isAssistente && caseRow.assisted_party_name
-        ? caseRow.assisted_party_name
-        : (caseRow.client_name ?? "[INSERIR]");
+    const clientLabel = "Cliente";
+    const clientValue = caseRow.client_name ?? "[INSERIR]";
 
     const user = `CASO: ${caseRow.title}
 ${clientLabel}: ${clientValue}
 Tipo: ${caseRow.case_type ?? "[INSERIR]"}
 Jurisdição: ${caseRow.jurisdiction ?? "[INSERIR]"}
-${caseRow.perito_nomination_ref ? `Nomeação: ${caseRow.perito_nomination_ref}\n` : ""}${caseRow.perito_deadline_date ? `Prazo do laudo: ${caseRow.perito_deadline_date}\n` : ""}Resumo: ${caseRow.summary ?? caseRow.description ?? "(sem resumo)"}
+Resumo: ${caseRow.summary ?? caseRow.description ?? "(sem resumo)"}
 
 INSTRUÇÕES ESPECÍFICAS: ${data.instructions || "(usar padrão do documento)"}
 

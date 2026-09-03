@@ -28,6 +28,10 @@ const PIECE_TYPES = [
   { value: "memoriais", label: "Memoriais" },
   { value: "parecer", label: "Parecer Jurídico" },
   { value: "notificacao-extrajudicial", label: "Notificação Extrajudicial" },
+  { value: "manifestacao-laudo", label: "Manifestação sobre Laudo Pericial" },
+  { value: "impugnacao-laudo", label: "Impugnação ao Laudo Pericial" },
+  { value: "quesitos-suplementares", label: "Quesitos Suplementares" },
+  { value: "pedido-esclarecimentos", label: "Pedido de Esclarecimentos ao Perito" },
 ] as const;
 
 type PieceType = (typeof PIECE_TYPES)[number]["value"];
