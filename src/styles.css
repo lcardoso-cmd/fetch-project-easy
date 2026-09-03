@@ -136,13 +136,15 @@
   /* Barra lateral institucional: navy da marca, texto branco,
    * ciano apenas como marcador de item ativo/foco. */
   --sidebar: var(--brand-navy);
-  --sidebar-foreground: oklch(0.97 0.005 260);
+  --sidebar-foreground: oklch(1 0 0);
   --sidebar-primary: var(--brand-cyan);
   --sidebar-primary-foreground: var(--brand-navy);
-  --sidebar-accent: oklch(0.261 0.104 276.4);  /* #1A1A55 */
+  /* Profundidade da sidebar: branco translúcido sobre o navy, sem novos azuis. */
+  --sidebar-accent: color-mix(in oklab, #ffffff 10%, var(--brand-navy));
   --sidebar-accent-foreground: oklch(1 0 0);
-  --sidebar-border: oklch(0.72 0.035 264 / 30%);
+  --sidebar-border: oklch(1 0 0 / 14%);
   --sidebar-ring: var(--brand-cyan);
+
 }
 
 
