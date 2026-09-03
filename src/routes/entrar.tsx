@@ -540,11 +540,16 @@ function AuthPage() {
         <div className="w-full max-w-md space-y-6">
           <div className="text-center">
             <JurisMindMark size={48} context={JURISMIND_CONTEXT.auth} rounded className="mb-4" />
-            <h1 className="text-3xl font-bold text-foreground">Entrar no JurisMind</h1>
+            <h1 className="text-3xl font-bold text-foreground">
+              {isTrialSignup ? "Comece seu teste gratuito" : "Entrar no JurisMind"}
+            </h1>
             <p className="mt-2 text-sm text-muted-foreground">
-              Inteligência para escritórios de advocacia
+              {isTrialSignup
+                ? "Criar sua conta inicia o período gratuito de 30 dias."
+                : "Inteligência para escritórios de advocacia"}
             </p>
           </div>
+
 
           {pendingEmail && (
             <div
