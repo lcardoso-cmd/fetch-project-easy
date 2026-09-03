@@ -6,7 +6,6 @@ import { useAuth } from "@/hooks/use-auth";
 import { UserMenu } from "@/components/layout/user-menu";
 import { useProfile } from "@/hooks/use-profile";
 import { useCapabilities, VIEW_AS_PRESETS } from "@/hooks/use-capabilities";
-import type { PracticeType } from "@/lib/profile.functions";
 import type { Capability } from "@/lib/capabilities.functions";
 import {
   NAV_ENTRIES,
@@ -27,22 +26,22 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import {
   Home,
   FolderKanban,
   ClipboardCheck,
-  CalendarDays,
   FileArchive,
   FileSearch,
-  Scale,
   Handshake,
-  Megaphone,
-  Puzzle,
   Settings2,
   LogOut,
   MessageSquare,
   PanelLeftClose,
   PanelLeftOpen,
-  
   Globe2,
   Layers,
   Repeat,
@@ -57,6 +56,10 @@ import {
   ScrollText,
   Eye,
   ShieldCheck,
+  Wallet,
+  Cog,
+  Activity,
+  ChevronDown,
   type LucideIcon,
   HelpCircle,
 } from "lucide-react";
@@ -66,9 +69,13 @@ import { cn } from "@/lib/utils";
 import { NotificationBell } from "@/components/layout/notification-bell";
 import { ConversationsDrawer } from "@/components/chat/conversations-drawer";
 
+/* ────────────────────────────────────────────────────────────────
+   Modelo de navegação orientado a dados.
+   Uma única configuração alimenta desktop e mobile.
+   ──────────────────────────────────────────────────────────────── */
 
 type NavLink = {
-  type: "link";
+  kind: "link";
   to: string;
   label: string;
   icon: LucideIcon;
@@ -76,157 +83,188 @@ type NavLink = {
   requires?: Capability;
   description: string;
 };
-type NavLabel = {
-  type: "label";
+
+/** Grupo recolhível com itens internos. */
+type NavGroup = {
+  kind: "group";
+  id: string;
   label: string;
-  description: string;
+  icon: LucideIcon;
+  items: NavLink[];
 };
-type NavItem = NavLabel | { type: "separator" } | NavLink;
+
+type NavNode = NavLink | NavGroup;
+
+/** Seção de navegação: título opcional + nós (links diretos ou grupos). */
+type NavSection = {
+  id: string;
+  label?: string;
+  description?: string;
+  nodes: NavNode[];
+};
 
 /** Ambientes de navegação: escritório (operação) e administração global B2B. */
 type ShellScope = "office" | "b2b";
 
-function buildNav(
-  _practice: PracticeType | null | undefined,
-  scope: ShellScope,
-): NavItem[] {
-  const link = (
-    key: NavKey,
-    to: string,
-    label: string,
-    icon: LucideIcon,
-    match?: "exact" | "startsWith",
-  ): NavLink => {
-    const entry = NAV_ENTRIES[key];
-    return {
-      type: "link",
-      to,
-      label,
-      icon,
-      match,
-      requires: entry.requires,
-      description: describeNav(entry),
-    };
-  };
-  const section = (key: NavSectionKey, label: string): NavLabel => ({
-    type: "label",
+function link(
+  key: NavKey,
+  to: string,
+  label: string,
+  icon: LucideIcon,
+  match?: "exact" | "startsWith",
+): NavLink {
+  const entry = NAV_ENTRIES[key];
+  return {
+    kind: "link",
+    to,
     label,
-    description: describeNav(NAV_SECTIONS[key]),
-  });
+    icon,
+    match,
+    requires: entry.requires,
+    description: describeNav(entry),
+  };
+}
 
+function sectionMeta(key: NavSectionKey) {
+  return describeNav(NAV_SECTIONS[key]);
+}
+
+/** Navegação principal por ambiente. */
+function buildNavSections(scope: ShellScope): NavSection[] {
   if (scope === "b2b") {
     return [
-      section("platform", "Administração B2B"),
-      link("platform", "/plataforma", "Visão geral", Globe2, "exact"),
-      link("platform-customers", "/plataforma/clientes", "Clientes SaaS", Building2, "startsWith"),
-      link("platform-users", "/plataforma/usuarios", "Usuários", Users2, "startsWith"),
-      { type: "separator" },
-      link("platform-plans", "/plataforma/planos", "Planos e limites", Layers, "startsWith"),
-      link("platform-subscriptions", "/plataforma/assinaturas", "Assinaturas", Repeat, "startsWith"),
-      link("platform-invoices", "/plataforma/faturas", "Faturas", ReceiptText, "startsWith"),
-      link("platform-payments", "/plataforma/pagamentos", "Pagamentos", CreditCard, "startsWith"),
-      { type: "separator" },
-      link("platform-usage", "/plataforma/consumo", "Consumo de IA", Gauge, "startsWith"),
-      link("platform-requests", "/plataforma/solicitacoes", "Solicitações B2B", Handshake, "startsWith"),
-      link("platform-credentials", "/plataforma/credenciais", "Credenciais SaaS", KeyRound, "startsWith"),
-      link(
-        "platform-commercial-settings",
-        "/plataforma/configuracoes",
-        "Configuração comercial",
-        SlidersHorizontal,
-        "startsWith",
-      ),
-      link("platform-audit", "/plataforma/auditoria", "Log de auditoria", ScrollText, "startsWith"),
+      {
+        id: "b2b-root",
+        description: sectionMeta("platform"),
+        nodes: [
+          link("platform", "/plataforma", "Visão geral", Globe2, "exact"),
+          {
+            kind: "group",
+            id: "b2b-gestao",
+            label: "Gestão",
+            icon: Building2,
+            items: [
+              link("platform-customers", "/plataforma/clientes", "Clientes SaaS", Building2, "startsWith"),
+              link("platform-users", "/plataforma/usuarios", "Usuários", Users2, "startsWith"),
+            ],
+          },
+          {
+            kind: "group",
+            id: "b2b-financeiro",
+            label: "Financeiro",
+            icon: Wallet,
+            items: [
+              link("platform-plans", "/plataforma/planos", "Planos e limites", Layers, "startsWith"),
+              link("platform-subscriptions", "/plataforma/assinaturas", "Assinaturas", Repeat, "startsWith"),
+              link("platform-invoices", "/plataforma/faturas", "Faturas", ReceiptText, "startsWith"),
+              link("platform-payments", "/plataforma/pagamentos", "Pagamentos", CreditCard, "startsWith"),
+            ],
+          },
+          {
+            kind: "group",
+            id: "b2b-operacao",
+            label: "Operação",
+            icon: Activity,
+            items: [
+              link("platform-usage", "/plataforma/consumo", "Consumo de IA", Gauge, "startsWith"),
+              link("platform-requests", "/plataforma/solicitacoes", "Solicitações B2B", Handshake, "startsWith"),
+            ],
+          },
+          {
+            kind: "group",
+            id: "b2b-sistema",
+            label: "Sistema",
+            icon: Cog,
+            items: [
+              link("platform-credentials", "/plataforma/credenciais", "Credenciais SaaS", KeyRound, "startsWith"),
+              link(
+                "platform-commercial-settings",
+                "/plataforma/configuracoes",
+                "Configuração comercial",
+                SlidersHorizontal,
+                "startsWith",
+              ),
+              link("platform-audit", "/plataforma/auditoria", "Log de auditoria", ScrollText, "startsWith"),
+            ],
+          },
+        ],
+      },
     ];
   }
 
   return [
-    // ─── PRINCIPAL ───
-    section("main", "Principal"),
-    link("dashboard", "/painel", "Início", Home, "exact"),
-    link("cases", "/assistencias", "Casos", FolderKanban, "startsWith"),
-    link("assistant", "/assistente", "JurisMind AI", MessageSquare, "startsWith"),
-    link("my-work", "/tarefas", "Meu trabalho", ClipboardCheck),
-    link("library", "/documentos", "Biblioteca", FileArchive),
-
-    // ─── MÓDULOS ───
-    { type: "separator" },
-    section("modules", "Módulos"),
-    link("monitoring", "/publicacoes", "Monitoramento", FileSearch),
-    link("proposal", "/comercial", "Comercial", Handshake),
+    {
+      id: "office-main",
+      label: "Principal",
+      description: sectionMeta("main"),
+      nodes: [
+        link("dashboard", "/painel", "Início", Home, "exact"),
+        link("cases", "/assistencias", "Casos", FolderKanban, "startsWith"),
+        link("assistant", "/assistente", "JurisMind AI", MessageSquare, "startsWith"),
+        link("my-work", "/tarefas", "Meu trabalho", ClipboardCheck),
+        link("library", "/documentos", "Biblioteca", FileArchive),
+      ],
+    },
+    {
+      id: "office-modules",
+      label: "Módulos",
+      description: sectionMeta("modules"),
+      nodes: [
+        link("monitoring", "/publicacoes", "Monitoramento", FileSearch),
+        link("proposal", "/comercial", "Comercial", Handshake),
+      ],
+    },
   ];
 }
 
-
 /** Itens fixos do rodapé da barra lateral, por ambiente. */
-export function buildFooterNav(scope: ShellScope = "office"): NavItem[] {
-  const link = (
-    key: NavKey,
-    to: string,
-    label: string,
-    icon: LucideIcon,
-    match?: "exact" | "startsWith",
-  ): NavLink => {
-    const entry = NAV_ENTRIES[key];
-    return {
-      type: "link",
-      to,
-      label,
-      icon,
-      match,
-      requires: entry.requires,
-      description: describeNav(entry),
-    };
-  };
+export function buildFooterNav(scope: ShellScope = "office"): NavLink[] {
   if (scope === "b2b") {
     return [link("help", "/ajuda/permissoes", "Ajuda", HelpCircle, "startsWith")];
   }
   return [
     link("hire-b2b", "/contratar-b2b", "Serviços especializados", ShieldCheck, "startsWith"),
     link("billing", "/organizacao/cobranca", "Assinatura e cobrança", CreditCard, "startsWith"),
-
     link("settings", "/configuracoes", "Administração", Settings2, "startsWith"),
     link("help", "/ajuda/permissoes", "Ajuda", HelpCircle, "startsWith"),
   ];
 }
 
-
-// Filtra links por capacidade e remove labels/separators órfãos.
-// Não expõe nada ao usuário sobre itens escondidos.
+/**
+ * Filtra links por capacidade e remove grupos/seções sem nenhum item
+ * autorizado. Nada é revelado ao usuário sobre itens ocultos.
+ */
 function applyCapabilities(
-  raw: NavItem[],
+  sections: NavSection[],
   has: (c: Capability) => boolean,
-): NavItem[] {
-  const filtered: NavItem[] = raw.filter((item) => {
-    if (item.type !== "link") return true;
-    if (!item.requires) return true;
-    return has(item.requires);
-  });
-
-  const cleaned: NavItem[] = [];
-  for (let i = 0; i < filtered.length; i++) {
-    const item = filtered[i];
-    if (item.type === "label") {
-      let hasLink = false;
-      for (let j = i + 1; j < filtered.length; j++) {
-        const next = filtered[j];
-        if (next.type === "label" || next.type === "separator") break;
-        if (next.type === "link") {
-          hasLink = true;
-          break;
-        }
+): NavSection[] {
+  const allowed = (l: NavLink) => !l.requires || has(l.requires);
+  const result: NavSection[] = [];
+  for (const section of sections) {
+    const nodes: NavNode[] = [];
+    for (const node of section.nodes) {
+      if (node.kind === "link") {
+        if (allowed(node)) nodes.push(node);
+        continue;
       }
-      if (!hasLink) continue;
+      const items = node.items.filter(allowed);
+      if (items.length > 0) nodes.push({ ...node, items });
     }
-    if (item.type === "separator") {
-      const last = cleaned[cleaned.length - 1];
-      if (!last || last.type === "separator" || last.type === "label") continue;
-    }
-    cleaned.push(item);
+    if (nodes.length > 0) result.push({ ...section, nodes });
   }
-  while (cleaned.length && cleaned[cleaned.length - 1].type === "separator") cleaned.pop();
+  return result;
+}
 
-  return cleaned;
+function flattenLinks(sections: NavSection[]): NavLink[] {
+  return sections.flatMap((s) =>
+    s.nodes.flatMap((n) => (n.kind === "link" ? [n] : n.items)),
+  );
+}
+
+function matchesPath(pathname: string, l: NavLink) {
+  return l.match === "exact"
+    ? pathname === l.to
+    : pathname === l.to || pathname.startsWith(`${l.to}/`);
 }
 
 function ViewAsSwitcher() {
@@ -239,20 +277,20 @@ function ViewAsSwitcher() {
         <button
           type="button"
           className={cn(
-            "flex min-h-11 w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm font-medium transition",
+            "flex min-h-11 w-full items-center gap-2 rounded-md px-3 py-2 text-left text-ui font-medium transition",
             activePreset
               ? "bg-amber-400/20 text-amber-100 ring-1 ring-amber-300/60"
               : "text-sidebar-foreground/85 hover:bg-sidebar-accent hover:text-sidebar-foreground",
           )}
         >
-          <Eye className="size-4 shrink-0" aria-hidden="true" />
+          <Eye className="size-[18px] shrink-0" aria-hidden="true" />
           <span className="truncate">
             {activePreset ? `Vendo como: ${activePreset.label}` : "Ver como…"}
           </span>
         </button>
       </PopoverTrigger>
       <PopoverContent side="right" align="start" className="w-72 p-2">
-        <div className="mb-2 flex items-center gap-1.5 px-2 pt-1 text-xs text-muted-foreground">
+        <div className="mb-2 flex items-center gap-1.5 px-2 pt-1 text-sm text-muted-foreground">
           <ShieldCheck className="h-3.5 w-3.5" />
           <span>Simulação visual — o servidor mantém sua permissão real.</span>
         </div>
@@ -282,6 +320,17 @@ function ViewAsSwitcher() {
 }
 
 /** Controle de contexto: separa o ambiente do escritório da administração B2B. */
+const SCOPE_OPTIONS: {
+  id: ShellScope;
+  label: string;
+  short: string;
+  to: string;
+  icon: LucideIcon;
+}[] = [
+  { id: "office", label: "Ambiente do escritório", short: "Escritório", to: "/painel", icon: Building2 },
+  { id: "b2b", label: "Administração B2B", short: "B2B", to: "/plataforma", icon: Globe2 },
+];
+
 function ScopeSwitcher({
   scope,
   collapsed,
@@ -291,26 +340,22 @@ function ScopeSwitcher({
   collapsed?: boolean;
   onNavigate?: () => void;
 }) {
-  const options: { id: ShellScope; label: string; short: string; to: string; icon: LucideIcon }[] = [
-    { id: "office", label: "Ambiente do escritório", short: "Escritório", to: "/painel", icon: Building2 },
-    { id: "b2b", label: "Administração B2B", short: "B2B", to: "/plataforma", icon: Globe2 },
-  ];
   if (collapsed) {
-    const other = options.find((o) => o.id !== scope)!;
+    const other = SCOPE_OPTIONS.find((o) => o.id !== scope)!;
     return (
       <Tooltip>
         <TooltipTrigger asChild>
           <Link
             to={other.to}
             onClick={onNavigate}
-            aria-label={`Ir para ${other.label}`}
-            className="mx-auto mb-2 flex size-10 items-center justify-center rounded-md border border-sidebar-border text-sidebar-foreground/85 transition hover:bg-sidebar-accent hover:text-sidebar-foreground"
+            aria-label={`Alternar para ${other.label}`}
+            className="mx-auto mb-2 flex size-11 items-center justify-center rounded-md border border-sidebar-border text-sidebar-foreground/85 transition hover:bg-sidebar-accent hover:text-sidebar-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring"
           >
             <other.icon className="size-[18px]" strokeWidth={1.75} aria-hidden="true" />
           </Link>
         </TooltipTrigger>
-        <TooltipContent side="right" className="text-xs">
-          {other.label}
+        <TooltipContent side="right" className="text-sm">
+          Alternar para {other.label}
         </TooltipContent>
       </Tooltip>
     );
@@ -319,9 +364,9 @@ function ScopeSwitcher({
     <div
       role="group"
       aria-label="Contexto de trabalho"
-      className="mx-2 mb-3 grid grid-cols-2 gap-1 rounded-lg border border-sidebar-border bg-sidebar-accent/60 p-1"
+      className="mx-2 mb-3 grid grid-cols-2 gap-1 rounded-lg border border-sidebar-border p-1"
     >
-      {options.map((o) => {
+      {SCOPE_OPTIONS.map((o) => {
         const active = o.id === scope;
         return (
           <Link
@@ -331,13 +376,19 @@ function ScopeSwitcher({
             aria-current={active ? "page" : undefined}
             title={o.label}
             className={cn(
-              "flex min-h-10 items-center justify-center gap-1.5 rounded-md px-2 text-xs font-semibold transition-colors",
+              "relative flex min-h-11 items-center justify-center gap-1.5 rounded-md px-2 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring",
               active
-                ? "bg-sidebar-primary text-sidebar-primary-foreground"
-                : "text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground",
+                ? "bg-sidebar-accent text-sidebar-foreground"
+                : "text-sidebar-foreground/78 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground",
             )}
           >
-            <o.icon className="size-4 shrink-0" strokeWidth={1.75} aria-hidden="true" />
+            {active && (
+              <span
+                aria-hidden="true"
+                className="absolute inset-x-2 bottom-0.5 h-[3px] rounded-full bg-sidebar-primary"
+              />
+            )}
+            <o.icon className="size-[18px] shrink-0" strokeWidth={1.75} aria-hidden="true" />
             <span className="truncate">{o.short}</span>
           </Link>
         );
@@ -346,11 +397,188 @@ function ScopeSwitcher({
   );
 }
 
+/* ── Primitivas visuais reutilizadas por desktop e mobile ── */
+
+const rowBase =
+  "group relative flex min-h-11 items-center gap-3 rounded-md pr-2 text-ui transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring";
+
+function NavRow({
+  item,
+  active,
+  collapsed,
+  nested,
+  onNavigate,
+}: {
+  item: NavLink;
+  active: boolean;
+  collapsed?: boolean;
+  nested?: boolean;
+  onNavigate?: () => void;
+}) {
+  const Icon = item.icon;
+  const row = (
+    <Link
+      to={item.to}
+      onClick={onNavigate}
+      aria-current={active ? "page" : undefined}
+      title={collapsed ? undefined : item.description}
+      className={cn(
+        rowBase,
+        collapsed ? "justify-center px-0" : nested ? "pl-6" : "pl-3",
+        active
+          ? "bg-sidebar-accent font-semibold text-sidebar-accent-foreground"
+          : "font-medium text-sidebar-foreground/85 hover:bg-sidebar-accent/70 hover:text-sidebar-foreground",
+      )}
+    >
+      {active && !collapsed && (
+        <span
+          aria-hidden="true"
+          className="absolute left-0 top-1/2 h-6 w-[3px] -translate-y-1/2 rounded-r bg-sidebar-primary"
+        />
+      )}
+      <Icon className="size-[18px] shrink-0" strokeWidth={1.75} aria-hidden="true" />
+      {!collapsed && <span className="truncate">{item.label}</span>}
+    </Link>
+  );
+  if (!collapsed) return row;
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>{row}</TooltipTrigger>
+      <TooltipContent side="right" className="text-sm">
+        {item.label}
+      </TooltipContent>
+    </Tooltip>
+  );
+}
+
+function NavGroupBlock({
+  group,
+  open,
+  onOpenChange,
+  pathname,
+  collapsed,
+  onNavigate,
+}: {
+  group: NavGroup;
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  pathname: string;
+  collapsed?: boolean;
+  onNavigate?: () => void;
+}) {
+  const hasActive = group.items.some((i) => matchesPath(pathname, i));
+
+  // Recolhida: grupos viram lista plana de ícones, com tooltip por item.
+  if (collapsed) {
+    return (
+      <div className="space-y-0.5 border-t border-sidebar-border/60 pt-1">
+        {group.items.map((item) => (
+          <NavRow
+            key={item.to}
+            item={item}
+            active={matchesPath(pathname, item)}
+            collapsed
+            onNavigate={onNavigate}
+          />
+        ))}
+      </div>
+    );
+  }
+
+  const Icon = group.icon;
+  return (
+    <Collapsible open={open} onOpenChange={onOpenChange}>
+      <CollapsibleTrigger
+        className={cn(
+          rowBase,
+          "w-full pl-3 text-left font-semibold",
+          hasActive
+            ? "text-sidebar-foreground"
+            : "text-sidebar-foreground/85 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground",
+        )}
+      >
+        <Icon className="size-[18px] shrink-0" strokeWidth={1.75} aria-hidden="true" />
+        <span className="flex-1 truncate">{group.label}</span>
+        <ChevronDown
+          aria-hidden="true"
+          className={cn("size-4 shrink-0 transition-transform", open && "rotate-180")}
+        />
+      </CollapsibleTrigger>
+      <CollapsibleContent className="mt-0.5 space-y-0.5 pb-1">
+        {group.items.map((item) => (
+          <NavRow
+            key={item.to}
+            item={item}
+            active={matchesPath(pathname, item)}
+            nested
+            onNavigate={onNavigate}
+          />
+        ))}
+      </CollapsibleContent>
+    </Collapsible>
+  );
+}
+
+function NavTree({
+  sections,
+  pathname,
+  openGroups,
+  setOpenGroup,
+  collapsed,
+  onNavigate,
+}: {
+  sections: NavSection[];
+  pathname: string;
+  openGroups: Record<string, boolean>;
+  setOpenGroup: (id: string, v: boolean) => void;
+  collapsed?: boolean;
+  onNavigate?: () => void;
+}) {
+  return (
+    <>
+      {sections.map((section) => (
+        <div key={section.id} className="mb-3 last:mb-0">
+          {section.label && !collapsed && (
+            <div
+              className="px-3 pb-2 pt-3 text-sm font-semibold uppercase tracking-[0.08em] text-sidebar-foreground/72"
+              title={section.description}
+            >
+              {section.label}
+            </div>
+          )}
+          <div className="space-y-1">
+            {section.nodes.map((node) =>
+              node.kind === "link" ? (
+                <NavRow
+                  key={node.to}
+                  item={node}
+                  active={matchesPath(pathname, node)}
+                  collapsed={collapsed}
+                  onNavigate={onNavigate}
+                />
+              ) : (
+                <NavGroupBlock
+                  key={node.id}
+                  group={node}
+                  open={openGroups[node.id] ?? false}
+                  onOpenChange={(v) => setOpenGroup(node.id, v)}
+                  pathname={pathname}
+                  collapsed={collapsed}
+                  onNavigate={onNavigate}
+                />
+              ),
+            )}
+          </div>
+        </div>
+      ))}
+    </>
+  );
+}
 
 export function DashboardShell({ children }: { children: React.ReactNode }) {
   const { pathname } = useLocation();
   const { user, signOut } = useAuth();
-  const { data: profile } = useProfile();
+  useProfile();
   const { has, isSuperAdmin, activePreset, clearSimulation } = useCapabilities();
   // Ambiente ativo: administração global B2B vive sob /plataforma;
   // todo o restante é o ambiente do escritório.
@@ -358,15 +586,34 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   const platformRequires = NAV_ENTRIES.platform.requires;
   const canAdminB2B = platformRequires ? has(platformRequires) : true;
 
-  const raw = useMemo(
-    () => buildNav((profile?.practice_type as PracticeType | undefined) ?? null, scope),
-    [profile?.practice_type, scope],
-  );
-  const NAV = useMemo(() => applyCapabilities(raw, has), [raw, has]);
-  const FOOTER_NAV = useMemo(
-    () => applyCapabilities(buildFooterNav(scope), has),
+  const sections = useMemo(
+    () => applyCapabilities(buildNavSections(scope), has),
     [has, scope],
   );
+  const footerNav = useMemo(
+    () => buildFooterNav(scope).filter((l) => !l.requires || has(l.requires)),
+    [has, scope],
+  );
+
+  // Grupo da rota ativa abre automaticamente; os demais iniciam recolhidos.
+  const activeGroupId = useMemo(() => {
+    for (const section of sections) {
+      for (const node of section.nodes) {
+        if (node.kind === "group" && node.items.some((i) => matchesPath(pathname, i))) {
+          return node.id;
+        }
+      }
+    }
+    return null;
+  }, [sections, pathname]);
+
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
+  useEffect(() => {
+    if (activeGroupId) setOpenGroups((prev) => ({ ...prev, [activeGroupId]: true }));
+  }, [activeGroupId]);
+
+  const setOpenGroup = (id: string, v: boolean) =>
+    setOpenGroups((prev) => ({ ...prev, [id]: v }));
 
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -375,7 +622,6 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     setMobileOpen(false);
   }, [pathname]);
-
 
   useEffect(() => {
     const saved = localStorage.getItem("sidebar-collapsed");
@@ -391,17 +637,23 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   };
 
   const currentSection = useMemo(() => {
-    const links = [...NAV, ...FOOTER_NAV].filter(
-      (i): i is Extract<typeof i, { type: "link" }> => i.type === "link",
-    );
+    const links = [...flattenLinks(sections), ...footerNav];
     const match = links
       .filter((l) => pathname === l.to || pathname.startsWith(`${l.to}/`))
       .sort((a, b) => b.to.length - a.to.length)[0];
     return match?.label ?? "Painel";
-  }, [NAV, FOOTER_NAV, pathname]);
+  }, [sections, footerNav, pathname]);
 
-  const isActive = (to: string, match?: "exact" | "startsWith") =>
-    match === "exact" ? pathname === to : pathname === to || pathname.startsWith(`${to}/`);
+  const footerRows = (opts: { collapsed?: boolean; onNavigate?: () => void }) =>
+    footerNav.map((item) => (
+      <NavRow
+        key={item.to}
+        item={item}
+        active={matchesPath(pathname, item)}
+        collapsed={opts.collapsed}
+        onNavigate={opts.onNavigate}
+      />
+    ));
 
   return (
     <TooltipProvider delayDuration={200}>
@@ -423,17 +675,18 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
             </button>
           </div>
         )}
-        {/* Sidebar */}
+
+        {/* Sidebar desktop */}
         <aside
           className={cn(
-            "relative hidden flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-[width] duration-200 ease-out lg:flex",
+            "relative hidden min-h-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-[width] duration-200 ease-out lg:flex",
             collapsed ? "w-[4.5rem]" : "w-[16.5rem]",
             activePreset && "mt-6",
           )}
         >
           <div
             className={cn(
-              "flex h-16 items-center gap-2 px-3",
+              "flex h-16 shrink-0 items-center gap-2 px-3",
               collapsed && "justify-center px-0",
             )}
           >
@@ -452,129 +705,48 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
             {!collapsed && (
               <button
                 onClick={toggle}
-                className="ml-auto flex size-9 items-center justify-center rounded-md text-sidebar-foreground/80 transition hover:bg-sidebar-accent hover:text-sidebar-foreground"
+                className="ml-auto flex size-9 items-center justify-center rounded-md text-sidebar-foreground/85 transition hover:bg-sidebar-accent hover:text-sidebar-foreground"
                 aria-label="Recolher"
               >
-                <PanelLeftClose className="size-4" />
+                <PanelLeftClose className="size-[18px]" />
               </button>
             )}
           </div>
           {collapsed && (
             <button
               onClick={toggle}
-              className="mx-auto mb-1 flex size-9 items-center justify-center rounded-md text-sidebar-foreground/80 transition hover:bg-sidebar-accent hover:text-sidebar-foreground"
+              className="mx-auto mb-1 flex size-11 shrink-0 items-center justify-center rounded-md text-sidebar-foreground/85 transition hover:bg-sidebar-accent hover:text-sidebar-foreground"
               aria-label="Expandir"
             >
-              <PanelLeftOpen className="size-4" />
+              <PanelLeftOpen className="size-[18px]" />
             </button>
           )}
 
-          {canAdminB2B && <ScopeSwitcher scope={scope} collapsed={collapsed} />}
+          {canAdminB2B && (
+            <div className="shrink-0">
+              <ScopeSwitcher scope={scope} collapsed={collapsed} />
+            </div>
+          )}
 
-          <nav className="flex-1 space-y-0.5 overflow-y-auto overflow-x-hidden px-2 py-2">
-
-            {NAV.map((item, idx) => {
-              if (item.type === "separator") {
-                return <div key={idx} className="my-2" />;
-              }
-              if (item.type === "label") {
-                if (collapsed) return null;
-                return (
-                  <div
-                    key={idx}
-                    className="px-2 pb-1.5 pt-5 text-2xs font-semibold uppercase tracking-[0.14em] text-sidebar-foreground/70"
-                  >
-                    {item.label}
-                  </div>
-                );
-              }
-              const Icon = item.icon;
-              const active = isActive(item.to, item.match);
-              return (
-                <Tooltip key={item.to}>
-                  <TooltipTrigger asChild>
-                    <Link
-                      to={item.to}
-                      className={cn(
-                        "group relative flex items-center gap-3 rounded-md pl-3 pr-2 text-ui transition-colors",
-                        "h-11",
-                        active
-                          ? "bg-sidebar-accent font-semibold text-sidebar-accent-foreground"
-                          : "font-medium text-sidebar-foreground/85 hover:bg-sidebar-accent/70 hover:text-sidebar-foreground",
-                        collapsed && "justify-center px-0",
-                      )}
-                    >
-                      {active && !collapsed && (
-                        <span aria-hidden="true" className="absolute left-0 top-1/2 h-6 w-[3px] -translate-y-1/2 rounded-r bg-sidebar-primary" />
-                      )}
-                      <Icon className="size-[18px] shrink-0" strokeWidth={1.75} aria-hidden="true" />
-                      {!collapsed && <span className="truncate">{item.label}</span>}
-                    </Link>
-                  </TooltipTrigger>
-                  {collapsed && (
-                    <TooltipContent side="right" className="text-xs">
-                      {item.label}
-                    </TooltipContent>
-                  )}
-                </Tooltip>
-              );
-            })}
+          <nav
+            aria-label="Navegação principal"
+            className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-2 py-1"
+          >
+            <NavTree
+              sections={sections}
+              pathname={pathname}
+              openGroups={openGroups}
+              setOpenGroup={setOpenGroup}
+              collapsed={collapsed}
+            />
           </nav>
 
-          {/* Footer */}
-          <div className="border-t border-sidebar-border p-2 space-y-1">
-            {FOOTER_NAV.map((item) =>
-              item.type !== "link" ? null : (
-                <Tooltip key={item.to}>
-                  <TooltipTrigger asChild>
-                    <Link
-                      to={item.to}
-                      className={cn(
-                        "flex h-11 items-center gap-3 rounded-md pl-3 pr-2 text-ui transition-colors",
-                        isActive(item.to, item.match)
-                          ? "bg-sidebar-accent font-semibold text-sidebar-accent-foreground"
-                          : "font-medium text-sidebar-foreground/85 hover:bg-sidebar-accent/70 hover:text-sidebar-foreground",
-                        collapsed && "justify-center px-0",
-                      )}
-                    >
-                      <item.icon className="size-[18px] shrink-0" strokeWidth={1.75} aria-hidden="true" />
-                      {!collapsed && <span className="truncate">{item.label}</span>}
-                    </Link>
-                  </TooltipTrigger>
-                  {collapsed && (
-                    <TooltipContent side="right" className="text-xs">
-                      {item.label}
-                    </TooltipContent>
-                  )}
-                </Tooltip>
-              ),
-            )}
+          {/* Footer — perfil/sair ficam no UserMenu do cabeçalho */}
+          <div className="shrink-0 space-y-1 border-t border-sidebar-border p-2">
+            {footerRows({ collapsed })}
             {isSuperAdmin && !collapsed && <ViewAsSwitcher />}
-            {!collapsed && user && (
-              <div className="flex items-center gap-2 px-1 py-1">
-                <div aria-hidden="true" className="flex size-9 shrink-0 items-center justify-center rounded-full bg-sidebar-accent text-sm font-semibold uppercase text-sidebar-accent-foreground">
-                  {user.email?.charAt(0) ?? "U"}
-                </div>
-                <p className="truncate text-sm text-sidebar-foreground/85 flex-1">
-                  {user.email}
-                </p>
-              </div>
-            )}
-            <Button
-              variant="ghost"
-              size={collapsed ? "icon" : "sm"}
-              onClick={signOut}
-              className={cn(
-                "text-sidebar-foreground/85 hover:bg-sidebar-accent hover:text-sidebar-foreground",
-                collapsed ? "size-10 mx-auto" : "w-full justify-start gap-3 h-11 pl-3 text-ui font-medium",
-              )}
-            >
-              <LogOut className="h-4 w-4" />
-              {!collapsed && "Sair"}
-            </Button>
           </div>
         </aside>
-
 
         {/* Main column */}
         <div className={cn("flex flex-1 flex-col min-w-0", activePreset && "mt-6")}>
@@ -585,93 +757,57 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                   <button
                     type="button"
                     aria-label="Abrir menu"
-                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md text-foreground/70 transition hover:bg-accent hover:text-foreground"
+                    className="flex size-11 shrink-0 items-center justify-center rounded-md text-foreground/70 transition hover:bg-accent hover:text-foreground"
                   >
                     <Menu className="h-5 w-5" />
                   </button>
                 </SheetTrigger>
                 <SheetContent
                   side="left"
-                  className="w-72 border-r border-sidebar-border bg-sidebar p-0 text-sidebar-foreground"
+                  className="flex w-[19rem] max-w-[88vw] flex-col overflow-x-hidden border-r border-sidebar-border bg-sidebar p-0 text-sidebar-foreground"
                 >
-                  <div className="flex h-16 items-center gap-3 px-3">
+                  <div className="flex h-16 shrink-0 items-center gap-3 px-3">
                     <JurisMindMark size={26} context={JURISMIND_CONTEXT.sidebar} interactive />
                     <span className="truncate font-heading text-lg font-bold text-sidebar-foreground">
                       JurisMind
                     </span>
                   </div>
                   {canAdminB2B && (
-                    <ScopeSwitcher scope={scope} onNavigate={() => setMobileOpen(false)} />
+                    <div className="shrink-0">
+                      <ScopeSwitcher scope={scope} onNavigate={() => setMobileOpen(false)} />
+                    </div>
                   )}
-                  <nav className="max-h-[calc(100dvh-14rem)] space-y-0.5 overflow-y-auto overflow-x-hidden px-2 py-2">
-
-                    {NAV.map((item, idx) => {
-                      if (item.type === "separator") {
-                        return <div key={idx} className="my-2" />;
-                      }
-                      if (item.type === "label") {
-                        return (
-                          <div
-                            key={idx}
-                            className="px-2 pb-1.5 pt-5 text-2xs font-semibold uppercase tracking-[0.14em] text-sidebar-foreground/70"
-                          >
-                            {item.label}
-                          </div>
-                        );
-                      }
-                      const Icon = item.icon;
-                      const active = isActive(item.to, item.match);
-                      return (
-                        <Link
-                          key={item.to}
-                          to={item.to}
-                          onClick={() => setMobileOpen(false)}
-                          className={cn(
-                            "relative flex h-11 items-center gap-3 rounded-md pl-3 pr-2 text-ui transition-colors",
-                            active
-                              ? "bg-sidebar-accent font-semibold text-sidebar-accent-foreground"
-                              : "font-medium text-sidebar-foreground/85 hover:bg-sidebar-accent/70 hover:text-sidebar-foreground",
-                          )}
-                        >
-                          {active && (
-                            <span aria-hidden="true" className="absolute left-0 top-1/2 h-6 w-[3px] -translate-y-1/2 rounded-r bg-sidebar-primary" />
-                          )}
-                          <Icon className="size-[18px] shrink-0" strokeWidth={1.75} aria-hidden="true" />
-                          <span className="truncate">{item.label}</span>
-                        </Link>
-                      );
-                    })}
-                    <div className="my-2" />
-                    {FOOTER_NAV.map((item) =>
-                      item.type !== "link" ? null : (
-                        <Link
-                          key={item.to}
-                          to={item.to}
-                          onClick={() => setMobileOpen(false)}
-                          className={cn(
-                            "flex h-11 items-center gap-3 rounded-md pl-3 pr-2 text-ui transition-colors",
-                            isActive(item.to, item.match)
-                              ? "bg-sidebar-accent font-semibold text-sidebar-accent-foreground"
-                              : "font-medium text-sidebar-foreground/85 hover:bg-sidebar-accent/70 hover:text-sidebar-foreground",
-                          )}
-                        >
-                          <item.icon className="size-[18px] shrink-0" strokeWidth={1.75} aria-hidden="true" />
-                          <span className="truncate">{item.label}</span>
-                        </Link>
-                      ),
-                    )}
+                  <nav
+                    aria-label="Navegação principal"
+                    className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-2 py-1"
+                  >
+                    <NavTree
+                      sections={sections}
+                      pathname={pathname}
+                      openGroups={openGroups}
+                      setOpenGroup={setOpenGroup}
+                      onNavigate={() => setMobileOpen(false)}
+                    />
+                    <div className="mt-3 space-y-1 border-t border-sidebar-border pt-3">
+                      {footerRows({ onNavigate: () => setMobileOpen(false) })}
+                    </div>
                   </nav>
-                  <div className="border-t border-sidebar-border p-2 space-y-1">
+                  <div className="shrink-0 space-y-1 border-t border-sidebar-border p-2">
                     {isSuperAdmin && <ViewAsSwitcher />}
+                    {user && (
+                      <p className="truncate px-3 py-1 text-sm text-sidebar-foreground/78">
+                        {user.email}
+                      </p>
+                    )}
                     <Button
                       asChild
                       variant="ghost"
                       size="sm"
-                      className="w-full justify-start gap-3 h-11 pl-3 text-ui font-medium text-sidebar-foreground/85 hover:bg-sidebar-accent hover:text-sidebar-foreground"
+                      className="h-11 w-full justify-start gap-3 pl-3 text-ui font-medium text-sidebar-foreground/85 hover:bg-sidebar-accent hover:text-sidebar-foreground"
                     >
-                      <Link to="/ajuda/permissoes" onClick={() => setMobileOpen(false)}>
-                        <HelpCircle className="size-[18px]" aria-hidden="true" />
-                        Ajuda
+                      <Link to="/configuracoes" onClick={() => setMobileOpen(false)}>
+                        <Settings2 className="size-[18px]" aria-hidden="true" />
+                        Meu perfil
                       </Link>
                     </Button>
                     <Button
@@ -681,7 +817,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                         setMobileOpen(false);
                         signOut();
                       }}
-                      className="w-full justify-start gap-3 h-11 pl-3 text-ui font-medium text-sidebar-foreground/85 hover:bg-sidebar-accent hover:text-sidebar-foreground"
+                      className="h-11 w-full justify-start gap-3 pl-3 text-ui font-medium text-sidebar-foreground/85 hover:bg-sidebar-accent hover:text-sidebar-foreground"
                     >
                       <LogOut className="size-[18px]" aria-hidden="true" />
                       Sair
@@ -707,7 +843,6 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
             </div>
           </header>
 
-
           <header className="hidden h-16 items-center justify-between gap-4 border-b border-border bg-card px-6 lg:flex xl:px-10">
             <div className="flex min-w-0 items-center gap-3">
               <nav aria-label="Trilha de navegação" className="flex min-w-0 items-center gap-2">
@@ -724,7 +859,6 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                   {currentSection}
                 </span>
               </nav>
-
             </div>
             <div className="flex shrink-0 items-center gap-2">
               <ConversationsDrawer />
@@ -732,7 +866,6 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
               <UserMenu />
             </div>
           </header>
-
 
           <main className="flex-1 overflow-y-auto">
             <div className="mx-auto w-full max-w-[1600px] px-4 py-6 md:px-6 lg:px-10 lg:py-8">
