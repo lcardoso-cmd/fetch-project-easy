@@ -56,41 +56,6 @@ export function labelsForMatter(kind: MatterKind): PracticeLabels {
   return BY_MATTER[kind] ?? BY_MATTER.processo;
 }
 
-export function labelsForPractice(practice: PracticeType | null | undefined): PracticeLabels {
-  return labelsForMatter(defaultMatterKindFor(practice));
-}
 
-export const PRACTICE_TYPE_LABELS: Record<PracticeType, string> = {
-  advogado: "Advogado(a)",
-  perito_judicial: "Perito(a) judicial",
-  assistente_tecnico: "Assistente técnico(a)",
-};
 
-export const PRACTICE_TYPE_DESCRIPTIONS: Record<PracticeType, string> = {
-  advogado:
-    "Atua representando clientes em processos judiciais ou consultivos.",
-  perito_judicial:
-    "Nomeado(a) pelo juízo para produzir laudo pericial técnico.",
-  assistente_tecnico:
-    "Contratado(a) por uma das partes para assessorar e acompanhar a perícia.",
-};
 
-export const SPECIALTY_SUGGESTIONS = [
-  "Contábil",
-  "Engenharia civil",
-  "Engenharia mecânica",
-  "Engenharia elétrica",
-  "Engenharia de segurança do trabalho",
-  "Médica",
-  "Psicológica",
-  "Ambiental",
-  "Grafotécnica",
-  "TI / digital",
-  "Avaliação de imóveis",
-];
-
-export const MATTER_KIND_LABELS: Record<MatterKind, string> = {
-  processo: "Processo (advocacia)",
-  pericia: "Perícia (nomeado pelo juízo)",
-  assistencia_tecnica: "Assistência técnica (parte)",
-};

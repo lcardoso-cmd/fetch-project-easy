@@ -82,7 +82,7 @@ export const NAV_SECTIONS: Record<NavSectionKey, NavEntry> = {
   },
   practice: {
     base:
-      "Trabalho jurídico: casos/assistências, peças e pareceres técnicos.",
+      "Trabalho jurídico: casos, peças e pareceres técnicos contratados.",
   },
   business: {
     base:
@@ -119,7 +119,7 @@ export const NAV_ENTRIES: Record<NavKey, NavEntry> = {
     base: "Gerador de peças jurídicas com IA.",
   },
   "expert-opinion": {
-    base: "Elaboração de pareceres técnicos.",
+    base: "Solicitação e acompanhamento de pareceres técnicos elaborados pela B2B Consulting.",
     requires: "expert_opinion",
   },
 

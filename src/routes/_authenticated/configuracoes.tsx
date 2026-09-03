@@ -22,15 +22,7 @@ import {
   listInvitations,
   revokeInvitation,
 } from "@/lib/team.functions";
-import {
-  updateMyProfile,
-  PRACTICE_TYPES,
-  type PracticeType,
-} from "@/lib/profile.functions";
-import {
-  PRACTICE_TYPE_LABELS,
-  SPECIALTY_SUGGESTIONS,
-} from "@/lib/practice-labels";
+import { updateMyProfile } from "@/lib/profile.functions";
 import { useProfile } from "@/hooks/use-profile";
 import { isCurrentUserAdmin } from "@/lib/oauth-settings.functions";
 import {
@@ -87,16 +79,16 @@ function SettingsPage() {
   const [role, setRole] = useState("");
   const [accessRole, setAccessRole] = useState<"viewer" | "editor" | "admin">("editor");
 
-  // Perfil profissional
-  const [practiceType, setPracticeType] = useState<PracticeType>("advogado");
-  const [specialty, setSpecialty] = useState("");
+  // Perfil profissional do(a) advogado(a)
   const [fullName, setFullName] = useState("");
+  const [oabNumber, setOabNumber] = useState("");
+  const [phone, setPhone] = useState("");
 
   useEffect(() => {
     if (profile) {
-      setPracticeType((profile.practice_type as PracticeType) ?? "advogado");
-      setSpecialty(profile.specialty ?? "");
       setFullName(profile.full_name ?? "");
+      setOabNumber(profile.oab_number ?? "");
+      setPhone(profile.phone ?? "");
     }
   }, [profile]);
 
@@ -154,9 +146,9 @@ function SettingsPage() {
     mutationFn: () =>
       updateProfileFn({
         data: {
-          practice_type: practiceType,
-          specialty: practiceType === "advogado" ? null : specialty.trim() || null,
           full_name: fullName.trim() || null,
+          oab_number: oabNumber.trim() || null,
+          phone: phone.trim() || null,
         },
       }),
     onSuccess: () => {
@@ -165,8 +157,6 @@ function SettingsPage() {
     },
     onError: (e: Error) => toast.error(e.message || "Falha ao salvar perfil"),
   });
-
-  const needsSpecialty = practiceType !== "advogado";
 
   return (
     <div className="space-y-6 max-w-3xl">
@@ -181,7 +171,7 @@ function SettingsPage() {
             <UserCog className="h-5 w-5" /> Perfil profissional
           </CardTitle>
           <CardDescription>
-            Define o vocabulário do app e os modelos de documento sugeridos.
+            Seus dados profissionais de advogado(a), usados nos documentos gerados.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -196,45 +186,26 @@ function SettingsPage() {
               />
             </div>
             <div className="space-y-1">
-              <Label htmlFor="p-type">Atuação principal</Label>
-              <Select value={practiceType} onValueChange={(v) => setPracticeType(v as PracticeType)}>
-                <SelectTrigger id="p-type">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {PRACTICE_TYPES.map((p) => (
-                    <SelectItem key={p} value={p}>
-                      {PRACTICE_TYPE_LABELS[p]}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label htmlFor="p-oab">OAB</Label>
+              <Input
+                id="p-oab"
+                value={oabNumber}
+                onChange={(e) => setOabNumber(e.target.value)}
+                maxLength={40}
+                placeholder="Ex.: OAB/SP 123.456"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="p-phone">Telefone</Label>
+              <Input
+                id="p-phone"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                maxLength={40}
+                placeholder="(11) 99999-9999"
+              />
             </div>
           </div>
-          {needsSpecialty && (
-            <div className="space-y-1">
-              <Label htmlFor="p-specialty">Especialidade</Label>
-              <Input
-                id="p-specialty"
-                value={specialty}
-                onChange={(e) => setSpecialty(e.target.value)}
-                maxLength={120}
-                placeholder="Ex.: Contábil, Engenharia civil, Médica..."
-              />
-              <div className="flex flex-wrap gap-1.5 pt-1">
-                {SPECIALTY_SUGGESTIONS.map((s) => (
-                  <button
-                    key={s}
-                    type="button"
-                    onClick={() => setSpecialty(s)}
-                    className="text-xs rounded-full border border-border px-2.5 py-1 text-muted-foreground hover:border-accent/40"
-                  >
-                    {s}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
           <div className="flex justify-end">
             <Button
               size="sm"
@@ -474,7 +445,6 @@ function SettingsPage() {
 
 const EDITABLE_CAPS: Capability[] = [
   "cases",
-  "expert_opinion",
   "commercial",
   "marketing",
   "office_admin",

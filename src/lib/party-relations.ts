@@ -9,7 +9,7 @@ export type PartyRelationOption = {
 
 export const PARTY_RELATIONS: Record<MatterKind, PartyRelationOption[]> = {
   processo: [
-    { value: "cliente", label: "Meu cliente", isRepresented: true },
+    { value: "cliente", label: "Cliente (parte representada)", isRepresented: true },
     { value: "contraria", label: "Parte contrária" },
     { value: "litisconsorte", label: "Litisconsorte" },
     { value: "terceiro", label: "Terceiro interessado" },
