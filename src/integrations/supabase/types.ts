@@ -794,6 +794,7 @@ export type Database = {
           case_id: string | null
           created_at: string
           created_by: string
+          dm_key: string | null
           id: string
           kind: string
           last_message_at: string
@@ -805,6 +806,7 @@ export type Database = {
           case_id?: string | null
           created_at?: string
           created_by: string
+          dm_key?: string | null
           id?: string
           kind: string
           last_message_at?: string
@@ -816,6 +818,7 @@ export type Database = {
           case_id?: string | null
           created_at?: string
           created_by?: string
+          dm_key?: string | null
           id?: string
           kind?: string
           last_message_at?: string
@@ -1932,6 +1935,7 @@ export type Database = {
           body: string
           conversation_id: string
           created_at: string
+          deleted_at: string | null
           edited_at: string | null
           id: string
           organization_id: string
@@ -1943,6 +1947,7 @@ export type Database = {
           body?: string
           conversation_id: string
           created_at?: string
+          deleted_at?: string | null
           edited_at?: string | null
           id?: string
           organization_id: string
@@ -1954,6 +1959,7 @@ export type Database = {
           body?: string
           conversation_id?: string
           created_at?: string
+          deleted_at?: string | null
           edited_at?: string | null
           id?: string
           organization_id?: string

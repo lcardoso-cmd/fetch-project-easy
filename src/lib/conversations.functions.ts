@@ -1,29 +1,102 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireOrg } from "@/lib/org-middleware";
+import {
+  attachmentPath,
+  CONVERSATION_ATTACHMENT_MAX_BYTES,
+  dmKey,
+} from "@/lib/conversation-utils";
 
 const AttachmentSchema = z.object({
-  path: z.string(),
-  filename: z.string(),
-  size: z.number().int().nonnegative().optional(),
-  mime: z.string().optional(),
+  path: z.string().min(1),
+  filename: z.string().min(1).max(255),
+  size: z.number().int().nonnegative().max(CONVERSATION_ATTACHMENT_MAX_BYTES).optional(),
+  mime: z.string().max(200).optional(),
 });
 
-// Helpers (server-side)
+const GENERAL_TITLE = "Canal geral";
+
+/** Exige que o usuário participe da conversa (além da RLS). */
 async function assertParticipant(
   supabase: any,
   conversationId: string,
   userId: string,
-): Promise<void> {
-  const { data, error } = await supabase
+): Promise<{ id: string; kind: string; case_id: string | null; organization_id: string }> {
+  const { data: part, error } = await supabase
     .from("conversation_participants")
     .select("user_id")
     .eq("conversation_id", conversationId)
     .eq("user_id", userId)
     .maybeSingle();
   if (error) throw error;
-  if (!data) throw new Error("Você não participa desta conversa.");
+  if (!part) throw new Error("Você não participa desta conversa.");
+
+  const { data: conv, error: cErr } = await supabase
+    .from("conversations")
+    .select("id, kind, case_id, organization_id")
+    .eq("id", conversationId)
+    .maybeSingle();
+  if (cErr) throw cErr;
+  if (!conv) throw new Error("Conversa não encontrada.");
+  return conv;
 }
+
+/** Garante que a conversa pertence à organização ativa do usuário. */
+function assertSameOrg(conv: { organization_id: string }, organizationId: string) {
+  if (conv.organization_id !== organizationId) {
+    throw new Error("Conversa de outra organização.");
+  }
+}
+
+/** Membros ativos da organização (via cliente privilegiado, após autorização). */
+async function activeMemberIds(admin: any, organizationId: string): Promise<string[]> {
+  const { data, error } = await admin
+    .from("organization_memberships")
+    .select("user_id")
+    .eq("organization_id", organizationId)
+    .eq("status", "active");
+  if (error) throw error;
+  return (data ?? []).map((m: { user_id: string }) => m.user_id);
+}
+
+/**
+ * Sincroniza participantes de conversas coletivas (canal geral / caso).
+ * Adiciona quem deve participar e remove quem perdeu o acesso.
+ */
+async function syncParticipants(
+  admin: any,
+  conversationId: string,
+  organizationId: string,
+  wanted: string[],
+): Promise<void> {
+  const { data: have } = await admin
+    .from("conversation_participants")
+    .select("user_id")
+    .eq("conversation_id", conversationId);
+  const haveSet = new Set<string>((have ?? []).map((p: { user_id: string }) => p.user_id));
+  const wantedSet = new Set(wanted);
+
+  const toAdd = wanted.filter((u) => !haveSet.has(u));
+  if (toAdd.length > 0) {
+    await admin.from("conversation_participants").insert(
+      toAdd.map((u) => ({
+        conversation_id: conversationId,
+        organization_id: organizationId,
+        user_id: u,
+      })),
+    );
+  }
+  const toRemove = Array.from(haveSet).filter((u) => !wantedSet.has(u));
+  if (toRemove.length > 0) {
+    await admin
+      .from("conversation_participants")
+      .delete()
+      .eq("conversation_id", conversationId)
+      .in("user_id", toRemove);
+  }
+}
+
+// ---------------------------------------------------------------- listagem
 
 export const listMyConversations = createServerFn({ method: "GET" })
   .middleware([requireOrg])
@@ -31,7 +104,8 @@ export const listMyConversations = createServerFn({ method: "GET" })
     const { data: parts, error } = await context.supabase
       .from("conversation_participants")
       .select("conversation_id, last_read_at")
-      .eq("user_id", context.userId);
+      .eq("user_id", context.userId)
+      .eq("organization_id", context.organizationId);
     if (error) throw error;
     const ids = (parts ?? []).map((p) => p.conversation_id);
     if (ids.length === 0) return [];
@@ -40,36 +114,29 @@ export const listMyConversations = createServerFn({ method: "GET" })
       .from("conversations")
       .select("*")
       .in("id", ids)
+      .eq("organization_id", context.organizationId)
       .order("last_message_at", { ascending: false });
     if (cErr) throw cErr;
 
-    // Hydrate: participants + case title + unread count
     const otherUserIds = new Set<string>();
     const caseIds = new Set<string>();
-    for (const c of convs ?? []) {
-      if (c.case_id) caseIds.add(c.case_id);
-    }
+    for (const c of convs ?? []) if (c.case_id) caseIds.add(c.case_id);
 
     const { data: allParts } = await context.supabase
       .from("conversation_participants")
       .select("conversation_id, user_id")
       .in("conversation_id", ids);
-    for (const p of allParts ?? []) if (p.user_id !== context.userId) otherUserIds.add(p.user_id);
-
-    const profilesPromise = otherUserIds.size
-      ? context.supabase
-          .from("profiles")
-          .select("id, full_name")
-          .in("id", Array.from(otherUserIds))
-      : Promise.resolve({ data: [] as Array<{ id: string; full_name: string | null }> });
-
-    const casesPromise = caseIds.size
-      ? context.supabase.from("cases").select("id, title").in("id", Array.from(caseIds))
-      : Promise.resolve({ data: [] as Array<{ id: string; title: string }> });
+    for (const p of allParts ?? []) {
+      if (p.user_id !== context.userId) otherUserIds.add(p.user_id);
+    }
 
     const [{ data: profiles }, { data: cases }] = await Promise.all([
-      profilesPromise,
-      casesPromise,
+      otherUserIds.size
+        ? context.supabase.from("profiles").select("id, full_name").in("id", Array.from(otherUserIds))
+        : Promise.resolve({ data: [] as Array<{ id: string; full_name: string | null }> }),
+      caseIds.size
+        ? context.supabase.from("cases").select("id, title").in("id", Array.from(caseIds))
+        : Promise.resolve({ data: [] as Array<{ id: string; title: string }> }),
     ]);
 
     const profileMap = new Map((profiles ?? []).map((p) => [p.id, p.full_name]));
@@ -82,53 +149,119 @@ export const listMyConversations = createServerFn({ method: "GET" })
     }
     const lastReadMap = new Map((parts ?? []).map((p) => [p.conversation_id, p.last_read_at]));
 
-    // Unread counts
-    const unreadEntries = await Promise.all(
+    // Última mensagem + não lidas
+    const meta = await Promise.all(
       (convs ?? []).map(async (c) => {
         const lr = lastReadMap.get(c.id) ?? c.created_at;
-        const { count } = await context.supabase
-          .from("messages")
-          .select("id", { count: "exact", head: true })
-          .eq("conversation_id", c.id)
-          .gt("created_at", lr)
-          .neq("author_id", context.userId);
-        return [c.id, count ?? 0] as const;
+        const [{ count }, { data: lastMsg }] = await Promise.all([
+          context.supabase
+            .from("messages")
+            .select("id", { count: "exact", head: true })
+            .eq("conversation_id", c.id)
+            .gt("created_at", lr)
+            .neq("author_id", context.userId)
+            .is("deleted_at", null),
+          context.supabase
+            .from("messages")
+            .select("body, author_id, created_at, deleted_at, attachments")
+            .eq("conversation_id", c.id)
+            .order("created_at", { ascending: false })
+            .limit(1)
+            .maybeSingle(),
+        ]);
+        return [c.id, { unread: count ?? 0, lastMsg }] as const;
       }),
     );
-    const unreadMap = new Map(unreadEntries);
+    const metaMap = new Map(meta);
 
     return (convs ?? []).map((c) => {
       const memberIds = partsMap.get(c.id) ?? [];
       const otherIds = memberIds.filter((id) => id !== context.userId);
       const otherName =
-        c.kind === "dm" && otherIds[0]
-          ? profileMap.get(otherIds[0]) ?? "Usuário"
-          : null;
+        c.kind === "dm" && otherIds[0] ? profileMap.get(otherIds[0]) ?? "Usuário" : null;
+      const m = metaMap.get(c.id);
+      const last = m?.lastMsg as
+        | { body: string; deleted_at: string | null; attachments: unknown[] }
+        | null
+        | undefined;
       return {
         ...c,
         case_title: c.case_id ? caseMap.get(c.case_id) ?? null : null,
         other_name: otherName,
         participant_user_ids: memberIds,
-        unread: unreadMap.get(c.id) ?? 0,
+        unread: m?.unread ?? 0,
+        last_message_preview: last
+          ? last.deleted_at
+            ? "Mensagem removida"
+            : last.body?.trim() ||
+              ((last.attachments as unknown[])?.length ? "Anexo enviado" : "")
+          : "",
       };
     });
   });
 
-// Find or create the case conversation; auto-add owner + accepted member accounts on the case
+// ------------------------------------------------ criação/obtenção de conversas
+
+export const getOrCreateGeneralConversation = createServerFn({ method: "POST" })
+  .middleware([requireOrg])
+  .handler(async ({ context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    // Autorização já garantida por requireOrg (membership ativa na organização).
+    const existing = await supabaseAdmin
+      .from("conversations")
+      .select("*")
+      .eq("organization_id", context.organizationId)
+      .eq("kind", "general")
+      .maybeSingle();
+
+    let conv = existing.data;
+    if (!conv) {
+      const ins = await supabaseAdmin
+        .from("conversations")
+        .insert({
+          kind: "general",
+          organization_id: context.organizationId,
+          title: GENERAL_TITLE,
+          created_by: context.userId,
+        })
+        .select("*")
+        .single();
+      if (ins.error) {
+        // corrida entre duas sessões: relê o canal existente
+        const again = await supabaseAdmin
+          .from("conversations")
+          .select("*")
+          .eq("organization_id", context.organizationId)
+          .eq("kind", "general")
+          .maybeSingle();
+        if (!again.data) throw ins.error;
+        conv = again.data;
+      } else {
+        conv = ins.data;
+      }
+    }
+
+    const members = await activeMemberIds(supabaseAdmin, context.organizationId);
+    await syncParticipants(supabaseAdmin, conv!.id, context.organizationId, members);
+    return conv;
+  });
+
 export const getOrCreateCaseConversation = createServerFn({ method: "POST" })
   .middleware([requireOrg])
   .inputValidator((i: unknown) => z.object({ case_id: z.string().uuid() }).parse(i))
   .handler(async ({ data, context }) => {
+    // Acesso ao caso é validado pela RLS do usuário (user_can_access_case).
     const { data: caseRow, error: cErr } = await context.supabase
       .from("cases")
-      .select("id, title")
+      .select("id, title, organization_id")
       .eq("id", data.case_id)
       .maybeSingle();
     if (cErr) throw cErr;
     if (!caseRow) throw new Error("Caso não encontrado ou sem acesso.");
+    if (caseRow.organization_id !== context.organizationId) {
+      throw new Error("Caso de outra organização.");
+    }
 
-    // Find or create conversation (use admin to bypass RLS chicken-and-egg:
-    // user must be a participant to SELECT, but participants are added after insert)
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const existing = await supabaseAdmin
       .from("conversations")
@@ -136,6 +269,7 @@ export const getOrCreateCaseConversation = createServerFn({ method: "POST" })
       .eq("case_id", data.case_id)
       .eq("kind", "case")
       .maybeSingle();
+
     let conv = existing.data;
     if (!conv) {
       const ins = await supabaseAdmin
@@ -149,104 +283,114 @@ export const getOrCreateCaseConversation = createServerFn({ method: "POST" })
         })
         .select("*")
         .single();
-      if (ins.error) throw ins.error;
-      conv = ins.data;
+      if (ins.error) {
+        const again = await supabaseAdmin
+          .from("conversations")
+          .select("*")
+          .eq("case_id", data.case_id)
+          .eq("kind", "case")
+          .maybeSingle();
+        if (!again.data) throw ins.error;
+        conv = again.data;
+      } else {
+        conv = ins.data;
+      }
     }
 
-    // Compute desired participants: case owner + accepted invited members
-    // (supabaseAdmin already imported above)
-    const linkedUserIds = new Set<string>();
-    const { data: members } = await supabaseAdmin
-      .from("organization_memberships")
-      .select("user_id")
-      .eq("organization_id", context.organizationId)
-      .eq("status", "active");
-    for (const m of members ?? []) linkedUserIds.add(m.user_id);
-    // Self is always a participant
-    linkedUserIds.add(context.userId);
-
-    // Insert missing participants
-    const wanted = Array.from(linkedUserIds);
-    const { data: have } = await supabaseAdmin
-      .from("conversation_participants")
-      .select("user_id")
-      .eq("conversation_id", conv.id);
-    const haveSet = new Set((have ?? []).map((p) => p.user_id));
-    const toAdd = wanted.filter((u) => !haveSet.has(u));
-    if (toAdd.length > 0) {
-      await supabaseAdmin
-        .from("conversation_participants")
-        .insert(toAdd.map((u) => ({ conversation_id: conv!.id, organization_id: context.organizationId, user_id: u })));
+    // Participantes = membros ativos que realmente têm acesso ao caso.
+    const members = await activeMemberIds(supabaseAdmin, context.organizationId);
+    const allowed: string[] = [];
+    for (const uid of members) {
+      const { data: can } = await supabaseAdmin.rpc("user_can_access_case", {
+        _case_id: data.case_id,
+        _user_id: uid,
+      });
+      if (can === true) allowed.push(uid);
     }
+    if (!allowed.includes(context.userId)) allowed.push(context.userId);
+    await syncParticipants(supabaseAdmin, conv!.id, context.organizationId, allowed);
 
     return conv;
   });
 
 export const getOrCreateDM = createServerFn({ method: "POST" })
   .middleware([requireOrg])
-  .inputValidator((i: unknown) =>
-    z.object({ other_user_id: z.string().uuid() }).parse(i),
-  )
+  .inputValidator((i: unknown) => z.object({ other_user_id: z.string().uuid() }).parse(i))
   .handler(async ({ data, context }) => {
     if (data.other_user_id === context.userId) throw new Error("Selecione outra pessoa.");
 
-    // Look for existing DM between the two
-    const { data: mine } = await context.supabase
-      .from("conversation_participants")
-      .select("conversation_id")
-      .eq("user_id", context.userId);
-    const myConvIds = (mine ?? []).map((p) => p.conversation_id);
-    let convId: string | null = null;
-    if (myConvIds.length > 0) {
-      const { data: shared } = await context.supabase
-        .from("conversation_participants")
-        .select("conversation_id")
-        .eq("user_id", data.other_user_id)
-        .in("conversation_id", myConvIds);
-      const candidates = (shared ?? []).map((s) => s.conversation_id);
-      if (candidates.length > 0) {
-        const { data: dms } = await context.supabase
-          .from("conversations")
-          .select("id")
-          .eq("kind", "dm")
-          .in("id", candidates)
-          .limit(1);
-        if (dms && dms[0]) convId = dms[0].id;
-      }
-    }
-    if (convId) {
-      const { data } = await context.supabase
-        .from("conversations")
-        .select("*")
-        .eq("id", convId)
-        .single();
-      return data;
+    // O destinatário precisa ser membro ativo da MESMA organização.
+    const { data: membership, error: mErr } = await context.supabase
+      .from("organization_memberships")
+      .select("user_id")
+      .eq("organization_id", context.organizationId)
+      .eq("user_id", data.other_user_id)
+      .eq("status", "active")
+      .maybeSingle();
+    if (mErr) throw mErr;
+    if (!membership) throw new Error("Pessoa não faz parte da organização.");
+
+    const key = dmKey(context.userId, data.other_user_id);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    const existing = await supabaseAdmin
+      .from("conversations")
+      .select("*")
+      .eq("organization_id", context.organizationId)
+      .eq("kind", "dm")
+      .eq("dm_key", key)
+      .maybeSingle();
+    if (existing.data) {
+      await syncParticipants(supabaseAdmin, existing.data.id, context.organizationId, [
+        context.userId,
+        data.other_user_id,
+      ]);
+      return existing.data;
     }
 
-    const ins = await context.supabase
+    const ins = await supabaseAdmin
       .from("conversations")
-      .insert({ kind: "dm", organization_id: context.organizationId, created_by: context.userId })
+      .insert({
+        kind: "dm",
+        organization_id: context.organizationId,
+        dm_key: key,
+        created_by: context.userId,
+      })
       .select("*")
       .single();
-    if (ins.error) throw ins.error;
+    let conv = ins.data;
+    if (ins.error) {
+      const again = await supabaseAdmin
+        .from("conversations")
+        .select("*")
+        .eq("organization_id", context.organizationId)
+        .eq("kind", "dm")
+        .eq("dm_key", key)
+        .maybeSingle();
+      if (!again.data) throw ins.error;
+      conv = again.data;
+    }
 
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    await supabaseAdmin
-      .from("conversation_participants")
-      .insert([
-        { conversation_id: ins.data.id, organization_id: context.organizationId, user_id: context.userId },
-        { conversation_id: ins.data.id, organization_id: context.organizationId, user_id: data.other_user_id },
-      ]);
-    return ins.data;
+    await syncParticipants(supabaseAdmin, conv!.id, context.organizationId, [
+      context.userId,
+      data.other_user_id,
+    ]);
+    return conv;
   });
+
+// ------------------------------------------------------------- participantes
 
 export const listConversationParticipants = createServerFn({ method: "GET" })
   .middleware([requireOrg])
-  .inputValidator((i: unknown) =>
-    z.object({ conversation_id: z.string().uuid() }).parse(i),
-  )
+  .inputValidator((i: unknown) => z.object({ conversation_id: z.string().uuid() }).parse(i))
   .handler(async ({ data, context }) => {
-    await assertParticipant(context.supabase, data.conversation_id, context.userId);
+    const conv = await assertParticipant(
+      context.supabase,
+      data.conversation_id,
+      context.userId,
+    );
+    assertSameOrg(conv, context.organizationId);
+
     const { data: parts, error } = await context.supabase
       .from("conversation_participants")
       .select("user_id")
@@ -254,15 +398,15 @@ export const listConversationParticipants = createServerFn({ method: "GET" })
     if (error) throw error;
     const ids = (parts ?? []).map((p) => p.user_id);
     if (ids.length === 0) return [] as Array<{ id: string; name: string }>;
+
     const { data: profiles } = await context.supabase
       .from("profiles")
       .select("id, full_name")
       .in("id", ids);
-    return (profiles ?? []).map((p) => ({
-      id: p.id,
-      name: p.full_name ?? "Usuário",
-    }));
+    return (profiles ?? []).map((p) => ({ id: p.id, name: p.full_name ?? "Usuário" }));
   });
+
+// ------------------------------------------------------------------ mensagens
 
 export const listMessages = createServerFn({ method: "GET" })
   .middleware([requireOrg])
@@ -275,7 +419,12 @@ export const listMessages = createServerFn({ method: "GET" })
       .parse(i),
   )
   .handler(async ({ data, context }) => {
-    await assertParticipant(context.supabase, data.conversation_id, context.userId);
+    const conv = await assertParticipant(
+      context.supabase,
+      data.conversation_id,
+      context.userId,
+    );
+    assertSameOrg(conv, context.organizationId);
 
     const { data: msgs, error } = await context.supabase
       .from("messages")
@@ -284,19 +433,146 @@ export const listMessages = createServerFn({ method: "GET" })
       .order("created_at", { ascending: true })
       .limit(data.limit);
     if (error) throw error;
+    const rows = msgs ?? [];
 
-    const authorIds = Array.from(new Set((msgs ?? []).map((m) => m.author_id)));
+    const authorIds = Array.from(new Set(rows.map((m) => m.author_id)));
     const { data: profiles } = authorIds.length
-      ? await context.supabase
-          .from("profiles")
-          .select("id, full_name")
-          .in("id", authorIds)
+      ? await context.supabase.from("profiles").select("id, full_name").in("id", authorIds)
       : { data: [] as Array<{ id: string; full_name: string | null }> };
     const nameMap = new Map((profiles ?? []).map((p) => [p.id, p.full_name]));
 
-    return (msgs ?? []).map((m) => ({
-      ...m,
+    // Prévia da mensagem respondida
+    const replyIds = Array.from(
+      new Set(rows.map((m) => m.reply_to_id).filter((v): v is string => !!v)),
+    );
+    const replyMap = new Map<
+      string,
+      { id: string; body: string; author_id: string; deleted_at: string | null }
+    >();
+    if (replyIds.length > 0) {
+      const { data: replies } = await context.supabase
+        .from("messages")
+        .select("id, body, author_id, deleted_at")
+        .in("id", replyIds);
+      for (const r of replies ?? []) replyMap.set(r.id, r);
+    }
+
+    // Tarefas geradas a partir das mensagens (integração bidirecional)
+    const messageIds = rows.map((m) => m.id);
+    const taskMap = new Map<string, Array<{ id: string; title: string; status: string }>>();
+    if (messageIds.length > 0) {
+      const { data: links } = await context.supabase
+        .from("message_tasks")
+        .select("message_id, task_id")
+        .in("message_id", messageIds);
+      const taskIds = Array.from(new Set((links ?? []).map((l) => l.task_id)));
+      if (taskIds.length > 0) {
+        const { data: tasks } = await context.supabase
+          .from("tasks")
+          .select("id, title, status")
+          .in("id", taskIds);
+        const tById = new Map((tasks ?? []).map((t) => [t.id, t]));
+        for (const l of links ?? []) {
+          const t = tById.get(l.task_id);
+          if (!t) continue;
+          const arr = taskMap.get(l.message_id) ?? [];
+          arr.push({ id: t.id, title: t.title, status: t.status });
+          taskMap.set(l.message_id, arr);
+        }
+      }
+    }
+
+    return rows.map((m) => {
+      const reply = m.reply_to_id ? replyMap.get(m.reply_to_id) ?? null : null;
+      return {
+        ...m,
+        body: m.deleted_at ? "" : m.body,
+        attachments: m.deleted_at ? [] : m.attachments,
+        author_name: nameMap.get(m.author_id) ?? "Usuário",
+        reply_to: reply
+          ? {
+              id: reply.id,
+              author_name: nameMap.get(reply.author_id) ?? "Usuário",
+              body: reply.deleted_at ? "Mensagem removida" : reply.body.slice(0, 160),
+            }
+          : null,
+        tasks: taskMap.get(m.id) ?? [],
+      };
+    });
+  });
+
+export const searchMessages = createServerFn({ method: "GET" })
+  .middleware([requireOrg])
+  .inputValidator((i: unknown) =>
+    z
+      .object({
+        query: z.string().min(2).max(200),
+        conversation_id: z.string().uuid().optional(),
+        limit: z.number().int().min(1).max(50).default(30),
+      })
+      .parse(i),
+  )
+  .handler(async ({ data, context }) => {
+    const { data: parts, error } = await context.supabase
+      .from("conversation_participants")
+      .select("conversation_id")
+      .eq("user_id", context.userId)
+      .eq("organization_id", context.organizationId);
+    if (error) throw error;
+    let ids = (parts ?? []).map((p) => p.conversation_id);
+    if (data.conversation_id) {
+      if (!ids.includes(data.conversation_id)) throw new Error("Você não participa desta conversa.");
+      ids = [data.conversation_id];
+    }
+    if (ids.length === 0) return [];
+
+    const { data: msgs, error: mErr } = await context.supabase
+      .from("messages")
+      .select("id, conversation_id, author_id, body, created_at")
+      .in("conversation_id", ids)
+      .is("deleted_at", null)
+      .ilike("body", `%${data.query.replace(/[%_]/g, "")}%`)
+      .order("created_at", { ascending: false })
+      .limit(data.limit);
+    if (mErr) throw mErr;
+    const rows = msgs ?? [];
+    if (rows.length === 0) return [];
+
+    const authorIds = Array.from(new Set(rows.map((m) => m.author_id)));
+    const { data: profiles } = await context.supabase
+      .from("profiles")
+      .select("id, full_name")
+      .in("id", authorIds);
+    const nameMap = new Map((profiles ?? []).map((p) => [p.id, p.full_name]));
+
+    const convIds = Array.from(new Set(rows.map((m) => m.conversation_id)));
+    const { data: convs } = await context.supabase
+      .from("conversations")
+      .select("id, kind, title, case_id")
+      .in("id", convIds);
+    const caseIds = (convs ?? []).map((c) => c.case_id).filter((v): v is string => !!v);
+    const { data: cases } = caseIds.length
+      ? await context.supabase.from("cases").select("id, title").in("id", caseIds)
+      : { data: [] as Array<{ id: string; title: string }> };
+    const caseTitle = new Map((cases ?? []).map((c) => [c.id, c.title]));
+    const convMap = new Map(
+      (convs ?? []).map((c) => [
+        c.id,
+        {
+          kind: c.kind as "general" | "case" | "dm",
+          title: c.title,
+          case_title: c.case_id ? caseTitle.get(c.case_id) ?? null : null,
+        },
+      ]),
+    );
+
+    return rows.map((m) => ({
+      id: m.id,
+      conversation_id: m.conversation_id,
+      body: m.body,
+      created_at: m.created_at,
       author_name: nameMap.get(m.author_id) ?? "Usuário",
+      conversation: convMap.get(m.conversation_id) ?? null,
     }));
   });
 
@@ -314,9 +590,39 @@ export const sendMessage = createServerFn({ method: "POST" })
       .parse(i),
   )
   .handler(async ({ data, context }) => {
-    await assertParticipant(context.supabase, data.conversation_id, context.userId);
+    const conv = await assertParticipant(
+      context.supabase,
+      data.conversation_id,
+      context.userId,
+    );
+    assertSameOrg(conv, context.organizationId);
     if (!data.body.trim() && data.attachments.length === 0) {
       throw new Error("Mensagem vazia.");
+    }
+
+    // A mensagem respondida precisa ser da mesma conversa
+    if (data.reply_to_id) {
+      const { data: parent } = await context.supabase
+        .from("messages")
+        .select("id, conversation_id")
+        .eq("id", data.reply_to_id)
+        .maybeSingle();
+      if (!parent || parent.conversation_id !== data.conversation_id) {
+        throw new Error("Mensagem respondida inválida.");
+      }
+    }
+
+    // Menções: apenas participantes da conversa
+    let mentions: string[] = [];
+    if (data.mention_user_ids.length > 0) {
+      const { data: parts } = await context.supabase
+        .from("conversation_participants")
+        .select("user_id")
+        .eq("conversation_id", data.conversation_id)
+        .in("user_id", Array.from(new Set(data.mention_user_ids)));
+      mentions = (parts ?? [])
+        .map((p) => p.user_id)
+        .filter((uid) => uid !== context.userId);
     }
 
     const ins = await context.supabase
@@ -333,29 +639,86 @@ export const sendMessage = createServerFn({ method: "POST" })
       .single();
     if (ins.error) throw ins.error;
 
-    if (data.mention_user_ids.length > 0) {
-      await context.supabase.from("message_mentions").insert(
-        data.mention_user_ids.map((uid) => ({
+    if (mentions.length > 0) {
+      await context.supabase.from("message_mentions").upsert(
+        mentions.map((uid) => ({
           message_id: ins.data.id,
           conversation_id: data.conversation_id,
           organization_id: context.organizationId,
           mentioned_user_id: uid,
         })),
+        { onConflict: "message_id,mentioned_user_id", ignoreDuplicates: true },
       );
     }
 
-    return ins.data;
+    return { ...ins.data, mentioned: mentions.length };
+  });
+
+export const editMessage = createServerFn({ method: "POST" })
+  .middleware([requireOrg])
+  .inputValidator((i: unknown) =>
+    z
+      .object({
+        message_id: z.string().uuid(),
+        body: z.string().min(1).max(8000),
+      })
+      .parse(i),
+  )
+  .handler(async ({ data, context }) => {
+    const { data: msg, error } = await context.supabase
+      .from("messages")
+      .select("id, author_id, conversation_id, deleted_at, organization_id")
+      .eq("id", data.message_id)
+      .maybeSingle();
+    if (error) throw error;
+    if (!msg) throw new Error("Mensagem não encontrada.");
+    if (msg.organization_id !== context.organizationId) throw new Error("Mensagem de outra organização.");
+    if (msg.author_id !== context.userId) throw new Error("Só o autor pode editar a mensagem.");
+    if (msg.deleted_at) throw new Error("Mensagem removida não pode ser editada.");
+
+    const upd = await context.supabase
+      .from("messages")
+      .update({ body: data.body, edited_at: new Date().toISOString() })
+      .eq("id", data.message_id)
+      .select("*")
+      .single();
+    if (upd.error) throw upd.error;
+    return upd.data;
+  });
+
+export const deleteMessage = createServerFn({ method: "POST" })
+  .middleware([requireOrg])
+  .inputValidator((i: unknown) => z.object({ message_id: z.string().uuid() }).parse(i))
+  .handler(async ({ data, context }) => {
+    const { data: msg, error } = await context.supabase
+      .from("messages")
+      .select("id, author_id, organization_id, deleted_at")
+      .eq("id", data.message_id)
+      .maybeSingle();
+    if (error) throw error;
+    if (!msg) throw new Error("Mensagem não encontrada.");
+    if (msg.organization_id !== context.organizationId) throw new Error("Mensagem de outra organização.");
+    if (msg.author_id !== context.userId) throw new Error("Só o autor pode remover a mensagem.");
+    if (msg.deleted_at) return { ok: true };
+
+    const upd = await context.supabase
+      .from("messages")
+      .update({ deleted_at: new Date().toISOString(), body: "", attachments: [] })
+      .eq("id", data.message_id);
+    if (upd.error) throw upd.error;
+    return { ok: true };
   });
 
 export const markConversationRead = createServerFn({ method: "POST" })
   .middleware([requireOrg])
   .inputValidator((i: unknown) => z.object({ conversation_id: z.string().uuid() }).parse(i))
   .handler(async ({ data, context }) => {
-    await context.supabase
+    const { error } = await context.supabase
       .from("conversation_participants")
       .update({ last_read_at: new Date().toISOString() })
       .eq("conversation_id", data.conversation_id)
       .eq("user_id", context.userId);
+    if (error) throw error;
     return { ok: true };
   });
 
@@ -366,16 +729,26 @@ export const uploadConversationAttachment = createServerFn({ method: "POST" })
       .object({
         conversation_id: z.string().uuid(),
         filename: z.string().min(1).max(255),
+        size: z.number().int().nonnegative().optional(),
       })
       .parse(i),
   )
   .handler(async ({ data, context }) => {
-    await assertParticipant(context.supabase, data.conversation_id, context.userId);
-    const safe = data.filename.replace(/[^a-zA-Z0-9._-]/g, "_");
-    const path = `${context.organizationId}/conversations/${data.conversation_id}/${Date.now()}_${safe}`;
-    // Caller uploads the file via the client supabase storage (path returned here)
-    return { path };
+    const conv = await assertParticipant(
+      context.supabase,
+      data.conversation_id,
+      context.userId,
+    );
+    assertSameOrg(conv, context.organizationId);
+    if (data.size !== undefined && data.size > CONVERSATION_ATTACHMENT_MAX_BYTES) {
+      throw new Error("Arquivo acima de 25 MB.");
+    }
+    // O upload é feito pelo cliente no bucket privado; a RLS de storage
+    // confirma organização + participação usando este caminho.
+    return { path: attachmentPath(context.organizationId, data.conversation_id, data.filename) };
   });
+
+// -------------------------------------------------------- tarefas a partir de mensagens
 
 export const createTaskFromMessage = createServerFn({ method: "POST" })
   .middleware([requireOrg])
@@ -394,30 +767,43 @@ export const createTaskFromMessage = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { data: msg, error } = await context.supabase
       .from("messages")
-      .select("id, conversation_id, conversations(case_id)")
+      .select("id, conversation_id, organization_id")
       .eq("id", data.message_id)
       .maybeSingle();
     if (error) throw error;
     if (!msg) throw new Error("Mensagem não encontrada.");
-    await assertParticipant(context.supabase, msg.conversation_id, context.userId);
+    if (msg.organization_id !== context.organizationId) {
+      throw new Error("Mensagem de outra organização.");
+    }
+    const conv = await assertParticipant(
+      context.supabase,
+      msg.conversation_id,
+      context.userId,
+    );
+    assertSameOrg(conv, context.organizationId);
 
-    const caseId =
-      (msg as unknown as { conversations: { case_id: string | null } | null }).conversations
-        ?.case_id ?? null;
+    // Participantes válidos para responsável/menções
+    const { data: parts } = await context.supabase
+      .from("conversation_participants")
+      .select("user_id")
+      .eq("conversation_id", msg.conversation_id);
+    const participantIds = new Set((parts ?? []).map((p) => p.user_id));
 
-    // If assignee not provided, default to first mentioned user (if any)
-    const assignee =
-      data.assigned_to_user_id ??
-      (data.mention_user_ids && data.mention_user_ids.length > 0
-        ? data.mention_user_ids[0]
-        : null);
+    const mentions = Array.from(new Set(data.mention_user_ids ?? [])).filter((uid) =>
+      participantIds.has(uid),
+    );
+
+    let assignee = data.assigned_to_user_id ?? mentions[0] ?? null;
+    if (assignee && !participantIds.has(assignee)) {
+      throw new Error("Responsável precisa participar da conversa.");
+    }
 
     const taskIns = await context.supabase
       .from("tasks")
       .insert({
         organization_id: context.organizationId,
         created_by_user_id: context.userId,
-        case_id: caseId,
+        case_id: conv.case_id,
         title: data.title,
         description: data.description ?? null,
         due_date: data.due_date ?? null,
@@ -432,13 +818,9 @@ export const createTaskFromMessage = createServerFn({ method: "POST" })
       .from("message_tasks")
       .insert({ message_id: data.message_id, task_id: taskIns.data.id });
 
-    // Notify mentioned users by inserting message_mentions rows on source msg.
-    // Authors of the source message will already have their own mentions; we
-    // dedupe via UNIQUE(message_id, mentioned_user_id).
-    const uniqueMentions = Array.from(new Set(data.mention_user_ids ?? []));
-    if (uniqueMentions.length > 0) {
+    if (mentions.length > 0) {
       await context.supabase.from("message_mentions").upsert(
-        uniqueMentions.map((uid) => ({
+        mentions.map((uid) => ({
           message_id: data.message_id,
           organization_id: context.organizationId,
           conversation_id: msg.conversation_id,
@@ -450,4 +832,3 @@ export const createTaskFromMessage = createServerFn({ method: "POST" })
 
     return taskIns.data;
   });
-

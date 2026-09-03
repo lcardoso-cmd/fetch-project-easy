@@ -58,6 +58,8 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 
 import { cn } from "@/lib/utils";
 import { NotificationBell } from "@/components/layout/notification-bell";
+import { ConversationsDrawer } from "@/components/chat/conversations-drawer";
+
 
 type NavLink = {
   type: "link";
@@ -574,6 +576,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
               </Link>
             </div>
             <div className="flex shrink-0 items-center gap-1">
+              <ConversationsDrawer />
               <NotificationBell />
               <UserMenu compact />
             </div>
@@ -581,9 +584,11 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
 
 
           <header className="hidden h-16 items-center justify-end gap-3 border-b bg-card/95 px-6 lg:flex">
+            <ConversationsDrawer />
             <NotificationBell />
             <UserMenu />
           </header>
+
 
           <main className="flex-1 overflow-y-auto">
             <div className="mx-auto max-w-7xl p-4 md:p-6 lg:p-8">{children}</div>
