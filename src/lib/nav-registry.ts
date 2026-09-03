@@ -1,18 +1,16 @@
 import {
-  CAPABILITY_LABELS,
-  formatRequiresPhrase,
-  type Capability,
-} from "@/lib/capabilities.functions";
+  ORG_PERMISSION_LABELS,
+  PLATFORM_ROLE_LABELS,
+  type OrgPermission,
+  type PlatformRole,
+} from "@/lib/org-permissions";
 
 /**
- * Registro central de descrições e permissões usadas em qualquer
- * lugar do app que precise explicar POR QUÊ um menu está visível
- * ou oculto (sidebar desktop, nav mobile, popover de "menus ocultos",
- * página de gestão de equipe, guards de rota, etc.).
+ * Registro central de descrições e exigências de acesso da navegação.
+ * Nunca escreva a frase "Requer …" à mão em componentes: use `describeNav()`.
  *
- * Regra: nunca escreva a frase "Requer …" à mão em componentes.
- * Sempre passe pela função `describeNav()` abaixo, para que todos
- * os pontos do app mostrem exatamente o mesmo motivo.
+ * Escritório usa permissões de organização; administração B2B usa papéis
+ * de plataforma. As duas dimensões nunca se misturam.
  */
 
 export type NavKey =
@@ -65,8 +63,10 @@ export type NavSectionKey =
 export type NavEntry = {
   /** Descrição funcional (o que o item faz). */
   base: string;
-  /** Permissão exigida, se houver. */
-  requires?: Capability;
+  /** Permissão da organização exigida, se houver. */
+  requires?: OrgPermission;
+  /** Papel interno da B2B exigido, se houver. */
+  platformRole?: PlatformRole;
 };
 
 export const NAV_SECTIONS: Record<NavSectionKey, NavEntry> = {
@@ -91,25 +91,28 @@ export const NAV_SECTIONS: Record<NavSectionKey, NavEntry> = {
   office: {
     base:
       "Gestão do escritório: equipe e configurações.",
-    requires: "office_admin",
+    requires: "members.view",
   },
   platform: {
     base:
       "Operação B2B da JurisMind — clientes, usuários, credenciais e métricas do SaaS.",
-    requires: "platform_admin",
+    platformRole: "platform_admin",
   },
 };
 
 export const NAV_ENTRIES: Record<NavKey, NavEntry> = {
   // Principal
   dashboard: { base: "Visão operacional do dia: prazos, tarefas e casos recentes." },
-  assistant: { base: "Análise documental com JurisMind AI por caso." },
+  assistant: {
+    base: "Análise documental com JurisMind AI por caso.",
+    requires: "ai.use",
+  },
   "my-work": { base: "Suas tarefas, prazos e agenda em um só lugar." },
   library: { base: "Todos os documentos aos quais você tem acesso." },
   help: { base: "Ajuda e explicação de acessos." },
   cases: {
     base: "Casos, clientes e documentos vinculados.",
-    requires: "cases",
+
   },
   "my-tasks": { base: "Suas tarefas pessoais." },
   inbox: { base: "Conversas internas do escritório." },
@@ -120,91 +123,92 @@ export const NAV_ENTRIES: Record<NavKey, NavEntry> = {
   },
   "expert-opinion": {
     base: "Solicitação e acompanhamento de pareceres técnicos elaborados pela B2B Consulting.",
-    requires: "expert_opinion",
+
   },
 
   // Negócio
   proposal: {
     base: "Gera e versiona propostas comerciais.",
-    requires: "commercial",
+    requires: "crm.view",
   },
   monitoring: {
     base: "Monitoramento de publicações oficiais.",
-    requires: "marketing",
+    requires: "publications.use",
   },
   marketing: {
     base: "Materiais e campanhas de marketing.",
-    requires: "marketing",
+    requires: "marketing.use",
   },
 
   "hire-b2b": {
     base: "Contrate assistência técnica, auditoria de cálculos, pareceres e finanças forense direto da B2B Consulting.",
+    requires: "services.view",
   },
 
   // Escritório
   integrations: {
     base: "Integrações do escritório (Google, Outlook, etc.).",
-    requires: "office_admin",
+    requires: "integrations.view",
   },
   settings: {
     base: "Configurações do escritório, equipe e permissões.",
-    requires: "office_admin",
+    requires: "members.view",
   },
 
   // Plataforma B2B
   platform: {
     base: "Painel B2B — KPIs, novos clientes e uso agregado.",
-    requires: "platform_admin",
+    platformRole: "platform_admin",
   },
   "platform-customers": {
     base: "Clientes do SaaS — escritórios e profissionais que compraram a plataforma.",
-    requires: "platform_admin",
+    platformRole: "platform_admin",
   },
   "platform-users": {
     base: "Todos os usuários do sistema, com escritório e permissões.",
-    requires: "platform_admin",
+    platformRole: "platform_admin",
   },
   "platform-credentials": {
     base: "Credenciais OAuth do SaaS (Google, Outlook) usadas por todos os clientes.",
-    requires: "super_admin",
+    platformRole: "super_admin",
   },
   "platform-requests": {
     base: "Solicitações de serviço enviadas pelos escritórios à B2B.",
-    requires: "platform_admin",
+    platformRole: "platform_admin",
   },
   "platform-audit": {
     base: "Log de ações administrativas da B2B.",
-    requires: "platform_admin",
+    platformRole: "platform_admin",
   },
   "platform-plans": {
     base: "Planos comerciais, preços e limites de cada contrato.",
-    requires: "platform_admin",
+    platformRole: "platform_admin",
   },
   "platform-subscriptions": {
     base: "Assinaturas vigentes, ciclos e receita recorrente.",
-    requires: "platform_admin",
+    platformRole: "platform_admin",
   },
   "platform-invoices": {
     base: "Faturas emitidas, vencimentos e inadimplência.",
-    requires: "platform_admin",
+    platformRole: "platform_admin",
   },
   "platform-payments": {
     base: "Pagamentos recebidos, falhas e conciliação.",
-    requires: "platform_admin",
+    platformRole: "platform_admin",
   },
   "platform-usage": {
     base: "Consumo de IA por cliente e custo agregado.",
-    requires: "platform_admin",
+    platformRole: "platform_admin",
   },
   "platform-commercial-settings": {
     base: "Regras comerciais: avaliação, tolerância e política de inadimplência.",
-    requires: "super_admin",
+    platformRole: "super_admin",
   },
 
   // Escritório — cobrança
   billing: {
     base: "Plano, assinatura, faturas e pagamentos do escritório.",
-    requires: "office_admin",
+    requires: "billing.view",
   },
 };
 
@@ -216,11 +220,14 @@ export const NAV_ENTRIES: Record<NavKey, NavEntry> = {
  * de menus ocultos.
  */
 export function describeNav(entry: NavEntry): string {
-  if (!entry.requires) return entry.base;
-  return `${entry.base} ${formatRequiresPhrase(entry.requires)}`;
+  const label = requirementLabel(entry);
+  if (!label) return entry.base;
+  return `${entry.base} Requer «${label}».`;
 }
 
-/** Label curto da permissão, se houver. */
+/** Label curto da exigência de acesso, se houver. */
 export function requirementLabel(entry: NavEntry): string | null {
-  return entry.requires ? CAPABILITY_LABELS[entry.requires] : null;
+  if (entry.requires) return ORG_PERMISSION_LABELS[entry.requires];
+  if (entry.platformRole) return PLATFORM_ROLE_LABELS[entry.platformRole];
+  return null;
 }

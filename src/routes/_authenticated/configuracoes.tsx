@@ -5,81 +5,66 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Plus, Trash2, Loader2, Users, UserCog, KeyRound, ChevronRight, Building2, BarChart3 } from "lucide-react";
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Loader2,
+  UserCog,
+  Users,
+  KeyRound,
+  ChevronRight,
+  Building2,
+  BarChart3,
+} from "lucide-react";
 import { toast } from "sonner";
-import {
-  listTeamMembers,
-  deleteTeamMember,
-  inviteTeamMember,
-  listInvitations,
-  revokeInvitation,
-} from "@/lib/team.functions";
 import { updateMyProfile } from "@/lib/profile.functions";
 import { useProfile } from "@/hooks/use-profile";
 import { isCurrentUserAdmin } from "@/lib/oauth-settings.functions";
-import {
-  listMemberCapabilities,
-  setMemberCapabilities,
-  listMemberCapabilityAudit,
-  getMyCapabilities,
-  CAPABILITY_LABELS,
-  CAPABILITY_DESCRIPTIONS,
-  type Capability,
-} from "@/lib/capabilities.functions";
-import { Checkbox } from "@/components/ui/checkbox";
-import { ShieldCheck } from "lucide-react";
-
+import { useAccess } from "@/hooks/use-access";
 
 export const Route = createFileRoute("/_authenticated/configuracoes")({
+  head: () => ({
+    meta: [
+      { title: "Configurações — JurisMind" },
+      {
+        name: "description",
+        content:
+          "Perfil profissional, equipe, identidade do escritório, credenciais e consumo de IA.",
+      },
+      { property: "og:title", content: "Configurações — JurisMind" },
+      {
+        property: "og:description",
+        content: "Central de configurações do escritório no JurisMind.",
+      },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+    ],
+  }),
   component: SettingsPage,
 });
 
 function SettingsPage() {
   const qc = useQueryClient();
-  const listFn = useServerFn(listTeamMembers);
-  const inviteFn = useServerFn(inviteTeamMember);
-  const deleteFn = useServerFn(deleteTeamMember);
-  const listInvFn = useServerFn(listInvitations);
-  const revokeInvFn = useServerFn(revokeInvitation);
   const updateProfileFn = useServerFn(updateMyProfile);
   const isAdminFn = useServerFn(isCurrentUserAdmin);
-  const myCapsFn = useServerFn(getMyCapabilities);
   const { data: profile } = useProfile();
+  const { hasOrgPermission, roleLabel } = useAccess();
+
   const { data: adminInfo } = useQuery({
     queryKey: ["is-admin"],
     queryFn: () => isAdminFn(),
   });
   const isAdmin = adminInfo?.isAdmin ?? false;
-  const { data: myCaps = [] } = useQuery({
-    queryKey: ["my-caps"],
-    queryFn: () => myCapsFn(),
-  });
-  const isPlatformStaff = myCaps.includes("platform_admin") || myCaps.includes("super_admin");
 
+  const canViewTeam = hasOrgPermission("members.view");
+  const canViewUsage =
+    hasOrgPermission("usage.view_self") || hasOrgPermission("usage.view_organization");
 
-  const { data: team = [], isLoading } = useQuery({
-    queryKey: ["team-members"],
-    queryFn: () => listFn(),
-  });
-  const { data: invites = [] } = useQuery({
-    queryKey: ["team-invitations"],
-    queryFn: () => listInvFn(),
-  });
-
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [role, setRole] = useState("");
-  const [accessRole, setAccessRole] = useState<"viewer" | "editor" | "admin">("editor");
-
-  // Perfil profissional do(a) advogado(a)
   const [fullName, setFullName] = useState("");
   const [oabNumber, setOabNumber] = useState("");
   const [phone, setPhone] = useState("");
@@ -91,56 +76,6 @@ function SettingsPage() {
       setPhone(profile.phone ?? "");
     }
   }, [profile]);
-
-  const inviteMut = useMutation({
-    mutationFn: () =>
-      inviteFn({
-        data: {
-          name: name.trim(),
-          email: email.trim(),
-          role: role.trim() || null,
-          access_role: accessRole,
-        },
-      }),
-    onSuccess: (res) => {
-      const link = `${window.location.origin}/convite/${res.invitation.token}`;
-      if (res.alreadyRegistered) {
-        toast.success(`${name} já tem conta — acesso liberado imediatamente.`);
-      } else {
-        navigator.clipboard?.writeText(link).catch(() => {});
-        toast.success("Convite criado — link copiado para a área de transferência.");
-      }
-      setName("");
-      setEmail("");
-      setRole("");
-      qc.invalidateQueries({ queryKey: ["team-members"] });
-      qc.invalidateQueries({ queryKey: ["team-invitations"] });
-    },
-    onError: (e: Error) => toast.error(e.message || "Falha ao convidar"),
-  });
-
-  const deleteMut = useMutation({
-    mutationFn: (id: string) => deleteFn({ data: { id } }),
-    onSuccess: () => {
-      toast.success("Membro removido");
-      qc.invalidateQueries({ queryKey: ["team-members"] });
-    },
-    onError: (e: Error) => toast.error(e.message || "Falha ao remover"),
-  });
-
-  const revokeMut = useMutation({
-    mutationFn: (id: string) => revokeInvFn({ data: { id } }),
-    onSuccess: () => {
-      toast.success("Convite revogado");
-      qc.invalidateQueries({ queryKey: ["team-invitations"] });
-    },
-  });
-
-  function copyInviteLink(token: string) {
-    const link = `${window.location.origin}/convite/${token}`;
-    navigator.clipboard?.writeText(link).then(() => toast.success("Link copiado"));
-  }
-
 
   const profileMut = useMutation({
     mutationFn: () =>
@@ -159,15 +94,18 @@ function SettingsPage() {
   });
 
   return (
-    <div className="space-y-6 max-w-3xl">
+    <div className="max-w-3xl space-y-6">
       <div>
         <h1 className="font-heading text-xl font-medium tracking-tight">Configurações</h1>
-        <p className="mt-1 text-sm text-muted-foreground">Gerencie seu perfil profissional, equipe e preferências.</p>
+        <p className="mt-1 text-ui text-muted-foreground">
+          Perfil profissional e administração do escritório
+          {roleLabel ? ` · seu papel: ${roleLabel}` : ""}.
+        </p>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2 text-lg">
             <UserCog className="h-5 w-5" /> Perfil profissional
           </CardTitle>
           <CardDescription>
@@ -219,367 +157,77 @@ function SettingsPage() {
         </CardContent>
       </Card>
 
+      {canViewTeam && (
+        <SettingsLinkCard
+          icon={<Users className="h-5 w-5" />}
+          title="Equipe e permissões"
+          description="Convide integrantes, defina papéis do escritório e ajuste permissões individuais."
+          to="/configuracoes/equipe"
+          label="Abrir equipe e permissões"
+        />
+      )}
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg flex items-center gap-2">
-            <Users className="h-5 w-5" /> Equipe
-          </CardTitle>
-          <CardDescription>
-            Convide membros por e-mail. Eles criam conta, fazem login e passam a ver os casos
-            onde estão alocados — e podem conversar com você no chat interno.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {isLoading ? (
-            <p className="text-sm text-muted-foreground">Carregando...</p>
-          ) : team.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Nenhum membro cadastrado ainda.</p>
-          ) : (
-            <ul className="divide-y rounded-lg border">
-              {team.map((m) => {
-                const inv = invites.find(
-                  (i) => i.team_member_id === m.id && i.status === "pending",
-                );
-                const linked = Boolean(m.member_user_id);
-                return (
-                  <li key={m.id} className="space-y-3 p-3">
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium truncate">{m.name}</p>
-                        <p className="text-xs text-muted-foreground truncate">
-                          {[m.role, m.email].filter(Boolean).join(" · ") || "—"}
-                        </p>
-                        <p className="text-xs">
-                          {linked ? (
-                            <span className="text-emerald-600 dark:text-emerald-400">
-                              ✓ Conta vinculada · {m.access_role ?? "editor"}
-                            </span>
-                          ) : inv ? (
-                            <span className="text-amber-600 dark:text-amber-400">
-                              ⏳ Convite pendente
-                            </span>
-                          ) : (
-                            <span className="text-muted-foreground">Sem convite ativo</span>
-                          )}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {inv && (
-                          <>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="h-8"
-                              onClick={() => copyInviteLink(inv.token)}
-                            >
-                              Copiar link
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-8 text-destructive"
-                              onClick={() => revokeMut.mutate(inv.id)}
-                            >
-                              Revogar
-                            </Button>
-                          </>
-                        )}
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                          onClick={() => {
-                            if (confirm(`Remover ${m.name}?`)) deleteMut.mutate(m.id);
-                          }}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                    {linked && m.member_user_id && (
-                      <MemberCapabilities userId={m.member_user_id} />
-                    )}
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-
-          <div className="rounded-lg border p-4 space-y-3">
-            <p className="text-sm font-medium">Convidar membro</p>
-            <div className="grid gap-3 sm:grid-cols-4">
-              <div className="space-y-1">
-                <Label htmlFor="m-name">Nome *</Label>
-                <Input id="m-name" value={name} onChange={(e) => setName(e.target.value)} maxLength={120} />
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor="m-email">E-mail *</Label>
-                <Input id="m-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} maxLength={255} />
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor="m-role">Cargo</Label>
-                <Input id="m-role" value={role} onChange={(e) => setRole(e.target.value)} maxLength={120} placeholder="Ex.: Sócio, Estagiário" />
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor="m-access">Acesso</Label>
-                <Select value={accessRole} onValueChange={(v) => setAccessRole(v as typeof accessRole)}>
-                  <SelectTrigger id="m-access"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="viewer">Visualizar</SelectItem>
-                    <SelectItem value="editor">Editar</SelectItem>
-                    <SelectItem value="admin">Admin</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <Button
-              size="sm"
-              onClick={() => inviteMut.mutate()}
-              disabled={!name.trim() || !email.trim() || inviteMut.isPending}
-            >
-              {inviteMut.isPending ? (
-                <Loader2 className="mr-1 h-4 w-4 animate-spin" />
-              ) : (
-                <Plus className="mr-1 h-4 w-4" />
-              )}
-              Convidar e copiar link
-            </Button>
-            <p className="text-xs text-muted-foreground">
-              Compartilhe o link com a pessoa. Ao acessá-lo logada com o e-mail informado, ela
-              ganha acesso aos casos onde está alocada.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg flex items-center gap-2">
-            <Building2 className="h-5 w-5" /> Identidade do escritório
-          </CardTitle>
-          <CardDescription>
-            Logo, razão social, CNPJ/CPF e endereço usados no cabeçalho dos documentos exportados.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Link
-            to="/configuracoes/escritorio"
-            className="flex items-center justify-between rounded-lg border p-3 hover:bg-accent/50"
-          >
-            <span className="text-sm">Abrir identidade do escritório</span>
-            <ChevronRight className="h-4 w-4 text-muted-foreground" />
-          </Link>
-        </CardContent>
-      </Card>
+      <SettingsLinkCard
+        icon={<Building2 className="h-5 w-5" />}
+        title="Identidade do escritório"
+        description="Logo, razão social, CNPJ/CPF e endereço usados no cabeçalho dos documentos exportados."
+        to="/configuracoes/escritorio"
+        label="Abrir identidade do escritório"
+      />
 
       {isAdmin && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
-              <KeyRound className="h-5 w-5" /> Credenciais OAuth
-            </CardTitle>
-            <CardDescription>
-              Configure Client ID e Client Secret do Google e do Microsoft/Outlook.
-              Valores criptografados no banco.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Link
-              to="/configuracoes/oauth"
-              className="flex items-center justify-between rounded-lg border p-3 hover:bg-accent/50"
-            >
-              <span className="text-sm">Abrir configurações OAuth</span>
-              <ChevronRight className="h-4 w-4 text-muted-foreground" />
-            </Link>
-          </CardContent>
-        </Card>
+        <SettingsLinkCard
+          icon={<KeyRound className="h-5 w-5" />}
+          title="Credenciais OAuth"
+          description="Client ID e Client Secret do Google e do Microsoft/Outlook, criptografados no banco."
+          to="/configuracoes/oauth"
+          label="Abrir configurações OAuth"
+        />
       )}
 
-      {isPlatformStaff && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
-              <ShieldCheck className="h-5 w-5" /> Capacidades por visão
-            </CardTitle>
-            <CardDescription>
-              Resumo do acesso de JurisMind B2B e admin de escritório, com aplicação de
-              presets em massa.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Link
-              to="/configuracoes/capacidades"
-              className="flex items-center justify-between rounded-lg border p-3 hover:bg-accent/50"
-            >
-              <span className="text-sm">Abrir painel de capacidades</span>
-              <ChevronRight className="h-4 w-4 text-muted-foreground" />
-            </Link>
-          </CardContent>
-        </Card>
+      {canViewUsage && (
+        <SettingsLinkCard
+          icon={<BarChart3 className="h-5 w-5" />}
+          title="Consumo de IA"
+          description="Tokens usados no mês por funcionalidade, modelo e usuário — com estimativa de custo."
+          to="/configuracoes/consumo"
+          label="Abrir painel de consumo"
+        />
       )}
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg flex items-center gap-2">
-            <BarChart3 className="h-5 w-5" /> Consumo de IA
-          </CardTitle>
-          <CardDescription>
-            Tokens usados no mês por funcionalidade, modelo e usuário — com estimativa de custo.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Link
-            to="/configuracoes/consumo"
-            className="flex items-center justify-between rounded-lg border p-3 hover:bg-accent/50"
-          >
-            <span className="text-sm">Abrir painel de consumo</span>
-            <ChevronRight className="h-4 w-4 text-muted-foreground" />
-          </Link>
-        </CardContent>
-      </Card>
     </div>
   );
 }
 
-
-const EDITABLE_CAPS: Capability[] = [
-  "cases",
-  "commercial",
-  "marketing",
-  "office_admin",
-];
-
-function MemberCapabilities({ userId }: { userId: string }) {
-  const qc = useQueryClient();
-  const listFn = useServerFn(listMemberCapabilities);
-  const setFn = useServerFn(setMemberCapabilities);
-  const { data: caps = [], isLoading } = useQuery({
-    queryKey: ["member-caps", userId],
-    queryFn: () => listFn({ data: { user_id: userId } }),
-  });
-
-  const mut = useMutation({
-    mutationFn: (next: Capability[]) =>
-      setFn({ data: { user_id: userId, capabilities: next } }),
-    onSuccess: () => {
-      toast.success("Permissões atualizadas");
-      qc.invalidateQueries({ queryKey: ["member-caps", userId] });
-      qc.invalidateQueries({ queryKey: ["member-caps-audit", userId] });
-    },
-    onError: (e: Error) => toast.error(e.message || "Falha ao salvar"),
-  });
-
-  function toggle(cap: Capability, checked: boolean) {
-    const set = new Set(caps);
-    if (checked) set.add(cap);
-    else set.delete(cap);
-    mut.mutate(Array.from(set));
-  }
-
-  if (isLoading) {
-    return <p className="text-xs text-muted-foreground pl-1">Carregando permissões…</p>;
-  }
-
+function SettingsLinkCard({
+  icon,
+  title,
+  description,
+  to,
+  label,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  description: string;
+  to: string;
+  label: string;
+}) {
   return (
-    <div className="rounded-md border bg-muted/30 p-3">
-      <p className="mb-2 text-xs font-medium text-muted-foreground">
-        Permissões (o que aparece no menu)
-      </p>
-      <div className="grid gap-2 sm:grid-cols-2">
-        {EDITABLE_CAPS.map((cap) => {
-          const checked = caps.includes(cap);
-          return (
-            <label
-              key={cap}
-              className="flex items-start gap-2 text-xs cursor-pointer select-none"
-              title={CAPABILITY_DESCRIPTIONS[cap]}
-            >
-              <Checkbox
-                checked={checked}
-                disabled={mut.isPending}
-                onCheckedChange={(v) => toggle(cap, Boolean(v))}
-                className="mt-0.5"
-              />
-              <span className="flex-1">
-                <span className="font-medium">{CAPABILITY_LABELS[cap]}</span>
-                <span className="block text-2xs text-muted-foreground">
-                  {CAPABILITY_DESCRIPTIONS[cap]}
-                </span>
-              </span>
-            </label>
-          );
-        })}
-      </div>
-      <MemberCapabilityAudit userId={userId} />
-    </div>
-  );
-}
-
-function MemberCapabilityAudit({ userId }: { userId: string }) {
-  const [open, setOpen] = useState(false);
-  const listAuditFn = useServerFn(listMemberCapabilityAudit);
-  const { data: entries, isLoading } = useQuery({
-    queryKey: ["member-caps-audit", userId],
-    queryFn: () => listAuditFn({ data: { user_id: userId, limit: 50 } }),
-    enabled: open,
-  });
-
-  return (
-    <div className="mt-3 border-t pt-2">
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        className="text-2xs font-medium text-muted-foreground hover:text-foreground"
-      >
-        {open ? "Ocultar" : "Ver"} histórico de alterações
-      </button>
-      {open && (
-        <div className="mt-2 space-y-1.5">
-          {isLoading && <p className="text-2xs text-muted-foreground">Carregando…</p>}
-          {!isLoading && (entries?.length ?? 0) === 0 && (
-            <p className="text-2xs text-muted-foreground">Sem alterações registradas.</p>
-          )}
-          {(entries ?? []).map((e) => {
-            const cap = e.metadata?.capability as Capability | undefined;
-            const isGrant = e.action === "capability.grant";
-            return (
-              <div
-                key={e.id}
-                className="flex items-start justify-between gap-2 rounded border bg-background px-2 py-1 text-2xs"
-              >
-                <div className="min-w-0">
-                  <span
-                    className={
-                      isGrant
-                        ? "font-medium text-emerald-600 dark:text-emerald-400"
-                        : "font-medium text-destructive"
-                    }
-                  >
-                    {isGrant ? "Concedeu" : "Revogou"}
-                  </span>{" "}
-                  <span className="font-medium">
-                    {cap ? CAPABILITY_LABELS[cap] : "permissão"}
-                  </span>
-                </div>
-                <time
-                  className="shrink-0 text-muted-foreground"
-                  dateTime={e.created_at}
-                  title={new Date(e.created_at).toLocaleString("pt-BR")}
-                >
-                  {new Date(e.created_at).toLocaleString("pt-BR", {
-                    day: "2-digit",
-                    month: "2-digit",
-                    year: "2-digit",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
-                </time>
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </div>
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-lg">
+          {icon} {title}
+        </CardTitle>
+        <CardDescription>{description}</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <Link
+          to={to}
+          className="flex items-center justify-between rounded-lg border p-3 text-ui hover:bg-accent/50"
+        >
+          <span>{label}</span>
+          <ChevronRight className="h-4 w-4 text-muted-foreground" />
+        </Link>
+      </CardContent>
+    </Card>
   );
 }

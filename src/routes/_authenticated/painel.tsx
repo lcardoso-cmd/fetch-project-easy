@@ -25,12 +25,12 @@ import { getCases } from "@/lib/cases.functions";
 import { listAllDocuments } from "@/lib/documents.functions";
 import { listEvents } from "@/lib/events.functions";
 import { createTask, listTasks, toggleTask } from "@/lib/tasks.functions";
-import { listTeamMembers } from "@/lib/team.functions";
+import { listOrgMembers } from "@/lib/organization.functions";
 import { AddTaskDialog } from "@/components/tasks/add-task-dialog";
 import { AddEventDialog } from "@/components/work/add-event-dialog";
 import { AgendaPanel, type UnifiedEvent } from "@/components/work/agenda-panel";
-import { useCapabilities } from "@/hooks/use-capabilities";
-import { requiredCapabilityForPath } from "@/lib/route-capabilities";
+import { useAccess } from "@/hooks/use-access";
+import { routeRuleFor } from "@/lib/route-permissions";
 
 const RETURN_STORAGE_KEY = "jm.accessReturn";
 
@@ -62,26 +62,31 @@ function HomePage() {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const { next } = Route.useSearch();
-  const { has, isLoading: capsLoading } = useCapabilities();
+  const { hasOrgPermission, hasPlatformRole, isLoading: accessLoading } = useAccess();
 
   const pendingReturn =
     next ??
     (typeof window !== "undefined"
       ? (sessionStorage.getItem(RETURN_STORAGE_KEY) ?? undefined)
       : undefined);
-  const pendingCap = pendingReturn ? requiredCapabilityForPath(pendingReturn) : null;
-  const canReturn = !!pendingReturn && (!pendingCap || (!capsLoading && has(pendingCap)));
+  const pendingRule = pendingReturn ? routeRuleFor(pendingReturn) : null;
+  const allowsPending = pendingRule
+    ? "permission" in pendingRule
+      ? hasOrgPermission(pendingRule.permission)
+      : hasPlatformRole(pendingRule.platformRole)
+    : true;
+  const canReturn = !!pendingReturn && (!pendingRule || (!accessLoading && allowsPending));
 
   useEffect(() => {
-    if (!pendingReturn || capsLoading) return;
-    if (pendingCap && !has(pendingCap)) return;
+    if (!pendingReturn || accessLoading) return;
+    if (pendingRule && !allowsPending) return;
     try {
       sessionStorage.removeItem(RETURN_STORAGE_KEY);
     } catch {
       /* noop */
     }
     navigate({ to: pendingReturn, replace: true });
-  }, [pendingReturn, pendingCap, capsLoading, has, navigate]);
+  }, [pendingReturn, pendingRule, allowsPending, accessLoading, navigate]);
 
   const getCasesFn = useServerFn(getCases);
   const listDocsFn = useServerFn(listAllDocuments);
@@ -89,7 +94,7 @@ function HomePage() {
   const listTasksFn = useServerFn(listTasks);
   const toggleTaskFn = useServerFn(toggleTask);
   const createTaskFn = useServerFn(createTask);
-  const teamFn = useServerFn(listTeamMembers);
+  const teamFn = useServerFn(listOrgMembers);
 
   const { data: cases = [] } = useQuery({ queryKey: ["cases"], queryFn: () => getCasesFn() });
   const { data: docs = [] } = useQuery({
@@ -106,14 +111,12 @@ function HomePage() {
     queryFn: () => listTasksFn({ data: { status: "all" } }),
   });
   const { data: team = [] } = useQuery({
-    queryKey: ["team-members"],
+    queryKey: ["org-members"],
     queryFn: () => teamFn(),
   });
 
   const tasks = rawTasks as unknown as Task[];
-  const assignees = team
-    .filter((m) => m.member_user_id)
-    .map((m) => ({ id: m.member_user_id as string, name: m.name }));
+  const assignees = team.map((m) => ({ id: m.id, name: m.name }));
   const caseOptions = cases.map((c) => ({ id: c.id, title: c.title }));
   const caseTitle = (id: string | null | undefined) =>
     id ? (cases.find((c) => c.id === id)?.title ?? null) : null;

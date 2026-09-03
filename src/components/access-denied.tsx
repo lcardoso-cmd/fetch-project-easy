@@ -2,11 +2,11 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { ShieldAlert, ArrowLeft, Mail, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { CAPABILITY_LABELS, type Capability } from "@/lib/capabilities.functions";
+import { accessLabel, isPlatformRequirement, type AccessRequirement } from "@/lib/access-labels";
 import { RequestAccessDialog } from "@/components/request-access-dialog";
 
 type Props = {
-  requires?: Capability | null;
+  requires?: AccessRequirement | null;
   /** Rota que o usuário tentou acessar, se disponível. */
   attemptedPath?: string;
 };
@@ -20,9 +20,8 @@ const RETURN_STORAGE_KEY = "jm.accessReturn";
  */
 export function AccessDenied({ requires, attemptedPath }: Props) {
   const navigate = useNavigate();
-  const isPlatformScope =
-    requires === "platform_admin" || requires === "super_admin";
-  const capLabel = requires ? CAPABILITY_LABELS[requires] : null;
+  const isPlatformScope = isPlatformRequirement(requires);
+  const capLabel = accessLabel(requires);
   const [requestOpen, setRequestOpen] = useState(false);
 
   // Preserva a rota original para retorno posterior.

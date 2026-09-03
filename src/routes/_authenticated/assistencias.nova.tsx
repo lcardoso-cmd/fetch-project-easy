@@ -42,12 +42,13 @@ import { labelsForMatter, type MatterKind } from "@/lib/practice-labels";
 import { PARTY_RELATIONS, representedRelationFor, guessRelation } from "@/lib/party-relations";
 import {
   createCase,
+  setCaseTeamAccess,
   extractCaseDataFromDocument,
   attachDocumentToCase,
   type ExtractedCaseData,
 } from "@/lib/cases.functions";
 import { buildCaseTitle } from "@/lib/case-title";
-import { listTeamMembers, createTeamMember } from "@/lib/team.functions";
+import { listOrgMembers } from "@/lib/organization.functions";
 import { indexDocument } from "@/lib/rag.functions";
 import { createUploadSignedUrl } from "@/lib/documents.functions";
 import { Progress } from "@/components/ui/progress";
@@ -106,11 +107,11 @@ function NewCasePage() {
   const attachFn = useServerFn(attachDocumentToCase);
   const indexFn = useServerFn(indexDocument);
   const signUploadFn = useServerFn(createUploadSignedUrl);
-  const listTeamFn = useServerFn(listTeamMembers);
-  const createTeamFn = useServerFn(createTeamMember);
+  const listTeamFn = useServerFn(listOrgMembers);
+  const setTeamAccessFn = useServerFn(setCaseTeamAccess);
 
   const { data: team = [] } = useQuery({
-    queryKey: ["team-members"],
+    queryKey: ["org-members"],
     queryFn: () => listTeamFn(),
   });
 
@@ -261,25 +262,6 @@ function NewCasePage() {
       // quota / indisponível — silencioso
     }
   }, [REVIEW_STORAGE_KEY, hydratedReview, uploaded, missingFields, extractionWarnings, reviewConfirmed]);
-
-  // quick add team
-  const [newMemberName, setNewMemberName] = useState("");
-  const [newMemberRole, setNewMemberRole] = useState("");
-  const [addingMember, setAddingMember] = useState(false);
-
-  const addMemberMut = useMutation({
-    mutationFn: () =>
-      createTeamFn({ data: { name: newMemberName.trim(), role: newMemberRole.trim() } }),
-    onSuccess: (m) => {
-      toast.success("Membro adicionado");
-      setNewMemberName("");
-      setNewMemberRole("");
-      setAddingMember(false);
-      setSelectedMembers((prev) => [...prev, m.id]);
-      qc.invalidateQueries({ queryKey: ["team-members"] });
-    },
-    onError: (e: Error) => toast.error(e.message || "Falha ao adicionar"),
-  });
 
   const applyExtracted = (e: ExtractedCaseData) => {
     // Título só é preenchido a partir do documento se o usuário ainda não
@@ -497,12 +479,22 @@ function NewCasePage() {
           description: description.trim() || null,
           parties: cleanParties,
           represented_party: represented,
-          team_member_ids: selectedMembers,
           status: "active",
           matter_kind: "processo",
           practice_type: "advogado",
         },
       });
+
+      if (selectedMembers.length > 0) {
+        try {
+          await setTeamAccessFn({
+            data: { case_id: newCase.id, user_ids: selectedMembers },
+          });
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err);
+          toast.error(`Caso criado, mas falhou ao alocar a equipe: ${msg}`);
+        }
+      }
 
       if (uploaded) {
         try {
@@ -1017,9 +1009,12 @@ function NewCasePage() {
           </CardHeader>
           <CardContent className="space-y-3">
             {team.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                Nenhum membro cadastrado. Adicione abaixo ou gerencie em{" "}
-                <Link to="/configuracoes" className="underline">Configurações</Link>.
+              <p className="text-ui text-muted-foreground">
+                Nenhum integrante ativo além de você. Convide sua equipe em{" "}
+                <Link to="/configuracoes/equipe" className="underline">
+                  Equipe e permissões
+                </Link>
+                .
               </p>
             ) : (
               <div className="grid gap-2 sm:grid-cols-2">
@@ -1033,64 +1028,24 @@ function NewCasePage() {
                       onCheckedChange={() => toggleMember(m.id)}
                     />
                     <div className="min-w-0">
-                      <p className="text-sm font-medium truncate">{m.name}</p>
-                      {m.role && (
-                        <p className="text-xs text-muted-foreground truncate">{m.role}</p>
-                      )}
+                      <p className="text-ui font-medium truncate">{m.name}</p>
+                      <p className="text-sm text-muted-foreground truncate">
+                        {m.role_label}
+                      </p>
                     </div>
                   </label>
                 ))}
               </div>
             )}
 
-            {addingMember ? (
-              <div className="rounded-md border p-3 space-y-2">
-                <div className="grid gap-2 sm:grid-cols-2">
-                  <Input
-                    placeholder="Nome"
-                    value={newMemberName}
-                    onChange={(e) => setNewMemberName(e.target.value)}
-                    maxLength={120}
-                  />
-                  <Input
-                    placeholder="Cargo (opcional)"
-                    value={newMemberRole}
-                    onChange={(e) => setNewMemberRole(e.target.value)}
-                    maxLength={120}
-                  />
-                </div>
-                <div className="flex gap-2">
-                  <Button
-                    type="button"
-                    size="sm"
-                    onClick={() => addMemberMut.mutate()}
-                    disabled={!newMemberName.trim() || addMemberMut.isPending}
-                  >
-                    {addMemberMut.isPending && (
-                      <Loader2 className="mr-1 h-3 w-3 animate-spin" />
-                    )}
-                    Salvar
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => setAddingMember(false)}
-                  >
-                    Cancelar
-                  </Button>
-                </div>
-              </div>
-            ) : (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => setAddingMember(true)}
-              >
-                <Plus className="mr-1 h-4 w-4" /> Adicionar membro
-              </Button>
-            )}
+            <p className="text-sm text-muted-foreground">
+              Integrantes alocados passam a ver e editar este caso. Novos acessos são
+              concedidos em{" "}
+              <Link to="/configuracoes/equipe" className="underline">
+                Equipe e permissões
+              </Link>
+              .
+            </p>
           </CardContent>
         </Card>
 

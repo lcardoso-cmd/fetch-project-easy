@@ -1,12 +1,12 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useLocation } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { JurisMindMark, JURISMIND_CONTEXT } from "@/components/brand/jurismind-mark";
 import { useAuth } from "@/hooks/use-auth";
 import { UserMenu } from "@/components/layout/user-menu";
 import { useProfile } from "@/hooks/use-profile";
-import { useCapabilities, VIEW_AS_PRESETS } from "@/hooks/use-capabilities";
-import type { Capability } from "@/lib/capabilities.functions";
+import { useAccess, VIEW_AS_ROLES } from "@/hooks/use-access";
+import type { OrgPermission, OrgRole, PlatformRole } from "@/lib/org-permissions";
 import {
   NAV_ENTRIES,
   NAV_SECTIONS,
@@ -80,7 +80,8 @@ type NavLink = {
   label: string;
   icon: LucideIcon;
   match?: "exact" | "startsWith";
-  requires?: Capability;
+  requires?: OrgPermission;
+  platformRole?: PlatformRole;
   description: string;
 };
 
@@ -121,6 +122,7 @@ function link(
     icon,
     match,
     requires: entry.requires,
+    platformRole: entry.platformRole,
     description: describeNav(entry),
   };
 }
@@ -234,11 +236,11 @@ export function buildFooterNav(scope: ShellScope = "office"): NavLink[] {
  * Filtra links por capacidade e remove grupos/seções sem nenhum item
  * autorizado. Nada é revelado ao usuário sobre itens ocultos.
  */
-function applyCapabilities(
+function applyAccess(
   sections: NavSection[],
-  has: (c: Capability) => boolean,
+  can: (l: NavLink) => boolean,
 ): NavSection[] {
-  const allowed = (l: NavLink) => !l.requires || has(l.requires);
+  const allowed = can;
   const result: NavSection[] = [];
   for (const section of sections) {
     const nodes: NavNode[] = [];
@@ -268,9 +270,8 @@ function matchesPath(pathname: string, l: NavLink) {
 }
 
 function ViewAsSwitcher() {
-  const { isSuperAdmin, simulation, activePreset, setSimulation } = useCapabilities();
-  if (!isSuperAdmin) return null;
-  const currentId = simulation ?? "super_admin";
+  const { isPlatformUser, simulation, roleLabel, setSimulation } = useAccess();
+  if (!isPlatformUser) return null;
   return (
     <Popover>
       <PopoverTrigger asChild>
@@ -278,14 +279,14 @@ function ViewAsSwitcher() {
           type="button"
           className={cn(
             "flex min-h-11 w-full items-center gap-2 rounded-md px-3 py-2 text-left text-ui font-medium transition",
-            activePreset
+            simulation
               ? "bg-amber-400/20 text-amber-100 ring-1 ring-amber-300/60"
               : "text-sidebar-foreground/85 hover:bg-sidebar-accent hover:text-sidebar-foreground",
           )}
         >
           <Eye className="size-[18px] shrink-0" aria-hidden="true" />
           <span className="truncate">
-            {activePreset ? `Vendo como: ${activePreset.label}` : "Ver como…"}
+            {simulation ? `Vendo como: ${roleLabel}` : "Ver como…"}
           </span>
         </button>
       </PopoverTrigger>
@@ -295,24 +296,38 @@ function ViewAsSwitcher() {
           <span>Simulação visual — o servidor mantém sua permissão real.</span>
         </div>
         <ul className="space-y-0.5">
-          {VIEW_AS_PRESETS.map((p) => {
-            const active = currentId === p.id;
-            return (
-              <li key={p.id}>
-                <button
-                  type="button"
-                  onClick={() => setSimulation(p.id === "super_admin" ? null : p.id)}
-                  className={cn(
-                    "w-full rounded-md px-2.5 py-2 text-left text-ui transition",
-                    active ? "bg-primary/10 text-foreground" : "hover:bg-muted",
-                  )}
-                >
-                  <div className="font-medium">{p.label}</div>
-                  <div className="text-sm text-muted-foreground">{p.description}</div>
-                </button>
-              </li>
-            );
-          })}
+          <li>
+            <button
+              type="button"
+              onClick={() => setSimulation(null)}
+              className={cn(
+                "w-full rounded-md px-2.5 py-2 text-left text-ui transition",
+                !simulation ? "bg-primary/10 text-foreground" : "hover:bg-muted",
+              )}
+            >
+              <div className="font-medium">Minha visão real</div>
+              <div className="text-sm text-muted-foreground">
+                Papéis reais da sua conta.
+              </div>
+            </button>
+          </li>
+          {VIEW_AS_ROLES.map((p) => (
+            <li key={p.role}>
+              <button
+                type="button"
+                onClick={() => setSimulation(p.role as OrgRole)}
+                className={cn(
+                  "w-full rounded-md px-2.5 py-2 text-left text-ui transition",
+                  simulation === p.role ? "bg-primary/10 text-foreground" : "hover:bg-muted",
+                )}
+              >
+                <div className="font-medium">{p.label}</div>
+                <div className="text-sm text-muted-foreground">
+                  Permissões padrão do papel «{p.label}» na organização.
+                </div>
+              </button>
+            </li>
+          ))}
         </ul>
       </PopoverContent>
     </Popover>
@@ -579,20 +594,34 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   const { pathname } = useLocation();
   const { user, signOut } = useAuth();
   useProfile();
-  const { has, isSuperAdmin, activePreset, clearSimulation } = useCapabilities();
+  const {
+    hasOrgPermission,
+    hasPlatformRole,
+    isPlatformUser,
+    simulation,
+    roleLabel,
+    clearSimulation,
+  } = useAccess();
+  const can = useCallback(
+    (l: NavLink) =>
+      l.platformRole
+        ? hasPlatformRole(l.platformRole)
+        : !l.requires || hasOrgPermission(l.requires),
+    [hasPlatformRole, hasOrgPermission],
+  );
   // Ambiente ativo: administração global B2B vive sob /plataforma;
   // todo o restante é o ambiente do escritório.
   const scope: ShellScope = pathname.startsWith("/plataforma") ? "b2b" : "office";
-  const platformRequires = NAV_ENTRIES.platform.requires;
-  const canAdminB2B = platformRequires ? has(platformRequires) : true;
+  // Só quem tem papel interno da B2B vê o ambiente de administração global.
+  const canAdminB2B = hasPlatformRole("platform_admin");
 
   const sections = useMemo(
-    () => applyCapabilities(buildNavSections(scope), has),
-    [has, scope],
+    () => applyAccess(buildNavSections(scope), can),
+    [can, scope],
   );
   const footerNav = useMemo(
-    () => buildFooterNav(scope).filter((l) => !l.requires || has(l.requires)),
-    [has, scope],
+    () => buildFooterNav(scope).filter(can),
+    [can, scope],
   );
 
   // Grupo da rota ativa abre automaticamente; os demais iniciam recolhidos.
@@ -659,11 +688,11 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
     <TooltipProvider delayDuration={200}>
       <div className="flex h-dvh w-full overflow-hidden bg-background">
         {/* Simulation banner */}
-        {activePreset && (
+        {simulation && (
           <div className="fixed inset-x-0 top-0 z-50 flex items-center justify-center gap-3 bg-secondary py-1.5 text-center text-sm font-medium text-secondary-foreground shadow">
             <Eye className="h-3.5 w-3.5" />
             <span>
-              Você está vendo o sistema como <strong>{activePreset.label}</strong>. As
+              Você está vendo o sistema como <strong>{roleLabel}</strong>. As
               autorizações do servidor continuam usando sua conta real.
             </span>
             <button
@@ -681,7 +710,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
           className={cn(
             "relative hidden min-h-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-[width] duration-200 ease-out lg:flex",
             collapsed ? "w-[4.5rem]" : "w-[16.5rem]",
-            activePreset && "mt-6",
+            simulation && "mt-6",
           )}
         >
           <div
@@ -744,12 +773,12 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
           {/* Footer — perfil/sair ficam no UserMenu do cabeçalho */}
           <div className="shrink-0 space-y-1 border-t border-sidebar-border p-2">
             {footerRows({ collapsed })}
-            {isSuperAdmin && !collapsed && <ViewAsSwitcher />}
+            {isPlatformUser && !collapsed && <ViewAsSwitcher />}
           </div>
         </aside>
 
         {/* Main column */}
-        <div className={cn("flex flex-1 flex-col min-w-0", activePreset && "mt-6")}>
+        <div className={cn("flex flex-1 flex-col min-w-0", simulation && "mt-6")}>
           <header className="flex h-16 items-center justify-between gap-3 border-b bg-card/95 px-4 lg:hidden">
             <div className="flex min-w-0 flex-1 items-center gap-2">
               <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
@@ -794,7 +823,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                     </div>
                   </nav>
                   <div className="shrink-0 space-y-1 border-t border-sidebar-border p-2">
-                    {isSuperAdmin && <ViewAsSwitcher />}
+                    {isPlatformUser && <ViewAsSwitcher />}
                     {user && (
                       <p className="truncate px-3 py-1 text-sm text-sidebar-foreground/78">
                         {user.email}

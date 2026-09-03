@@ -129,9 +129,17 @@ export const ORG_PERMISSION_LABELS: Record<OrgPermission, string> = {
 };
 
 /**
- * Permissões padrão por papel. Espelha `public.org_role_default_permissions`.
- * Permissões de faturamento/contratação nunca são padrão do `admin` —
- * somente o `owner` pode concedê-las.
+ * Permissões padrão por papel. Espelha EXATAMENTE
+ * `public.org_role_default_permissions` (ver migration da matriz).
+ *
+ * Regras:
+ * - `owner` recebe tudo, inclusive cobrança, assinatura e contratação.
+ * - `admin` administra o escritório, mas NUNCA cobrança/assinatura/contratação.
+ * - `manager` opera casos e equipe em leitura; módulos comerciais/marketing/
+ *   publicações são concessões explícitas, não padrão.
+ * - `lawyer`/`collaborator` são operacionais; nada sensível por padrão.
+ * - `viewer` apenas visualiza.
+ * - `billing_manager` fica restrito a cobrança/assinatura e leitura de consumo.
  */
 export const ORG_ROLE_DEFAULT_PERMISSIONS: Record<OrgRole, readonly OrgPermission[]> = {
   owner: ORG_PERMISSIONS,
@@ -171,8 +179,6 @@ export const ORG_ROLE_DEFAULT_PERMISSIONS: Record<OrgRole, readonly OrgPermissio
   ],
   manager: [
     "members.view",
-    "services.view",
-    "services.request",
     "integrations.view",
     "usage.view_self",
     "usage.view_organization",
@@ -182,48 +188,17 @@ export const ORG_ROLE_DEFAULT_PERMISSIONS: Record<OrgRole, readonly OrgPermissio
     "documents.upload",
     "documents.delete",
     "ai.use",
-    "proposals.use",
-    "marketing.use",
-    "publications.use",
-    "crm.view",
-    "crm.manage_own",
-    "crm.view_all",
-    "crm.manage_all",
-    "crm.view_values",
-    "crm.proposals_create",
-    "crm.proposals_approve",
-    "crm.proposals_share",
-    "crm.record_outcome",
-    "crm.convert",
   ],
-  lawyer: [
-    "members.view",
-    "usage.view_self",
-    "cases.create",
-    "documents.upload",
-    "ai.use",
-    "proposals.use",
-    "marketing.use",
-    "publications.use",
-    "crm.view",
-    "crm.manage_own",
-    "crm.view_values",
-    "crm.proposals_create",
-    "crm.proposals_share",
-    "crm.record_outcome",
-  ],
-  collaborator: ["members.view", "usage.view_self", "documents.upload", "ai.use", "crm.view"],
+  lawyer: ["members.view", "usage.view_self", "cases.create", "documents.upload", "ai.use"],
+  collaborator: ["members.view", "usage.view_self", "documents.upload", "ai.use"],
   viewer: ["members.view", "usage.view_self"],
   billing_manager: [
     "members.view",
     "billing.view",
     "billing.manage",
     "subscription.manage",
-    "services.view",
     "usage.view_self",
     "usage.view_organization",
-    "crm.view",
-    "crm.view_values",
   ],
 };
 
@@ -233,4 +208,107 @@ export const OWNER_ONLY_GRANTABLE: readonly OrgPermission[] = [
   "billing.manage",
   "subscription.manage",
   "services.contract",
+];
+
+/**
+ * Papéis que cada papel pode atribuir a outra pessoa.
+ * Ninguém promove alguém a um papel superior ao seu; apenas o titular
+ * transfere/duplica a titularidade.
+ */
+export const ROLE_ASSIGNABLE_BY: Record<OrgRole, readonly OrgRole[]> = {
+  owner: ORG_ROLES,
+  admin: ["manager", "lawyer", "collaborator", "viewer", "billing_manager"],
+  manager: [],
+  lawyer: [],
+  collaborator: [],
+  viewer: [],
+  billing_manager: [],
+};
+
+export function canAssignRole(actorRole: OrgRole | null, target: OrgRole): boolean {
+  if (!actorRole) return false;
+  return ROLE_ASSIGNABLE_BY[actorRole].includes(target);
+}
+
+/** O papel concede a permissão por padrão? */
+export function roleHasPermission(role: OrgRole, permission: OrgPermission): boolean {
+  return ORG_ROLE_DEFAULT_PERMISSIONS[role].includes(permission);
+}
+
+/**
+ * Permissões efetivas: padrão do papel + concessões explícitas − revogações.
+ * Espelha `public.org_effective_permissions`.
+ */
+export function effectivePermissions(
+  role: OrgRole,
+  overrides: ReadonlyArray<{ permission: OrgPermission; granted: boolean }> = [],
+): OrgPermission[] {
+  const set = new Set<OrgPermission>(ORG_ROLE_DEFAULT_PERMISSIONS[role]);
+  for (const o of overrides) {
+    if (o.granted) set.add(o.permission);
+    else set.delete(o.permission);
+  }
+  return ORG_PERMISSIONS.filter((p) => set.has(p));
+}
+
+/** Agrupamento das permissões para telas de administração. */
+export const ORG_PERMISSION_GROUPS: ReadonlyArray<{
+  id: string;
+  label: string;
+  permissions: readonly OrgPermission[];
+}> = [
+  {
+    id: "team",
+    label: "Equipe e permissões",
+    permissions: ["members.view", "members.invite", "members.manage", "permissions.manage"],
+  },
+  {
+    id: "cases",
+    label: "Casos e documentos",
+    permissions: [
+      "cases.create",
+      "cases.view_all",
+      "cases.manage_all",
+      "cases.delete",
+      "documents.upload",
+      "documents.delete",
+    ],
+  },
+  {
+    id: "ai",
+    label: "Inteligência artificial",
+    permissions: ["ai.use", "usage.view_self", "usage.view_organization", "usage.manage_budget"],
+  },
+  {
+    id: "modules",
+    label: "Módulos",
+    permissions: ["proposals.use", "marketing.use", "publications.use"],
+  },
+  {
+    id: "crm",
+    label: "Comercial (CRM)",
+    permissions: [
+      "crm.view",
+      "crm.manage_own",
+      "crm.view_all",
+      "crm.manage_all",
+      "crm.view_values",
+      "crm.proposals_create",
+      "crm.proposals_approve",
+      "crm.proposals_share",
+      "crm.record_outcome",
+      "crm.convert",
+      "crm.admin",
+    ],
+  },
+  {
+    id: "office",
+    label: "Escritório",
+    permissions: ["integrations.view", "integrations.manage", "services.view", "services.request"],
+  },
+  {
+    id: "billing",
+    label: "Cobrança e contratação",
+    permissions: ["billing.view", "billing.manage", "subscription.manage", "services.contract"],
+  },
 ];

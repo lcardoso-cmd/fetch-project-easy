@@ -19,7 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useCapabilities } from "@/hooks/use-capabilities";
+import { useAccess } from "@/hooks/use-access";
 import {
   getB2bRequest,
   addB2bRequestNote,
@@ -49,9 +49,8 @@ function HireB2bRequestDetail() {
   const { requestId } = Route.useParams();
   const navigate = useNavigate();
   const qc = useQueryClient();
-  const { capabilities } = useCapabilities();
-  const isStaff =
-    capabilities.includes("platform_admin") || capabilities.includes("super_admin");
+  const { hasPlatformRole } = useAccess();
+  const isStaff = hasPlatformRole("platform_admin");
 
   const getFn = useServerFn(getB2bRequest);
   const noteFn = useServerFn(addB2bRequestNote);
