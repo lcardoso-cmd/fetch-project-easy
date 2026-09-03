@@ -153,9 +153,13 @@ function CommercialSettingsPage() {
                   <select
                     id="currency"
                     className="h-10 w-full rounded-md border bg-background px-3 text-sm"
-                    value={form.currency}
+                    value={form.default_currency}
                     onChange={(e) =>
-                      setForm({ ...form, currency: e.target.value as CommercialSettings["currency"] })
+                      setForm({
+                        ...form,
+                        default_currency: e.target
+                          .value as CommercialSettings["default_currency"],
+                      })
                     }
                   >
                     <option value="BRL">BRL</option>
@@ -177,11 +181,11 @@ function CommercialSettingsPage() {
                   <Label htmlFor="notify">E-mails de aviso (separados por vírgula)</Label>
                   <Input
                     id="notify"
-                    value={form.notification_emails.join(", ")}
+                    value={form.alert_recipients.join(", ")}
                     onChange={(e) =>
                       setForm({
                         ...form,
-                        notification_emails: e.target.value
+                        alert_recipients: e.target.value
                           .split(",")
                           .map((s) => s.trim())
                           .filter(Boolean),
@@ -191,22 +195,45 @@ function CommercialSettingsPage() {
                 </div>
               </div>
 
-              <div className="grid gap-3 sm:grid-cols-2">
-                <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                  <span>Suspender automaticamente ao fim do trial</span>
-                  <Switch
-                    checked={form.suspend_on_trial_expiry}
-                    onCheckedChange={(v) => setForm({ ...form, suspend_on_trial_expiry: v })}
-                  />
-                </label>
-                <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                  <span>Suspender automaticamente por inadimplência</span>
-                  <Switch
-                    checked={form.suspend_on_delinquency}
-                    onCheckedChange={(v) => setForm({ ...form, suspend_on_delinquency: v })}
-                  />
-                </label>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label htmlFor="trial_policy">Ao expirar o trial</Label>
+                  <select
+                    id="trial_policy"
+                    className="h-10 w-full rounded-md border bg-background px-3 text-sm"
+                    value={form.trial_expired_policy}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        trial_expired_policy: e.target
+                          .value as CommercialSettings["trial_expired_policy"],
+                      })
+                    }
+                  >
+                    <option value="block">Bloquear o acesso</option>
+                    <option value="read_only">Manter apenas leitura</option>
+                  </select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="delinquency_policy">Em caso de inadimplência</Label>
+                  <select
+                    id="delinquency_policy"
+                    className="h-10 w-full rounded-md border bg-background px-3 text-sm"
+                    value={form.delinquency_policy}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        delinquency_policy: e.target
+                          .value as CommercialSettings["delinquency_policy"],
+                      })
+                    }
+                  >
+                    <option value="keep_active">Manter ativo e cobrar</option>
+                    <option value="suspend_after_grace">Suspender após a tolerância</option>
+                  </select>
+                </div>
               </div>
+
 
               <Button onClick={submit} disabled={save.isPending}>
                 {save.isPending ? "Salvando…" : "Salvar configuração"}
