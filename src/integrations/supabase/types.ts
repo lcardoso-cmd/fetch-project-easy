@@ -535,6 +535,103 @@ export type Database = {
           },
         ]
       }
+      billing_email_log: {
+        Row: {
+          created_at: string
+          error: string | null
+          event: string
+          id: string
+          organization_id: string | null
+          provider_message_id: string | null
+          recipient: string
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          error?: string | null
+          event: string
+          id?: string
+          organization_id?: string | null
+          provider_message_id?: string | null
+          recipient: string
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          error?: string | null
+          event?: string
+          id?: string
+          organization_id?: string | null
+          provider_message_id?: string | null
+          recipient?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "billing_email_log_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      billing_webhook_events: {
+        Row: {
+          attempts: number
+          created_at: string
+          environment: string
+          error: string | null
+          external_event_id: string
+          id: string
+          occurred_at: string | null
+          organization_id: string | null
+          processed_at: string | null
+          provider: string
+          status: string
+          summary: Json
+          type: string
+        }
+        Insert: {
+          attempts?: number
+          created_at?: string
+          environment?: string
+          error?: string | null
+          external_event_id: string
+          id?: string
+          occurred_at?: string | null
+          organization_id?: string | null
+          processed_at?: string | null
+          provider?: string
+          status?: string
+          summary?: Json
+          type: string
+        }
+        Update: {
+          attempts?: number
+          created_at?: string
+          environment?: string
+          error?: string | null
+          external_event_id?: string
+          id?: string
+          occurred_at?: string | null
+          organization_id?: string | null
+          processed_at?: string | null
+          provider?: string
+          status?: string
+          summary?: Json
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "billing_webhook_events_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       case_access: {
         Row: {
           access_level: Database["public"]["Enums"]["case_access_level"]
@@ -2189,52 +2286,91 @@ export type Database = {
       }
       organization_invoices: {
         Row: {
+          attempt_count: number
+          billing_email: string | null
           created_at: string
           created_by_user_id: string | null
           currency: string
+          discount_cents: number
           due_date: string | null
+          environment: string
+          external_invoice_id: string | null
+          hosted_url: string | null
           id: string
           issued_at: string | null
           notes: string | null
           number: string
           organization_id: string
+          origin: string
           paid_at: string | null
+          pdf_url: string | null
+          period_end: string | null
+          period_start: string | null
           status: Database["public"]["Enums"]["invoice_status"]
+          subscription_id: string | null
           subtotal_cents: number
+          tax_cents: number
           total_cents: number
           updated_at: string
+          voided_at: string | null
         }
         Insert: {
+          attempt_count?: number
+          billing_email?: string | null
           created_at?: string
           created_by_user_id?: string | null
           currency?: string
+          discount_cents?: number
           due_date?: string | null
+          environment?: string
+          external_invoice_id?: string | null
+          hosted_url?: string | null
           id?: string
           issued_at?: string | null
           notes?: string | null
           number: string
           organization_id: string
+          origin?: string
           paid_at?: string | null
+          pdf_url?: string | null
+          period_end?: string | null
+          period_start?: string | null
           status?: Database["public"]["Enums"]["invoice_status"]
+          subscription_id?: string | null
           subtotal_cents?: number
+          tax_cents?: number
           total_cents?: number
           updated_at?: string
+          voided_at?: string | null
         }
         Update: {
+          attempt_count?: number
+          billing_email?: string | null
           created_at?: string
           created_by_user_id?: string | null
           currency?: string
+          discount_cents?: number
           due_date?: string | null
+          environment?: string
+          external_invoice_id?: string | null
+          hosted_url?: string | null
           id?: string
           issued_at?: string | null
           notes?: string | null
           number?: string
           organization_id?: string
+          origin?: string
           paid_at?: string | null
+          pdf_url?: string | null
+          period_end?: string | null
+          period_start?: string | null
           status?: Database["public"]["Enums"]["invoice_status"]
+          subscription_id?: string | null
           subtotal_cents?: number
+          tax_cents?: number
           total_cents?: number
           updated_at?: string
+          voided_at?: string | null
         }
         Relationships: [
           {
@@ -2242,6 +2378,13 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_invoices_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "organization_subscriptions"
             referencedColumns: ["id"]
           },
         ]
@@ -2328,39 +2471,66 @@ export type Database = {
       organization_payments: {
         Row: {
           amount_cents: number
+          attempt: number
           created_at: string
+          environment: string
+          external_payment_id: string | null
+          failure_reason: string | null
           id: string
           invoice_id: string | null
+          justification: string | null
           method: string | null
+          method_summary: string | null
           notes: string | null
           organization_id: string
           paid_at: string
+          provider: string
+          receipt_path: string | null
           recorded_by_user_id: string | null
           reference: string | null
+          status: string
         }
         Insert: {
           amount_cents: number
+          attempt?: number
           created_at?: string
+          environment?: string
+          external_payment_id?: string | null
+          failure_reason?: string | null
           id?: string
           invoice_id?: string | null
+          justification?: string | null
           method?: string | null
+          method_summary?: string | null
           notes?: string | null
           organization_id: string
           paid_at?: string
+          provider?: string
+          receipt_path?: string | null
           recorded_by_user_id?: string | null
           reference?: string | null
+          status?: string
         }
         Update: {
           amount_cents?: number
+          attempt?: number
           created_at?: string
+          environment?: string
+          external_payment_id?: string | null
+          failure_reason?: string | null
           id?: string
           invoice_id?: string | null
+          justification?: string | null
           method?: string | null
+          method_summary?: string | null
           notes?: string | null
           organization_id?: string
           paid_at?: string
+          provider?: string
+          receipt_path?: string | null
           recorded_by_user_id?: string | null
           reference?: string | null
+          status?: string
         }
         Relationships: [
           {
@@ -2381,42 +2551,87 @@ export type Database = {
       }
       organization_subscriptions: {
         Row: {
+          amount_cents: number
+          billing_interval: string
+          cancel_at_period_end: boolean
+          cancel_effective_at: string | null
           cancelled_at: string | null
           created_at: string
+          currency: string
           current_period_end: string | null
           current_period_start: string
+          environment: string
+          external_customer_id: string | null
+          external_price_id: string | null
+          external_subscription_id: string | null
           id: string
           notes: string | null
           organization_id: string
+          past_due_since: string | null
           plan_id: string
+          provider: string
+          scheduled_interval: string | null
+          scheduled_plan_id: string | null
           seats: number
+          started_at: string
           status: Database["public"]["Enums"]["subscription_status"]
+          trial_end: string | null
           updated_at: string
         }
         Insert: {
+          amount_cents?: number
+          billing_interval?: string
+          cancel_at_period_end?: boolean
+          cancel_effective_at?: string | null
           cancelled_at?: string | null
           created_at?: string
+          currency?: string
           current_period_end?: string | null
           current_period_start?: string
+          environment?: string
+          external_customer_id?: string | null
+          external_price_id?: string | null
+          external_subscription_id?: string | null
           id?: string
           notes?: string | null
           organization_id: string
+          past_due_since?: string | null
           plan_id: string
+          provider?: string
+          scheduled_interval?: string | null
+          scheduled_plan_id?: string | null
           seats?: number
+          started_at?: string
           status?: Database["public"]["Enums"]["subscription_status"]
+          trial_end?: string | null
           updated_at?: string
         }
         Update: {
+          amount_cents?: number
+          billing_interval?: string
+          cancel_at_period_end?: boolean
+          cancel_effective_at?: string | null
           cancelled_at?: string | null
           created_at?: string
+          currency?: string
           current_period_end?: string | null
           current_period_start?: string
+          environment?: string
+          external_customer_id?: string | null
+          external_price_id?: string | null
+          external_subscription_id?: string | null
           id?: string
           notes?: string | null
           organization_id?: string
+          past_due_since?: string | null
           plan_id?: string
+          provider?: string
+          scheduled_interval?: string | null
+          scheduled_plan_id?: string | null
           seats?: number
+          started_at?: string
           status?: Database["public"]["Enums"]["subscription_status"]
+          trial_end?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -2434,45 +2649,106 @@ export type Database = {
             referencedRelation: "plans"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "organization_subscriptions_scheduled_plan_id_fkey"
+            columns: ["scheduled_plan_id"]
+            isOneToOne: false
+            referencedRelation: "plans"
+            referencedColumns: ["id"]
+          },
         ]
       }
       organizations: {
         Row: {
+          address_city: string | null
+          address_line: string | null
+          address_postal_code: string | null
+          address_state: string | null
+          billing_email: string | null
+          billing_environment: string
+          billing_provider_customer_id: string | null
+          cancelled_at: string | null
+          conversion_source: string | null
+          converted_at: string | null
+          country: string
           created_at: string
           created_by_user_id: string
+          domain: string | null
+          grace_until: string | null
           id: string
           is_demo: boolean
+          legacy_customer_account_id: string | null
           legal_name: string | null
           name: string
+          phone: string | null
+          primary_contact_name: string | null
           status: Database["public"]["Enums"]["org_status"]
+          suspended_at: string | null
           tax_id: string | null
           trial_ends_at: string
+          trial_extension_days: number
           trial_started_at: string
           updated_at: string
         }
         Insert: {
+          address_city?: string | null
+          address_line?: string | null
+          address_postal_code?: string | null
+          address_state?: string | null
+          billing_email?: string | null
+          billing_environment?: string
+          billing_provider_customer_id?: string | null
+          cancelled_at?: string | null
+          conversion_source?: string | null
+          converted_at?: string | null
+          country?: string
           created_at?: string
           created_by_user_id: string
+          domain?: string | null
+          grace_until?: string | null
           id?: string
           is_demo?: boolean
+          legacy_customer_account_id?: string | null
           legal_name?: string | null
           name: string
+          phone?: string | null
+          primary_contact_name?: string | null
           status?: Database["public"]["Enums"]["org_status"]
+          suspended_at?: string | null
           tax_id?: string | null
           trial_ends_at?: string
+          trial_extension_days?: number
           trial_started_at?: string
           updated_at?: string
         }
         Update: {
+          address_city?: string | null
+          address_line?: string | null
+          address_postal_code?: string | null
+          address_state?: string | null
+          billing_email?: string | null
+          billing_environment?: string
+          billing_provider_customer_id?: string | null
+          cancelled_at?: string | null
+          conversion_source?: string | null
+          converted_at?: string | null
+          country?: string
           created_at?: string
           created_by_user_id?: string
+          domain?: string | null
+          grace_until?: string | null
           id?: string
           is_demo?: boolean
+          legacy_customer_account_id?: string | null
           legal_name?: string | null
           name?: string
+          phone?: string | null
+          primary_contact_name?: string | null
           status?: Database["public"]["Enums"]["org_status"]
+          suspended_at?: string | null
           tax_id?: string | null
           trial_ends_at?: string
+          trial_extension_days?: number
           trial_started_at?: string
           updated_at?: string
         }
@@ -2596,36 +2872,57 @@ export type Database = {
       plans: {
         Row: {
           active: boolean
+          archived_at: string | null
           code: string
           created_at: string
+          currency: string
           description: string | null
           id: string
+          is_trial_default: boolean
           monthly_price_cents: number
           name: string
+          provider_monthly_price_id: string | null
+          provider_product_id: string | null
+          provider_yearly_price_id: string | null
           sort_order: number
           updated_at: string
+          yearly_price_cents: number | null
         }
         Insert: {
           active?: boolean
+          archived_at?: string | null
           code: string
           created_at?: string
+          currency?: string
           description?: string | null
           id?: string
+          is_trial_default?: boolean
           monthly_price_cents?: number
           name: string
+          provider_monthly_price_id?: string | null
+          provider_product_id?: string | null
+          provider_yearly_price_id?: string | null
           sort_order?: number
           updated_at?: string
+          yearly_price_cents?: number | null
         }
         Update: {
           active?: boolean
+          archived_at?: string | null
           code?: string
           created_at?: string
+          currency?: string
           description?: string | null
           id?: string
+          is_trial_default?: boolean
           monthly_price_cents?: number
           name?: string
+          provider_monthly_price_id?: string | null
+          provider_product_id?: string | null
+          provider_yearly_price_id?: string | null
           sort_order?: number
           updated_at?: string
+          yearly_price_cents?: number | null
         }
         Relationships: []
       }
@@ -3505,6 +3802,66 @@ export type Database = {
           },
         ]
       }
+      subscription_events: {
+        Row: {
+          actor_user_id: string | null
+          created_at: string
+          event: string
+          from_plan_id: string | null
+          from_status: string | null
+          id: string
+          metadata: Json
+          organization_id: string
+          reason: string | null
+          subscription_id: string | null
+          to_plan_id: string | null
+          to_status: string | null
+        }
+        Insert: {
+          actor_user_id?: string | null
+          created_at?: string
+          event: string
+          from_plan_id?: string | null
+          from_status?: string | null
+          id?: string
+          metadata?: Json
+          organization_id: string
+          reason?: string | null
+          subscription_id?: string | null
+          to_plan_id?: string | null
+          to_status?: string | null
+        }
+        Update: {
+          actor_user_id?: string | null
+          created_at?: string
+          event?: string
+          from_plan_id?: string | null
+          from_status?: string | null
+          id?: string
+          metadata?: Json
+          organization_id?: string
+          reason?: string | null
+          subscription_id?: string | null
+          to_plan_id?: string | null
+          to_status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscription_events_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subscription_events_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "organization_subscriptions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       support_access_grants: {
         Row: {
           created_at: string
@@ -3931,6 +4288,10 @@ export type Database = {
         Returns: number
       }
       org_can_use_ai: { Args: { _organization_id: string }; Returns: boolean }
+      org_effective_entitlements: {
+        Args: { _organization_id: string }
+        Returns: Json
+      }
       org_effective_permissions: {
         Args: { _organization_id: string; _user_id: string }
         Returns: Database["public"]["Enums"]["org_permission"][]
@@ -3940,10 +4301,19 @@ export type Database = {
         Args: { _organization_id: string; _user_id: string }
         Returns: Database["public"]["Enums"]["org_role"]
       }
+      org_operational_state: {
+        Args: { _organization_id: string }
+        Returns: string
+      }
       org_role_default_permissions: {
         Args: { _role: Database["public"]["Enums"]["org_role"] }
         Returns: Database["public"]["Enums"]["org_permission"][]
       }
+      org_subscription_mrr_cents: {
+        Args: { _amount_cents: number; _interval: string }
+        Returns: number
+      }
+      org_trial_end: { Args: { _organization_id: string }; Returns: string }
       support_can_read: {
         Args: { _organization_id: string; _user_id: string }
         Returns: boolean
