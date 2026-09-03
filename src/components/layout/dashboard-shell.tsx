@@ -44,6 +44,12 @@ import {
   PanelLeftOpen,
   
   Globe2,
+  Layers,
+  Repeat,
+  ReceiptText,
+  CreditCard,
+  Gauge,
+  SlidersHorizontal,
   Menu,
   Users2,
   Building2,
