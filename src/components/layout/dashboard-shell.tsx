@@ -630,11 +630,6 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                   {currentSection}
                 </span>
               </nav>
-              {profile?.firm_name && (
-                <span className="ml-2 truncate rounded-md border border-border bg-secondary px-2.5 py-1 text-sm text-muted-foreground">
-                  {profile.firm_name}
-                </span>
-              )}
             </div>
             <div className="flex shrink-0 items-center gap-2">
               <ConversationsDrawer />
