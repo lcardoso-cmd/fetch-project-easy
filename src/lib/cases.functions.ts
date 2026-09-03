@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireOrg, requireOrgPermission } from "@/lib/org-middleware";
 
 const PartySchema = z.object({
   role: z.string().trim().max(80),
@@ -31,19 +31,18 @@ const CaseSchema = z.object({
   case_type: z.string().max(80).optional().nullable(),
   parties: z.array(PartySchema).optional(),
   represented_party: PartySchema.nullable().optional(),
-  team_member_ids: z.array(z.string().uuid()).optional(),
   ...PericiaFields,
 });
 
 const StatusEnum = z.enum(["active", "archived", "closed"]);
 
 export const getCases = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireOrg])
   .handler(async ({ context }) => {
     const { data, error } = await context.supabase
       .from("cases")
       .select("*")
-      .eq("user_id", context.userId)
+      .eq("organization_id", context.organizationId)
       .order("created_at", { ascending: false });
 
     if (error) throw error;
@@ -51,14 +50,14 @@ export const getCases = createServerFn({ method: "GET" })
   });
 
 export const getCase = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireOrg])
   .inputValidator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }) => {
     const { data: caseData, error } = await context.supabase
       .from("cases")
       .select("*, documents(*), events(*)")
       .eq("id", data.id)
-      .eq("user_id", context.userId)
+      .eq("organization_id", context.organizationId)
       .single();
 
     if (error) throw error;
@@ -66,13 +65,14 @@ export const getCase = createServerFn({ method: "GET" })
   });
 
 export const createCase = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireOrgPermission("cases.create")])
   .inputValidator((input: unknown) => CaseSchema.parse(input))
   .handler(async ({ data, context }) => {
     const { data: newCase, error } = await context.supabase
       .from("cases")
       .insert({
-        user_id: context.userId,
+        organization_id: context.organizationId,
+        created_by_user_id: context.userId,
         title: data.title,
         description: data.description ?? null,
         client_name: data.client_name ?? null,
@@ -82,7 +82,6 @@ export const createCase = createServerFn({ method: "POST" })
         case_type: data.case_type ?? null,
         parties: data.parties ?? [],
         represented_party: data.represented_party ?? null,
-        team_member_ids: data.team_member_ids ?? [],
         matter_kind: data.matter_kind,
         practice_type: data.practice_type ?? null,
         assisted_party_name: data.assisted_party_name ?? null,
@@ -99,7 +98,7 @@ export const createCase = createServerFn({ method: "POST" })
   });
 
 export const updateCase = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireOrg])
   .inputValidator((input: unknown) =>
     z
       .object({
@@ -113,8 +112,7 @@ export const updateCase = createServerFn({ method: "POST" })
         case_type: z.string().max(80).optional().nullable(),
         parties: z.array(PartySchema).optional(),
         represented_party: PartySchema.nullable().optional(),
-        team_member_ids: z.array(z.string().uuid()).optional(),
-        matter_kind: MatterKindEnum.optional(),
+              matter_kind: MatterKindEnum.optional(),
         practice_type: PracticeTypeEnum.optional().nullable(),
         assisted_party_name: z.string().max(200).optional().nullable(),
         perito_fee_cents: z.number().int().nonnegative().optional().nullable(),
@@ -130,7 +128,7 @@ export const updateCase = createServerFn({ method: "POST" })
       .from("cases")
       .update(updates)
       .eq("id", id)
-      .eq("user_id", context.userId)
+      .eq("organization_id", context.organizationId)
       .select()
       .single();
 
@@ -139,14 +137,14 @@ export const updateCase = createServerFn({ method: "POST" })
   });
 
 export const deleteCase = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireOrgPermission("cases.delete")])
   .inputValidator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }) => {
     const { error } = await context.supabase
       .from("cases")
       .delete()
       .eq("id", data.id)
-      .eq("user_id", context.userId);
+      .eq("organization_id", context.organizationId);
 
     if (error) throw error;
     return { success: true };
@@ -252,7 +250,7 @@ function cleanString(raw: string | null | undefined, max = 200): string | null {
 
 /** Extrai dados do documento sem salvar. Retorna a estrutura + texto bruto. */
 export const extractCaseDataFromDocument = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireOrgPermission("documents.upload")])
   .inputValidator((i: unknown) => FromDocSchema.parse(i))
   .handler(async ({ data, context }) => {
     const { chatComplete } = await import("./ai.server");
@@ -370,7 +368,7 @@ ${snippet}
 
 /** Após criar o caso, anexa o documento já enviado e devolve o id pra indexar. */
 export const attachDocumentToCase = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireOrgPermission("documents.upload")])
   .inputValidator((i: unknown) =>
     FromDocSchema.extend({ case_id: z.string().uuid() }).parse(i),
   )
@@ -384,7 +382,8 @@ export const attachDocumentToCase = createServerFn({ method: "POST" })
     const { data: doc, error } = await context.supabase
       .from("documents")
       .insert({
-        user_id: context.userId,
+        organization_id: context.organizationId,
+        created_by_user_id: context.userId,
         case_id: data.case_id,
         filename: data.filename,
         file_type: data.file_type,

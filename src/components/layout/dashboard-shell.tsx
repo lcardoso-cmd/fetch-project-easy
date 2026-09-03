@@ -101,39 +101,19 @@ function buildNav(_practice: PracticeType | null | undefined): NavItem[] {
   });
 
   return [
-    // ─── MEU ESPAÇO ───
-    section("workspace", "Meu Espaço"),
-    link("dashboard", "/painel", "Painel", Home, "exact"),
-    link("my-tasks", "/tarefas", "Minhas Tarefas", ClipboardCheck),
-    link("inbox", "/conversas", "Conversas", MessageSquare, "startsWith"),
-    link("calendar", "/agenda", "Agenda", CalendarDays),
-    link("my-files", "/documentos", "Meus Documentos", FileArchive),
+    // ─── PRINCIPAL ───
+    section("main", "Principal"),
+    link("dashboard", "/painel", "Início", Home, "exact"),
+    link("cases", "/assistencias", "Casos", FolderKanban, "startsWith"),
+    link("assistant", "/assistente", "JurisMind AI", MessageSquare, "startsWith"),
+    link("my-work", "/tarefas", "Meu trabalho", ClipboardCheck),
+    link("library", "/documentos", "Biblioteca", FileArchive),
 
-    // ─── TRABALHO ───
+    // ─── MÓDULOS ───
     { type: "separator" },
-    section("practice", "Trabalho"),
-    link(
-      "cases",
-      "/assistencias",
-      "Casos",
-      FolderKanban,
-      "startsWith",
-    ),
-    link("drafter", "/pecas", "Peças Jurídicas", Scale),
-
-    // ─── NEGÓCIO ───
-    { type: "separator" },
-    section("business", "Negócio"),
-    link("proposal", "/propostas", "Proposta Comercial", Handshake),
-    link("monitoring", "/publicacoes", "Publicações", FileSearch),
-    link("marketing", "/marketing", "Marketing", Megaphone),
-    link("hire-b2b", "/contratar-b2b", "Contratar B2B", ShieldCheck, "startsWith"),
-
-    // ─── ESCRITÓRIO ───
-    { type: "separator" },
-    section("office", "Escritório"),
-    link("integrations", "/integracoes", "Integrações", Puzzle),
-    link("settings", "/configuracoes", "Configurações", Settings2),
+    section("modules", "Módulos"),
+    link("monitoring", "/publicacoes", "Monitoramento", FileSearch),
+    link("proposal", "/propostas", "Comercial", Handshake),
 
     // ─── PLATAFORMA B2B ───
     { type: "separator" },
@@ -144,6 +124,33 @@ function buildNav(_practice: PracticeType | null | undefined): NavItem[] {
     link("platform-requests", "/plataforma/solicitacoes", "Solicitações B2B", Handshake, "startsWith"),
     link("platform-credentials", "/plataforma/credenciais", "Credenciais SaaS", KeyRound, "startsWith"),
     link("platform-audit", "/plataforma/auditoria", "Log de auditoria", ScrollText, "startsWith"),
+  ];
+}
+
+/** Itens fixos do rodapé da barra lateral. */
+export function buildFooterNav(): NavItem[] {
+  const link = (
+    key: NavKey,
+    to: string,
+    label: string,
+    icon: LucideIcon,
+    match?: "exact" | "startsWith",
+  ): NavLink => {
+    const entry = NAV_ENTRIES[key];
+    return {
+      type: "link",
+      to,
+      label,
+      icon,
+      match,
+      requires: entry.requires,
+      description: describeNav(entry),
+    };
+  };
+  return [
+    link("hire-b2b", "/contratar-b2b", "Serviços especializados", ShieldCheck, "startsWith"),
+    link("settings", "/configuracoes", "Administração", Settings2, "startsWith"),
+    link("help", "/ajuda/permissoes", "Ajuda", HelpCircle, "startsWith"),
   ];
 }
 
@@ -247,6 +254,10 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
     [profile?.practice_type],
   );
   const NAV = useMemo(() => applyCapabilities(raw, has), [raw, has]);
+  const FOOTER_NAV = useMemo(
+    () => applyCapabilities(buildFooterNav(), has),
+    [has],
+  );
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -348,7 +359,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                 return (
                   <div
                     key={idx}
-                    className="px-2 pb-1 pt-3 text-[10px] font-medium uppercase tracking-[0.14em] text-sidebar-foreground/45"
+                    className="px-2 pb-1 pt-3 text-[13px] font-medium uppercase tracking-[0.12em] text-sidebar-foreground/60"
                   >
                     {item.label}
                   </div>
@@ -362,8 +373,8 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                     <Link
                       to={item.to}
                       className={cn(
-                        "group relative flex items-center gap-2.5 rounded-md px-2 text-[13px] transition-colors",
-                        "h-8",
+                        "group relative flex items-center gap-2.5 rounded-md px-2 text-sm transition-colors",
+                        "h-9",
                         active
                           ? "bg-sidebar-accent font-medium text-foreground"
                           : "text-sidebar-foreground/80 hover:bg-sidebar-accent/60 hover:text-foreground",
@@ -389,6 +400,32 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
 
           {/* Footer */}
           <div className="border-t border-sidebar-border p-2 space-y-1">
+            {FOOTER_NAV.map((item) =>
+              item.type !== "link" ? null : (
+                <Tooltip key={item.to}>
+                  <TooltipTrigger asChild>
+                    <Link
+                      to={item.to}
+                      className={cn(
+                        "flex h-9 items-center gap-2.5 rounded-md px-2 text-sm transition-colors",
+                        isActive(item.to, item.match)
+                          ? "bg-sidebar-accent font-medium text-foreground"
+                          : "text-sidebar-foreground/80 hover:bg-sidebar-accent/60 hover:text-foreground",
+                        collapsed && "justify-center px-0",
+                      )}
+                    >
+                      <item.icon className="h-[15px] w-[15px] shrink-0" strokeWidth={1.75} />
+                      {!collapsed && <span className="truncate">{item.label}</span>}
+                    </Link>
+                  </TooltipTrigger>
+                  {collapsed && (
+                    <TooltipContent side="right" className="text-xs">
+                      {item.label}
+                    </TooltipContent>
+                  )}
+                </Tooltip>
+              ),
+            )}
             {isSuperAdmin && !collapsed && <ViewAsSwitcher />}
             {!collapsed && user && (
               <div className="flex items-center gap-2 px-1 py-1">
@@ -463,7 +500,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                         return (
                           <div
                             key={idx}
-                            className="px-2 pb-1 pt-3 text-[10px] font-medium uppercase tracking-[0.14em] text-sidebar-foreground/45"
+                            className="px-2 pb-1 pt-3 text-[13px] font-medium uppercase tracking-[0.12em] text-sidebar-foreground/60"
                           >
                             {item.label}
                           </div>
@@ -477,7 +514,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                           to={item.to}
                           onClick={() => setMobileOpen(false)}
                           className={cn(
-                            "relative flex h-9 items-center gap-2.5 rounded-md px-2 text-[13px] transition-colors",
+                            "relative flex h-9 items-center gap-2.5 rounded-md px-2 text-sm transition-colors",
                             active
                               ? "bg-sidebar-accent font-medium text-foreground"
                               : "text-sidebar-foreground/80 hover:bg-sidebar-accent/60 hover:text-foreground",
@@ -491,6 +528,25 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                         </Link>
                       );
                     })}
+                    <div className="my-2" />
+                    {FOOTER_NAV.map((item) =>
+                      item.type !== "link" ? null : (
+                        <Link
+                          key={item.to}
+                          to={item.to}
+                          onClick={() => setMobileOpen(false)}
+                          className={cn(
+                            "flex h-9 items-center gap-2.5 rounded-md px-2 text-sm transition-colors",
+                            isActive(item.to, item.match)
+                              ? "bg-sidebar-accent font-medium text-foreground"
+                              : "text-sidebar-foreground/80 hover:bg-sidebar-accent/60 hover:text-foreground",
+                          )}
+                        >
+                          <item.icon className="h-[15px] w-[15px] shrink-0" strokeWidth={1.75} />
+                          <span className="truncate">{item.label}</span>
+                        </Link>
+                      ),
+                    )}
                   </nav>
                   <div className="border-t border-sidebar-border p-2 space-y-1">
                     {isSuperAdmin && <ViewAsSwitcher />}

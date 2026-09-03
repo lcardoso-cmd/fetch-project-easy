@@ -1,18 +1,18 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { requireCapability } from "@/lib/capability-middleware";
+import { requireOrgPermission } from "@/lib/org-middleware";
 
 const SourceEnum = z.enum(["juizo", "autor", "reu", "assistido", "outro"]);
 
 export const listQuesitos = createServerFn({ method: "GET" })
-  .middleware([requireCapability("expert_opinion")])
+  .middleware([requireOrgPermission("ai.use")])
   .inputValidator((i: unknown) => z.object({ case_id: z.string().uuid() }).parse(i))
   .handler(async ({ data, context }) => {
     const { data: rows, error } = await context.supabase
       .from("case_quesitos")
       .select("*")
       .eq("case_id", data.case_id)
-      .eq("user_id", context.userId)
+      .eq("organization_id", context.organizationId)
       .order("source", { ascending: true })
       .order("number", { ascending: true, nullsFirst: false })
       .order("created_at", { ascending: true });
@@ -21,7 +21,7 @@ export const listQuesitos = createServerFn({ method: "GET" })
   });
 
 export const createQuesito = createServerFn({ method: "POST" })
-  .middleware([requireCapability("expert_opinion")])
+  .middleware([requireOrgPermission("ai.use")])
   .inputValidator((i: unknown) =>
     z
       .object({
@@ -37,7 +37,8 @@ export const createQuesito = createServerFn({ method: "POST" })
     const { data: row, error } = await context.supabase
       .from("case_quesitos")
       .insert({
-        user_id: context.userId,
+        organization_id: context.organizationId,
+        created_by_user_id: context.userId,
         case_id: data.case_id,
         source: data.source,
         number: data.number ?? null,
@@ -51,7 +52,7 @@ export const createQuesito = createServerFn({ method: "POST" })
   });
 
 export const updateQuesito = createServerFn({ method: "POST" })
-  .middleware([requireCapability("expert_opinion")])
+  .middleware([requireOrgPermission("ai.use")])
   .inputValidator((i: unknown) =>
     z
       .object({
@@ -69,7 +70,7 @@ export const updateQuesito = createServerFn({ method: "POST" })
       .from("case_quesitos")
       .update(patch)
       .eq("id", id)
-      .eq("user_id", context.userId)
+      .eq("organization_id", context.organizationId)
       .select()
       .single();
     if (error) throw error;
@@ -77,14 +78,14 @@ export const updateQuesito = createServerFn({ method: "POST" })
   });
 
 export const deleteQuesito = createServerFn({ method: "POST" })
-  .middleware([requireCapability("expert_opinion")])
+  .middleware([requireOrgPermission("ai.use")])
   .inputValidator((i: unknown) => z.object({ id: z.string().uuid() }).parse(i))
   .handler(async ({ data, context }) => {
     const { error } = await context.supabase
       .from("case_quesitos")
       .delete()
       .eq("id", data.id)
-      .eq("user_id", context.userId);
+      .eq("organization_id", context.organizationId);
     if (error) throw error;
     return { ok: true };
   });

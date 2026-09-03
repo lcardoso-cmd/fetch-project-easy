@@ -105,9 +105,10 @@ export async function prepareRagRun(opts: {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   supabase: any;
   userId: string;
+  organizationId: string;
   data: RagInput;
 }): Promise<RagRun> {
-  const { supabase, userId, data } = opts;
+  const { supabase, userId, organizationId, data } = opts;
   const startedAt = Date.now();
   const { embedTexts, rewriteQuery, rerankChunksDetailed } = await import("./ai.server");
   const { locationLabel } = await import("./rag/chunking");
@@ -180,58 +181,15 @@ export async function prepareRagRun(opts: {
     const { data: hits, error: hErr } = await supabase.rpc("hybrid_search_chunks_v2", {
       query_embedding: emb as unknown as string,
       query_text: q,
+      filter_organization_id: organizationId,
       filter_case_id: data.case_id,
       keyword_text: keywordText,
       filter_doc_ids: docFilter,
       match_count: perQueryLimit,
     });
 
-    if (!hErr && hits) {
-      lists.push((hits as Candidate[]).map((r) => ({ ...r })));
-      continue;
-    }
-
-    // Fallback 1: híbrido legado (filtro por user_id).
-    const { data: legacy, error: lErr } = await supabase.rpc("hybrid_search_chunks", {
-      query_embedding: emb as unknown as string,
-      query_text: q,
-      filter_user_id: userId,
-      filter_case_id: data.case_id,
-      filter_doc_ids: docFilter ?? undefined,
-      match_count: perQueryLimit,
-    });
-    if (!lErr && legacy) {
-      lists.push(
-        (legacy as Array<Record<string, unknown>>).map((r) => ({
-          id: String(r.id),
-          document_id: String(r.document_id),
-          content: String(r.content ?? ""),
-          source_kind: String(r.source_kind ?? "text"),
-          vector_similarity: Number(r.vector_similarity ?? 0),
-          fts_rank: Number(r.fts_rank ?? 0),
-        })),
-      );
-      continue;
-    }
-
-    // Fallback 2: apenas vetorial.
-    const { data: fb } = await supabase.rpc("match_chunks_scoped", {
-      query_embedding: emb as unknown as string,
-      filter_user_id: userId,
-      filter_case_id: data.case_id,
-      filter_doc_ids: docFilter ?? undefined,
-      match_count: perQueryLimit,
-    } as never);
-    lists.push(
-      ((fb ?? []) as Array<Record<string, unknown>>).map((r) => ({
-        id: String(r.id ?? `${r.document_id}:${String(r.content ?? "").slice(0, 40)}`),
-        document_id: String(r.document_id),
-        content: String(r.content ?? ""),
-        source_kind: "text",
-        vector_similarity: Number(r.similarity ?? 0),
-        fts_rank: 0,
-      })),
-    );
+    if (hErr) throw new Error(hErr.message);
+    lists.push(((hits ?? []) as Candidate[]).map((r) => ({ ...r })));
   }
 
   const fused = rrfFuse(lists);
@@ -247,6 +205,7 @@ export async function prepareRagRun(opts: {
     const targets = neighborTargets(primary.slice(0, 6), 1);
     if (targets.length > 0) {
       const { data: nb } = await supabase.rpc("fetch_chunk_neighbors", {
+        filter_organization_id: organizationId,
         filter_case_id: data.case_id,
         doc_ids: targets.map((t) => t.document_id),
         chunk_indexes: targets.map((t) => t.chunk_index),
@@ -604,7 +563,8 @@ INSTRUÇÕES:
   const executor = async (name: string, args: Record<string, unknown>) => {
     if (name === "create_event") {
       const ev = {
-        user_id: userId,
+        organization_id: organizationId,
+        created_by_user_id: userId,
         case_id: data.case_id,
         title: String(args.title ?? "Evento"),
         description: args.description ? String(args.description) : null,
@@ -623,7 +583,8 @@ INSTRUÇÕES:
     }
     if (name === "create_task") {
       const t = {
-        user_id: userId,
+        organization_id: organizationId,
+        created_by_user_id: userId,
         case_id: data.case_id,
         title: String(args.title ?? "Tarefa"),
         description: args.description ? String(args.description) : null,
@@ -645,7 +606,7 @@ INSTRUÇÕES:
       const { data: evs } = await supabase
         .from("events")
         .select("id, title, starts_at, event_type")
-        .eq("user_id", userId)
+        .eq("organization_id", organizationId)
         .eq("case_id", data.case_id)
         .gte("starts_at", new Date().toISOString())
         .lte("starts_at", until)
@@ -656,7 +617,7 @@ INSTRUÇÕES:
       const { data: ts } = await supabase
         .from("tasks")
         .select("id, title, status, priority, due_date")
-        .eq("user_id", userId)
+        .eq("organization_id", organizationId)
         .eq("case_id", data.case_id)
         .neq("status", "done")
         .order("created_at", { ascending: false });
@@ -710,6 +671,7 @@ export async function persistChatTurn(opts: {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   supabase: any;
   userId: string;
+  organizationId: string;
   threadId: string;
   question: string;
   images?: string[];
@@ -724,6 +686,7 @@ export async function persistChatTurn(opts: {
   const {
     supabase,
     userId,
+    organizationId,
     threadId,
     question,
     images,
@@ -739,6 +702,7 @@ export async function persistChatTurn(opts: {
     await supabase.from("ai_chat_messages").insert([
       {
         thread_id: threadId,
+        organization_id: organizationId,
         user_id: userId,
         role: "user",
         content: question,
@@ -750,6 +714,7 @@ export async function persistChatTurn(opts: {
       },
       {
         thread_id: threadId,
+        organization_id: organizationId,
         user_id: userId,
         role: "assistant",
         content,

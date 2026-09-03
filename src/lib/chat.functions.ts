@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireAiEnabled } from "@/lib/org-middleware";
 
 const AskSchema = z.object({
   case_id: z.string().uuid(),
@@ -21,7 +21,7 @@ const AskSchema = z.object({
 });
 
 export const askWithRag = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireAiEnabled])
   .inputValidator((i: unknown) => AskSchema.parse(i))
   .handler(async ({ data, context }) => {
     const { chatWithTools } = await import("./ai.server");
@@ -33,6 +33,7 @@ export const askWithRag = createServerFn({ method: "POST" })
     const run = await prepareRagRun({
       supabase: context.supabase,
       userId: context.userId,
+      organizationId: context.organizationId,
       data,
     });
 
@@ -49,6 +50,7 @@ export const askWithRag = createServerFn({ method: "POST" })
     await logRetrievalEvent({
       supabase: context.supabase,
       userId: context.userId,
+      organizationId: context.organizationId,
       caseId: data.case_id,
       threadId: data.thread_id ?? null,
       log: run.retrievalLog,
@@ -67,6 +69,7 @@ export const askWithRag = createServerFn({ method: "POST" })
       await persistChatTurn({
         supabase: context.supabase,
         userId: context.userId,
+        organizationId: context.organizationId,
         threadId: data.thread_id,
         question: data.question,
         images: data.images,
@@ -91,7 +94,7 @@ export const askWithRag = createServerFn({ method: "POST" })
   });
 
 export const summarizeCase = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireAiEnabled])
   .inputValidator((i: unknown) => z.object({ case_id: z.string().uuid() }).parse(i))
   .handler(async ({ data, context }) => {
     const { chatComplete } = await import("./ai.server");

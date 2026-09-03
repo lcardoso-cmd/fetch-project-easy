@@ -65,7 +65,7 @@ export const listNotifications = createServerFn({ method: "GET" })
         .from("tasks")
         .select("id, title, case_id, due_date, status, created_at")
         .eq("assigned_to_user_id", context.userId)
-        .neq("user_id", context.userId)
+        .neq("created_by_user_id", context.userId)
         .gte("created_at", since)
         .order("created_at", { ascending: false })
         .limit(30),

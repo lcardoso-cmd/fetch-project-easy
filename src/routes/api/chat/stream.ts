@@ -169,6 +169,7 @@ export const Route = createFileRoute("/api/chat/stream")({
               const run = await prepareRagRun({
                 supabase: auth.supabase,
                 userId: auth.userId,
+                organizationId: auth.organizationId,
                 data: body,
               });
               if (abortSignal.aborted) return;
@@ -269,6 +270,7 @@ export const Route = createFileRoute("/api/chat/stream")({
               await logRetrievalEvent({
                 supabase: auth.supabase,
                 userId: auth.userId,
+                organizationId: auth.organizationId,
                 caseId: body.case_id,
                 threadId: body.thread_id ?? null,
                 log: run.retrievalLog,
@@ -287,6 +289,7 @@ export const Route = createFileRoute("/api/chat/stream")({
                 await persistChatTurn({
                   supabase: auth.supabase,
                   userId: auth.userId,
+                  organizationId: auth.organizationId,
                   threadId: body.thread_id,
                   question: body.question,
                   images: body.images,

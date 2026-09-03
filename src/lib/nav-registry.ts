@@ -17,6 +17,10 @@ import {
 
 export type NavKey =
   // Principal
+  | "assistant"
+  | "my-work"
+  | "library"
+  | "help"
   | "dashboard"
   | "cases"
   | "my-tasks"
@@ -42,6 +46,8 @@ export type NavKey =
   | "platform-audit";
 
 export type NavSectionKey =
+  | "main"
+  | "modules"
   | "workspace"
   | "practice"
   | "business"
@@ -56,6 +62,12 @@ export type NavEntry = {
 };
 
 export const NAV_SECTIONS: Record<NavSectionKey, NavEntry> = {
+  main: {
+    base: "Trabalho jurídico do dia a dia.",
+  },
+  modules: {
+    base: "Módulos complementares contratados pelo escritório.",
+  },
   workspace: {
     base:
       "Seu espaço pessoal: painel, tarefas, conversas, agenda e documentos.",
@@ -82,7 +94,11 @@ export const NAV_SECTIONS: Record<NavSectionKey, NavEntry> = {
 
 export const NAV_ENTRIES: Record<NavKey, NavEntry> = {
   // Principal
-  dashboard: { base: "Visão geral." },
+  dashboard: { base: "Visão operacional do dia: prazos, tarefas e casos recentes." },
+  assistant: { base: "Análise documental com JurisMind AI por caso." },
+  "my-work": { base: "Suas tarefas, prazos e agenda em um só lugar." },
+  library: { base: "Todos os documentos aos quais você tem acesso." },
+  help: { base: "Ajuda e explicação de acessos." },
   cases: {
     base: "Casos, clientes e documentos vinculados.",
     requires: "cases",

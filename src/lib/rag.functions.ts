@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireOrg } from "@/lib/org-middleware";
 import type { DocBlock } from "./rag/chunking";
 
 const IndexSchema = z.object({
@@ -21,7 +21,7 @@ export const EMBEDDING_MODEL = "openai/text-embedding-3-small";
  * falhar, a versão anterior do índice continua consultável.
  */
 export const indexDocument = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireOrg])
   .inputValidator((i: unknown) => IndexSchema.parse(i))
   .handler(async ({ data, context }) => {
     const { embedTexts } = await import("./ai.server");
@@ -44,7 +44,7 @@ export const indexDocument = createServerFn({ method: "POST" })
       .from("documents")
       .select("id, case_id, storage_path, file_type, filename")
       .eq("id", data.document_id)
-      .eq("user_id", context.userId)
+      .eq("organization_id", context.organizationId)
       .single();
     if (docErr || !doc) throw new Error("Documento não encontrado");
 
@@ -155,7 +155,8 @@ export const indexDocument = createServerFn({ method: "POST" })
       const rows = chunks.map((c, idx) => ({
         document_id: doc.id,
         case_id: doc.case_id,
-        user_id: context.userId,
+        organization_id: context.organizationId,
+        created_by_user_id: context.userId,
         chunk_index: offset + idx,
         content: c.content,
         source_kind: c.source_kind === "table" ? "text" : c.source_kind,
@@ -224,7 +225,7 @@ export const indexDocument = createServerFn({ method: "POST" })
 
 /** Reindexa documentos de um caso cujo índice está em versão anterior. */
 export const reindexCaseDocuments = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireOrg])
   .inputValidator((i: unknown) =>
     z.object({ case_id: z.string().uuid(), limit: z.number().int().min(1).max(20).optional() }).parse(i),
   )
@@ -233,7 +234,7 @@ export const reindexCaseDocuments = createServerFn({ method: "POST" })
       .from("documents")
       .select("id, filename")
       .eq("case_id", data.case_id)
-      .eq("user_id", context.userId)
+      .eq("organization_id", context.organizationId)
       .order("created_at", { ascending: true })
       .limit(data.limit ?? 5);
 

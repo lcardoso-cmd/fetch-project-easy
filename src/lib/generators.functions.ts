@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { requireCapability } from "@/lib/capability-middleware";
+import { requireOrgPermission } from "@/lib/org-middleware";
 import { chatComplete } from "./ai.server";
 
 const ProposalSchema = z.object({
@@ -29,7 +29,7 @@ const ProposalSchema = z.object({
 });
 
 export const generateProposal = createServerFn({ method: "POST" })
-  .middleware([requireCapability("commercial")])
+  .middleware([requireOrgPermission("proposals.use")])
   .inputValidator((input: unknown) => ProposalSchema.parse(input))
   .handler(async ({ data }) => {
     const counterpartyFilled = Boolean(
@@ -256,7 +256,7 @@ const MarketingSchema = z.object({
 });
 
 export const generateMarketing = createServerFn({ method: "POST" })
-  .middleware([requireCapability("marketing")])
+  .middleware([requireOrgPermission("marketing.use")])
   .inputValidator((input: unknown) => MarketingSchema.parse(input))
   .handler(async ({ data }) => {
     const formatGuide: Record<string, string> = {
@@ -327,7 +327,7 @@ const PIECE_GUIDE: Record<string, string> = {
 };
 
 export const draftLegalPiece = createServerFn({ method: "POST" })
-  .middleware([requireCapability("expert_opinion")])
+  .middleware([requireOrgPermission("ai.use")])
   .inputValidator((input: unknown) => PieceSchema.parse(input))
   .handler(async ({ data, context }) => {
     const { embedTexts } = await import("./ai.server");
@@ -338,7 +338,7 @@ export const draftLegalPiece = createServerFn({ method: "POST" })
         "id, title, client_name, case_type, jurisdiction, summary, description, matter_kind, assisted_party_name, perito_nomination_ref, perito_deadline_date",
       )
       .eq("id", data.case_id)
-      .eq("user_id", context.userId)
+      .eq("organization_id", context.organizationId)
       .single();
     if (caseErr || !caseRow) throw new Error("Caso não encontrado");
 
@@ -347,7 +347,7 @@ export const draftLegalPiece = createServerFn({ method: "POST" })
       .from("case_quesitos")
       .select("source, number, question, answer")
       .eq("case_id", data.case_id)
-      .eq("user_id", context.userId)
+      .eq("organization_id", context.organizationId)
       .order("source", { ascending: true })
       .order("number", { ascending: true, nullsFirst: false });
 
@@ -374,13 +374,15 @@ export const draftLegalPiece = createServerFn({ method: "POST" })
     const [qEmb] = await embedTexts([seed]);
     let contextBlock = "(Sem documentos indexados neste caso.)";
     if (qEmb) {
-      const { data: matches } = await context.supabase.rpc("match_chunks", {
+      const { data: matches } = await context.supabase.rpc("hybrid_search_chunks_v2", {
         query_embedding: qEmb as unknown as string,
+        query_text: seed,
+        filter_organization_id: context.organizationId,
+        filter_case_id: data.case_id,
         match_count: 12,
-        filter_user_id: context.userId,
       });
-      const filtered = (matches ?? []).filter(
-        (m: { case_id: string }) => m.case_id === data.case_id,
+      const filtered = ((matches ?? []) as Array<{ case_id: string; content: string }>).filter(
+        (m) => m.case_id === data.case_id,
       );
       if (filtered.length > 0) {
         contextBlock = filtered
@@ -518,7 +520,7 @@ Regras:
 }
 
 export const generateMarketingImages = createServerFn({ method: "POST" })
-  .middleware([requireCapability("marketing")])
+  .middleware([requireOrgPermission("marketing.use")])
   .inputValidator((input: unknown) => MarketingImagesSchema.parse(input))
   .handler(async ({ data }) => {
     const { headline, subheadline } = await deriveHeadline(data.topic, data.content);

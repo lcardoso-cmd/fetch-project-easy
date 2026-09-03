@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireOrg } from "@/lib/org-middleware";
 
 const EventInput = z.object({
   case_id: z.string().uuid().nullable().optional(),
@@ -13,7 +13,7 @@ const EventInput = z.object({
 });
 
 export const listEvents = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireOrg])
   .inputValidator((i: unknown) =>
     z
       .object({
@@ -27,7 +27,7 @@ export const listEvents = createServerFn({ method: "GET" })
     let q = context.supabase
       .from("events")
       .select("id, title, description, starts_at, ends_at, event_type, all_day, case_id")
-      .eq("user_id", context.userId)
+      .eq("organization_id", context.organizationId)
       .order("starts_at", { ascending: true });
     if (data.case_id) q = q.eq("case_id", data.case_id);
     if (data.from) q = q.gte("starts_at", data.from);
@@ -38,12 +38,12 @@ export const listEvents = createServerFn({ method: "GET" })
   });
 
 export const createEvent = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireOrg])
   .inputValidator((i: unknown) => EventInput.parse(i))
   .handler(async ({ data, context }) => {
     const { data: row, error } = await context.supabase
       .from("events")
-      .insert({ ...data, user_id: context.userId })
+      .insert({ ...data, organization_id: context.organizationId, created_by_user_id: context.userId })
       .select()
       .single();
     if (error) throw error;
@@ -51,14 +51,14 @@ export const createEvent = createServerFn({ method: "POST" })
   });
 
 export const deleteEvent = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireOrg])
   .inputValidator((i: unknown) => z.object({ id: z.string().uuid() }).parse(i))
   .handler(async ({ data, context }) => {
     const { error } = await context.supabase
       .from("events")
       .delete()
       .eq("id", data.id)
-      .eq("user_id", context.userId);
+      .eq("organization_id", context.organizationId);
     if (error) throw error;
     return { ok: true };
   });

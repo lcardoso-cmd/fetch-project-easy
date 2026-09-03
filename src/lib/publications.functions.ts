@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireOrg } from "@/lib/org-middleware";
 
 const TermInput = z.object({
   id: z.string().uuid().optional(),
@@ -16,19 +16,19 @@ const TermInput = z.object({
 });
 
 export const listTerms = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireOrg])
   .handler(async ({ context }) => {
     const { data, error } = await context.supabase
       .from("monitoring_terms")
       .select("*")
-      .eq("user_id", context.userId)
+      .eq("organization_id", context.organizationId)
       .order("created_at", { ascending: false });
     if (error) throw error;
     return data ?? [];
   });
 
 export const upsertTerm = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireOrg])
   .inputValidator((i: unknown) => TermInput.parse(i))
   .handler(async ({ data, context }) => {
     const { id, ...rest } = data;
@@ -37,7 +37,7 @@ export const upsertTerm = createServerFn({ method: "POST" })
         .from("monitoring_terms")
         .update(rest)
         .eq("id", id)
-        .eq("user_id", context.userId)
+        .eq("organization_id", context.organizationId)
         .select()
         .single();
       if (error) throw error;
@@ -45,7 +45,7 @@ export const upsertTerm = createServerFn({ method: "POST" })
     }
     const { data: row, error } = await context.supabase
       .from("monitoring_terms")
-      .insert({ ...rest, user_id: context.userId })
+      .insert({ ...rest, organization_id: context.organizationId, created_by_user_id: context.userId })
       .select()
       .single();
     if (error) throw error;
@@ -53,14 +53,14 @@ export const upsertTerm = createServerFn({ method: "POST" })
   });
 
 export const deleteTerm = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireOrg])
   .inputValidator((i: unknown) => z.object({ id: z.string().uuid() }).parse(i))
   .handler(async ({ data, context }) => {
     const { error } = await context.supabase
       .from("monitoring_terms")
       .delete()
       .eq("id", data.id)
-      .eq("user_id", context.userId);
+      .eq("organization_id", context.organizationId);
     if (error) throw error;
     return { ok: true };
   });
@@ -75,13 +75,13 @@ const ListPubsInput = z.object({
 });
 
 export const listPublications = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireOrg])
   .inputValidator((i: unknown) => ListPubsInput.parse(i ?? {}))
   .handler(async ({ data, context }) => {
     let q = context.supabase
       .from("publications")
       .select("id, source, tribunal, orgao, publication_date, captured_at, cnj, snippet, url_original, status, case_id, task_id, created_at")
-      .eq("user_id", context.userId)
+      .eq("organization_id", context.organizationId)
       .order("captured_at", { ascending: false })
       .limit(data.limit);
     if (data.status !== "all") q = q.eq("status", data.status);
@@ -109,21 +109,21 @@ export const listPublications = createServerFn({ method: "GET" })
   });
 
 export const getPublication = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireOrg])
   .inputValidator((i: unknown) => z.object({ id: z.string().uuid() }).parse(i))
   .handler(async ({ data, context }) => {
     const { data: row, error } = await context.supabase
       .from("publications")
       .select("*, publication_term_matches(term_id, matched_field, matched_snippet)")
       .eq("id", data.id)
-      .eq("user_id", context.userId)
+      .eq("organization_id", context.organizationId)
       .single();
     if (error) throw error;
     return row;
   });
 
 export const updatePublication = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireOrg])
   .inputValidator((i: unknown) =>
     z
       .object({
@@ -139,7 +139,7 @@ export const updatePublication = createServerFn({ method: "POST" })
       .from("publications")
       .update(patch)
       .eq("id", id)
-      .eq("user_id", context.userId)
+      .eq("organization_id", context.organizationId)
       .select()
       .single();
     if (error) throw error;
@@ -147,12 +147,12 @@ export const updatePublication = createServerFn({ method: "POST" })
   });
 
 export const countUnreadPublications = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireOrg])
   .handler(async ({ context }) => {
     const { count, error } = await context.supabase
       .from("publications")
       .select("id", { count: "exact", head: true })
-      .eq("user_id", context.userId)
+      .eq("organization_id", context.organizationId)
       .eq("status", "new");
     if (error) throw error;
     return count ?? 0;
@@ -161,7 +161,7 @@ export const countUnreadPublications = createServerFn({ method: "GET" })
 const THROTTLE_MS = 5 * 60 * 1000;
 
 export const runFetchNow = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireOrg])
   .inputValidator((i: unknown) =>
     z.object({ termIds: z.array(z.string().uuid()).optional() }).parse(i ?? {}),
   )
@@ -171,7 +171,7 @@ export const runFetchNow = createServerFn({ method: "POST" })
     let q = context.supabase
       .from("monitoring_terms")
       .select("*")
-      .eq("user_id", context.userId)
+      .eq("organization_id", context.organizationId)
       .eq("active", true);
     if (data.termIds && data.termIds.length) q = q.in("id", data.termIds);
     const { data: terms, error } = await q;
@@ -195,13 +195,13 @@ export const runFetchNow = createServerFn({ method: "POST" })
   });
 
 export const listFetchLog = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireOrg])
   .inputValidator((i: unknown) => z.object({ limit: z.number().int().min(1).max(100).default(30) }).parse(i ?? {}))
   .handler(async ({ data, context }) => {
     const { data: rows, error } = await context.supabase
       .from("publication_fetch_log")
       .select("id, source, ok, http_status, latency_ms, results_count, error, cost_usd, created_at, term_id")
-      .eq("user_id", context.userId)
+      .eq("organization_id", context.organizationId)
       .order("created_at", { ascending: false })
       .limit(data.limit);
     if (error) throw error;

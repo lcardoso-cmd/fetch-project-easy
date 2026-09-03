@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireOrg } from "@/lib/org-middleware";
 
 export interface AiThread {
   id: string;
@@ -35,7 +35,7 @@ export interface AiMessage {
 }
 
 export const listThreads = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireOrg])
   .inputValidator((i: unknown) =>
     z.object({ case_id: z.string().uuid() }).parse(i),
   )
@@ -44,14 +44,14 @@ export const listThreads = createServerFn({ method: "GET" })
       .from("ai_chat_threads")
       .select("id, title, case_id, last_message_at, created_at")
       .eq("case_id", data.case_id)
-      .eq("user_id", context.userId)
+      .eq("organization_id", context.organizationId)
       .order("last_message_at", { ascending: false });
     if (error) throw error;
     return (rows ?? []) as AiThread[];
   });
 
 export const createThread = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireOrg])
   .inputValidator((i: unknown) =>
     z
       .object({
@@ -65,7 +65,8 @@ export const createThread = createServerFn({ method: "POST" })
       .from("ai_chat_threads")
       .insert({
         case_id: data.case_id,
-        user_id: context.userId,
+        organization_id: context.organizationId,
+        created_by_user_id: context.userId,
         title: data.title ?? "Nova conversa",
       })
       .select("id, title, case_id, last_message_at, created_at")
@@ -75,7 +76,7 @@ export const createThread = createServerFn({ method: "POST" })
   });
 
 export const renameThread = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireOrg])
   .inputValidator((i: unknown) =>
     z
       .object({ id: z.string().uuid(), title: z.string().min(1).max(200) })
@@ -86,26 +87,26 @@ export const renameThread = createServerFn({ method: "POST" })
       .from("ai_chat_threads")
       .update({ title: data.title })
       .eq("id", data.id)
-      .eq("user_id", context.userId);
+      .eq("organization_id", context.organizationId);
     if (error) throw error;
     return { ok: true };
   });
 
 export const deleteThread = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireOrg])
   .inputValidator((i: unknown) => z.object({ id: z.string().uuid() }).parse(i))
   .handler(async ({ data, context }) => {
     const { error } = await context.supabase
       .from("ai_chat_threads")
       .delete()
       .eq("id", data.id)
-      .eq("user_id", context.userId);
+      .eq("organization_id", context.organizationId);
     if (error) throw error;
     return { ok: true };
   });
 
 export const getThreadMessages = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireOrg])
   .inputValidator((i: unknown) =>
     z.object({ thread_id: z.string().uuid() }).parse(i),
   )
@@ -116,14 +117,14 @@ export const getThreadMessages = createServerFn({ method: "GET" })
         "id, thread_id, role, content, images, tool_steps, citations, model_tier, created_at, input_kind, audio_path, audio_duration_ms",
       )
       .eq("thread_id", data.thread_id)
-      .eq("user_id", context.userId)
+      .eq("organization_id", context.organizationId)
       .order("created_at", { ascending: true });
     if (error) throw error;
     return (rows ?? []) as unknown as AiMessage[];
   });
 
 export const getMessageAudioUrl = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireOrg])
   .inputValidator((i: unknown) =>
     z.object({ message_id: z.string().uuid() }).parse(i),
   )
@@ -132,7 +133,7 @@ export const getMessageAudioUrl = createServerFn({ method: "POST" })
       .from("ai_chat_messages")
       .select("audio_path, user_id")
       .eq("id", data.message_id)
-      .eq("user_id", context.userId)
+      .eq("organization_id", context.organizationId)
       .maybeSingle();
     if (error) throw error;
     if (!row?.audio_path) throw new Error("Áudio não encontrado.");

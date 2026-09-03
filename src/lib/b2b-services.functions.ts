@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireOrg } from "@/lib/org-middleware";
 
 export const B2B_REQUEST_STATUSES = [
   "novo",
@@ -87,7 +87,7 @@ export type B2bServiceRequestAttachment = {
 // ============= Catalog =============
 
 export const listB2bCatalog = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireOrg])
   .handler(async ({ context }) => {
     const { data, error } = await context.supabase
       .from("b2b_service_catalog")
@@ -112,12 +112,13 @@ const CreateSchema = z.object({
 });
 
 export const createB2bRequest = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireOrg])
   .inputValidator((i: unknown) => CreateSchema.parse(i))
   .handler(async ({ data, context }) => {
     const { data: row, error } = await context.supabase
       .from("b2b_service_requests")
       .insert({
+        organization_id: context.organizationId,
         requester_user_id: context.userId,
         service_slug: data.service_slug,
         title: data.title,
@@ -141,7 +142,7 @@ export const createB2bRequest = createServerFn({ method: "POST" })
   });
 
 export const listMyB2bRequests = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireOrg])
   .inputValidator((i: unknown) =>
     z
       .object({
@@ -170,7 +171,7 @@ export const listMyB2bRequests = createServerFn({ method: "GET" })
   });
 
 export const listAllB2bRequests = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireOrg])
   .inputValidator((i: unknown) =>
     z
       .object({
@@ -193,7 +194,7 @@ export const listAllB2bRequests = createServerFn({ method: "GET" })
   });
 
 export const getB2bRequest = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireOrg])
   .inputValidator((i: unknown) =>
     z.object({ id: z.string().uuid() }).parse(i),
   )
@@ -221,7 +222,7 @@ export const getB2bRequest = createServerFn({ method: "GET" })
   });
 
 export const updateB2bRequestStatus = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireOrg])
   .inputValidator((i: unknown) =>
     z
       .object({
@@ -255,7 +256,7 @@ export const updateB2bRequestStatus = createServerFn({ method: "POST" })
   });
 
 export const addB2bRequestNote = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireOrg])
   .inputValidator((i: unknown) =>
     z
       .object({
@@ -288,7 +289,7 @@ const RegisterAttSchema = z.object({
 });
 
 export const registerB2bAttachment = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireOrg])
   .inputValidator((i: unknown) => RegisterAttSchema.parse(i))
   .handler(async ({ data, context }) => {
     const { data: row, error } = await context.supabase
@@ -315,7 +316,7 @@ export const registerB2bAttachment = createServerFn({ method: "POST" })
   });
 
 export const deleteB2bAttachment = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireOrg])
   .inputValidator((i: unknown) => z.object({ id: z.string().uuid() }).parse(i))
   .handler(async ({ data, context }) => {
     const { data: att } = await context.supabase
@@ -335,7 +336,7 @@ export const deleteB2bAttachment = createServerFn({ method: "POST" })
   });
 
 export const getB2bAttachmentUrl = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireOrg])
   .inputValidator((i: unknown) => z.object({ id: z.string().uuid() }).parse(i))
   .handler(async ({ data, context }) => {
     const { data: att, error } = await context.supabase

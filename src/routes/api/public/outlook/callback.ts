@@ -92,11 +92,23 @@ export const Route = createFileRoute("/api/public/outlook/callback")({
 
         const expiresAt = new Date(Date.now() + tokens.expires_in * 1000).toISOString();
 
+        const { data: membership } = await supabaseAdmin
+          .from("organization_memberships")
+          .select("organization_id")
+          .eq("user_id", stateRow.user_id)
+          .eq("status", "active")
+          .order("created_at", { ascending: true })
+          .limit(1)
+          .maybeSingle();
+        if (!membership) return redirectBack("error", "no_organization");
+        const connectionOrgId = membership.organization_id;
+
         const { error: upsertErr } = await supabaseAdmin
           .from("outlook_connections")
           .upsert(
             {
               user_id: stateRow.user_id,
+              organization_id: connectionOrgId,
               outlook_email: outlookEmail,
               access_token: tokens.access_token,
               refresh_token: tokens.refresh_token,

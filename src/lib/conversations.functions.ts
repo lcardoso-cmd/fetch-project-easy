@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireOrg } from "@/lib/org-middleware";
 
 const AttachmentSchema = z.object({
   path: z.string(),
@@ -26,7 +26,7 @@ async function assertParticipant(
 }
 
 export const listMyConversations = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireOrg])
   .handler(async ({ context }) => {
     const { data: parts, error } = await context.supabase
       .from("conversation_participants")
@@ -116,12 +116,12 @@ export const listMyConversations = createServerFn({ method: "GET" })
 
 // Find or create the case conversation; auto-add owner + accepted member accounts on the case
 export const getOrCreateCaseConversation = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireOrg])
   .inputValidator((i: unknown) => z.object({ case_id: z.string().uuid() }).parse(i))
   .handler(async ({ data, context }) => {
     const { data: caseRow, error: cErr } = await context.supabase
       .from("cases")
-      .select("id, user_id, team_member_ids, title")
+      .select("id, title")
       .eq("id", data.case_id)
       .maybeSingle();
     if (cErr) throw cErr;
@@ -142,6 +142,7 @@ export const getOrCreateCaseConversation = createServerFn({ method: "POST" })
         .from("conversations")
         .insert({
           kind: "case",
+          organization_id: context.organizationId,
           case_id: data.case_id,
           title: caseRow.title,
           created_by: context.userId,
@@ -154,15 +155,13 @@ export const getOrCreateCaseConversation = createServerFn({ method: "POST" })
 
     // Compute desired participants: case owner + accepted invited members
     // (supabaseAdmin already imported above)
-    const memberIds = (caseRow.team_member_ids as string[]) ?? [];
-    const linkedUserIds = new Set<string>([caseRow.user_id]);
-    if (memberIds.length > 0) {
-      const { data: tms } = await supabaseAdmin
-        .from("team_members")
-        .select("member_user_id")
-        .in("id", memberIds);
-      for (const tm of tms ?? []) if (tm.member_user_id) linkedUserIds.add(tm.member_user_id);
-    }
+    const linkedUserIds = new Set<string>();
+    const { data: members } = await supabaseAdmin
+      .from("organization_memberships")
+      .select("user_id")
+      .eq("organization_id", context.organizationId)
+      .eq("status", "active");
+    for (const m of members ?? []) linkedUserIds.add(m.user_id);
     // Self is always a participant
     linkedUserIds.add(context.userId);
 
@@ -177,14 +176,14 @@ export const getOrCreateCaseConversation = createServerFn({ method: "POST" })
     if (toAdd.length > 0) {
       await supabaseAdmin
         .from("conversation_participants")
-        .insert(toAdd.map((u) => ({ conversation_id: conv!.id, user_id: u })));
+        .insert(toAdd.map((u) => ({ conversation_id: conv!.id, organization_id: context.organizationId, user_id: u })));
     }
 
     return conv;
   });
 
 export const getOrCreateDM = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireOrg])
   .inputValidator((i: unknown) =>
     z.object({ other_user_id: z.string().uuid() }).parse(i),
   )
@@ -226,7 +225,7 @@ export const getOrCreateDM = createServerFn({ method: "POST" })
 
     const ins = await context.supabase
       .from("conversations")
-      .insert({ kind: "dm", created_by: context.userId })
+      .insert({ kind: "dm", organization_id: context.organizationId, created_by: context.userId })
       .select("*")
       .single();
     if (ins.error) throw ins.error;
@@ -235,14 +234,14 @@ export const getOrCreateDM = createServerFn({ method: "POST" })
     await supabaseAdmin
       .from("conversation_participants")
       .insert([
-        { conversation_id: ins.data.id, user_id: context.userId },
-        { conversation_id: ins.data.id, user_id: data.other_user_id },
+        { conversation_id: ins.data.id, organization_id: context.organizationId, user_id: context.userId },
+        { conversation_id: ins.data.id, organization_id: context.organizationId, user_id: data.other_user_id },
       ]);
     return ins.data;
   });
 
 export const listConversationParticipants = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireOrg])
   .inputValidator((i: unknown) =>
     z.object({ conversation_id: z.string().uuid() }).parse(i),
   )
@@ -266,7 +265,7 @@ export const listConversationParticipants = createServerFn({ method: "GET" })
   });
 
 export const listMessages = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireOrg])
   .inputValidator((i: unknown) =>
     z
       .object({
@@ -302,7 +301,7 @@ export const listMessages = createServerFn({ method: "GET" })
   });
 
 export const sendMessage = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireOrg])
   .inputValidator((i: unknown) =>
     z
       .object({
@@ -324,6 +323,7 @@ export const sendMessage = createServerFn({ method: "POST" })
       .from("messages")
       .insert({
         conversation_id: data.conversation_id,
+        organization_id: context.organizationId,
         author_id: context.userId,
         body: data.body,
         attachments: data.attachments,
@@ -338,6 +338,7 @@ export const sendMessage = createServerFn({ method: "POST" })
         data.mention_user_ids.map((uid) => ({
           message_id: ins.data.id,
           conversation_id: data.conversation_id,
+          organization_id: context.organizationId,
           mentioned_user_id: uid,
         })),
       );
@@ -347,7 +348,7 @@ export const sendMessage = createServerFn({ method: "POST" })
   });
 
 export const markConversationRead = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireOrg])
   .inputValidator((i: unknown) => z.object({ conversation_id: z.string().uuid() }).parse(i))
   .handler(async ({ data, context }) => {
     await context.supabase
@@ -359,7 +360,7 @@ export const markConversationRead = createServerFn({ method: "POST" })
   });
 
 export const uploadConversationAttachment = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireOrg])
   .inputValidator((i: unknown) =>
     z
       .object({
@@ -371,13 +372,13 @@ export const uploadConversationAttachment = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertParticipant(context.supabase, data.conversation_id, context.userId);
     const safe = data.filename.replace(/[^a-zA-Z0-9._-]/g, "_");
-    const path = `${context.userId}/conversations/${data.conversation_id}/${Date.now()}_${safe}`;
+    const path = `${context.organizationId}/conversations/${data.conversation_id}/${Date.now()}_${safe}`;
     // Caller uploads the file via the client supabase storage (path returned here)
     return { path };
   });
 
 export const createTaskFromMessage = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireOrg])
   .inputValidator((i: unknown) =>
     z
       .object({
@@ -414,7 +415,8 @@ export const createTaskFromMessage = createServerFn({ method: "POST" })
     const taskIns = await context.supabase
       .from("tasks")
       .insert({
-        user_id: context.userId,
+        organization_id: context.organizationId,
+        created_by_user_id: context.userId,
         case_id: caseId,
         title: data.title,
         description: data.description ?? null,
@@ -438,6 +440,7 @@ export const createTaskFromMessage = createServerFn({ method: "POST" })
       await context.supabase.from("message_mentions").upsert(
         uniqueMentions.map((uid) => ({
           message_id: data.message_id,
+          organization_id: context.organizationId,
           conversation_id: msg.conversation_id,
           mentioned_user_id: uid,
         })),
