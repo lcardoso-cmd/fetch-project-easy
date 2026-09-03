@@ -167,30 +167,73 @@ const LAYERS = [
   },
 ];
 
+function LoginButton({
+  size = "default",
+  className,
+  variant = "ghost",
+  label = "Entrar",
+}: {
+  size?: "default" | "lg";
+  className?: string;
+  variant?: "ghost" | "outline" | "default";
+  label?: string;
+}) {
+  return (
+    <Button size={size} variant={variant} asChild className={className}>
+      <Link to="/entrar">{label}</Link>
+    </Button>
+  );
+}
+
+function TrialSignupButton({
+  size = "lg",
+  className,
+  label = "Testar grátis por 30 dias",
+}: {
+  size?: "default" | "lg";
+  className?: string;
+  label?: string;
+}) {
+  return (
+    <Button size={size} asChild className={className}>
+      <Link to="/entrar" search={TRIAL_SEARCH}>
+        {label}
+        <ArrowRight className="ml-2 h-4 w-4" />
+      </Link>
+    </Button>
+  );
+}
+
+function OpenDashboardButton({
+  size = "lg",
+  className,
+  label = "Abrir meu painel",
+}: {
+  size?: "default" | "lg";
+  className?: string;
+  label?: string;
+}) {
+  return (
+    <Button size={size} asChild className={className}>
+      <Link to="/painel">
+        {label}
+        <ArrowRight className="ml-2 h-4 w-4" />
+      </Link>
+    </Button>
+  );
+}
+
+function LearnMoreButton({ className }: { className?: string }) {
+  return (
+    <Button size="lg" variant="outline" asChild className={className}>
+      <a href="#como-funciona">Ver como funciona</a>
+    </Button>
+  );
+}
+
 function LandingPage() {
   const { user } = useAuth();
 
-  const TrialButton = ({
-    size = "lg",
-    className,
-    label,
-  }: {
-    size?: "default" | "lg";
-    className?: string;
-    label?: string;
-  }) =>
-    user ? (
-      <Button size={size} asChild className={className}>
-        <Link to="/painel">Abrir painel</Link>
-      </Button>
-    ) : (
-      <Button size={size} asChild className={className}>
-        <Link to="/entrar" search={TRIAL_SEARCH}>
-          {label ?? "Testar grátis por 30 dias"}
-          <ArrowRight className="ml-2 h-4 w-4" />
-        </Link>
-      </Button>
-    );
 
   return (
     <div className="min-h-screen bg-background">
