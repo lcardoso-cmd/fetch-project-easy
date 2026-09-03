@@ -152,7 +152,6 @@ export function buildFooterNav(): NavItem[] {
     link("settings", "/configuracoes", "Administração", Settings2, "startsWith"),
     link("help", "/ajuda/permissoes", "Ajuda", HelpCircle, "startsWith"),
   ];
-  ];
 }
 
 // Filtra links por capacidade e remove labels/separators órfãos.
