@@ -101,39 +101,19 @@ function buildNav(_practice: PracticeType | null | undefined): NavItem[] {
   });
 
   return [
-    // ─── MEU ESPAÇO ───
-    section("workspace", "Meu Espaço"),
-    link("dashboard", "/painel", "Painel", Home, "exact"),
-    link("my-tasks", "/tarefas", "Minhas Tarefas", ClipboardCheck),
-    link("inbox", "/conversas", "Conversas", MessageSquare, "startsWith"),
-    link("calendar", "/agenda", "Agenda", CalendarDays),
-    link("my-files", "/documentos", "Meus Documentos", FileArchive),
+    // ─── PRINCIPAL ───
+    section("main", "Principal"),
+    link("dashboard", "/painel", "Início", Home, "exact"),
+    link("cases", "/assistencias", "Casos", FolderKanban, "startsWith"),
+    link("assistant", "/assistente", "JurisMind AI", MessageSquare, "startsWith"),
+    link("my-work", "/tarefas", "Meu trabalho", ClipboardCheck),
+    link("library", "/documentos", "Biblioteca", FileArchive),
 
-    // ─── TRABALHO ───
+    // ─── MÓDULOS ───
     { type: "separator" },
-    section("practice", "Trabalho"),
-    link(
-      "cases",
-      "/assistencias",
-      "Casos",
-      FolderKanban,
-      "startsWith",
-    ),
-    link("drafter", "/pecas", "Peças Jurídicas", Scale),
-
-    // ─── NEGÓCIO ───
-    { type: "separator" },
-    section("business", "Negócio"),
-    link("proposal", "/propostas", "Proposta Comercial", Handshake),
-    link("monitoring", "/publicacoes", "Publicações", FileSearch),
-    link("marketing", "/marketing", "Marketing", Megaphone),
-    link("hire-b2b", "/contratar-b2b", "Contratar B2B", ShieldCheck, "startsWith"),
-
-    // ─── ESCRITÓRIO ───
-    { type: "separator" },
-    section("office", "Escritório"),
-    link("integrations", "/integracoes", "Integrações", Puzzle),
-    link("settings", "/configuracoes", "Configurações", Settings2),
+    section("modules", "Módulos"),
+    link("monitoring", "/publicacoes", "Monitoramento", FileSearch),
+    link("proposal", "/propostas", "Comercial", Handshake),
 
     // ─── PLATAFORMA B2B ───
     { type: "separator" },
@@ -144,6 +124,34 @@ function buildNav(_practice: PracticeType | null | undefined): NavItem[] {
     link("platform-requests", "/plataforma/solicitacoes", "Solicitações B2B", Handshake, "startsWith"),
     link("platform-credentials", "/plataforma/credenciais", "Credenciais SaaS", KeyRound, "startsWith"),
     link("platform-audit", "/plataforma/auditoria", "Log de auditoria", ScrollText, "startsWith"),
+  ];
+}
+
+/** Itens fixos do rodapé da barra lateral. */
+export function buildFooterNav(): NavItem[] {
+  const link = (
+    key: NavKey,
+    to: string,
+    label: string,
+    icon: LucideIcon,
+    match?: "exact" | "startsWith",
+  ): NavLink => {
+    const entry = NAV_ENTRIES[key];
+    return {
+      type: "link",
+      to,
+      label,
+      icon,
+      match,
+      requires: entry.requires,
+      description: describeNav(entry),
+    };
+  };
+  return [
+    link("hire-b2b", "/contratar-b2b", "Serviços especializados", ShieldCheck, "startsWith"),
+    link("settings", "/configuracoes", "Administração", Settings2, "startsWith"),
+    link("help", "/ajuda/permissoes", "Ajuda", HelpCircle, "startsWith"),
+  ];
   ];
 }
 
