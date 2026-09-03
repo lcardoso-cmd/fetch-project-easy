@@ -15,16 +15,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { getAccessRequestContext } from "@/lib/access-request.functions";
-import {
-  CAPABILITY_LABELS,
-  formatRequiresPhrase,
-  type Capability,
-} from "@/lib/capabilities.functions";
+import { accessLabel, type AccessRequirement } from "@/lib/access-labels";
 
 type Props = {
   open: boolean;
   onOpenChange: (v: boolean) => void;
-  requires?: Capability | null;
+  requires?: AccessRequirement | null;
   attemptedPath?: string;
 };
 
@@ -34,12 +30,12 @@ function buildDefaults({
   meName,
   meEmail,
 }: {
-  requires?: Capability | null;
+  requires?: AccessRequirement | null;
   attemptedPath?: string;
   meName: string | null;
   meEmail: string | null;
 }) {
-  const capLabel = requires ? CAPABILITY_LABELS[requires] : null;
+  const capLabel = accessLabel(requires);
   const subject = capLabel
     ? `Solicitação de acesso no JurisMind — permissão «${capLabel}»`
     : "Solicitação de acesso no JurisMind";
@@ -52,7 +48,7 @@ function buildDefaults({
     "",
     `Sou ${identifier} e preciso de acesso a uma área do JurisMind que está bloqueada para mim.`,
     "",
-    ...(requires ? [formatRequiresPhrase(requires), ""] : []),
+    ...(requires ? [`Requer a permissão «${accessLabel(requires)}».`, ""] : []),
     ...(attemptedPath ? [`Rota tentada: ${attemptedPath}`, ""] : []),
     "Poderia liberar em Configurações → Equipe e permissões?",
     "",
