@@ -23,6 +23,7 @@ import {
   OPERATIONAL_STATE_LABELS,
   formatMoneyCents,
   type BillingInterval,
+  type OperationalState,
 } from "@/lib/billing-shared";
 
 export const Route = createFileRoute("/_authenticated/organizacao/cobranca")({
@@ -143,7 +144,7 @@ function OrgBillingPage() {
           <div>
             <p className="text-muted-foreground">Estado operacional</p>
             <Badge variant="outline" className="mt-1">
-              {snapshot ? OPERATIONAL_STATE_LABELS[snapshot.operationalState] : "—"}
+              {snapshot ? OPERATIONAL_STATE_LABELS[snapshot.operationalState as OperationalState] : "—"}
             </Badge>
           </div>
           <div>
