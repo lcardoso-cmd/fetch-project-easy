@@ -42,6 +42,7 @@ import { labelsForMatter, type MatterKind } from "@/lib/practice-labels";
 import { PARTY_RELATIONS, representedRelationFor, guessRelation } from "@/lib/party-relations";
 import {
   createCase,
+  setCaseTeamAccess,
   extractCaseDataFromDocument,
   attachDocumentToCase,
   type ExtractedCaseData,
@@ -483,6 +484,17 @@ function NewCasePage() {
           practice_type: "advogado",
         },
       });
+
+      if (selectedMembers.length > 0) {
+        try {
+          await setTeamAccessFn({
+            data: { case_id: newCase.id, user_ids: selectedMembers },
+          });
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err);
+          toast.error(`Caso criado, mas falhou ao alocar a equipe: ${msg}`);
+        }
+      }
 
       if (uploaded) {
         try {
@@ -997,9 +1009,12 @@ function NewCasePage() {
           </CardHeader>
           <CardContent className="space-y-3">
             {team.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                Nenhum membro cadastrado. Adicione abaixo ou gerencie em{" "}
-                <Link to="/configuracoes" className="underline">Configurações</Link>.
+              <p className="text-ui text-muted-foreground">
+                Nenhum integrante ativo além de você. Convide sua equipe em{" "}
+                <Link to="/configuracoes/equipe" className="underline">
+                  Equipe e permissões
+                </Link>
+                .
               </p>
             ) : (
               <div className="grid gap-2 sm:grid-cols-2">
@@ -1013,64 +1028,24 @@ function NewCasePage() {
                       onCheckedChange={() => toggleMember(m.id)}
                     />
                     <div className="min-w-0">
-                      <p className="text-sm font-medium truncate">{m.name}</p>
-                      {m.role && (
-                        <p className="text-xs text-muted-foreground truncate">{m.role}</p>
-                      )}
+                      <p className="text-ui font-medium truncate">{m.name}</p>
+                      <p className="text-sm text-muted-foreground truncate">
+                        {m.role_label}
+                      </p>
                     </div>
                   </label>
                 ))}
               </div>
             )}
 
-            {addingMember ? (
-              <div className="rounded-md border p-3 space-y-2">
-                <div className="grid gap-2 sm:grid-cols-2">
-                  <Input
-                    placeholder="Nome"
-                    value={newMemberName}
-                    onChange={(e) => setNewMemberName(e.target.value)}
-                    maxLength={120}
-                  />
-                  <Input
-                    placeholder="Cargo (opcional)"
-                    value={newMemberRole}
-                    onChange={(e) => setNewMemberRole(e.target.value)}
-                    maxLength={120}
-                  />
-                </div>
-                <div className="flex gap-2">
-                  <Button
-                    type="button"
-                    size="sm"
-                    onClick={() => addMemberMut.mutate()}
-                    disabled={!newMemberName.trim() || addMemberMut.isPending}
-                  >
-                    {addMemberMut.isPending && (
-                      <Loader2 className="mr-1 h-3 w-3 animate-spin" />
-                    )}
-                    Salvar
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => setAddingMember(false)}
-                  >
-                    Cancelar
-                  </Button>
-                </div>
-              </div>
-            ) : (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => setAddingMember(true)}
-              >
-                <Plus className="mr-1 h-4 w-4" /> Adicionar membro
-              </Button>
-            )}
+            <p className="text-sm text-muted-foreground">
+              Integrantes alocados passam a ver e editar este caso. Novos acessos são
+              concedidos em{" "}
+              <Link to="/configuracoes/equipe" className="underline">
+                Equipe e permissões
+              </Link>
+              .
+            </p>
           </CardContent>
         </Card>
 
