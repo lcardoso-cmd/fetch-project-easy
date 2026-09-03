@@ -630,7 +630,7 @@ function AuthPage() {
                         setForgotEmail(email);
                         setForgotOpen(true);
                       }}
-                      className="text-xs font-medium text-primary underline-offset-4 hover:underline"
+                      className="inline-flex min-h-11 items-center px-1 text-sm font-medium text-primary underline-offset-4 hover:underline"
                     >
                       Esqueci minha senha
                     </button>
@@ -660,7 +660,7 @@ function AuthPage() {
                 <button
                   type="button"
                   onClick={() => { setMode("signup"); setError(null); }}
-                  className="font-medium text-primary underline-offset-4 hover:underline"
+                  className="inline-flex min-h-11 items-center px-1 font-medium text-primary underline-offset-4 hover:underline"
                 >
                   Criar conta
                 </button>
@@ -718,7 +718,7 @@ function AuthPage() {
                 <button
                   type="button"
                   onClick={() => { setMode("login"); setError(null); }}
-                  className="font-medium text-primary underline-offset-4 hover:underline"
+                  className="inline-flex min-h-11 items-center px-1 font-medium text-primary underline-offset-4 hover:underline"
                 >
                   Entrar
                 </button>
