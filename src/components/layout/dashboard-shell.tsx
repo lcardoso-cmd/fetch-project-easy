@@ -254,6 +254,10 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
     [profile?.practice_type],
   );
   const NAV = useMemo(() => applyCapabilities(raw, has), [raw, has]);
+  const FOOTER_NAV = useMemo(
+    () => applyCapabilities(buildFooterNav(), has),
+    [has],
+  );
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -355,7 +359,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                 return (
                   <div
                     key={idx}
-                    className="px-2 pb-1 pt-3 text-[10px] font-medium uppercase tracking-[0.14em] text-sidebar-foreground/45"
+                    className="px-2 pb-1 pt-3 text-[13px] font-medium uppercase tracking-[0.12em] text-sidebar-foreground/60"
                   >
                     {item.label}
                   </div>
@@ -369,8 +373,8 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                     <Link
                       to={item.to}
                       className={cn(
-                        "group relative flex items-center gap-2.5 rounded-md px-2 text-[13px] transition-colors",
-                        "h-8",
+                        "group relative flex items-center gap-2.5 rounded-md px-2 text-sm transition-colors",
+                        "h-9",
                         active
                           ? "bg-sidebar-accent font-medium text-foreground"
                           : "text-sidebar-foreground/80 hover:bg-sidebar-accent/60 hover:text-foreground",
@@ -396,6 +400,32 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
 
           {/* Footer */}
           <div className="border-t border-sidebar-border p-2 space-y-1">
+            {FOOTER_NAV.map((item) =>
+              item.type !== "link" ? null : (
+                <Tooltip key={item.to}>
+                  <TooltipTrigger asChild>
+                    <Link
+                      to={item.to}
+                      className={cn(
+                        "flex h-9 items-center gap-2.5 rounded-md px-2 text-sm transition-colors",
+                        isActive(item.to, item.match)
+                          ? "bg-sidebar-accent font-medium text-foreground"
+                          : "text-sidebar-foreground/80 hover:bg-sidebar-accent/60 hover:text-foreground",
+                        collapsed && "justify-center px-0",
+                      )}
+                    >
+                      <item.icon className="h-[15px] w-[15px] shrink-0" strokeWidth={1.75} />
+                      {!collapsed && <span className="truncate">{item.label}</span>}
+                    </Link>
+                  </TooltipTrigger>
+                  {collapsed && (
+                    <TooltipContent side="right" className="text-xs">
+                      {item.label}
+                    </TooltipContent>
+                  )}
+                </Tooltip>
+              ),
+            )}
             {isSuperAdmin && !collapsed && <ViewAsSwitcher />}
             {!collapsed && user && (
               <div className="flex items-center gap-2 px-1 py-1">
@@ -470,7 +500,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                         return (
                           <div
                             key={idx}
-                            className="px-2 pb-1 pt-3 text-[10px] font-medium uppercase tracking-[0.14em] text-sidebar-foreground/45"
+                            className="px-2 pb-1 pt-3 text-[13px] font-medium uppercase tracking-[0.12em] text-sidebar-foreground/60"
                           >
                             {item.label}
                           </div>
