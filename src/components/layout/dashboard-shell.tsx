@@ -289,7 +289,9 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   // Ambiente ativo: administração global B2B vive sob /plataforma;
   // todo o restante é o ambiente do escritório.
   const scope: ShellScope = pathname.startsWith("/plataforma") ? "b2b" : "office";
-  const canAdminB2B = has(NAV_ENTRIES.platform.requires ?? "view_dashboard");
+  const platformRequires = NAV_ENTRIES.platform.requires;
+  const canAdminB2B = platformRequires ? has(platformRequires) : true;
+
   const raw = useMemo(
     () => buildNav((profile?.practice_type as PracticeType | undefined) ?? null, scope),
     [profile?.practice_type, scope],
