@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { requireOrg, requireOrgPermission } from "@/lib/org-middleware";
+import { requireOrgPermission } from "@/lib/org-middleware";
 import {
   ORG_PERMISSIONS,
   ORG_ROLES,
@@ -446,6 +446,3 @@ export const acceptOrgInvitation = createServerFn({ method: "POST" })
     });
     return { organization_id: inv.organization_id as string };
   });
-
-/** Reexporta o middleware para testes de fumaça de importação. */
-export const __requireOrg = requireOrg;
