@@ -605,34 +605,51 @@ function LandingPage() {
           </div>
         </section>
 
-        {/* 8 · TESTE GRATUITO */}
+        {/* 8 · TESTE GRATUITO / CONTINUIDADE */}
         <section className="bg-primary text-primary-foreground">
           <div className="mx-auto max-w-3xl px-4 py-16 text-center">
-            <h2 className="font-heading text-3xl font-bold tracking-tight md:text-4xl">
-              Experimente o JurisMind em um caso real do seu escritório.
-            </h2>
-            <p className="mx-auto mt-4 max-w-2xl text-primary-foreground/80">
-              Crie sua conta, organize um caso, inclua documentos e conheça durante 30 dias a
-              diferença entre conversar com uma IA e trabalhar com inteligência jurídica
-              contextualizada.
-            </p>
-            <div className="mt-8 flex flex-wrap justify-center gap-3">
-              <TrialButton
-                className="bg-accent text-accent-foreground hover:bg-accent/90"
-                label="Começar meu teste gratuito"
-              />
-              <Button
-                size="lg"
-                variant="outline"
-                asChild
-                className="border-primary-foreground/30 bg-transparent text-primary-foreground hover:bg-primary-foreground/10"
-              >
-                <Link to="/entrar">Entrar na plataforma</Link>
-              </Button>
-            </div>
-            <p className="mt-5 text-sm text-primary-foreground/70">Teste gratuito por 30 dias.</p>
+            {user ? (
+              <>
+                <h2 className="font-heading text-3xl font-bold tracking-tight md:text-4xl">
+                  Continue seu trabalho no JurisMind.
+                </h2>
+                <p className="mx-auto mt-4 max-w-2xl text-primary-foreground/80">
+                  Acesse seus casos, documentos e recursos de inteligência jurídica.
+                </p>
+                <div className="mt-8 flex justify-center">
+                  <OpenDashboardButton className="bg-accent text-accent-foreground hover:bg-accent/90" />
+                </div>
+              </>
+            ) : (
+              <>
+                <h2 className="font-heading text-3xl font-bold tracking-tight md:text-4xl">
+                  Experimente o JurisMind em um caso real do seu escritório.
+                </h2>
+                <p className="mx-auto mt-4 max-w-2xl text-primary-foreground/80">
+                  Crie sua conta, organize um caso, inclua documentos e conheça durante 30 dias a
+                  diferença entre conversar com uma IA e trabalhar com inteligência jurídica
+                  contextualizada.
+                </p>
+                <div className="mt-8 flex justify-center">
+                  <TrialSignupButton
+                    className="bg-accent text-accent-foreground hover:bg-accent/90"
+                    label="Começar meu teste gratuito"
+                  />
+                </div>
+                <p className="mt-4 text-sm text-primary-foreground/70">
+                  Já possui uma conta?{" "}
+                  <Link to="/entrar" className="font-medium underline underline-offset-4">
+                    Entrar
+                  </Link>
+                </p>
+                <p className="mt-5 text-sm text-primary-foreground/70">
+                  Teste gratuito por 30 dias.
+                </p>
+              </>
+            )}
           </div>
         </section>
+
       </main>
 
       <footer className="border-t bg-card">
