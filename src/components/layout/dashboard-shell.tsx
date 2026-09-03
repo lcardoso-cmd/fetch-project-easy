@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useLocation } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { JurisMindMark, JURISMIND_CONTEXT } from "@/components/brand/jurismind-mark";
@@ -594,20 +594,34 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   const { pathname } = useLocation();
   const { user, signOut } = useAuth();
   useProfile();
-  const { has, isSuperAdmin, activePreset, clearSimulation } = useCapabilities();
+  const {
+    hasOrgPermission,
+    hasPlatformRole,
+    isPlatformUser,
+    simulation,
+    roleLabel,
+    clearSimulation,
+  } = useAccess();
+  const can = useCallback(
+    (l: NavLink) =>
+      l.platformRole
+        ? hasPlatformRole(l.platformRole)
+        : !l.requires || hasOrgPermission(l.requires),
+    [hasPlatformRole, hasOrgPermission],
+  );
   // Ambiente ativo: administração global B2B vive sob /plataforma;
   // todo o restante é o ambiente do escritório.
   const scope: ShellScope = pathname.startsWith("/plataforma") ? "b2b" : "office";
-  const platformRequires = NAV_ENTRIES.platform.requires;
-  const canAdminB2B = platformRequires ? has(platformRequires) : true;
+  // Só quem tem papel interno da B2B vê o ambiente de administração global.
+  const canAdminB2B = hasPlatformRole("platform_admin");
 
   const sections = useMemo(
-    () => applyCapabilities(buildNavSections(scope), has),
-    [has, scope],
+    () => applyAccess(buildNavSections(scope), can),
+    [can, scope],
   );
   const footerNav = useMemo(
-    () => buildFooterNav(scope).filter((l) => !l.requires || has(l.requires)),
-    [has, scope],
+    () => buildFooterNav(scope).filter(can),
+    [can, scope],
   );
 
   // Grupo da rota ativa abre automaticamente; os demais iniciam recolhidos.
@@ -759,7 +773,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
           {/* Footer — perfil/sair ficam no UserMenu do cabeçalho */}
           <div className="shrink-0 space-y-1 border-t border-sidebar-border p-2">
             {footerRows({ collapsed })}
-            {isSuperAdmin && !collapsed && <ViewAsSwitcher />}
+            {isPlatformUser && !collapsed && <ViewAsSwitcher />}
           </div>
         </aside>
 
@@ -809,7 +823,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                     </div>
                   </nav>
                   <div className="shrink-0 space-y-1 border-t border-sidebar-border p-2">
-                    {isSuperAdmin && <ViewAsSwitcher />}
+                    {isPlatformUser && <ViewAsSwitcher />}
                     {user && (
                       <p className="truncate px-3 py-1 text-sm text-sidebar-foreground/78">
                         {user.email}
