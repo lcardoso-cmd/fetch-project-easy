@@ -26,7 +26,6 @@ import {
   reorderTasks,
   updateTask,
   toggleTask,
-  updateTaskStatus,
   TASK_STATUSES,
   TASK_STATUS_LABEL,
   type TaskStatus,
@@ -90,7 +89,6 @@ function MyWorkPage() {
   const reorderTasksFn = useServerFn(reorderTasks);
   const deleteTaskFn = useServerFn(deleteTask);
   const createTaskFn = useServerFn(createTask);
-  const updateStatusFn = useServerFn(updateTaskStatus);
   const toggleTaskFn = useServerFn(toggleTask);
   const deleteEventFn = useServerFn(deleteEvent);
   const gCalFn = useServerFn(listGoogleCalendarEvents);
@@ -241,19 +239,6 @@ function MyWorkPage() {
   );
   const overdueTasks = openTasks.filter((t) => t.due_date && new Date(t.due_date) < now);
 
-  async function handleStatusChange(taskId: string, newStatus: TaskStatus) {
-    const previous = qc.getQueryData(["tasks", "all"]);
-    qc.setQueryData<Task[]>(["tasks", "all"], (old) =>
-      (old ?? []).map((t) => (t.id === taskId ? { ...t, status: newStatus } : t)),
-    );
-    try {
-      await updateStatusFn({ data: { id: taskId, status: newStatus } });
-      await qc.invalidateQueries({ queryKey: ["tasks"] });
-    } catch (e) {
-      qc.setQueryData(["tasks", "all"], previous);
-      toast.error(e instanceof Error ? e.message : "Erro ao mover tarefa");
-    }
-  }
 
   const removeEvent = async (id: string) => {
     await deleteEventFn({ data: { id } });
