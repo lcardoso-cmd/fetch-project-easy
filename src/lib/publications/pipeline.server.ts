@@ -92,7 +92,7 @@ export async function runPipelineForTerm(
     return { captured: 0, matched: 0, sourcesTried };
   }
 
-  // Persistir com dedupe por (user_id, hash)
+  // Persistir com dedupe por (organization_id, hash)
   let captured = 0;
   for (const { pub, matchedField, matchedSnippet } of collected) {
     const hash = publicationHash(pub);
@@ -104,7 +104,7 @@ export async function runPipelineForTerm(
       const { data: caseMatch } = await supabase
         .from("cases")
         .select("id")
-        .eq("user_id", term.user_id)
+        .eq("organization_id", term.organization_id)
         .not("case_number", "is", null)
         .limit(1)
         .filter("case_number", "ilike", `%${digits.slice(-10)}%`)
@@ -118,7 +118,8 @@ export async function runPipelineForTerm(
       .from("publications")
       .upsert(
         {
-          user_id: term.user_id,
+          organization_id: term.organization_id,
+          created_by_user_id: term.created_by_user_id,
           source: pub.source,
           external_id: pub.external_id,
           tribunal: pub.tribunal,
@@ -132,7 +133,7 @@ export async function runPipelineForTerm(
           status: "new",
           case_id: caseId,
         },
-        { onConflict: "user_id,hash", ignoreDuplicates: false },
+        { onConflict: "organization_id,hash", ignoreDuplicates: false },
       )
       .select("id, created_at")
       .single();
@@ -150,6 +151,7 @@ export async function runPipelineForTerm(
       .upsert(
         {
           publication_id: inserted.id,
+          organization_id: term.organization_id,
           term_id: term.id,
           matched_field: matchedField,
           matched_snippet: matchedSnippet,
@@ -164,14 +166,15 @@ export async function runPipelineForTerm(
       const { data: task } = await supabase
         .from("tasks")
         .insert({
-          user_id: term.user_id,
+          organization_id: term.organization_id,
+          created_by_user_id: term.created_by_user_id,
           case_id: caseId,
           title: `Publicação: ${pub.tribunal ?? "tribunal"} — ${makeSnippet(pub.content, 80)}`,
           description: pub.content.slice(0, 2000),
           status: "pending",
           priority: "high",
           due_date: due.toISOString(),
-          assigned_to_user_id: term.responsible_user_id ?? term.user_id,
+          assigned_to_user_id: term.responsible_user_id ?? term.created_by_user_id,
         })
         .select("id")
         .single();
@@ -220,7 +223,7 @@ async function logFetch(
   costUsd = 0,
 ) {
   await supabase.from("publication_fetch_log").insert({
-    user_id: term.user_id,
+    organization_id: term.organization_id,
     term_id: term.id,
     source,
     ok,
