@@ -8,11 +8,15 @@ import { Loader2, Send, FileText, AlertCircle } from "lucide-react";
 import { JurisMindMark, JURISMIND_CONTEXT } from "@/components/brand/jurismind-mark";
 
 interface Citation {
+  ref?: string;
+  chunk_id?: string;
   document_id: string;
   filename: string;
   snippet: string;
-  similarity: number;
+  location?: string | null;
+  is_context?: boolean;
 }
+
 
 interface ToolStep {
   name: string;
@@ -104,19 +108,28 @@ export function ChatPanel({
                 {m.content}
                 {m.citations && m.citations.length > 0 && (
                   <div className="mt-3 space-y-1 border-t border-border/40 pt-2">
-                    <p className="text-xs font-semibold opacity-70">Fontes:</p>
+                    <p className="text-sm font-semibold text-foreground/80">Fontes:</p>
                     {m.citations.map((c, idx) => (
-                      <div key={idx} className="flex items-start gap-2 text-xs opacity-80">
-                        <FileText className="mt-0.5 h-3 w-3 shrink-0" />
-                        <span>
-                          [{idx + 1}] {c.filename}
-                          <span className="ml-1 opacity-60">
-                            ({Math.round(c.similarity * 100)}%)
+                      <div
+                        key={c.chunk_id ?? idx}
+                        className="flex items-start gap-2 text-sm text-foreground/80"
+                      >
+                        <FileText className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                        <span className="min-w-0 flex-1">
+                          <span className="font-medium">
+                            [{c.ref ?? `F${idx + 1}`}] {c.filename}
                           </span>
+                          {c.location ? (
+                            <span className="text-foreground/60"> · {c.location}</span>
+                          ) : null}
+                          {c.is_context ? (
+                            <span className="text-foreground/50"> · contexto vizinho</span>
+                          ) : null}
                         </span>
                       </div>
                     ))}
                   </div>
+
                 )}
                 {m.steps && m.steps.length > 0 && (
                   <div className="mt-3 space-y-1 border-t border-border/40 pt-2">

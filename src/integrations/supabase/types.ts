@@ -757,37 +757,73 @@ export type Database = {
         Row: {
           case_id: string
           chunk_index: number
+          chunking_version: string | null
           content: string
+          content_hash: string | null
           content_tsv: unknown
           created_at: string
           document_id: string
           embedding: string | null
+          embedding_model: string | null
           id: string
+          metadata: Json
+          page_end: number | null
+          page_start: number | null
+          parser_version: string | null
+          row_end: number | null
+          row_start: number | null
+          section_title: string | null
+          sheet_name: string | null
           source_kind: string
+          token_count: number | null
           user_id: string
         }
         Insert: {
           case_id: string
           chunk_index: number
+          chunking_version?: string | null
           content: string
+          content_hash?: string | null
           content_tsv?: unknown
           created_at?: string
           document_id: string
           embedding?: string | null
+          embedding_model?: string | null
           id?: string
+          metadata?: Json
+          page_end?: number | null
+          page_start?: number | null
+          parser_version?: string | null
+          row_end?: number | null
+          row_start?: number | null
+          section_title?: string | null
+          sheet_name?: string | null
           source_kind?: string
+          token_count?: number | null
           user_id: string
         }
         Update: {
           case_id?: string
           chunk_index?: number
+          chunking_version?: string | null
           content?: string
+          content_hash?: string | null
           content_tsv?: unknown
           created_at?: string
           document_id?: string
           embedding?: string | null
+          embedding_model?: string | null
           id?: string
+          metadata?: Json
+          page_end?: number | null
+          page_start?: number | null
+          parser_version?: string | null
+          row_end?: number | null
+          row_start?: number | null
+          section_title?: string | null
+          sheet_name?: string | null
           source_kind?: string
+          token_count?: number | null
           user_id?: string
         }
         Relationships: [
@@ -1735,6 +1771,78 @@ export type Database = {
           },
         ]
       }
+      rag_retrieval_events: {
+        Row: {
+          candidates: number
+          case_id: string | null
+          chunking_versions: string[] | null
+          created_at: string
+          documents_touched: number
+          embedding_model: string | null
+          id: string
+          keywords_used: number
+          latency_ms: number | null
+          model_tier: string | null
+          neighbors: number
+          queries_used: number
+          question_chars: number
+          reranker_reason: string | null
+          reranker_used: boolean
+          retrieval_version: string | null
+          retrieved: number
+          sufficiency: string | null
+          thread_id: string | null
+          top_similarity: number | null
+          user_id: string
+        }
+        Insert: {
+          candidates?: number
+          case_id?: string | null
+          chunking_versions?: string[] | null
+          created_at?: string
+          documents_touched?: number
+          embedding_model?: string | null
+          id?: string
+          keywords_used?: number
+          latency_ms?: number | null
+          model_tier?: string | null
+          neighbors?: number
+          queries_used?: number
+          question_chars?: number
+          reranker_reason?: string | null
+          reranker_used?: boolean
+          retrieval_version?: string | null
+          retrieved?: number
+          sufficiency?: string | null
+          thread_id?: string | null
+          top_similarity?: number | null
+          user_id: string
+        }
+        Update: {
+          candidates?: number
+          case_id?: string | null
+          chunking_versions?: string[] | null
+          created_at?: string
+          documents_touched?: number
+          embedding_model?: string | null
+          id?: string
+          keywords_used?: number
+          latency_ms?: number | null
+          model_tier?: string | null
+          neighbors?: number
+          queries_used?: number
+          question_chars?: number
+          reranker_reason?: string | null
+          reranker_used?: boolean
+          retrieval_version?: string | null
+          retrieved?: number
+          sufficiency?: string | null
+          thread_id?: string | null
+          top_similarity?: number | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       tasks: {
         Row: {
           assigned_to_user_id: string | null
@@ -1981,6 +2089,28 @@ export type Database = {
         }[]
       }
       can_view_all_ai_usage: { Args: { _user_id: string }; Returns: boolean }
+      fetch_chunk_neighbors: {
+        Args: {
+          chunk_indexes: number[]
+          doc_ids: string[]
+          filter_case_id: string
+        }
+        Returns: {
+          case_id: string
+          chunk_index: number
+          chunking_version: string
+          content: string
+          document_id: string
+          id: string
+          page_end: number
+          page_start: number
+          row_end: number
+          row_start: number
+          section_title: string
+          sheet_name: string
+          source_kind: string
+        }[]
+      }
       has_capability: {
         Args: {
           _capability: Database["public"]["Enums"]["app_capability"]
@@ -2012,6 +2142,35 @@ export type Database = {
           fts_rank: number
           id: string
           score: number
+          source_kind: string
+          vector_similarity: number
+        }[]
+      }
+      hybrid_search_chunks_v2: {
+        Args: {
+          filter_case_id: string
+          filter_doc_ids?: string[]
+          keyword_text?: string
+          match_count?: number
+          query_embedding: string
+          query_text: string
+          rrf_k?: number
+        }
+        Returns: {
+          case_id: string
+          chunk_index: number
+          chunking_version: string
+          content: string
+          document_id: string
+          fts_rank: number
+          id: string
+          page_end: number
+          page_start: number
+          row_end: number
+          row_start: number
+          score: number
+          section_title: string
+          sheet_name: string
           source_kind: string
           vector_similarity: number
         }[]
