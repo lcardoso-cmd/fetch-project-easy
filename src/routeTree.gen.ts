@@ -72,6 +72,7 @@ import { Route as ApiToolsPdfRouteImport } from './routes/api/tools/pdf'
 import { Route as ApiChatStreamRouteImport } from './routes/api/chat/stream'
 import { Route as AuthenticatedSettingsOauthRouteImport } from './routes/_authenticated/settings.oauth'
 import { Route as AuthenticatedSettingsFirmRouteImport } from './routes/_authenticated/settings.firm'
+import { Route as AuthenticatedOrganizacaoCobrancaRouteImport } from './routes/_authenticated/organizacao.cobranca'
 import { Route as AuthenticatedContratarB2bSolicitarRouteImport } from './routes/_authenticated/contratar-b2b.solicitar'
 import { Route as AuthenticatedContratarB2bRequestIdRouteImport } from './routes/_authenticated/contratar-b2b.$requestId'
 import { Route as AuthenticatedConfiguracoesOauthRouteImport } from './routes/_authenticated/configuracoes.oauth'
@@ -446,6 +447,12 @@ const AuthenticatedSettingsFirmRoute =
     path: '/firm',
     getParentRoute: () => AuthenticatedSettingsRoute,
   } as any)
+const AuthenticatedOrganizacaoCobrancaRoute =
+  AuthenticatedOrganizacaoCobrancaRouteImport.update({
+    id: '/cobranca',
+    path: '/cobranca',
+    getParentRoute: () => AuthenticatedOrganizacaoRoute,
+  } as any)
 const AuthenticatedContratarB2bSolicitarRoute =
   AuthenticatedContratarB2bSolicitarRouteImport.update({
     id: '/contratar-b2b/solicitar',
@@ -719,7 +726,7 @@ export interface FileRoutesByFullPath {
   '/notificacoes': typeof AuthenticatedNotificacoesRoute
   '/notifications': typeof AuthenticatedNotificationsRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
-  '/organizacao': typeof AuthenticatedOrganizacaoRoute
+  '/organizacao': typeof AuthenticatedOrganizacaoRouteWithChildren
   '/painel': typeof AuthenticatedPainelRoute
   '/parecer-tecnico': typeof AuthenticatedParecerTecnicoRoute
   '/pecas': typeof AuthenticatedPecasRoute
@@ -747,6 +754,7 @@ export interface FileRoutesByFullPath {
   '/configuracoes/oauth': typeof AuthenticatedConfiguracoesOauthRoute
   '/contratar-b2b/$requestId': typeof AuthenticatedContratarB2bRequestIdRoute
   '/contratar-b2b/solicitar': typeof AuthenticatedContratarB2bSolicitarRoute
+  '/organizacao/cobranca': typeof AuthenticatedOrganizacaoCobrancaRoute
   '/settings/firm': typeof AuthenticatedSettingsFirmRoute
   '/settings/oauth': typeof AuthenticatedSettingsOauthRoute
   '/api/chat/stream': typeof ApiChatStreamRoute
@@ -821,7 +829,7 @@ export interface FileRoutesByTo {
   '/notificacoes': typeof AuthenticatedNotificacoesRoute
   '/notifications': typeof AuthenticatedNotificationsRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
-  '/organizacao': typeof AuthenticatedOrganizacaoRoute
+  '/organizacao': typeof AuthenticatedOrganizacaoRouteWithChildren
   '/painel': typeof AuthenticatedPainelRoute
   '/parecer-tecnico': typeof AuthenticatedParecerTecnicoRoute
   '/pecas': typeof AuthenticatedPecasRoute
@@ -849,6 +857,7 @@ export interface FileRoutesByTo {
   '/configuracoes/oauth': typeof AuthenticatedConfiguracoesOauthRoute
   '/contratar-b2b/$requestId': typeof AuthenticatedContratarB2bRequestIdRoute
   '/contratar-b2b/solicitar': typeof AuthenticatedContratarB2bSolicitarRoute
+  '/organizacao/cobranca': typeof AuthenticatedOrganizacaoCobrancaRoute
   '/settings/firm': typeof AuthenticatedSettingsFirmRoute
   '/settings/oauth': typeof AuthenticatedSettingsOauthRoute
   '/api/chat/stream': typeof ApiChatStreamRoute
@@ -927,7 +936,7 @@ export interface FileRoutesById {
   '/_authenticated/notificacoes': typeof AuthenticatedNotificacoesRoute
   '/_authenticated/notifications': typeof AuthenticatedNotificationsRoute
   '/_authenticated/onboarding': typeof AuthenticatedOnboardingRoute
-  '/_authenticated/organizacao': typeof AuthenticatedOrganizacaoRoute
+  '/_authenticated/organizacao': typeof AuthenticatedOrganizacaoRouteWithChildren
   '/_authenticated/painel': typeof AuthenticatedPainelRoute
   '/_authenticated/parecer-tecnico': typeof AuthenticatedParecerTecnicoRoute
   '/_authenticated/pecas': typeof AuthenticatedPecasRoute
@@ -955,6 +964,7 @@ export interface FileRoutesById {
   '/_authenticated/configuracoes/oauth': typeof AuthenticatedConfiguracoesOauthRoute
   '/_authenticated/contratar-b2b/$requestId': typeof AuthenticatedContratarB2bRequestIdRoute
   '/_authenticated/contratar-b2b/solicitar': typeof AuthenticatedContratarB2bSolicitarRoute
+  '/_authenticated/organizacao/cobranca': typeof AuthenticatedOrganizacaoCobrancaRoute
   '/_authenticated/settings/firm': typeof AuthenticatedSettingsFirmRoute
   '/_authenticated/settings/oauth': typeof AuthenticatedSettingsOauthRoute
   '/api/chat/stream': typeof ApiChatStreamRoute
@@ -1061,6 +1071,7 @@ export interface FileRouteTypes {
     | '/configuracoes/oauth'
     | '/contratar-b2b/$requestId'
     | '/contratar-b2b/solicitar'
+    | '/organizacao/cobranca'
     | '/settings/firm'
     | '/settings/oauth'
     | '/api/chat/stream'
@@ -1163,6 +1174,7 @@ export interface FileRouteTypes {
     | '/configuracoes/oauth'
     | '/contratar-b2b/$requestId'
     | '/contratar-b2b/solicitar'
+    | '/organizacao/cobranca'
     | '/settings/firm'
     | '/settings/oauth'
     | '/api/chat/stream'
@@ -1268,6 +1280,7 @@ export interface FileRouteTypes {
     | '/_authenticated/configuracoes/oauth'
     | '/_authenticated/contratar-b2b/$requestId'
     | '/_authenticated/contratar-b2b/solicitar'
+    | '/_authenticated/organizacao/cobranca'
     | '/_authenticated/settings/firm'
     | '/_authenticated/settings/oauth'
     | '/api/chat/stream'
@@ -1786,6 +1799,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSettingsFirmRouteImport
       parentRoute: typeof AuthenticatedSettingsRoute
     }
+    '/_authenticated/organizacao/cobranca': {
+      id: '/_authenticated/organizacao/cobranca'
+      path: '/cobranca'
+      fullPath: '/organizacao/cobranca'
+      preLoaderRoute: typeof AuthenticatedOrganizacaoCobrancaRouteImport
+      parentRoute: typeof AuthenticatedOrganizacaoRoute
+    }
     '/_authenticated/contratar-b2b/solicitar': {
       id: '/_authenticated/contratar-b2b/solicitar'
       path: '/contratar-b2b/solicitar'
@@ -2159,6 +2179,21 @@ const AuthenticatedConfiguracoesRouteWithChildren =
     AuthenticatedConfiguracoesRouteChildren,
   )
 
+interface AuthenticatedOrganizacaoRouteChildren {
+  AuthenticatedOrganizacaoCobrancaRoute: typeof AuthenticatedOrganizacaoCobrancaRoute
+}
+
+const AuthenticatedOrganizacaoRouteChildren: AuthenticatedOrganizacaoRouteChildren =
+  {
+    AuthenticatedOrganizacaoCobrancaRoute:
+      AuthenticatedOrganizacaoCobrancaRoute,
+  }
+
+const AuthenticatedOrganizacaoRouteWithChildren =
+  AuthenticatedOrganizacaoRoute._addFileChildren(
+    AuthenticatedOrganizacaoRouteChildren,
+  )
+
 interface AuthenticatedSettingsRouteChildren {
   AuthenticatedSettingsFirmRoute: typeof AuthenticatedSettingsFirmRoute
   AuthenticatedSettingsOauthRoute: typeof AuthenticatedSettingsOauthRoute
@@ -2199,7 +2234,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedNotificacoesRoute: typeof AuthenticatedNotificacoesRoute
   AuthenticatedNotificationsRoute: typeof AuthenticatedNotificationsRoute
   AuthenticatedOnboardingRoute: typeof AuthenticatedOnboardingRoute
-  AuthenticatedOrganizacaoRoute: typeof AuthenticatedOrganizacaoRoute
+  AuthenticatedOrganizacaoRoute: typeof AuthenticatedOrganizacaoRouteWithChildren
   AuthenticatedPainelRoute: typeof AuthenticatedPainelRoute
   AuthenticatedParecerTecnicoRoute: typeof AuthenticatedParecerTecnicoRoute
   AuthenticatedPecasRoute: typeof AuthenticatedPecasRoute
@@ -2258,7 +2293,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedNotificacoesRoute: AuthenticatedNotificacoesRoute,
   AuthenticatedNotificationsRoute: AuthenticatedNotificationsRoute,
   AuthenticatedOnboardingRoute: AuthenticatedOnboardingRoute,
-  AuthenticatedOrganizacaoRoute: AuthenticatedOrganizacaoRoute,
+  AuthenticatedOrganizacaoRoute: AuthenticatedOrganizacaoRouteWithChildren,
   AuthenticatedPainelRoute: AuthenticatedPainelRoute,
   AuthenticatedParecerTecnicoRoute: AuthenticatedParecerTecnicoRoute,
   AuthenticatedPecasRoute: AuthenticatedPecasRoute,
