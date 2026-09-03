@@ -39,7 +39,7 @@ import {
   type B2bRequestStatus,
 } from "@/lib/b2b-services.functions";
 
-const STATUS_FILTER_VALUES = ["todos", ...B2B_REQUEST_STATUSES] as const;
+export const STATUS_FILTER_VALUES = ["todos", ...B2B_REQUEST_STATUSES] as const;
 type StatusFilter = (typeof STATUS_FILTER_VALUES)[number];
 
 const searchSchema = z.object({

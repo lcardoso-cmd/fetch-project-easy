@@ -29,7 +29,7 @@ type OAuthNamespace = {
     error: { message: string } | null;
   }>;
 };
-function oauth(): OAuthNamespace {
+export function oauth(): OAuthNamespace {
   return (supabase.auth as unknown as { oauth: OAuthNamespace }).oauth;
 }
 
