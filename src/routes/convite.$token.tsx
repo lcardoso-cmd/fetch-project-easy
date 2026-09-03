@@ -2,9 +2,15 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { peekInvitation, acceptInvitation } from "@/lib/team.functions";
+import { peekOrgInvitation, acceptOrgInvitation } from "@/lib/org-team.functions";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { useAuth } from "@/hooks/use-auth";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
@@ -12,12 +18,22 @@ import { toast } from "sonner";
 export const Route = createFileRoute("/convite/$token")({
   head: () => ({
     meta: [
-      { title: "Convite de equipe — JurisMind AI" },
-      { name: "description", content: "Aceite seu convite para colaborar em casos da equipe no JurisMind AI." },
+      { title: "Convite para o escritório — JurisMind AI" },
+      {
+        name: "description",
+        content:
+          "Aceite seu convite para participar do escritório no JurisMind AI e colaborar nos casos.",
+      },
       { name: "robots", content: "noindex" },
+      { property: "og:title", content: "Convite para o escritório — JurisMind AI" },
+      {
+        property: "og:description",
+        content: "Aceite o convite e comece a colaborar nos casos do escritório.",
+      },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
-
   component: InvitePage,
 });
 
@@ -25,11 +41,11 @@ function InvitePage() {
   const { token } = Route.useParams();
   const navigate = useNavigate();
   const { user, isLoading: loading } = useAuth();
-  const peekFn = useServerFn(peekInvitation);
-  const acceptFn = useServerFn(acceptInvitation);
+  const peekFn = useServerFn(peekOrgInvitation);
+  const acceptFn = useServerFn(acceptOrgInvitation);
 
   const { data: inv, isLoading } = useQuery({
-    queryKey: ["invitation", token],
+    queryKey: ["org-invitation", token],
     queryFn: () => peekFn({ data: { token } }),
   });
 
@@ -46,24 +62,23 @@ function InvitePage() {
     try {
       await acceptFn({ data: { token } });
       sessionStorage.removeItem("pending_invite_token");
-      toast.success("Convite aceito! Bem-vindo à equipe.");
+      toast.success("Convite aceito! Bem-vindo(a) ao escritório.");
       navigate({ to: "/painel" });
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Falha ao aceitar");
+      toast.error(e instanceof Error ? e.message : "Falha ao aceitar o convite");
     } finally {
       setBusy(false);
     }
   }
 
   return (
-    <main className="min-h-screen flex items-center justify-center p-4 bg-background">
+    <main className="flex min-h-screen items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md">
         <CardHeader>
-          <h1 className="sr-only">Convite para equipe JurisMind AI</h1>
-          <CardTitle>Convite para equipe</CardTitle>
+          <h1 className="sr-only">Convite para o escritório no JurisMind AI</h1>
+          <CardTitle>Convite para o escritório</CardTitle>
           <CardDescription>
-
-            Você foi convidado a colaborar em casos no Lovable Juris.
+            Você foi convidado(a) a participar de uma organização no JurisMind.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -72,9 +87,9 @@ function InvitePage() {
               <Loader2 className="h-5 w-5 animate-spin" />
             </div>
           ) : !inv ? (
-            <p className="text-sm text-destructive">Convite inválido ou expirado.</p>
+            <p className="text-ui text-destructive">Convite inválido.</p>
           ) : inv.status === "accepted" ? (
-            <p className="text-sm">
+            <p className="text-ui">
               Este convite já foi aceito.{" "}
               <button onClick={() => navigate({ to: "/painel" })} className="underline">
                 Ir ao painel
@@ -82,36 +97,40 @@ function InvitePage() {
               .
             </p>
           ) : inv.status === "revoked" ? (
-            <p className="text-sm text-destructive">Este convite foi revogado.</p>
+            <p className="text-ui text-destructive">Este convite foi revogado.</p>
+          ) : inv.status === "expired" ? (
+            <p className="text-ui text-destructive">
+              Este convite expirou. Peça um novo ao administrador do escritório.
+            </p>
           ) : (
             <>
-              <div className="rounded-md border bg-muted/30 p-3 text-sm">
+              <div className="rounded-md border bg-muted/30 p-3 text-ui">
                 <p>
-                  <span className="text-muted-foreground">Convidado por:</span>{" "}
-                  <span className="font-medium">{inv.owner_name ?? "—"}</span>
+                  <span className="text-muted-foreground">Escritório:</span>{" "}
+                  <span className="font-medium">{inv.organization_name}</span>
                 </p>
                 <p>
                   <span className="text-muted-foreground">Para o e-mail:</span>{" "}
                   <span className="font-medium">{inv.email}</span>
                 </p>
                 <p>
-                  <span className="text-muted-foreground">Como:</span>{" "}
-                  <span className="font-medium">{inv.member_name ?? "—"}</span>
+                  <span className="text-muted-foreground">Papel:</span>{" "}
+                  <span className="font-medium">{inv.role_label}</span>
                 </p>
               </div>
 
               {!user ? (
                 <div className="space-y-2">
-                  <p className="text-sm text-muted-foreground">
-                    Faça login (ou crie sua conta) com o e-mail <strong>{inv.email}</strong> para
-                    aceitar.
+                  <p className="text-ui text-muted-foreground">
+                    Faça login (ou crie sua conta) com o e-mail <strong>{inv.email}</strong>{" "}
+                    para aceitar.
                   </p>
                   <Button className="w-full" onClick={() => navigate({ to: "/entrar" })}>
                     Entrar / criar conta
                   </Button>
                 </div>
               ) : user.email?.toLowerCase() !== inv.email.toLowerCase() ? (
-                <p className="text-sm text-destructive">
+                <p className="text-ui text-destructive">
                   Você está logado como <strong>{user.email}</strong>. Saia e entre com{" "}
                   <strong>{inv.email}</strong> para aceitar este convite.
                 </p>
@@ -127,5 +146,4 @@ function InvitePage() {
       </Card>
     </main>
   );
-
 }
