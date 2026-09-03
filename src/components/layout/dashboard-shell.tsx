@@ -688,11 +688,11 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
     <TooltipProvider delayDuration={200}>
       <div className="flex h-dvh w-full overflow-hidden bg-background">
         {/* Simulation banner */}
-        {activePreset && (
+        {simulation && (
           <div className="fixed inset-x-0 top-0 z-50 flex items-center justify-center gap-3 bg-secondary py-1.5 text-center text-sm font-medium text-secondary-foreground shadow">
             <Eye className="h-3.5 w-3.5" />
             <span>
-              Você está vendo o sistema como <strong>{activePreset.label}</strong>. As
+              Você está vendo o sistema como <strong>{roleLabel}</strong>. As
               autorizações do servidor continuam usando sua conta real.
             </span>
             <button
@@ -710,7 +710,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
           className={cn(
             "relative hidden min-h-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-[width] duration-200 ease-out lg:flex",
             collapsed ? "w-[4.5rem]" : "w-[16.5rem]",
-            activePreset && "mt-6",
+            simulation && "mt-6",
           )}
         >
           <div
@@ -778,7 +778,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
         </aside>
 
         {/* Main column */}
-        <div className={cn("flex flex-1 flex-col min-w-0", activePreset && "mt-6")}>
+        <div className={cn("flex flex-1 flex-col min-w-0", simulation && "mt-6")}>
           <header className="flex h-16 items-center justify-between gap-3 border-b bg-card/95 px-4 lg:hidden">
             <div className="flex min-w-0 flex-1 items-center gap-2">
               <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
