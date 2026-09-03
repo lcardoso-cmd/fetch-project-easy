@@ -105,7 +105,16 @@ export const updateTask = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { id, ...updates } = data;
-    const patch: Record<string, unknown> = {};
+    const patch: {
+      title?: string;
+      description?: string | null;
+      priority?: string;
+      due_date?: string | null;
+      assigned_to_user_id?: string | null;
+      case_id?: string | null;
+      status?: string;
+      completed_at?: string | null;
+    } = {};
     if (updates.title !== undefined) patch['title'] = updates.title;
     if (updates.description !== undefined)
       patch['description'] = updates.description || null;
