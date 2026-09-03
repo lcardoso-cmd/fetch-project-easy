@@ -170,6 +170,8 @@ export function buildFooterNav(): NavItem[] {
   };
   return [
     link("hire-b2b", "/contratar-b2b", "Serviços especializados", ShieldCheck, "startsWith"),
+    link("billing", "/organizacao/cobranca", "Assinatura e cobrança", CreditCard, "startsWith"),
+
     link("settings", "/configuracoes", "Administração", Settings2, "startsWith"),
     link("help", "/ajuda/permissoes", "Ajuda", HelpCircle, "startsWith"),
   ];
