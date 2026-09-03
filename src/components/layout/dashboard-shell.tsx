@@ -158,8 +158,8 @@ function buildNav(
 }
 
 
-/** Itens fixos do rodapé da barra lateral. */
-export function buildFooterNav(): NavItem[] {
+/** Itens fixos do rodapé da barra lateral, por ambiente. */
+export function buildFooterNav(scope: ShellScope = "office"): NavItem[] {
   const link = (
     key: NavKey,
     to: string,
@@ -178,6 +178,9 @@ export function buildFooterNav(): NavItem[] {
       description: describeNav(entry),
     };
   };
+  if (scope === "b2b") {
+    return [link("help", "/ajuda/permissoes", "Ajuda", HelpCircle, "startsWith")];
+  }
   return [
     link("hire-b2b", "/contratar-b2b", "Serviços especializados", ShieldCheck, "startsWith"),
     link("billing", "/organizacao/cobranca", "Assinatura e cobrança", CreditCard, "startsWith"),
@@ -186,6 +189,7 @@ export function buildFooterNav(): NavItem[] {
     link("help", "/ajuda/permissoes", "Ajuda", HelpCircle, "startsWith"),
   ];
 }
+
 
 // Filtra links por capacidade e remove labels/separators órfãos.
 // Não expõe nada ao usuário sobre itens escondidos.
