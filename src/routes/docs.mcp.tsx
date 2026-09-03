@@ -248,7 +248,7 @@ function McpDocsPage() {
             </ol>
             <p>
               Você pode revogar o acesso a qualquer momento em{" "}
-              <Link to="/configuracoes/perfil" className="underline">Configurações</Link>{" "}
+              <Link to="/configuracoes/oauth" className="underline">Configurações</Link>{" "}
               → sessões OAuth.
             </p>
           </Section>
