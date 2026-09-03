@@ -2738,6 +2738,7 @@ export type Database = {
           due_date: string | null
           id: string
           organization_id: string
+          position: number
           priority: string
           source_message_id: string | null
           status: string
@@ -2754,6 +2755,7 @@ export type Database = {
           due_date?: string | null
           id?: string
           organization_id: string
+          position?: number
           priority?: string
           source_message_id?: string | null
           status?: string
@@ -2770,6 +2772,7 @@ export type Database = {
           due_date?: string | null
           id?: string
           organization_id?: string
+          position?: number
           priority?: string
           source_message_id?: string | null
           status?: string
