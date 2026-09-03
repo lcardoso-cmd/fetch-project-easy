@@ -626,7 +626,7 @@ function MessageBubble({
           </div>
 
           {!removed && (
-            <div className="absolute -top-3 right-1 hidden items-center gap-1 rounded-full border bg-background px-1 py-0.5 shadow-sm group-hover:flex">
+            <div className="absolute -top-3 right-1 flex items-center gap-1 rounded-full border bg-background px-1 py-0.5 opacity-100 shadow-sm transition-opacity focus-within:opacity-100 sm:opacity-0 sm:group-hover:opacity-100">
               <IconAction label="Responder" onClick={onReply}>
                 <Reply className="h-3.5 w-3.5" />
               </IconAction>
