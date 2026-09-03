@@ -108,7 +108,9 @@ function AuthPage() {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
-  const [mode, setMode] = useState<"login" | "signup">("login");
+  const isTrialSignup = search.modo === "cadastro";
+  const [mode, setMode] = useState<"login" | "signup">(isTrialSignup ? "signup" : "login");
+
   const [pendingEmail, setPendingEmail] = useState<string | null>(null);
   const [resendCooldown, setResendCooldown] = useState(0);
   const [isResending, setIsResending] = useState(false);
