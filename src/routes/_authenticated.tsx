@@ -5,8 +5,8 @@ import { Loader2 } from "lucide-react";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { AiBudgetBanner } from "@/components/layout/ai-budget-banner";
 import { useProfile } from "@/hooks/use-profile";
-import { useCapabilities } from "@/hooks/use-capabilities";
-import { requiredCapabilityForPath } from "@/lib/route-capabilities";
+import { useAccess } from "@/hooks/use-access";
+import { routeRuleFor } from "@/lib/route-permissions";
 import { AccessDenied } from "@/components/access-denied";
 
 export const Route = createFileRoute("/_authenticated")({
