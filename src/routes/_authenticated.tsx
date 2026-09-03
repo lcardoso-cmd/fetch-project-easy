@@ -83,9 +83,9 @@ function Gate({ path }: { path: string }) {
 }
 
 function GatedOutlet({ path }: { path: string }) {
-  const required = requiredCapabilityForPath(path);
-  const { has, isLoading } = useCapabilities();
-  if (!required) return <Outlet key={path} />;
+  const rule = routeRuleFor(path);
+  const { hasOrgPermission, hasPlatformRole, isLoading } = useAccess();
+  if (!rule) return <Outlet key={path} />;
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-16">
@@ -93,8 +93,13 @@ function GatedOutlet({ path }: { path: string }) {
       </div>
     );
   }
-  if (!has(required)) {
-    return <AccessDenied requires={required} attemptedPath={path} />;
+  const allowed =
+    "platformRole" in rule
+      ? hasPlatformRole(rule.platformRole)
+      : hasOrgPermission(rule.permission);
+  if (!allowed) {
+    const requires = "platformRole" in rule ? rule.platformRole : rule.permission;
+    return <AccessDenied requires={requires} attemptedPath={path} />;
   }
   return <Outlet key={path} />;
 }
