@@ -45,9 +45,10 @@ function safeInternalPath(p: unknown): string | null {
 }
 
 export const Route = createFileRoute("/entrar")({
-  validateSearch: (search: Record<string, unknown>) => ({
-    redirect: safeInternalPath(search.redirect) ?? undefined,
-  }),
+  validateSearch: (search: Record<string, unknown>) => {
+    const redirect = safeInternalPath(search.redirect);
+    return redirect ? { redirect } : {};
+  },
   head: () => ({
     meta: [
       { title: "Entrar no JurisMind — IA para advogados" },
