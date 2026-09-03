@@ -397,3 +397,67 @@ export const attachDocumentToCase = createServerFn({ method: "POST" })
     if (error) throw error;
     return { document_id: doc.id };
   });
+
+/**
+ * Alocação de equipe no caso. Grava acessos reais em `case_access`
+ * (fonte única de verdade), substituindo a lista atual pelos usuários
+ * informados. Somente quem pode editar o caso pode alterar a alocação.
+ */
+export const setCaseTeamAccess = createServerFn({ method: "POST" })
+  .middleware([requireOrg])
+  .inputValidator((input: unknown) =>
+    z
+      .object({
+        case_id: z.string().uuid(),
+        user_ids: z.array(z.string().uuid()).max(100),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const { data: canEdit } = await context.supabase.rpc("user_can_edit_case", {
+      _case_id: data.case_id,
+      _user_id: context.userId,
+    });
+    if (!canEdit) throw new Error("Você não pode alterar a equipe deste caso.");
+
+    // Apenas integrantes ativos da organização podem ser alocados.
+    const { data: members } = await context.supabase
+      .from("organization_memberships")
+      .select("user_id")
+      .eq("organization_id", context.organizationId)
+      .eq("status", "active");
+    const allowed = new Set((members ?? []).map((m) => m.user_id));
+    const target = data.user_ids.filter((id) => allowed.has(id));
+
+    const { data: current } = await context.supabase
+      .from("case_access")
+      .select("user_id")
+      .eq("case_id", data.case_id);
+    const currentIds = new Set((current ?? []).map((r) => r.user_id));
+
+    const toRemove = [...currentIds].filter((id) => !target.includes(id));
+    if (toRemove.length > 0) {
+      const { error } = await context.supabase
+        .from("case_access")
+        .delete()
+        .eq("case_id", data.case_id)
+        .in("user_id", toRemove);
+      if (error) throw error;
+    }
+
+    const toAdd = target.filter((id) => !currentIds.has(id));
+    if (toAdd.length > 0) {
+      const { error } = await context.supabase.from("case_access").insert(
+        toAdd.map((user_id) => ({
+          organization_id: context.organizationId,
+          case_id: data.case_id,
+          user_id,
+          access_level: "editor" as const,
+          granted_by_user_id: context.userId,
+        })),
+      );
+      if (error) throw error;
+    }
+
+    return { allocated: target.length };
+  });
