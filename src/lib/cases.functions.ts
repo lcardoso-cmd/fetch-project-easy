@@ -158,14 +158,46 @@ const FromDocSchema = z.object({
   matter_kind: MatterKindEnum.optional().default("processo"),
 });
 
+/** Nº máximo de páginas lidas do PDF para preencher o formulário do caso. */
+const PDF_TEXT_PAGE_LIMIT = 20;
+/** Nº máximo de páginas enviadas para OCR quando não há camada de texto. */
+const PDF_OCR_PAGE_LIMIT = 4;
+
+/**
+ * Lê o texto de um PDF página por página, com limite.
+ * PDFs grandes (centenas de páginas / dezenas de MB) estouram memória e tempo
+ * quando extraídos por inteiro no runtime serverless — para preencher o
+ * cadastro do caso, as primeiras páginas já contêm capa, partes e nº do processo.
+ */
+async function extractPdfText(
+  buffer: Uint8Array,
+  pageLimit = PDF_TEXT_PAGE_LIMIT,
+): Promise<{ text: string; pageCount: number; pagesRead: number }> {
+  const { getDocumentProxy } = await import("unpdf");
+  const pdf = await getDocumentProxy(buffer);
+  const pageCount = pdf.numPages as number;
+  const pagesRead = Math.min(pageCount, pageLimit);
+  const parts: string[] = [];
+  for (let i = 1; i <= pagesRead; i++) {
+    try {
+      const page = await pdf.getPage(i);
+      const content = (await page.getTextContent()) as {
+        items: Array<{ str?: string }>;
+      };
+      parts.push(content.items.map((it) => it.str ?? "").join(" "));
+    } catch {
+      parts.push("");
+    }
+  }
+  return { text: parts.join("\n\n"), pageCount, pagesRead };
+}
+
 export async function extractTextFromBlob(blob: Blob, filename: string, fileType: string) {
   const lower = filename.toLowerCase();
   if (fileType === "application/pdf" || lower.endsWith(".pdf")) {
-    const { extractText, getDocumentProxy } = await import("unpdf");
     const buffer = new Uint8Array(await blob.arrayBuffer());
-    const pdf = await getDocumentProxy(buffer);
-    const { text } = await extractText(pdf, { mergePages: true });
-    return Array.isArray(text) ? text.join("\n") : text;
+    const { text } = await extractPdfText(buffer);
+    return text;
   }
   if (
     lower.endsWith(".docx") ||
@@ -178,6 +210,7 @@ export async function extractTextFromBlob(blob: Blob, filename: string, fileType
   }
   return await blob.text();
 }
+
 
 export type ExtractedCaseData = {
   title: string;
@@ -260,9 +293,42 @@ export const extractCaseDataFromDocument = createServerFn({ method: "POST" })
       .download(data.storage_path);
     if (dlErr || !blob) throw new Error("Falha ao baixar arquivo enviado");
 
-    const fullText = await extractTextFromBlob(blob, data.filename, data.file_type);
-    const text = (fullText || "").trim();
-    if (!text) throw new Error("Não foi possível extrair texto do documento");
+    const isPdf =
+      data.file_type === "application/pdf" || data.filename.toLowerCase().endsWith(".pdf");
+
+    let text = "";
+    let usedOcr = false;
+    try {
+      text = (await extractTextFromBlob(blob, data.filename, data.file_type))?.trim() ?? "";
+    } catch {
+      text = "";
+    }
+
+    // PDF escaneado / sem camada de texto: OCR das primeiras páginas.
+    if (isPdf && text.length < 200) {
+      try {
+        const { ocrPdfPages } = await import("./rag/ocr.server");
+        const bytes = new Uint8Array(await blob.arrayBuffer());
+        const pages = Array.from({ length: PDF_OCR_PAGE_LIMIT }, (_, i) => i + 1);
+        const out = await ocrPdfPages({ bytes, filename: data.filename, pages, batchSize: 2 });
+        const ocrText = out.blocks.map((b) => b.content).join("\n\n").trim();
+        if (ocrText.length > text.length) {
+          text = ocrText;
+          usedOcr = true;
+        }
+      } catch {
+        // mantém o texto que houver
+      }
+    }
+
+    if (!text) {
+      throw new Error(
+        isPdf
+          ? "Não foi possível ler o conteúdo deste PDF (provavelmente digitalizado sem texto ou protegido). Anexe o documento ao caso e preencha os dados manualmente."
+          : "Não foi possível extrair texto do documento",
+      );
+    }
+
 
     // Fallback regex pra CNJ direto no texto — reforça o que o JurisMind achar
     const cnjFromText = text.match(CNJ_REGEX)?.[0] ?? null;
@@ -362,7 +428,16 @@ ${snippet}
       });
     }
 
-    return { extracted: result, text_length: text.length, missing, warnings };
+    if (usedOcr) {
+      warnings.push({
+        field: null,
+        message:
+          "O PDF não tinha texto pesquisável; os dados foram lidos por reconhecimento de imagem das primeiras páginas. Confira tudo antes de criar o caso.",
+      });
+    }
+
+    return { extracted: result, text_length: text.length, used_ocr: usedOcr, missing, warnings };
+
   });
 
 
