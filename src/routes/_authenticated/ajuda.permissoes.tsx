@@ -3,12 +3,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-  CAPABILITIES,
-  CAPABILITY_LABELS,
-  CAPABILITY_DESCRIPTIONS,
-  type Capability,
-} from "@/lib/capabilities.functions";
-import { useCapabilities } from "@/hooks/use-capabilities";
+  ORG_PERMISSION_GROUPS,
+  ORG_PERMISSION_LABELS,
+  ORG_ROLE_DEFAULT_PERMISSIONS,
+  ORG_ROLE_LABELS,
+  ORG_ROLES,
+  OWNER_ONLY_GRANTABLE,
+} from "@/lib/org-permissions";
+import { useAccess } from "@/hooks/use-access";
 import {
   ArrowLeft,
   ShieldCheck,
@@ -26,19 +28,24 @@ export const Route = createFileRoute("/_authenticated/ajuda/permissoes")({
       {
         name: "description",
         content:
-          "Entenda como solicitar acesso ao seu gestor ou conceder permissões ao seu time no JurisMind.",
+          "Entenda os papéis do escritório e como pedir ou conceder permissões no JurisMind.",
       },
+      { property: "og:title", content: "Como liberar permissões — JurisMind" },
+      {
+        property: "og:description",
+        content: "Papéis, permissões e caminhos para liberar acesso no escritório.",
+      },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
   component: PermissionsHelpPage,
 });
 
-const B2B_ONLY: Capability[] = ["platform_admin", "super_admin"];
-
 function PermissionsHelpPage() {
-  const { capabilities, has } = useCapabilities();
-  const myCaps = new Set(capabilities);
-  const isOfficeAdmin = has("office_admin");
+  const { permissions, role, roleLabel, hasOrgPermission } = useAccess();
+  const mine = new Set(permissions);
+  const canManagePermissions = hasOrgPermission("permissions.manage");
 
   return (
     <div className="mx-auto max-w-4xl space-y-6 p-4 sm:p-6">
@@ -52,17 +59,17 @@ function PermissionsHelpPage() {
       </div>
 
       <div className="space-y-2">
-        <div className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
+        <div className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-sm font-medium text-primary">
           <ShieldCheck className="h-3.5 w-3.5" />
           Central de permissões
         </div>
         <h1 className="font-heading text-2xl font-bold sm:text-3xl">
           Como liberar permissões no JurisMind
         </h1>
-        <p className="text-muted-foreground">
-          Cada área do sistema (Casos, Parecer técnico, Proposta comercial…) depende de
-          uma <strong>permissão</strong>. Aqui você aprende como pedir acesso ao seu
-          gestor ou como conceder acesso ao seu time.
+        <p className="text-ui text-muted-foreground">
+          O acesso vem do seu <strong>papel no escritório</strong>
+          {roleLabel ? ` (hoje: ${roleLabel})` : ""}. Ajustes individuais existem como
+          exceção e ficam registrados na auditoria da organização.
         </p>
       </div>
 
@@ -74,30 +81,29 @@ function PermissionsHelpPage() {
               <CardTitle className="text-base">Sou usuário — quero acesso</CardTitle>
             </div>
           </CardHeader>
-          <CardContent className="space-y-3 text-sm text-muted-foreground">
+          <CardContent className="space-y-3 text-ui text-muted-foreground">
             <ol className="list-decimal space-y-2 pl-4">
               <li>
-                Identifique qual permissão você precisa na lista abaixo (o nome aparece
-                sempre que o sistema bloqueia uma tela).
+                Identifique a permissão que falta na lista abaixo (o nome aparece sempre
+                que o sistema bloqueia uma tela).
               </li>
               <li>
-                Fale com o <strong>administrador do seu escritório</strong> — quem
-                gerencia a equipe e as configurações no JurisMind.
+                Fale com o <strong>titular ou administrador do escritório</strong>.
               </li>
               <li>
-                Peça para ele abrir{" "}
-                <Link to="/configuracoes/escritorio" className="text-primary underline">
-                  Configurações → Escritório
+                Peça para abrir{" "}
+                <Link to="/configuracoes/equipe" className="text-primary underline">
+                  Configurações → Equipe e permissões
                 </Link>{" "}
-                e marcar a permissão para o seu usuário.
+                e ajustar o seu papel ou a permissão específica.
               </li>
-              <li>Faça logout e login novamente para que a permissão seja aplicada.</li>
+              <li>Recarregue a página para aplicar a mudança.</li>
             </ol>
             <div className="flex items-start gap-2 rounded-md bg-muted/50 p-3">
               <MessageSquare className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-              <p className="text-xs">
-                Dica: envie ao gestor o nome exato da permissão (ex.: «Proposta
-                comercial»). Isso evita confusão.
+              <p className="text-sm">
+                Dica: informe o nome exato da permissão (ex.: «Usar propostas
+                comerciais»).
               </p>
             </div>
           </CardContent>
@@ -112,40 +118,33 @@ function PermissionsHelpPage() {
               </CardTitle>
             </div>
           </CardHeader>
-          <CardContent className="space-y-3 text-sm text-muted-foreground">
+          <CardContent className="space-y-3 text-ui text-muted-foreground">
             <ol className="list-decimal space-y-2 pl-4">
               <li>
                 Abra{" "}
-                <Link
-                  to="/configuracoes/escritorio"
-                  className="text-primary underline"
-                >
-                  Configurações → Escritório
+                <Link to="/configuracoes/equipe" className="text-primary underline">
+                  Configurações → Equipe e permissões
                 </Link>
                 .
               </li>
-              <li>Selecione o membro na lista da equipe.</li>
+              <li>Escolha o papel adequado — ele já traz o acesso padrão.</li>
               <li>
-                Marque ou desmarque as permissões desejadas e salve. A liberação vale
-                para o próximo login do usuário.
+                Use «Ajustar permissões» apenas para exceções pontuais em cima do papel.
               </li>
               <li>
-                Permissões de <strong>Administração B2B</strong> não são concedidas por
-                gestores de escritório — só pela equipe interna da B2B.
+                Cobrança, assinatura e contratação só podem ser concedidas pelo{" "}
+                <strong>titular</strong>. Administração B2B é exclusiva da equipe interna.
               </li>
             </ol>
-            {isOfficeAdmin ? (
+            {canManagePermissions ? (
               <Button asChild size="sm" className="w-full">
-                <Link to="/configuracoes/escritorio">
-                  Gerenciar equipe agora
-                </Link>
+                <Link to="/configuracoes/equipe">Gerenciar equipe agora</Link>
               </Button>
             ) : (
               <div className="flex items-start gap-2 rounded-md bg-muted/50 p-3">
                 <Lock className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
-                <p className="text-xs">
-                  Você não é administrador do escritório. Só gestores conseguem liberar
-                  permissões da equipe.
+                <p className="text-sm">
+                  Seu papel não permite alterar permissões da equipe.
                 </p>
               </div>
             )}
@@ -155,50 +154,80 @@ function PermissionsHelpPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Permissões disponíveis</CardTitle>
-          <p className="text-sm text-muted-foreground">
-            Cada linha mostra a permissão, para que serve e quem pode conceder.
+          <CardTitle className="text-base">Papéis do escritório</CardTitle>
+          <p className="text-ui text-muted-foreground">
+            Cada papel concede um conjunto padrão de permissões.
           </p>
         </CardHeader>
         <CardContent className="space-y-3">
-          {CAPABILITIES.map((cap) => {
-            const has = myCaps.has(cap);
-            const isB2B = B2B_ONLY.includes(cap);
-            return (
-              <div
-                key={cap}
-                className="flex flex-col gap-2 rounded-md border p-3 sm:flex-row sm:items-start sm:justify-between"
-              >
-                <div className="min-w-0 flex-1 space-y-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="font-medium text-foreground">
-                      {CAPABILITY_LABELS[cap]}
-                    </span>
-                    {has && (
-                      <Badge variant="secondary" className="gap-1">
-                        <CheckCircle2 className="h-3 w-3" />
-                        Você tem
-                      </Badge>
-                    )}
-                    {isB2B && (
-                      <Badge variant="outline" className="gap-1">
-                        <Lock className="h-3 w-3" />
-                        Só B2B
-                      </Badge>
-                    )}
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    {CAPABILITY_DESCRIPTIONS[cap]}
-                  </p>
-                </div>
-                <div className="shrink-0 text-xs text-muted-foreground sm:text-right">
-                  {isB2B
-                    ? "Concedida pela equipe B2B"
-                    : "Concedida pelo admin do escritório"}
-                </div>
+          {ORG_ROLES.map((r) => (
+            <div key={r} className="rounded-md border p-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-ui font-medium">{ORG_ROLE_LABELS[r]}</span>
+                {r === role && (
+                  <Badge variant="secondary" className="gap-1">
+                    <CheckCircle2 className="h-3 w-3" />
+                    Seu papel
+                  </Badge>
+                )}
               </div>
-            );
-          })}
+              <p className="mt-1 text-sm text-muted-foreground">
+                {ORG_ROLE_DEFAULT_PERMISSIONS[r]
+                  .map((p) => ORG_PERMISSION_LABELS[p])
+                  .join(" · ")}
+              </p>
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Permissões disponíveis</CardTitle>
+          <p className="text-ui text-muted-foreground">
+            O que cada permissão libera e quem pode concedê-la.
+          </p>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          {ORG_PERMISSION_GROUPS.map((group) => (
+            <div key={group.id} className="space-y-2">
+              <p className="text-ui font-semibold">{group.label}</p>
+              <div className="space-y-2">
+                {group.permissions.map((p) => {
+                  const ownerOnly = OWNER_ONLY_GRANTABLE.includes(p);
+                  return (
+                    <div
+                      key={p}
+                      className="flex flex-col gap-2 rounded-md border p-3 sm:flex-row sm:items-center sm:justify-between"
+                    >
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-ui text-foreground">
+                          {ORG_PERMISSION_LABELS[p]}
+                        </span>
+                        {mine.has(p) && (
+                          <Badge variant="secondary" className="gap-1">
+                            <CheckCircle2 className="h-3 w-3" />
+                            Você tem
+                          </Badge>
+                        )}
+                        {ownerOnly && (
+                          <Badge variant="outline" className="gap-1">
+                            <Lock className="h-3 w-3" />
+                            Só o titular
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="shrink-0 text-sm text-muted-foreground sm:text-right">
+                        {ownerOnly
+                          ? "Concedida pelo titular do escritório"
+                          : "Concedida pelo titular ou administrador"}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
         </CardContent>
       </Card>
     </div>
