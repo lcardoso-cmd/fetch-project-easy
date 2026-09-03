@@ -3,6 +3,22 @@
 ## Feito
 - [x] Nova homepage pública posicionando o JurisMind como camada de inteligência jurídica (RAG, operação, governança).
 
+## Em aberto (RAG — revisão técnica incremental)
+- [x] Fase 1: fixtures sintéticas + harness de benchmark (Recall@K, MRR, precisão/cobertura de fontes) e linha de base.
+- [x] Fase 2: parsers explícitos por formato, chunking estrutural versionado, metadados de procedência, indexação resiliente.
+- [x] Fase 3: keywords no híbrido, diversidade, vizinhos, reranker com procedência, suficiência documental.
+- [x] Fase 4: separação retrieved/cited/supporting, refs [F1], remoção do percentual de similaridade.
+- [x] Fase 5: acesso efetivo ao caso no RAG (membros) + resumo hierárquico do caso.
+- [x] Fase 6: benchmark antes/depois e promoção da nova pipeline.
+
+## Em aberto (homepage — legibilidade e demonstração)
+- [x] Legibilidade/contraste WCAG AA (16px+ texto, 14px+ auxiliar, botões 44px).
+- [x] Trocar exemplo do hero para caso cível de cobrança contratual (fictício, identificado).
+- [x] Abas Cível / Trabalhista / Empresarial na demonstração, sem rotação automática.
+- [x] Mostrar resposta concreta com refs [F1]/[F2]/[F3] e fontes utilizadas.
+- [x] Bloco "Como o JurisMind chegou a essa resposta?" com 4 etapas + explicação de RAG.
+
+
 ## Em aberto (marketing / publicações)
 - [ ] Radar Jurídico: busca semanal de temas definidos no sistema via Firecrawl e sugestão de pautas prontas.
 - [ ] Tela de geração de publicações: informar URL ou tema → gerar post para redes com Firecrawl.

@@ -1,150 +1,253 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import type { DocBlock } from "./rag/chunking";
 
 const IndexSchema = z.object({
   document_id: z.string().uuid(),
   force_vision: z.boolean().optional(),
+  chunk_profile: z.enum(["structural-sm", "structural-md", "structural-lg"]).optional(),
 });
 
+export const EMBEDDING_MODEL = "openai/text-embedding-3-small";
+
 /**
- * Indexa um documento já enviado: baixa o arquivo do storage (se PDF, extrai),
- * gera chunks + embeddings via Lovable AI e grava em document_chunks.
+ * Indexação resiliente e idempotente de um documento.
  *
- * Se o PDF for escaneado (pouco texto por página) ou force_vision=true,
- * envia o PDF diretamente ao Gemini para transcrição multimodal (OCR + visão).
+ * Etapas com status próprio em `documents.processing_status`:
+ * extracting → ocr_processing → chunking → embedding → ready | partial | error.
+ *
+ * Os novos chunks são gravados ANTES de remover os antigos: se qualquer etapa
+ * falhar, a versão anterior do índice continua consultável.
  */
 export const indexDocument = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((i: unknown) => IndexSchema.parse(i))
   .handler(async ({ data, context }) => {
-    const { embedTexts, chunkText, visionExtractPdf } = await import("./ai.server");
+    const { embedTexts } = await import("./ai.server");
+    const { parseDocument, detectFormat, UnsupportedFormatError, PARSER_VERSION } = await import(
+      "./rag/parsers.server"
+    );
+    const { ocrPdfPages, ocrImage } = await import("./rag/ocr.server");
+    const { structuredChunk, CHUNK_PROFILES, DEFAULT_CHUNK_PROFILE } = await import(
+      "./rag/chunking"
+    );
+
+    const setStatus = async (status: string) => {
+      await context.supabase
+        .from("documents")
+        .update({ processing_status: status })
+        .eq("id", data.document_id);
+    };
 
     const { data: doc, error: docErr } = await context.supabase
       .from("documents")
-      .select("id, case_id, storage_path, file_type, filename, extracted_text")
+      .select("id, case_id, storage_path, file_type, filename")
       .eq("id", data.document_id)
       .eq("user_id", context.userId)
       .single();
     if (docErr || !doc) throw new Error("Documento não encontrado");
 
-    await context.supabase
-      .from("documents")
-      .update({ processing_status: "processing" })
-      .eq("id", doc.id);
+    const profile = data.chunk_profile
+      ? (CHUNK_PROFILES[data.chunk_profile] ?? DEFAULT_CHUNK_PROFILE)
+      : DEFAULT_CHUNK_PROFILE;
 
     try {
-      const lower = doc.filename.toLowerCase();
-      const isPdf = doc.file_type === "application/pdf" || lower.endsWith(".pdf");
+      // Formato: recusa explícita em vez de ler binário como texto.
+      let format: ReturnType<typeof detectFormat>;
+      try {
+        format = detectFormat(doc.filename, doc.file_type);
+      } catch (e) {
+        if (e instanceof UnsupportedFormatError) {
+          await setStatus(`error: ${e.detail.slice(0, 180)}`);
+          throw e;
+        }
+        throw e;
+      }
 
-      let text = "";
-      let visionText = "";
-      let pdfBytes: Uint8Array | null = null;
-      let pageCount = 0;
+      await setStatus("extracting");
 
-      // 1. Baixa e extrai texto
       const { data: blob, error: dlErr } = await context.supabase.storage
         .from("documents")
         .download(doc.storage_path);
       if (dlErr || !blob) throw new Error("Falha ao baixar arquivo do storage");
 
-      if (isPdf) {
-        const { extractText, getDocumentProxy } = await import("unpdf");
-        pdfBytes = new Uint8Array(await blob.arrayBuffer());
-        const pdf = await getDocumentProxy(pdfBytes);
-        pageCount = pdf.numPages;
-        const { text: pdfText } = await extractText(pdf, { mergePages: true });
-        text = Array.isArray(pdfText) ? pdfText.join("\n") : pdfText;
-      } else if (
-        lower.endsWith(".docx") ||
-        doc.file_type ===
-          "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-      ) {
-        const mammoth = await import("mammoth");
-        const buffer = Buffer.from(await blob.arrayBuffer());
-        const { value } = await mammoth.extractRawText({ buffer });
-        text = value;
-      } else {
-        text = await blob.text();
-      }
+      const parsed = await parseDocument({
+        blob,
+        filename: doc.filename,
+        fileType: doc.file_type,
+      });
 
-      // 2. Detecta PDF escaneado: texto muito curto por página → usa visão
-      const charsPerPage = pageCount > 0 ? text.replace(/\s+/g, "").length / pageCount : Infinity;
-      const looksScanned = isPdf && pdfBytes && (charsPerPage < 120 || text.trim().length < 200);
-      const doVision = isPdf && pdfBytes && (data.force_vision || looksScanned);
+      // OCR: imagens sempre; PDF apenas nas páginas fracas (ou tudo se forçado).
+      let visionBlocks: DocBlock[] = [];
+      let ocrFailedPages: number[] = [];
+      let ocrPagesRun = 0;
 
-      if (doVision && pdfBytes) {
-        try {
-          visionText = await visionExtractPdf(pdfBytes, doc.filename);
-        } catch (e) {
-          // não deixa cair — apenas registra dentro do status
-          const msg = e instanceof Error ? e.message : String(e);
-          console.error("[vision]", msg);
+      if (format === "image") {
+        await setStatus("ocr_processing");
+        visionBlocks = await ocrImage({
+          blob,
+          filename: doc.filename,
+          fileType: doc.file_type,
+        });
+        ocrPagesRun = 1;
+      } else if (format === "pdf") {
+        const pages = data.force_vision
+          ? Array.from({ length: parsed.pageCount }, (_, i) => i + 1)
+          : parsed.ocrPages;
+        if (pages.length > 0) {
+          await setStatus("ocr_processing");
+          const bytes = new Uint8Array(await blob.arrayBuffer());
+          const out = await ocrPdfPages({ bytes, filename: doc.filename, pages });
+          visionBlocks = out.blocks;
+          ocrFailedPages = out.failedPages;
+          ocrPagesRun = pages.length;
         }
       }
 
-      // 3. Monta chunks — texto normal + visão marcados separadamente
-      const textChunks = chunkText(text, 1800, 200);
-      const visionChunks = chunkText(visionText, 1800, 200);
+      await setStatus("chunking");
 
-      const allChunks: Array<{ content: string; source_kind: "text" | "vision" }> = [
-        ...textChunks.map((c) => ({ content: c, source_kind: "text" as const })),
-        ...visionChunks.map((c) => ({ content: c, source_kind: "vision" as const })),
+      // Blocos de visão substituem o texto extraído das MESMAS páginas
+      // (evita indexar duas vezes a mesma página).
+      const ocrPageSet = new Set(visionBlocks.map((b) => b.page).filter((p): p is number => p != null));
+      const textBlocks = parsed.blocks.filter((b) => b.page == null || !ocrPageSet.has(b.page));
+
+      const chunks = [
+        ...structuredChunk(textBlocks, profile),
+        ...structuredChunk(visionBlocks, profile),
       ];
 
-      if (allChunks.length === 0) {
+      const plain = [parsed.plainText, visionBlocks.map((b) => b.content).join("\n\n")]
+        .filter((s) => s && s.trim().length > 0)
+        .join("\n\n[VISÃO]\n\n");
+
+      if (chunks.length === 0) {
         await context.supabase
           .from("documents")
-          .update({ processing_status: "empty", extracted_text: text })
+          .update({ processing_status: "empty", extracted_text: plain.slice(0, 200_000) })
           .eq("id", doc.id);
-        return { ok: true, chunks: 0, vision_used: doVision };
+        return { ok: true, chunks: 0, vision_pages: ocrPagesRun, format };
       }
 
-      // 4. Embeddings em batches
+      await setStatus("embedding");
+
       const BATCH = 32;
       const embeddings: number[][] = [];
-      for (let i = 0; i < allChunks.length; i += BATCH) {
-        const slice = allChunks.slice(i, i + BATCH).map((c) => c.content);
-        const embs = await embedTexts(slice);
-        embeddings.push(...embs);
+      for (let i = 0; i < chunks.length; i += BATCH) {
+        const slice = chunks.slice(i, i + BATCH).map((c) => c.content);
+        embeddings.push(...(await embedTexts(slice)));
+      }
+      if (embeddings.length !== chunks.length) {
+        throw new Error("Embeddings incompletos — índice anterior preservado.");
       }
 
-      // 5. Substitui chunks
-      await context.supabase.from("document_chunks").delete().eq("document_id", doc.id);
-      const rows = allChunks.map((c, idx) => ({
+      // Idempotência: chunk_index começa após o máximo atual, os novos entram
+      // primeiro e só então os antigos são removidos.
+      const { data: maxRow } = await context.supabase
+        .from("document_chunks")
+        .select("chunk_index")
+        .eq("document_id", doc.id)
+        .order("chunk_index", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      const offset = ((maxRow?.chunk_index as number | undefined) ?? -1) + 1;
+
+      const rows = chunks.map((c, idx) => ({
         document_id: doc.id,
         case_id: doc.case_id,
         user_id: context.userId,
-        chunk_index: idx,
+        chunk_index: offset + idx,
         content: c.content,
-        source_kind: c.source_kind,
+        source_kind: c.source_kind === "table" ? "text" : c.source_kind,
         embedding: embeddings[idx] as unknown as string,
+        page_start: c.page_start,
+        page_end: c.page_end,
+        section_title: c.section_title,
+        sheet_name: c.sheet_name,
+        row_start: c.row_start,
+        row_end: c.row_end,
+        parser_version: PARSER_VERSION,
+        chunking_version: c.chunking_version,
+        embedding_model: EMBEDDING_MODEL,
+        token_count: c.token_count,
+        content_hash: c.content_hash,
+        metadata: { format, block_kind: c.source_kind },
       }));
-      const { error: insErr } = await context.supabase.from("document_chunks").insert(rows);
+
+      const { data: inserted, error: insErr } = await context.supabase
+        .from("document_chunks")
+        .insert(rows)
+        .select("id");
       if (insErr) throw insErr;
 
-      const combined = [text, visionText].filter(Boolean).join("\n\n[VISÃO]\n\n");
+      const newIds = new Set(((inserted ?? []) as Array<{ id: string }>).map((r) => r.id));
+      const { data: existing } = await context.supabase
+        .from("document_chunks")
+        .select("id")
+        .eq("document_id", doc.id);
+      const staleIds = ((existing ?? []) as Array<{ id: string }>)
+        .map((r) => r.id)
+        .filter((id) => !newIds.has(id));
+      if (staleIds.length > 0) {
+        await context.supabase.from("document_chunks").delete().in("id", staleIds);
+      }
+
+      const partial = ocrFailedPages.length > 0;
       await context.supabase
         .from("documents")
         .update({
-          processing_status: "ready",
-          extracted_text: combined.slice(0, 200_000),
+          processing_status: partial
+            ? `partial: OCR falhou nas páginas ${ocrFailedPages.slice(0, 20).join(", ")}`
+            : "ready",
+          extracted_text: plain.slice(0, 200_000),
         })
         .eq("id", doc.id);
 
       return {
         ok: true,
-        chunks: allChunks.length,
-        text_chunks: textChunks.length,
-        vision_chunks: visionChunks.length,
-        vision_used: Boolean(doVision),
+        format,
+        chunks: chunks.length,
+        text_chunks: chunks.filter((c) => c.source_kind !== "vision").length,
+        vision_chunks: chunks.filter((c) => c.source_kind === "vision").length,
+        vision_pages: ocrPagesRun,
+        failed_pages: ocrFailedPages,
+        parser_version: PARSER_VERSION,
+        chunking_version: profile.name,
+        embedding_model: EMBEDDING_MODEL,
       };
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      await context.supabase
-        .from("documents")
-        .update({ processing_status: `error: ${msg.slice(0, 200)}` })
-        .eq("id", doc.id);
+      await setStatus(`error: ${msg.slice(0, 200)}`);
       throw err;
     }
+  });
+
+/** Reindexa documentos de um caso cujo índice está em versão anterior. */
+export const reindexCaseDocuments = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((i: unknown) =>
+    z.object({ case_id: z.string().uuid(), limit: z.number().int().min(1).max(20).optional() }).parse(i),
+  )
+  .handler(async ({ data, context }) => {
+    const { data: docs } = await context.supabase
+      .from("documents")
+      .select("id, filename")
+      .eq("case_id", data.case_id)
+      .eq("user_id", context.userId)
+      .order("created_at", { ascending: true })
+      .limit(data.limit ?? 5);
+
+    const pending: Array<{ id: string; filename: string }> = [];
+    for (const d of (docs ?? []) as Array<{ id: string; filename: string }>) {
+      const { data: chunk } = await context.supabase
+        .from("document_chunks")
+        .select("chunking_version")
+        .eq("document_id", d.id)
+        .limit(1)
+        .maybeSingle();
+      const version = (chunk?.chunking_version as string | null) ?? null;
+      if (!version || !version.startsWith("structural")) pending.push(d);
+    }
+
+    return { pending, total: (docs ?? []).length };
   });

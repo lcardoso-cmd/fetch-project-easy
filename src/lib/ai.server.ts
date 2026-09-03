@@ -602,37 +602,42 @@ function u8ToBase64(bytes: Uint8Array): string {
   return btoa(bin);
 }
 
-/**
- * OCR / transcrição multimodal de um PDF (inclusive escaneado) via Gemini.
- * Retorna o texto completo transcrito, preservando estrutura básica.
- */
-export async function visionExtractPdf(pdfBytes: Uint8Array, filename: string): Promise<string> {
-  // Limite defensivo (~20MB); a API do gateway tem um teto de payload.
-  const MAX = 18 * 1024 * 1024;
-  if (pdfBytes.byteLength > MAX) {
+const OCR_SYSTEM =
+  "Você é um OCR jurídico de altíssima precisão. Transcreva integralmente o conteúdo recebido, preservando cabeçalhos, títulos, tabelas (em markdown) e assinaturas. Não resuma, não omita e não adicione comentários.";
+
+/** Limite defensivo de payload por chamada multimodal. */
+const VISION_MAX_BYTES = 18 * 1024 * 1024;
+
+function assertVisionSize(bytes: Uint8Array, what: string) {
+  if (bytes.byteLength > VISION_MAX_BYTES) {
     throw new Error(
-      `PDF muito grande para visão (${(pdfBytes.byteLength / 1024 / 1024).toFixed(1)}MB). Limite: 18MB.`,
+      `${what} muito grande para visão (${(bytes.byteLength / 1024 / 1024).toFixed(1)}MB). Limite: 18MB.`,
     );
   }
-  const b64 = u8ToBase64(pdfBytes);
-  const dataUrl = `data:application/pdf;base64,${b64}`;
+}
+
+/**
+ * OCR de um recorte de PDF (um lote de páginas já extraído com pdf-lib).
+ * `pages` são os números originais das páginas, usados nos marcadores.
+ */
+export async function visionExtractPdfSlice(
+  pdfBytes: Uint8Array,
+  filename: string,
+  pages: number[],
+): Promise<string> {
+  assertVisionSize(pdfBytes, "Lote de páginas");
+  const dataUrl = `data:application/pdf;base64,${u8ToBase64(pdfBytes)}`;
+  const list = pages.join(", ");
 
   const messages: ChatMessage[] = [
-    {
-      role: "system",
-      content:
-        "Você é um OCR jurídico de altíssima precisão. Transcreva integralmente o conteúdo do PDF, página a página, preservando cabeçalhos, títulos, tabelas (em markdown) e assinaturas. Não resuma, não omita e não adicione comentários.",
-    },
+    { role: "system", content: OCR_SYSTEM },
     {
       role: "user",
       content: [
-        {
-          type: "file",
-          file: { filename, file_data: dataUrl },
-        },
+        { type: "file", file: { filename, file_data: dataUrl } },
         {
           type: "text",
-          text: `Transcreva TODO o conteúdo do arquivo "${filename}". Use "--- Página N ---" como separador entre páginas.`,
+          text: `Transcreva TODO o conteúdo deste recorte de "${filename}", que corresponde às páginas ${list} do documento original. Comece cada página com o marcador exato "--- Página N ---", usando o número original da página.`,
         },
       ],
     },
@@ -641,9 +646,68 @@ export async function visionExtractPdf(pdfBytes: Uint8Array, filename: string): 
   const r = await chatComplete(messages, {
     model: "google/gemini-2.5-flash",
     temperature: 0,
+    feature: "ocr_pdf",
   });
   return r.content ?? "";
 }
+
+/** OCR / leitura de uma imagem (PNG/JPG/WEBP) enviada como documento. */
+export async function visionExtractImage(
+  bytes: Uint8Array,
+  mimeType: string,
+  filename: string,
+): Promise<string> {
+  assertVisionSize(bytes, "Imagem");
+  const dataUrl = `data:${mimeType || "image/png"};base64,${u8ToBase64(bytes)}`;
+  const messages: ChatMessage[] = [
+    { role: "system", content: OCR_SYSTEM },
+    {
+      role: "user",
+      content: [
+        { type: "image_url", image_url: { url: dataUrl } },
+        {
+          type: "text",
+          text: `Transcreva todo o texto visível na imagem "${filename}". Se houver elementos não textuais relevantes (assinatura, selo, carimbo, gráfico), descreva-os objetivamente em uma linha.`,
+        },
+      ],
+    },
+  ];
+  const r = await chatComplete(messages, {
+    model: "google/gemini-2.5-flash",
+    temperature: 0,
+    feature: "ocr_image",
+  });
+  return r.content ?? "";
+}
+
+/**
+ * OCR do PDF inteiro em uma única chamada (caminho legado, mantido para
+ * compatibilidade). Prefira `ocrPdfPages` em `rag/ocr.server.ts`.
+ */
+export async function visionExtractPdf(pdfBytes: Uint8Array, filename: string): Promise<string> {
+  assertVisionSize(pdfBytes, "PDF");
+  const dataUrl = `data:application/pdf;base64,${u8ToBase64(pdfBytes)}`;
+  const messages: ChatMessage[] = [
+    { role: "system", content: OCR_SYSTEM },
+    {
+      role: "user",
+      content: [
+        { type: "file", file: { filename, file_data: dataUrl } },
+        {
+          type: "text",
+          text: `Transcreva TODO o conteúdo do arquivo "${filename}". Use "--- Página N ---" como separador entre páginas.`,
+        },
+      ],
+    },
+  ];
+  const r = await chatComplete(messages, {
+    model: "google/gemini-2.5-flash",
+    temperature: 0,
+    feature: "ocr_pdf",
+  });
+  return r.content ?? "";
+}
+
 
 /** Reescreve a pergunta do usuário em N variações + termos-chave para melhorar recall no RAG. */
 export async function rewriteQuery(
@@ -677,38 +741,86 @@ export async function rewriteQuery(
 }
 
 /** Reordena trechos por relevância à pergunta usando um modelo leve. */
-export async function rerankChunks(
+export interface RerankCandidate {
+  id: string;
+  content: string;
+  /** Procedência ("contrato.pdf · p. 3 · CLÁUSULA 5"). */
+  label?: string | null;
+  /** true quando o trecho entrou apenas como contexto vizinho. */
+  isContext?: boolean;
+}
+
+export interface RerankOutcome {
+  ids: string[];
+  /** true quando o modelo respondeu algo utilizável; false = ordem original. */
+  modelUsed: boolean;
+  reason?: string;
+}
+
+/**
+ * Reordena trechos por relevância à pergunta usando um modelo leve.
+ * Recebe procedência e trecho maior (1.200 chars) e devolve o motivo quando
+ * cai no fallback determinístico, para ficar registrado em log.
+ */
+export async function rerankChunksDetailed(
   query: string,
-  candidates: { id: string; content: string }[],
+  candidates: RerankCandidate[],
   topK = 8,
-): Promise<string[]> {
-  if (candidates.length <= topK) return candidates.map((c) => c.id);
+): Promise<RerankOutcome> {
+  const fallback = () => candidates.slice(0, topK).map((c) => c.id);
+  if (candidates.length <= topK) {
+    return { ids: candidates.map((c) => c.id), modelUsed: false, reason: "candidates<=topK" };
+  }
   try {
     const list = candidates
-      .map((c, i) => `[${i}] ${c.content.slice(0, 400).replace(/\s+/g, " ")}`)
+      .map((c, i) => {
+        const head = [c.label, c.isContext ? "contexto vizinho" : "evidência"]
+          .filter(Boolean)
+          .join(" · ");
+        const body = c.content.slice(0, 1200).replace(/[ \t]+/g, " ").trim();
+        return `[${i}] (${head})\n${body}`;
+      })
       .join("\n\n");
     const r = await chatComplete(
       [
         {
           role: "system",
           content:
-            "Você é um reranker. Dada uma pergunta e trechos numerados, retorne SOMENTE um array JSON com os índices dos trechos mais relevantes, ordenados do mais para o menos relevante.",
+            "Você é um reranker jurídico. Dada uma pergunta e trechos numerados com procedência, retorne SOMENTE um array JSON com os índices dos trechos mais relevantes para responder, ordenados do mais para o menos relevante. Prefira trechos marcados como evidência; inclua contexto vizinho apenas quando ele complementar uma evidência.",
         },
         {
           role: "user",
-          content: `Pergunta: """${query}"""\n\nTrechos:\n${list}\n\nRetorne apenas os ${topK} melhores índices como JSON, ex: [3,1,7,0,...]`,
+          content: `Pergunta: """${query}"""\n\nTrechos:\n${list}\n\nRetorne apenas os ${topK} melhores índices como JSON, ex: [3,1,7,0]`,
         },
       ],
-      { model: "google/gemini-2.5-flash-lite", temperature: 0 },
+      { model: "google/gemini-2.5-flash-lite", temperature: 0, feature: "rerank" },
     );
     const arr = JSON.parse(r.content.match(/\[[\s\S]*\]/)?.[0] ?? "[]") as number[];
-    const ids = arr
-      .filter((i) => Number.isInteger(i) && i >= 0 && i < candidates.length)
-      .slice(0, topK)
-      .map((i) => candidates[i].id);
-    if (ids.length === 0) return candidates.slice(0, topK).map((c) => c.id);
-    return ids;
-  } catch {
-    return candidates.slice(0, topK).map((c) => c.id);
+    const ids = Array.from(
+      new Set(
+        arr
+          .filter((i) => Number.isInteger(i) && i >= 0 && i < candidates.length)
+          .map((i) => candidates[i]!.id),
+      ),
+    ).slice(0, topK);
+    if (ids.length === 0) return { ids: fallback(), modelUsed: false, reason: "empty_or_invalid" };
+    return { ids, modelUsed: true };
+  } catch (e) {
+    return {
+      ids: fallback(),
+      modelUsed: false,
+      reason: e instanceof Error ? e.message.slice(0, 120) : "rerank_error",
+    };
   }
 }
+
+/** Compatibilidade: mantém a assinatura antiga retornando apenas os ids. */
+export async function rerankChunks(
+  query: string,
+  candidates: { id: string; content: string }[],
+  topK = 8,
+): Promise<string[]> {
+  const out = await rerankChunksDetailed(query, candidates, topK);
+  return out.ids;
+}
+

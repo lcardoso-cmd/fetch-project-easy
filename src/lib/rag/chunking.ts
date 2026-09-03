@@ -206,15 +206,20 @@ export function structuredChunk(
   const chunks: StructuredChunk[] = [];
   const seen = new Set<string>();
 
+  type Pending = { text: string };
+
   for (const group of groups) {
-    type Pending = { text: string; meta: ChunkMeta };
-    let pending: Pending | null = null;
-    let prevContent = "";
+    const state: { pending: Pending | null; prev: string; meta: ChunkMeta } = {
+      pending: null,
+      prev: "",
+      meta: emptyMeta(),
+    };
 
     const emit = () => {
-      if (!pending) return;
-      const content = pending.text.trim();
-      pending = null;
+      const cur = state.pending;
+      if (!cur) return;
+      state.pending = null;
+      const content = cur.text.trim();
       if (!content) return;
       const hash = contentHash(content);
       if (seen.has(hash)) return;
@@ -225,18 +230,15 @@ export function structuredChunk(
         chunking_version: profile.name,
         token_count: estimateTokens(content),
         content_hash: hash,
-        ...pendingMetaSnapshot,
+        ...state.meta,
       });
-      prevContent = content;
+      state.prev = content;
     };
 
-    // metadados do chunk em construção (capturados no momento do emit)
-    let pendingMetaSnapshot: ChunkMeta = emptyMeta();
-
     const startPending = (text: string, block: DocBlock) => {
-      const overlap = tailOverlap(prevContent, profile.overlapChars);
-      pending = { text: overlap ? `${overlap}\n\n${text}` : text, meta: emptyMeta() };
-      pendingMetaSnapshot = metaFromBlock(block);
+      const overlap = tailOverlap(state.prev, profile.overlapChars);
+      state.pending = { text: overlap ? `${overlap}\n\n${text}` : text };
+      state.meta = metaFromBlock(block);
     };
 
     for (const block of group) {
@@ -245,20 +247,21 @@ export function structuredChunk(
 
       for (const piece of pieces) {
         const prefixed = heading && piece !== heading ? `${heading}\n${piece}` : piece;
+        const cur = state.pending;
 
-        if (!pending) {
+        if (!cur) {
           startPending(prefixed, block);
           continue;
         }
-        if (pending.text.length + 2 + prefixed.length <= profile.targetChars) {
-          pending.text += "\n\n" + prefixed;
-          pendingMetaSnapshot = mergeMeta(pendingMetaSnapshot, metaFromBlock(block));
+        if (cur.text.length + 2 + prefixed.length <= profile.targetChars) {
+          cur.text += "\n\n" + prefixed;
+          state.meta = mergeMeta(state.meta, metaFromBlock(block));
           continue;
         }
-        if (pending.text.trim().length < profile.minChars) {
+        if (cur.text.trim().length < profile.minChars) {
           // chunk minúsculo: prefere juntar mesmo passando um pouco do alvo
-          pending.text += "\n\n" + prefixed;
-          pendingMetaSnapshot = mergeMeta(pendingMetaSnapshot, metaFromBlock(block));
+          cur.text += "\n\n" + prefixed;
+          state.meta = mergeMeta(state.meta, metaFromBlock(block));
           emit();
           continue;
         }
@@ -268,6 +271,7 @@ export function structuredChunk(
     }
     emit();
   }
+
 
   return chunks;
 }

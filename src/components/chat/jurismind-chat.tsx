@@ -88,10 +88,14 @@ import { toast } from "sonner";
 
 
 interface Citation {
+  ref?: string;
+  chunk_id?: string;
   document_id: string;
   filename: string;
   snippet: string;
-  similarity: number;
+  location?: string | null;
+  source_kind?: string;
+  is_context?: boolean;
 }
 interface ToolStep {
   name: string;
@@ -2268,44 +2272,35 @@ function friendlyToolName(name: string) {
   return TOOL_LABELS[name] ?? name.replace(/_/g, " ");
 }
 
-function SourcesBlock({
-  citations,
-}: {
-  citations: Array<{ filename: string; similarity: number }>;
-}) {
+function SourcesBlock({ citations }: { citations: Citation[] }) {
   const [open, setOpen] = useState(false);
-  const unique = Array.from(
-    citations
-      .reduce((acc, c) => {
-        const prev = acc.get(c.filename);
-        if (!prev || prev.similarity < c.similarity) acc.set(c.filename, c);
-        return acc;
-      }, new Map<string, { filename: string; similarity: number }>())
-      .values(),
-  );
+  const evidence = citations.filter((c) => !c.is_context);
+  const context = citations.filter((c) => c.is_context);
+  const documents = Array.from(new Set(citations.map((c) => c.filename)));
+
   return (
     <div className="mt-3 border-t border-border/40 pt-2">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center justify-between text-xs font-semibold opacity-70 hover:opacity-100"
+        className="flex w-full items-center justify-between text-sm font-semibold text-foreground/80 hover:text-foreground"
       >
         <span>
-          Fontes ({unique.length}
-          {unique.length !== citations.length ? ` · ${citations.length} trechos` : ""})
+          Fontes ({documents.length} documento{documents.length === 1 ? "" : "s"} ·{" "}
+          {evidence.length} trecho{evidence.length === 1 ? "" : "s"}
+          {context.length > 0 ? ` + ${context.length} de contexto` : ""})
         </span>
-        <span>{open ? "−" : "+"}</span>
+        <span aria-hidden>{open ? "−" : "+"}</span>
       </button>
       {open && (
-        <div className="mt-1.5 space-y-1">
-          {unique.map((c, idx) => (
-            <div key={idx} className="flex items-start gap-2 text-xs opacity-80">
-              <FileText className="mt-0.5 h-3 w-3 shrink-0" />
-              <span className="min-w-0 flex-1 truncate">
-                {c.filename}
-                <span className="ml-1 opacity-60">
-                  ({Math.round(c.similarity * 100)}%)
-                </span>
+        <div className="mt-2 space-y-1.5">
+          {citations.map((c, idx) => (
+            <div key={c.chunk_id ?? idx} className="flex items-start gap-2 text-sm text-foreground/80">
+              <FileText className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+              <span className="min-w-0 flex-1">
+                <span className="font-medium">{c.ref ? `[${c.ref}] ` : ""}{c.filename}</span>
+                {c.location ? <span className="text-foreground/60"> · {c.location}</span> : null}
+                {c.is_context ? <span className="text-foreground/50"> · contexto vizinho</span> : null}
               </span>
             </div>
           ))}

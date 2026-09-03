@@ -260,6 +260,21 @@ export const Route = createFileRoute("/api/chat/stream")({
                 }
               }
 
+              // Rastreabilidade: remove refs inventadas antes de persistir/enviar.
+              const { stripInvalidRefs, splitSources } = await import("@/lib/rag/citations");
+              const { logRetrievalEvent } = await import("@/lib/rag/log.server");
+              const { EMBEDDING_MODEL } = await import("@/lib/rag.functions");
+              finalContent = stripInvalidRefs(finalContent, run.citations);
+              const sources = splitSources(finalContent, run.citations);
+              await logRetrievalEvent({
+                supabase: auth.supabase,
+                userId: auth.userId,
+                caseId: body.case_id,
+                threadId: body.thread_id ?? null,
+                log: run.retrievalLog,
+                embeddingModel: EMBEDDING_MODEL,
+              });
+
               const toolSteps = visibleSteps.map((s) => ({
                 name: s.name,
                 args_json: JSON.stringify(s.args),
@@ -289,6 +304,9 @@ export const Route = createFileRoute("/api/chat/stream")({
                 send("done", {
                   answer: finalContent,
                   citations: run.citations,
+                  cited_sources: sources.cited_sources,
+                  supporting_sources: sources.supporting_sources,
+                  sufficiency: run.sufficiency,
                   steps: toolSteps,
                   thread_id: persistedThreadId,
                 });
