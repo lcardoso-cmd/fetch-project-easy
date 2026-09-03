@@ -32,8 +32,9 @@ export type IconBoxSize = keyof typeof ICON_BOX_SIZES;
  *
  * Aceita um token de tamanho (`size="sm"`) para manter proporções iguais em
  * todos os contextos, ou valores numéricos custom via `size`/`iconSize` quando
- * necessário. Padrões alinhados à marca: fundo primário, ícone
- * `primary-foreground` e arredondamento `squircle` (22%).
+ * necessário. Padrão neutro: o ciano da marca é reservado a CTA, item ativo,
+ * foco e seleção — ícones decorativos usam superfície discreta, ícone
+ * neutro (superfície discreta) e arredondamento `squircle` (22%).
  *
  * @example
  * // Preset (recomendado)
@@ -52,8 +53,8 @@ export function IconBox({
   size = "md",
   iconSize,
   rounded = "squircle",
-  bgColor = "bg-primary",
-  iconColor = "text-primary-foreground",
+  bgColor = "bg-secondary",
+  iconColor = "text-foreground",
   className,
 }: {
   icon: LucideIcon;
