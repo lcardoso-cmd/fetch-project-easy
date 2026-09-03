@@ -16,7 +16,7 @@ import { hashSharePassword, safeEqualHex } from "@/lib/proposal-shares-crypto";
 
 type ShareRow = {
   id: string;
-  user_id: string;
+  created_by_user_id: string;
   title: string;
   client_name: string | null;
   html: string;
@@ -53,7 +53,7 @@ async function loadShare(
   const { data, error } = await admin
     .from("proposal_shares")
     .select(
-      "id, user_id, title, client_name, html, page_config, cover, watermark, password_salt, password_hash, max_downloads, download_count, expires_at, revoked_at",
+      "id, created_by_user_id, title, client_name, html, page_config, cover, watermark, password_salt, password_hash, max_downloads, download_count, expires_at, revoked_at",
     )
     .eq("token", token)
     .maybeSingle();
@@ -155,7 +155,7 @@ export const Route = createFileRoute("/api/public/proposal-share/$token")({
           const blocks = contentToBlocks(row.html);
           const headerLabel = "Proposta comercial";
           const { loadBrandingForUser } = await import("@/lib/docx/branding.server");
-          const branding = await loadBrandingForUser(row.user_id).catch(() => null);
+          const branding = await loadBrandingForUser(row.created_by_user_id).catch(() => null);
           const pdfBytes = await renderPdf({
             title: row.title,
             blocks,

@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireOrg } from "@/lib/org-middleware";
 
 export const TASK_STATUSES = ["pending", "in_progress", "blocked", "done"] as const;
 export type TaskStatus = (typeof TASK_STATUSES)[number];
@@ -23,7 +23,7 @@ const TaskInput = z.object({
 });
 
 export const listTasks = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireOrg])
   .inputValidator((i: unknown) =>
     z
       .object({
@@ -38,7 +38,7 @@ export const listTasks = createServerFn({ method: "GET" })
       .select(
         "id, title, description, status, priority, due_date, completed_at, case_id, assigned_to_user_id, created_at",
       )
-      .eq("user_id", context.userId)
+      .eq("organization_id", context.organizationId)
       .order("created_at", { ascending: false });
     if (data.case_id) q = q.eq("case_id", data.case_id);
     if (data.status && data.status !== "all") q = q.eq("status", data.status);
@@ -48,12 +48,12 @@ export const listTasks = createServerFn({ method: "GET" })
   });
 
 export const createTask = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireOrg])
   .inputValidator((i: unknown) => TaskInput.parse(i))
   .handler(async ({ data, context }) => {
     const { data: row, error } = await context.supabase
       .from("tasks")
-      .insert({ ...data, user_id: context.userId })
+      .insert({ ...data, organization_id: context.organizationId, created_by_user_id: context.userId })
       .select()
       .single();
     if (error) throw error;
@@ -61,7 +61,7 @@ export const createTask = createServerFn({ method: "POST" })
   });
 
 export const toggleTask = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireOrg])
   .inputValidator((i: unknown) =>
     z.object({ id: z.string().uuid(), done: z.boolean() }).parse(i),
   )
@@ -73,13 +73,13 @@ export const toggleTask = createServerFn({ method: "POST" })
         completed_at: data.done ? new Date().toISOString() : null,
       })
       .eq("id", data.id)
-      .eq("user_id", context.userId);
+      .eq("organization_id", context.organizationId);
     if (error) throw error;
     return { ok: true };
   });
 
 export const updateTaskStatus = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireOrg])
   .inputValidator((i: unknown) =>
     z.object({ id: z.string().uuid(), status: z.enum(TASK_STATUSES) }).parse(i),
   )
@@ -91,20 +91,20 @@ export const updateTaskStatus = createServerFn({ method: "POST" })
         completed_at: data.status === "done" ? new Date().toISOString() : null,
       })
       .eq("id", data.id)
-      .eq("user_id", context.userId);
+      .eq("organization_id", context.organizationId);
     if (error) throw error;
     return { ok: true };
   });
 
 export const deleteTask = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireOrg])
   .inputValidator((i: unknown) => z.object({ id: z.string().uuid() }).parse(i))
   .handler(async ({ data, context }) => {
     const { error } = await context.supabase
       .from("tasks")
       .delete()
       .eq("id", data.id)
-      .eq("user_id", context.userId);
+      .eq("organization_id", context.organizationId);
     if (error) throw error;
     return { ok: true };
   });

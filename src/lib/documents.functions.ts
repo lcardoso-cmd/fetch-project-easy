@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireOrg, requireOrgPermission } from "@/lib/org-middleware";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 const UploadSchema = z.object({
@@ -25,6 +25,7 @@ type AuditAction =
 
 async function logAudit(
   supabase: SupabaseClient,
+  organizationId: string,
   userId: string,
   entry: {
     case_id: string;
@@ -40,7 +41,8 @@ async function logAudit(
     .from("document_audit_events")
     .insert({
       case_id: entry.case_id,
-      user_id: userId,
+      organization_id: organizationId,
+      actor_user_id: userId,
       action: entry.action,
       document_id: entry.document_id ?? null,
       filename: entry.filename ?? null,
@@ -55,26 +57,26 @@ async function logAudit(
 }
 
 export const listDocuments = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireOrg])
   .inputValidator((i: unknown) => z.object({ case_id: z.string().uuid() }).parse(i))
   .handler(async ({ data, context }) => {
     const { data: docs, error } = await context.supabase
       .from("documents")
       .select("id, filename, file_type, file_size, processing_status, created_at")
       .eq("case_id", data.case_id)
-      .eq("user_id", context.userId)
+      .eq("organization_id", context.organizationId)
       .order("created_at", { ascending: false });
     if (error) throw error;
     return docs ?? [];
   });
 
 export const listAllDocuments = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireOrg])
   .handler(async ({ context }) => {
     const { data, error } = await context.supabase
       .from("documents")
       .select("id, filename, file_type, file_size, processing_status, created_at, case_id, storage_path")
-      .eq("user_id", context.userId)
+      .eq("organization_id", context.organizationId)
       .order("created_at", { ascending: false });
     if (error) throw error;
     return data ?? [];
@@ -85,7 +87,7 @@ export const listAllDocuments = createServerFn({ method: "GET" })
  * Retorna também o título do caso de origem para facilitar a busca.
  */
 export const listImportableDocuments = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireOrg])
   .inputValidator((i: unknown) =>
     z.object({ exclude_case_id: z.string().uuid().optional() }).parse(i ?? {}),
   )
@@ -95,7 +97,7 @@ export const listImportableDocuments = createServerFn({ method: "POST" })
       .select(
         "id, filename, file_type, file_size, processing_status, created_at, case_id, storage_path, content_hash, cases:case_id(title)",
       )
-      .eq("user_id", context.userId)
+      .eq("organization_id", context.organizationId)
       .order("created_at", { ascending: false });
     if (error) throw error;
     const rows = (docs ?? []).map((d) => ({
@@ -118,14 +120,14 @@ export const listImportableDocuments = createServerFn({ method: "POST" })
   });
 
 export const getDocumentUrl = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireOrg])
   .inputValidator((i: unknown) => z.object({ id: z.string().uuid() }).parse(i))
   .handler(async ({ data, context }) => {
     const { data: doc } = await context.supabase
       .from("documents")
       .select("storage_path")
       .eq("id", data.id)
-      .eq("user_id", context.userId)
+      .eq("organization_id", context.organizationId)
       .single();
     if (!doc) throw new Error("Documento não encontrado");
     const { data: signed, error } = await context.supabase.storage
@@ -140,7 +142,7 @@ export const getDocumentUrl = createServerFn({ method: "POST" })
  * Usada para permitir progresso real de upload via XHR.
  */
 export const createUploadSignedUrl = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireOrgPermission("documents.upload")])
   .inputValidator((i: unknown) =>
     z
       .object({
@@ -152,7 +154,7 @@ export const createUploadSignedUrl = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const safeName = data.filename.replace(/[^\w.\-]+/g, "_");
     const folder = data.case_id ?? "_intake";
-    const path = `${context.userId}/${folder}/${Date.now()}-${safeName}`;
+    const path = `${context.organizationId}/${folder}/${Date.now()}-${safeName}`;
     const { data: signed, error } = await context.supabase.storage
       .from("documents")
       .createSignedUploadUrl(path);
@@ -170,7 +172,7 @@ export const createUploadSignedUrl = createServerFn({ method: "POST" })
  * Restringido ao prefixo do próprio usuário para evitar acesso cruzado.
  */
 export const discardUploadedObject = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireOrgPermission("documents.upload")])
   .inputValidator((i: unknown) =>
     z
       .object({
@@ -182,7 +184,7 @@ export const discardUploadedObject = createServerFn({ method: "POST" })
       .parse(i),
   )
   .handler(async ({ data, context }) => {
-    if (!data.storage_path.startsWith(`${context.userId}/`)) {
+    if (!data.storage_path.startsWith(`${context.organizationId}/`)) {
       throw new Error("Caminho inválido");
     }
     await context.supabase.storage
@@ -190,7 +192,7 @@ export const discardUploadedObject = createServerFn({ method: "POST" })
       .remove([data.storage_path])
       .catch(() => {});
     if (data.case_id) {
-      await logAudit(context.supabase, context.userId, {
+      await logAudit(context.supabase, context.organizationId, context.userId, {
         case_id: data.case_id,
         action: "discarded",
         filename: data.filename ?? null,
@@ -209,7 +211,7 @@ export type RegisterDuplicate = {
 };
 
 export const registerDocument = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireOrgPermission("documents.upload")])
   .inputValidator((i: unknown) => UploadSchema.parse(i))
   .handler(async ({ data, context }) => {
     // Duplicata por content_hash
@@ -217,7 +219,7 @@ export const registerDocument = createServerFn({ method: "POST" })
       const { data: byHash } = await context.supabase
         .from("documents")
         .select("id, filename")
-        .eq("user_id", context.userId)
+        .eq("organization_id", context.organizationId)
         .eq("case_id", data.case_id)
         .eq("content_hash", data.content_hash)
         .maybeSingle();
@@ -227,7 +229,7 @@ export const registerDocument = createServerFn({ method: "POST" })
           .from("documents")
           .remove([data.storage_path])
           .catch(() => {});
-        await logAudit(context.supabase, context.userId, {
+        await logAudit(context.supabase, context.organizationId, context.userId, {
           case_id: data.case_id,
           action: "duplicate_ignored",
           document_id: byHash.id as string,
@@ -248,7 +250,7 @@ export const registerDocument = createServerFn({ method: "POST" })
     const { data: byName } = await context.supabase
       .from("documents")
       .select("id, filename")
-      .eq("user_id", context.userId)
+      .eq("organization_id", context.organizationId)
       .eq("case_id", data.case_id)
       .eq("filename", data.filename)
       .maybeSingle();
@@ -257,7 +259,7 @@ export const registerDocument = createServerFn({ method: "POST" })
         .from("documents")
         .remove([data.storage_path])
         .catch(() => {});
-      await logAudit(context.supabase, context.userId, {
+      await logAudit(context.supabase, context.organizationId, context.userId, {
         case_id: data.case_id,
         action: "duplicate_ignored",
         document_id: byName.id as string,
@@ -278,7 +280,8 @@ export const registerDocument = createServerFn({ method: "POST" })
       .from("documents")
       .insert({
         case_id: data.case_id,
-        user_id: context.userId,
+        organization_id: context.organizationId,
+        created_by_user_id: context.userId,
         filename: data.filename,
         file_type: data.file_type,
         file_size: data.file_size,
@@ -290,7 +293,7 @@ export const registerDocument = createServerFn({ method: "POST" })
       .select()
       .single();
     if (error) throw error;
-    await logAudit(context.supabase, context.userId, {
+    await logAudit(context.supabase, context.organizationId, context.userId, {
       case_id: data.case_id,
       action: data.replaces_document_id ? "replaced" : "uploaded",
       document_id: (row as { id: string }).id,
@@ -316,7 +319,7 @@ export const registerDocument = createServerFn({ method: "POST" })
  * Rejeita se um documento com o mesmo hash/nome já existir no caso alvo.
  */
 export const attachExistingDocument = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireOrgPermission("documents.upload")])
   .inputValidator((i: unknown) =>
     z
       .object({
@@ -332,7 +335,7 @@ export const attachExistingDocument = createServerFn({ method: "POST" })
         "id, filename, file_type, file_size, storage_path, extracted_text, content_hash",
       )
       .eq("id", data.source_document_id)
-      .eq("user_id", context.userId)
+      .eq("organization_id", context.organizationId)
       .single();
     if (srcErr || !src) throw new Error("Documento de origem não encontrado");
 
@@ -341,12 +344,12 @@ export const attachExistingDocument = createServerFn({ method: "POST" })
       const { data: byHash } = await context.supabase
         .from("documents")
         .select("id, filename")
-        .eq("user_id", context.userId)
+        .eq("organization_id", context.organizationId)
         .eq("case_id", data.case_id)
         .eq("content_hash", src.content_hash)
         .maybeSingle();
       if (byHash) {
-        await logAudit(context.supabase, context.userId, {
+        await logAudit(context.supabase, context.organizationId, context.userId, {
           case_id: data.case_id,
           action: "duplicate_ignored",
           document_id: byHash.id as string,
@@ -367,12 +370,12 @@ export const attachExistingDocument = createServerFn({ method: "POST" })
     const { data: byName } = await context.supabase
       .from("documents")
       .select("id, filename")
-      .eq("user_id", context.userId)
+      .eq("organization_id", context.organizationId)
       .eq("case_id", data.case_id)
       .eq("filename", src.filename as string)
       .maybeSingle();
     if (byName) {
-      await logAudit(context.supabase, context.userId, {
+      await logAudit(context.supabase, context.organizationId, context.userId, {
         case_id: data.case_id,
         action: "duplicate_ignored",
         document_id: byName.id as string,
@@ -392,7 +395,8 @@ export const attachExistingDocument = createServerFn({ method: "POST" })
       .from("documents")
       .insert({
         case_id: data.case_id,
-        user_id: context.userId,
+        organization_id: context.organizationId,
+        created_by_user_id: context.userId,
         filename: src.filename,
         file_type: src.file_type,
         file_size: src.file_size,
@@ -404,7 +408,7 @@ export const attachExistingDocument = createServerFn({ method: "POST" })
       .select()
       .single();
     if (error) throw error;
-    await logAudit(context.supabase, context.userId, {
+    await logAudit(context.supabase, context.organizationId, context.userId, {
       case_id: data.case_id,
       action: "imported",
       document_id: (row as { id: string }).id,
@@ -417,7 +421,7 @@ export const attachExistingDocument = createServerFn({ method: "POST" })
   });
 
 export const deleteDocument = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireOrgPermission("documents.delete")])
   .inputValidator((i: unknown) =>
     z
       .object({
@@ -432,7 +436,7 @@ export const deleteDocument = createServerFn({ method: "POST" })
       .from("documents")
       .select("storage_path, case_id, filename, content_hash")
       .eq("id", data.id)
-      .eq("user_id", context.userId)
+      .eq("organization_id", context.organizationId)
       .single();
     if (doc?.storage_path) {
       const { count } = await context.supabase
@@ -450,10 +454,10 @@ export const deleteDocument = createServerFn({ method: "POST" })
       .from("documents")
       .delete()
       .eq("id", data.id)
-      .eq("user_id", context.userId);
+      .eq("organization_id", context.organizationId);
     if (error) throw error;
     if (doc?.case_id) {
-      await logAudit(context.supabase, context.userId, {
+      await logAudit(context.supabase, context.organizationId, context.userId, {
         case_id: doc.case_id as string,
         action: "deleted",
         document_id: data.id,
@@ -471,7 +475,7 @@ export const deleteDocument = createServerFn({ method: "POST" })
  * antigo, com o nome do usuário responsável quando disponível.
  */
 export const listDocumentAuditEvents = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireOrg])
   .inputValidator((i: unknown) =>
     z.object({ case_id: z.string().uuid(), limit: z.number().int().min(1).max(200).optional() }).parse(i),
   )
@@ -479,7 +483,7 @@ export const listDocumentAuditEvents = createServerFn({ method: "POST" })
     const { data: rows, error } = await context.supabase
       .from("document_audit_events")
       .select(
-        "id, action, reason, filename, content_hash, metadata, created_at, user_id, document_id, profiles:user_id(full_name)",
+        "id, action, reason, filename, content_hash, metadata, created_at, actor_user_id, document_id, profiles:actor_user_id(full_name)",
       )
       .eq("case_id", data.case_id)
       .order("created_at", { ascending: false })
@@ -493,7 +497,7 @@ export const listDocumentAuditEvents = createServerFn({ method: "POST" })
       content_hash: (r.content_hash as string | null) ?? null,
       metadata: (r.metadata ?? {}) as Record<string, string | number | boolean | null>,
       created_at: r.created_at as string,
-      user_id: r.user_id as string,
+      user_id: r.actor_user_id as string,
       document_id: (r.document_id as string | null) ?? null,
       user_name:
         (r.profiles as { full_name?: string | null } | null)?.full_name ??

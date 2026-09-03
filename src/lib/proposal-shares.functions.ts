@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { requireCapability } from "@/lib/capability-middleware";
+import { requireOrgPermission } from "@/lib/org-middleware";
 import { hashSharePassword } from "@/lib/proposal-shares-crypto";
 
 export interface ProposalShare {
@@ -87,7 +87,7 @@ function mapRow(row: {
 }
 
 export const createProposalShare = createServerFn({ method: "POST" })
-  .middleware([requireCapability("commercial")])
+  .middleware([requireOrgPermission("proposals.use")])
   .inputValidator((i: unknown) =>
     z
       .object({
@@ -120,7 +120,8 @@ export const createProposalShare = createServerFn({ method: "POST" })
       const { data: row, error } = await context.supabase
         .from("proposal_shares")
         .insert({
-          user_id: context.userId,
+          organization_id: context.organizationId,
+        created_by_user_id: context.userId,
           token,
           title: data.title,
           client_name: data.client_name ?? null,
@@ -144,14 +145,14 @@ export const createProposalShare = createServerFn({ method: "POST" })
   });
 
 export const listProposalShares = createServerFn({ method: "GET" })
-  .middleware([requireCapability("commercial")])
+  .middleware([requireOrgPermission("proposals.use")])
   .handler(async ({ context }) => {
     const { data, error } = await context.supabase
       .from("proposal_shares")
       .select(
         "id, token, title, client_name, max_downloads, download_count, expires_at, revoked_at, last_accessed_at, password_hash, created_at",
       )
-      .eq("user_id", context.userId)
+      .eq("organization_id", context.organizationId)
       .order("created_at", { ascending: false })
       .limit(100);
     if (error) throw error;
@@ -159,27 +160,27 @@ export const listProposalShares = createServerFn({ method: "GET" })
   });
 
 export const revokeProposalShare = createServerFn({ method: "POST" })
-  .middleware([requireCapability("commercial")])
+  .middleware([requireOrgPermission("proposals.use")])
   .inputValidator((i: unknown) => z.object({ id: z.string().uuid() }).parse(i))
   .handler(async ({ data, context }) => {
     const { error } = await context.supabase
       .from("proposal_shares")
       .update({ revoked_at: new Date().toISOString() })
       .eq("id", data.id)
-      .eq("user_id", context.userId);
+      .eq("organization_id", context.organizationId);
     if (error) throw error;
     return { ok: true };
   });
 
 export const deleteProposalShare = createServerFn({ method: "POST" })
-  .middleware([requireCapability("commercial")])
+  .middleware([requireOrgPermission("proposals.use")])
   .inputValidator((i: unknown) => z.object({ id: z.string().uuid() }).parse(i))
   .handler(async ({ data, context }) => {
     const { error } = await context.supabase
       .from("proposal_shares")
       .delete()
       .eq("id", data.id)
-      .eq("user_id", context.userId);
+      .eq("organization_id", context.organizationId);
     if (error) throw error;
     return { ok: true };
   });

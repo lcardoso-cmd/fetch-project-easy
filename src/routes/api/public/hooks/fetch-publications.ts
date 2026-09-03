@@ -35,7 +35,7 @@ export const Route = createFileRoute("/api/public/hooks/fetch-publications")({
           try {
             const r = await runPipelineForTerm(supabaseAdmin, term);
             totalCaptured += r.captured;
-            perUser.set(term.user_id, (perUser.get(term.user_id) ?? 0) + r.captured);
+            perUser.set(term.created_by_user_id, (perUser.get(term.created_by_user_id) ?? 0) + r.captured);
           } catch (e) {
             console.error("[fetch-publications] term failed", term.id, e);
           }

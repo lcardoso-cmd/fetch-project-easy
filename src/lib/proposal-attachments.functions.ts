@@ -1,11 +1,11 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { requireCapability } from "@/lib/capability-middleware";
+import { requireOrgPermission } from "@/lib/org-middleware";
 import { extractTextFromBlob } from "./cases.functions";
 
 export type ProposalAttachment = {
   id: string;
-  user_id: string;
+  created_by_user_id: string;
   case_id: string | null;
   filename: string;
   file_type: string;
@@ -34,13 +34,13 @@ export type ExtractedProposalFields = {
 const CaseIdFilter = z.object({ case_id: z.string().uuid().nullable() });
 
 export const listProposalAttachments = createServerFn({ method: "GET" })
-  .middleware([requireCapability("commercial")])
+  .middleware([requireOrgPermission("proposals.use")])
   .inputValidator((i: unknown) => CaseIdFilter.parse(i))
   .handler(async ({ data, context }) => {
     let q = context.supabase
       .from("proposal_attachments")
       .select("*")
-      .eq("user_id", context.userId)
+      .eq("organization_id", context.organizationId)
       .order("created_at", { ascending: false });
     q = data.case_id === null ? q.is("case_id", null) : q.eq("case_id", data.case_id);
     const { data: rows, error } = await q;
@@ -57,13 +57,14 @@ const RegisterSchema = z.object({
 });
 
 export const registerProposalAttachment = createServerFn({ method: "POST" })
-  .middleware([requireCapability("commercial")])
+  .middleware([requireOrgPermission("proposals.use")])
   .inputValidator((i: unknown) => RegisterSchema.parse(i))
   .handler(async ({ data, context }) => {
     const { data: row, error } = await context.supabase
       .from("proposal_attachments")
       .insert({
-        user_id: context.userId,
+        organization_id: context.organizationId,
+        created_by_user_id: context.userId,
         case_id: data.case_id,
         filename: data.filename,
         file_type: data.file_type,
@@ -78,14 +79,14 @@ export const registerProposalAttachment = createServerFn({ method: "POST" })
   });
 
 export const deleteProposalAttachment = createServerFn({ method: "POST" })
-  .middleware([requireCapability("commercial")])
+  .middleware([requireOrgPermission("proposals.use")])
   .inputValidator((i: unknown) => z.object({ id: z.string().uuid() }).parse(i))
   .handler(async ({ data, context }) => {
     const { data: row } = await context.supabase
       .from("proposal_attachments")
       .select("storage_path")
       .eq("id", data.id)
-      .eq("user_id", context.userId)
+      .eq("organization_id", context.organizationId)
       .single();
     if (row?.storage_path) {
       await context.supabase.storage.from("documents").remove([row.storage_path]);
@@ -94,7 +95,7 @@ export const deleteProposalAttachment = createServerFn({ method: "POST" })
       .from("proposal_attachments")
       .delete()
       .eq("id", data.id)
-      .eq("user_id", context.userId);
+      .eq("organization_id", context.organizationId);
     if (error) throw error;
     return { ok: true };
   });
@@ -107,14 +108,14 @@ function cleanStr(v: unknown, max = 200): string | null {
 }
 
 export const extractProposalAttachment = createServerFn({ method: "POST" })
-  .middleware([requireCapability("commercial")])
+  .middleware([requireOrgPermission("proposals.use")])
   .inputValidator((i: unknown) => z.object({ id: z.string().uuid() }).parse(i))
   .handler(async ({ data, context }) => {
     const { data: att, error: selErr } = await context.supabase
       .from("proposal_attachments")
       .select("*")
       .eq("id", data.id)
-      .eq("user_id", context.userId)
+      .eq("organization_id", context.organizationId)
       .single();
     if (selErr || !att) throw new Error("Anexo não encontrado");
 
@@ -225,14 +226,15 @@ const ConvertSchema = z.object({
  * de proposta ao novo caso.
  */
 export const convertProposalToCase = createServerFn({ method: "POST" })
-  .middleware([requireCapability("commercial")])
+  .middleware([requireOrgPermission("proposals.use")])
   .inputValidator((i: unknown) => ConvertSchema.parse(i))
   .handler(async ({ data, context }) => {
     // 1. Cria o caso
     const { data: newCase, error: caseErr } = await context.supabase
       .from("cases")
       .insert({
-        user_id: context.userId,
+        organization_id: context.organizationId,
+        created_by_user_id: context.userId,
         title: data.case.title,
         description: data.case.description ?? null,
         client_name: data.case.client_name ?? null,
@@ -252,14 +254,15 @@ export const convertProposalToCase = createServerFn({ method: "POST" })
         .from("proposal_attachments")
         .select("*")
         .in("id", data.attachment_ids)
-        .eq("user_id", context.userId);
+        .eq("organization_id", context.organizationId);
 
       for (const att of atts ?? []) {
         try {
           const { error: docErr } = await context.supabase
             .from("documents")
             .insert({
-              user_id: context.userId,
+              organization_id: context.organizationId,
+        created_by_user_id: context.userId,
               case_id: newCase.id,
               filename: att.filename,
               file_type: att.file_type,
@@ -288,7 +291,7 @@ export const convertProposalToCase = createServerFn({ method: "POST" })
       const { data: draft } = await context.supabase
         .from("proposal_drafts")
         .select("id")
-        .eq("user_id", context.userId)
+        .eq("organization_id", context.organizationId)
         .is("case_id", null)
         .maybeSingle();
       if (draft) {

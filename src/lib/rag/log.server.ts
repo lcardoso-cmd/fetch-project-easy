@@ -7,6 +7,7 @@ export async function logRetrievalEvent(opts: {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   supabase: any;
   userId: string;
+  organizationId: string;
   caseId: string;
   threadId?: string | null;
   log: RetrievalLog;
@@ -15,6 +16,7 @@ export async function logRetrievalEvent(opts: {
   try {
     await opts.supabase.from("rag_retrieval_events").insert({
       user_id: opts.userId,
+      organization_id: opts.organizationId,
       case_id: opts.caseId,
       thread_id: opts.threadId ?? null,
       question_chars: opts.log.question_chars,

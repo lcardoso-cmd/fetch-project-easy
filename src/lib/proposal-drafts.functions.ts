@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { requireCapability } from "@/lib/capability-middleware";
+import { requireOrgPermission } from "@/lib/org-middleware";
 
 const optionalUuid = z.string().uuid().nullable().optional();
 
@@ -27,7 +27,7 @@ export interface ProposalVersion {
 // ------------- Rascunhos -------------
 
 export const getProposalDraft = createServerFn({ method: "GET" })
-  .middleware([requireCapability("commercial")])
+  .middleware([requireOrgPermission("proposals.use")])
   .inputValidator((i: unknown) =>
     z.object({ case_id: optionalUuid }).parse(i ?? {}),
   )
@@ -36,7 +36,7 @@ export const getProposalDraft = createServerFn({ method: "GET" })
     let query = context.supabase
       .from("proposal_drafts")
       .select("id, case_id, form, output, updated_at")
-      .eq("user_id", context.userId);
+      .eq("organization_id", context.organizationId);
     query = caseId === null ? query.is("case_id", null) : query.eq("case_id", caseId);
     const { data: row, error } = await query.maybeSingle();
     if (error) throw error;
@@ -44,7 +44,7 @@ export const getProposalDraft = createServerFn({ method: "GET" })
   });
 
 export const upsertProposalDraft = createServerFn({ method: "POST" })
-  .middleware([requireCapability("commercial")])
+  .middleware([requireOrgPermission("proposals.use")])
   .inputValidator((i: unknown) =>
     z
       .object({
@@ -62,7 +62,7 @@ export const upsertProposalDraft = createServerFn({ method: "POST" })
     let existingQuery = context.supabase
       .from("proposal_drafts")
       .select("id")
-      .eq("user_id", context.userId);
+      .eq("organization_id", context.organizationId);
     existingQuery =
       caseId === null ? existingQuery.is("case_id", null) : existingQuery.eq("case_id", caseId);
     const { data: existing, error: selErr } = await existingQuery.maybeSingle();
@@ -73,7 +73,7 @@ export const upsertProposalDraft = createServerFn({ method: "POST" })
         .from("proposal_drafts")
         .update({ form: data.form, output: data.output })
         .eq("id", existing.id)
-        .eq("user_id", context.userId);
+        .eq("organization_id", context.organizationId);
       if (error) throw error;
       return { ok: true, id: existing.id };
     }
@@ -81,7 +81,8 @@ export const upsertProposalDraft = createServerFn({ method: "POST" })
     const { data: inserted, error } = await context.supabase
       .from("proposal_drafts")
       .insert({
-        user_id: context.userId,
+        organization_id: context.organizationId,
+        created_by_user_id: context.userId,
         case_id: caseId,
         form: data.form,
         output: data.output,
@@ -93,7 +94,7 @@ export const upsertProposalDraft = createServerFn({ method: "POST" })
   });
 
 export const deleteProposalDraft = createServerFn({ method: "POST" })
-  .middleware([requireCapability("commercial")])
+  .middleware([requireOrgPermission("proposals.use")])
   .inputValidator((i: unknown) =>
     z.object({ case_id: optionalUuid }).parse(i ?? {}),
   )
@@ -102,7 +103,7 @@ export const deleteProposalDraft = createServerFn({ method: "POST" })
     let q = context.supabase
       .from("proposal_drafts")
       .delete()
-      .eq("user_id", context.userId);
+      .eq("organization_id", context.organizationId);
     q = caseId === null ? q.is("case_id", null) : q.eq("case_id", caseId);
     const { error } = await q;
     if (error) throw error;
@@ -112,7 +113,7 @@ export const deleteProposalDraft = createServerFn({ method: "POST" })
 // ------------- Versões -------------
 
 export const listProposalVersions = createServerFn({ method: "GET" })
-  .middleware([requireCapability("commercial")])
+  .middleware([requireOrgPermission("proposals.use")])
   .inputValidator((i: unknown) =>
     z.object({ case_id: optionalUuid }).parse(i ?? {}),
   )
@@ -121,7 +122,7 @@ export const listProposalVersions = createServerFn({ method: "GET" })
     let q = context.supabase
       .from("proposal_versions")
       .select("id, case_id, label, description, origin, pinned, form, output, created_at")
-      .eq("user_id", context.userId);
+      .eq("organization_id", context.organizationId);
     q = caseId === null ? q.is("case_id", null) : q.eq("case_id", caseId);
     const { data: rows, error } = await q
       .order("pinned", { ascending: false })
@@ -131,7 +132,7 @@ export const listProposalVersions = createServerFn({ method: "GET" })
   });
 
 export const createProposalVersion = createServerFn({ method: "POST" })
-  .middleware([requireCapability("commercial")])
+  .middleware([requireOrgPermission("proposals.use")])
   .inputValidator((i: unknown) =>
     z
       .object({
@@ -149,7 +150,8 @@ export const createProposalVersion = createServerFn({ method: "POST" })
     const { data: row, error } = await context.supabase
       .from("proposal_versions")
       .insert({
-        user_id: context.userId,
+        organization_id: context.organizationId,
+        created_by_user_id: context.userId,
         case_id: data.case_id ?? null,
         label: data.label,
         description: data.description ?? null,
@@ -165,7 +167,7 @@ export const createProposalVersion = createServerFn({ method: "POST" })
   });
 
 export const updateProposalVersion = createServerFn({ method: "POST" })
-  .middleware([requireCapability("commercial")])
+  .middleware([requireOrgPermission("proposals.use")])
   .inputValidator((i: unknown) =>
     z
       .object({
@@ -186,20 +188,20 @@ export const updateProposalVersion = createServerFn({ method: "POST" })
       .from("proposal_versions")
       .update(patch)
       .eq("id", data.id)
-      .eq("user_id", context.userId);
+      .eq("organization_id", context.organizationId);
     if (error) throw error;
     return { ok: true };
   });
 
 export const deleteProposalVersion = createServerFn({ method: "POST" })
-  .middleware([requireCapability("commercial")])
+  .middleware([requireOrgPermission("proposals.use")])
   .inputValidator((i: unknown) => z.object({ id: z.string().uuid() }).parse(i))
   .handler(async ({ data, context }) => {
     const { error } = await context.supabase
       .from("proposal_versions")
       .delete()
       .eq("id", data.id)
-      .eq("user_id", context.userId);
+      .eq("organization_id", context.organizationId);
     if (error) throw error;
     return { ok: true };
   });
@@ -209,7 +211,7 @@ export const deleteProposalVersion = createServerFn({ method: "POST" })
  * informado (ou "sem caso" quando null).
  */
 export const deleteAllProposalVersions = createServerFn({ method: "POST" })
-  .middleware([requireCapability("commercial")])
+  .middleware([requireOrgPermission("proposals.use")])
   .inputValidator((i: unknown) =>
     z.object({ case_id: optionalUuid }).parse(i ?? {}),
   )
@@ -218,7 +220,7 @@ export const deleteAllProposalVersions = createServerFn({ method: "POST" })
     let q = context.supabase
       .from("proposal_versions")
       .delete()
-      .eq("user_id", context.userId);
+      .eq("organization_id", context.organizationId);
     q = caseId === null ? q.is("case_id", null) : q.eq("case_id", caseId);
     const { error } = await q;
     if (error) throw error;

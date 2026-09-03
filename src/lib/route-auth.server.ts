@@ -58,5 +58,11 @@ export async function authenticateRequest(request: Request) {
     throw new Response("Unauthorized", { status: 401 });
   }
 
-  return { supabase, userId: data.claims.sub as string };
+  const userId = data.claims.sub as string;
+  const { resolveActiveOrganizationId } = await import("@/lib/org-middleware");
+  const organizationId = await resolveActiveOrganizationId(supabase, userId).catch(() => null);
+  if (!organizationId) {
+    throw new Response("Nenhuma organização ativa para este usuário", { status: 403 });
+  }
+  return { supabase, userId, organizationId };
 }
