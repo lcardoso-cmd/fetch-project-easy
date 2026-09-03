@@ -21,9 +21,9 @@
    * Nada abaixo de 12px é usado para informação operacional. */
   --text-2xs: 0.75rem;        /* 12px — badge/legenda técnica (mínimo) */
   --text-2xs--line-height: 1.4;
-  --text-xs: 0.8125rem;       /* 13px — cabeçalho de tabela */
+  --text-xs: 0.875rem;        /* 14px — cabeçalho de tabela, legenda */
   --text-xs--line-height: 1.45;
-  --text-sm: 0.875rem;        /* 14px — texto secundário, label */
+  --text-sm: 0.9375rem;       /* 15px — texto de interface, label, botão */
   --text-sm--line-height: 1.5;
   --text-base: 1rem;          /* 16px — corpo, formulários */
   --text-base--line-height: 1.6;
