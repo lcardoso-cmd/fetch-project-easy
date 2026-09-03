@@ -224,6 +224,7 @@ async function logFetch(
 ) {
   await supabase.from("publication_fetch_log").insert({
     organization_id: term.organization_id,
+    created_by_user_id: term.created_by_user_id,
     term_id: term.id,
     source,
     ok,
