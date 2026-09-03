@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { LogOut, Settings, LayoutDashboard, UserCog } from "lucide-react";
+import { LogOut, Settings, LayoutDashboard, UserCog, HelpCircle } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -73,6 +73,12 @@ export function UserMenu({ compact = false }: { compact?: boolean }) {
           <Link to="/configuracoes/escritorio" className="flex items-center gap-2">
             <Settings className="h-4 w-4" />
             Configurações
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <Link to="/ajuda/permissoes" className="flex items-center gap-2">
+            <HelpCircle className="h-4 w-4" />
+            Ajuda e acessos
           </Link>
         </DropdownMenuItem>
         <DropdownMenuSeparator />
