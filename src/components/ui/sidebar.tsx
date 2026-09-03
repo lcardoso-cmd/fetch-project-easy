@@ -269,7 +269,7 @@ const SidebarTrigger = React.forwardRef<
       data-sidebar="trigger"
       variant="ghost"
       size="icon"
-      className={cn("h-7 w-7", className)}
+      className={cn("size-9", className)}
       onClick={(event) => {
         onClick?.(event);
         toggleSidebar();
@@ -511,7 +511,7 @@ const sidebarMenuButtonVariants = cva(
       },
       size: {
         default: "h-8 text-sm",
-        sm: "h-7 text-xs",
+        sm: "h-9 text-sm",
         lg: "h-12 text-sm group-data-[collapsible=icon]:!p-0",
       },
     },

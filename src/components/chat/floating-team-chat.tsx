@@ -133,7 +133,7 @@ export function FloatingTeamChat({ caseId }: { caseId: string }) {
                 <div className="min-w-0">
                   <p className="truncate text-sm font-semibold">{chat.title}</p>
                   {chat.subtitle && (
-                    <p className="truncate text-[11px] opacity-80">
+                    <p className="truncate text-2xs opacity-80">
                       {chat.subtitle}
                     </p>
                   )}
@@ -181,7 +181,7 @@ export function FloatingTeamChat({ caseId }: { caseId: string }) {
             <Button
               variant="ghost"
               size="icon"
-              className="h-7 w-7"
+              className="size-9"
               onClick={() => setListOpen(false)}
             >
               <X className="h-4 w-4" />

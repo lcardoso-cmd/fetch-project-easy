@@ -6,7 +6,16 @@ import { CAPABILITIES, type Capability } from "@/lib/capabilities.functions";
 type Admin = {
   from: (t: string) => any;
   rpc: (fn: string, args: Record<string, unknown>) => Promise<{ data: unknown; error: { message: string } | null }>;
+  auth: {
+    admin: {
+      listUsers: (params: { page: number; perPage: number }) => Promise<{
+        data: { users: Array<{ id: string; email?: string | null; last_sign_in_at?: string | null }> } | null;
+        error: { message: string } | null;
+      }>;
+    };
+  };
 };
+
 
 async function getAdmin(): Promise<Admin> {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -233,15 +242,52 @@ export const listPlatformUsers = createServerFn({ method: "POST" })
       arr.push(row.capability);
       map.set(row.user_id, arr);
     }
+
+    // Organização ativa (papel + nome) por usuário — dados reais de membership.
+    const memberships = ids.length
+      ? (
+          await admin
+            .from("organization_memberships")
+            .select("user_id, role, status, organizations(name)")
+            .in("user_id", ids)
+            .eq("status", "active")
+        ).data ?? []
+      : [];
+    const orgMap = new Map<string, { org_name: string | null; role: string | null }>();
+    for (const m of memberships as any[]) {
+      if (!orgMap.has(m.user_id)) {
+        orgMap.set(m.user_id, { org_name: m.organizations?.name ?? null, role: m.role ?? null });
+      }
+    }
+
+    // E-mail e último acesso vêm do provedor de autenticação.
+    const authMap = new Map<string, { email: string | null; last_sign_in_at: string | null }>();
+    try {
+      const { data: authList } = await admin.auth.admin.listUsers({ page: 1, perPage: 200 });
+      for (const u of authList?.users ?? []) {
+        authMap.set(u.id, {
+          email: u.email ?? null,
+          last_sign_in_at: (u as any).last_sign_in_at ?? null,
+        });
+      }
+    } catch {
+      // Sem acesso à listagem de auth: as colunas exibem "—" na interface.
+    }
+
     let rows = (profiles ?? []).map((p: any) => ({
       ...p,
       capabilities: map.get(p.id) ?? [],
+      organization_name: orgMap.get(p.id)?.org_name ?? null,
+      organization_role: orgMap.get(p.id)?.role ?? null,
+      email: authMap.get(p.id)?.email ?? null,
+      last_sign_in_at: authMap.get(p.id)?.last_sign_in_at ?? null,
     }));
     if (data.capability) {
       rows = rows.filter((r: any) => r.capabilities.includes(data.capability));
     }
     return { total: count ?? 0, rows };
   });
+
 
 export const grantCapability = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])

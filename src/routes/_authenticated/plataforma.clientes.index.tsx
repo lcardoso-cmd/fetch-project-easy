@@ -93,7 +93,7 @@ function PlatformCustomers() {
           />
         </div>
         <select
-          className="h-10 rounded-md border bg-background px-3 text-sm"
+          className="h-11 rounded-md border border-input bg-card px-3 text-base"
           value={status}
           onChange={(e) => {
             setStatus(e.target.value);
@@ -108,7 +108,7 @@ function PlatformCustomers() {
           ))}
         </select>
         <select
-          className="h-10 rounded-md border bg-background px-3 text-sm"
+          className="h-11 rounded-md border border-input bg-card px-3 text-base"
           value={planCode}
           onChange={(e) => {
             setPlanCode(e.target.value);

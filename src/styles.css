@@ -10,8 +10,36 @@
  */
 
 @theme inline {
-  --font-heading: "Sora", system-ui, -apple-system, sans-serif;
-  --font-body: "Jost", system-ui, -apple-system, sans-serif;
+  /* Guideline da marca: Cassannet (títulos) e Kelson (interface).
+   * Os arquivos licenciados não estão no repositório, portanto usamos
+   * substitutas legíveis: Sora para títulos e Inter para interface/corpo.
+   * Ao receber os arquivos, basta declarar @font-face e trocar os nomes. */
+  --font-heading: "Sora", "Cassannet", system-ui, -apple-system, sans-serif;
+  --font-body: "Inter", "Kelson", system-ui, -apple-system, sans-serif;
+
+  /* Escala tipográfica semântica (base 16px do navegador).
+   * Nada abaixo de 12px é usado para informação operacional. */
+  --text-2xs: 0.75rem;        /* 12px — badge/legenda técnica (mínimo) */
+  --text-2xs--line-height: 1.4;
+  --text-xs: 0.875rem;        /* 14px — cabeçalho de tabela, legenda */
+  --text-xs--line-height: 1.45;
+  --text-sm: 0.9375rem;       /* 15px — texto de interface, label, botão */
+  --text-sm--line-height: 1.5;
+  --text-base: 1rem;          /* 16px — corpo, formulários */
+  --text-base--line-height: 1.6;
+  --text-table: 0.9375rem;    /* 15px — tabelas, navegação, botões */
+  --text-table--line-height: 1.45;
+  --text-lg: 1.0625rem;       /* 17px — título de card */
+  --text-lg--line-height: 1.35;
+  --text-xl: 1.375rem;        /* 22px — título de seção */
+  --text-xl--line-height: 1.25;
+  --text-2xl: 1.5rem;         /* 24px — título de seção grande */
+  --text-2xl--line-height: 1.22;
+  --text-3xl: 1.75rem;        /* 28px — título de página */
+  --text-3xl--line-height: 1.18;
+  --text-4xl: 2rem;           /* 32px — título de página destaque */
+  --text-4xl--line-height: 1.15;
+
 
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
@@ -79,41 +107,44 @@
 
 
 
-  /* Minimal editorial — 90% neutro, navy só como marca/CTA. */
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.16 0.01 260);
-  --card: oklch(0.985 0.002 250);
+  /* Tema claro institucional: canvas marfim/cinza derivado do navy,
+   * cards brancos delimitados, texto navy. */
+  --background: oklch(0.976 0.004 271.4);      /* #F6F7FA */
+  --foreground: oklch(0.154 0.107 264.1);      /* navy #000038 */
+  --card: oklch(1 0 0);                        /* #FFFFFF */
   --card-foreground: var(--foreground);
   --popover: oklch(1 0 0);
   --popover-foreground: var(--foreground);
   --primary: var(--brand-navy);
   --primary-foreground: oklch(1 0 0);
-  --secondary: oklch(0.97 0.002 250);
+  --secondary: oklch(0.961 0.007 268.5);       /* #F0F2F7 */
   --secondary-foreground: var(--foreground);
-  --muted: oklch(0.97 0.002 250);
-  --muted-foreground: oklch(0.48 0.008 260);
-  --accent: oklch(0.965 0.004 260);
+  --muted: oklch(0.961 0.007 268.5);           /* #F0F2F7 */
+  --muted-foreground: oklch(0.442 0.035 257.8);/* #475467 — AA sobre marfim */
+  --accent: oklch(0.961 0.007 268.5);
   --accent-foreground: var(--foreground);
-  --destructive: oklch(0.55 0.22 25);
+  --destructive: oklch(0.52 0.21 25);
   --destructive-foreground: oklch(1 0 0);
-  --border: oklch(0.92 0.004 260);
-  --input: oklch(0.92 0.004 260);
+  --border: oklch(0.894 0.014 268.5);          /* #D8DCE6 */
+  --input: oklch(0.894 0.014 268.5);
   --ring: var(--brand-navy);
   --chart-1: var(--brand-navy);
   --chart-2: oklch(0.30 0.13 278);
   --chart-3: oklch(0.45 0.13 275);
   --chart-4: oklch(0.60 0.10 268);
   --chart-5: oklch(0.78 0.06 260);
-  /* Sidebar editorial: branco puro, ativo com fundo neutro + barra navy */
-  --sidebar: oklch(1 0 0);
-  --sidebar-foreground: oklch(0.30 0.008 260);
-  --sidebar-primary: var(--brand-navy);
-  --sidebar-primary-foreground: oklch(1 0 0);
-  --sidebar-accent: oklch(0.965 0.004 260);
-  --sidebar-accent-foreground: var(--foreground);
-  --sidebar-border: oklch(0.93 0.004 260);
-  --sidebar-ring: var(--brand-navy);
+  /* Barra lateral institucional: navy da marca, texto branco,
+   * ciano apenas como marcador de item ativo/foco. */
+  --sidebar: var(--brand-navy);
+  --sidebar-foreground: oklch(0.97 0.005 260);
+  --sidebar-primary: var(--brand-cyan);
+  --sidebar-primary-foreground: var(--brand-navy);
+  --sidebar-accent: oklch(0.261 0.104 276.4);  /* #1A1A55 */
+  --sidebar-accent-foreground: oklch(1 0 0);
+  --sidebar-border: oklch(0.72 0.035 264 / 30%);
+  --sidebar-ring: var(--brand-cyan);
 }
+
 
 .dark {
   /* Dark mode institucional: navy #000038 como base real do sistema,
@@ -159,25 +190,37 @@
 
   html {
     font-family: var(--font-body);
-    /* Aumenta a legibilidade global: escala todas as unidades rem
-     * (Tailwind text-sm, text-base, text-lg, etc.) sem tocar em
-     * cada componente. 16px é o default do browser; 17.5px casa
-     * com a densidade do menu Lovable e melhora leitura no site. */
-    font-size: 17.5px;
+    /* Base 100% do navegador: respeita a preferência do usuário e o zoom.
+     * A legibilidade vem da escala semântica em @theme, não de um
+     * font-size global inflado. */
+    font-size: 100%;
     line-height: 1.55;
+    -webkit-text-size-adjust: 100%;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-  }
-
-  @media (max-width: 640px) {
-    html { font-size: 16.5px; }
   }
 
   h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-heading);
     font-weight: 700;
-    letter-spacing: 0;
+    letter-spacing: -0.01em;
+    line-height: 1.2;
   }
+
+  /* Interface: pesos mínimos legíveis, sem depender de traços finos. */
+  label,
+  th,
+  nav a,
+  button {
+    font-weight: 500;
+  }
+
+  input,
+  select,
+  textarea {
+    font-size: 1rem; /* 16px — evita zoom automático no iOS */
+  }
+
 
   body {
     background-color: var(--color-background);
@@ -288,3 +331,91 @@
 .word-doc strong { font-weight: 700; }
 .word-doc em { font-style: italic; }
 .word-doc a { color: #1E3A8A; text-decoration: underline; }
+
+/* ────────── Escala tipográfica semântica ──────────
+ * Use estas classes em vez de escolher tamanhos ad-hoc por tela.
+ * Nenhuma delas desce abaixo de 12px. */
+@utility text-page-title {
+  font-family: var(--font-heading);
+  font-size: 1.75rem; /* 28px */
+  line-height: 1.18;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+}
+
+@utility text-section-title {
+  font-family: var(--font-heading);
+  font-size: 1.375rem; /* 22px */
+  line-height: 1.25;
+  font-weight: 600;
+}
+
+@utility text-card-title {
+  font-size: 1.0625rem; /* 17px */
+  line-height: 1.35;
+  font-weight: 600;
+}
+
+@utility text-body {
+  font-size: 1rem; /* 16px */
+  line-height: 1.6;
+  font-weight: 400;
+}
+
+@utility text-ui {
+  font-size: 0.9375rem; /* 15px — navegação, tabelas, botões */
+  line-height: 1.45;
+}
+
+@utility text-secondary {
+  font-size: 0.875rem; /* 14px */
+  line-height: 1.5;
+  color: var(--color-muted-foreground);
+}
+
+@utility text-kpi {
+  font-family: var(--font-heading);
+  font-size: 1.75rem;
+  line-height: 1.15;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Largura de leitura confortável (60–75 caracteres). */
+@utility prose-measure {
+  max-width: 68ch;
+}
+
+/* Marcador ativo da navegação institucional. */
+@utility nav-active-marker {
+  position: relative;
+  &::before {
+    content: "";
+    position: absolute;
+    inset-block: 0.25rem;
+    inset-inline-start: 0;
+    width: 3px;
+    border-radius: 9999px;
+    background-color: var(--color-brand-cyan);
+  }
+}
+
+@layer base {
+  /* Foco sempre visível e com 2px, em qualquer superfície. */
+  :focus-visible {
+    outline: 2px solid var(--color-ring);
+    outline-offset: 2px;
+  }
+
+  /* Placeholder legível (não cinza-claro). */
+  ::placeholder {
+    color: var(--color-muted-foreground);
+    opacity: 1;
+  }
+
+  /* Desabilitado permanece identificável. */
+  [disabled],
+  [aria-disabled="true"] {
+    opacity: 0.65;
+  }
+}

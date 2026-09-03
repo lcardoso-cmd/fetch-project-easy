@@ -385,7 +385,7 @@ function VoiceMessagePlayback({
 
   if (!hasAudio) {
     return (
-      <div className="mb-2 flex items-center gap-1.5 text-[11px] opacity-80">
+      <div className="mb-2 flex items-center gap-1.5 text-2xs opacity-80">
         <Mic className="h-3 w-3" />
         <span>Ditado por voz{dur ? ` · ${dur}` : ""}</span>
       </div>
@@ -394,7 +394,7 @@ function VoiceMessagePlayback({
 
   return (
     <div className="mb-2 flex flex-col gap-1.5">
-      <div className="flex items-center gap-1.5 text-[11px] opacity-80">
+      <div className="flex items-center gap-1.5 text-2xs opacity-80">
         <Mic className="h-3 w-3" />
         <span>Ditado por voz{dur ? ` · ${dur}` : ""}</span>
       </div>
@@ -410,7 +410,7 @@ function VoiceMessagePlayback({
           type="button"
           onClick={load}
           disabled={loading}
-          className="inline-flex w-fit items-center gap-1 rounded-md bg-background/20 px-2 py-1 text-[11px] hover:bg-background/30 disabled:opacity-60"
+          className="inline-flex w-fit items-center gap-1 rounded-md bg-background/20 px-2 py-1 text-2xs hover:bg-background/30 disabled:opacity-60"
         >
           {loading ? "Carregando…" : error ?? "Ouvir áudio"}
         </button>
@@ -1587,7 +1587,7 @@ export function JurisMindChat({
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7"
+                    className="absolute right-1 top-1/2 -translate-y-1/2 size-9"
                     onClick={() => setDateRange(undefined)}
                   >
                     <X className="h-3.5 w-3.5" />
@@ -1686,7 +1686,7 @@ export function JurisMindChat({
             <BrainCircuit className="h-5 w-5 shrink-0 text-primary" />
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-semibold sm:text-base">JurisMind AI</p>
-              <p className="truncate text-[11px] text-muted-foreground sm:text-xs">
+              <p className="truncate text-2xs text-muted-foreground sm:text-xs">
                 {selectedDocIds.size > 0
                   ? `${selectedDocIds.size} de ${readyDocs.length} doc(s) selecionado(s)`
                   : `${readyDocs.length} doc(s) no caso`}
@@ -1872,7 +1872,7 @@ export function JurisMindChat({
           <div className="shrink-0 border-t p-3">
             {messages.length === 0 && (
               <div className="mb-3">
-                <p className="mb-2 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                <p className="mb-2 text-2xs font-medium uppercase tracking-wide text-muted-foreground">
                   Sugestões
                 </p>
                 <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3">
@@ -2202,13 +2202,13 @@ export function JurisMindChat({
                     })}
                   </RadioGroup>
                   {recording && (
-                    <p className="mt-2 text-[11px] text-muted-foreground">
+                    <p className="mt-2 text-2xs text-muted-foreground">
                       Pare a gravação para trocar o microfone.
                     </p>
                   )}
                 </PopoverContent>
               </Popover>
-              <div className="ml-auto text-[11px] text-muted-foreground">
+              <div className="ml-auto text-2xs text-muted-foreground">
                 Enter envia · Shift+Enter quebra
               </div>
             </div>

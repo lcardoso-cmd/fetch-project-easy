@@ -31,7 +31,7 @@ export function ConversationsDrawer() {
         <Button variant="ghost" size="icon" className="relative" aria-label="Conversas internas">
           <MessageSquare className="h-5 w-5" />
           {unread > 0 && (
-            <span className="absolute -right-0.5 -top-0.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-semibold text-primary-foreground">
+            <span className="absolute -right-0.5 -top-0.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-2xs font-semibold text-primary-foreground">
               {unread > 9 ? "9+" : unread}
             </span>
           )}

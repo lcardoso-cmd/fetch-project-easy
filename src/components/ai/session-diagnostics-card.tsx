@@ -191,7 +191,7 @@ function EventRow({ event }: { event: SessionEventRow }) {
     <li className="rounded-md border border-border/60 bg-muted/30 px-3 py-2">
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 text-sm">
-          <span className={`inline-flex h-5 items-center rounded px-1.5 text-[10px] font-medium uppercase ${meta.color}`}>
+          <span className={`inline-flex h-5 items-center rounded px-1.5 text-2xs font-medium uppercase ${meta.color}`}>
             {event.event_type}
           </span>
           {event.model && <span className="font-mono text-xs">{event.model}</span>}

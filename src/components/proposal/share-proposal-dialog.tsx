@@ -268,7 +268,7 @@ export function ShareProposalDialog({ open, onOpenChange, snapshot }: Props) {
                   onChange={(e) => setPassword(e.target.value)}
                   className="h-9"
                 />
-                <p className="text-[11px] text-muted-foreground">
+                <p className="text-2xs text-muted-foreground">
                   Compartilhe a senha em um canal separado do link.
                 </p>
               </>
@@ -329,7 +329,7 @@ export function ShareProposalDialog({ open, onOpenChange, snapshot }: Props) {
                     >
                       <div className="min-w-0 flex-1">
                         <p className="truncate font-medium">{s.title}</p>
-                        <div className="flex flex-wrap gap-x-2 gap-y-0.5 text-[11px] text-muted-foreground">
+                        <div className="flex flex-wrap gap-x-2 gap-y-0.5 text-2xs text-muted-foreground">
                           <span
                             className={
                               status.tone === "ok"
@@ -353,7 +353,7 @@ export function ShareProposalDialog({ open, onOpenChange, snapshot }: Props) {
                       <Button
                         size="icon"
                         variant="ghost"
-                        className="h-7 w-7"
+                        className="size-9"
                         onClick={() => copy(s.token)}
                         aria-label="Copiar link"
                         disabled={!!s.revoked_at}

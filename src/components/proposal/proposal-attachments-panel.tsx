@@ -290,7 +290,7 @@ function AttachmentRow({
             <p className="mt-1 text-xs text-destructive">{att.extraction_error}</p>
           )}
           {att.extracted_fields && (
-            <div className="mt-2 flex flex-wrap gap-1 text-[11px] text-muted-foreground">
+            <div className="mt-2 flex flex-wrap gap-1 text-2xs text-muted-foreground">
               {att.extracted_fields.client_name && (
                 <span className="rounded bg-muted px-1.5 py-0.5">
                   Cliente: <strong>{att.extracted_fields.client_name}</strong>
@@ -313,14 +313,14 @@ function AttachmentRow({
           {statusBadge()}
           <div className="flex gap-1">
             {att.extraction_status === "done" ? (
-              <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={onApply}>
+              <Button size="sm" variant="ghost" className="h-9 px-3 text-sm" onClick={onApply}>
                 <Sparkles className="mr-1 h-3 w-3" /> Aplicar
               </Button>
             ) : (
               <Button
                 size="sm"
                 variant="ghost"
-                className="h-7 px-2 text-xs"
+                className="h-9 px-3 text-sm"
                 onClick={onExtract}
                 disabled={busy || att.extraction_status === "processing"}
               >
@@ -335,7 +335,7 @@ function AttachmentRow({
             <Button
               size="sm"
               variant="ghost"
-              className="h-7 px-2 text-xs text-destructive"
+              className="h-9 px-3 text-sm text-destructive"
               onClick={onRemove}
             >
               <Trash2 className="h-3 w-3" />

@@ -509,7 +509,7 @@ export function UploadDialog({
                     />
                   ))}
                 </div>
-                <p className="text-[11px] text-muted-foreground">
+                <p className="text-2xs text-muted-foreground">
                   Confira o conteúdo e os metadados extraídos. Nada é gravado
                   no caso até você confirmar o envio.
                 </p>
@@ -526,7 +526,7 @@ export function UploadDialog({
                       variant="ghost"
                       size="sm"
                       onClick={cancelAll}
-                      className="h-7 text-xs text-muted-foreground hover:text-destructive"
+                      className="h-9 text-sm text-muted-foreground hover:text-destructive"
                     >
                       <StopCircle className="mr-1 h-3.5 w-3.5" />
                       Cancelar todos

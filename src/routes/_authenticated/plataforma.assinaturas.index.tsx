@@ -79,7 +79,7 @@ function SubscriptionsPage() {
 
       <div className="grid gap-3 sm:grid-cols-3">
         <select
-          className="h-10 rounded-md border bg-background px-3 text-sm"
+          className="h-11 rounded-md border border-input bg-card px-3 text-base"
           value={status}
           onChange={(e) => setStatus(e.target.value)}
         >
@@ -91,7 +91,7 @@ function SubscriptionsPage() {
           ))}
         </select>
         <select
-          className="h-10 rounded-md border bg-background px-3 text-sm"
+          className="h-11 rounded-md border border-input bg-card px-3 text-base"
           value={provider}
           onChange={(e) => setProvider(e.target.value)}
         >

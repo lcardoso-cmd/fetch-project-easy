@@ -126,7 +126,7 @@ function CapabilitiesOverviewPage() {
                   <CardContent className="flex-1 space-y-3">
                     <div className="flex flex-wrap gap-1.5">
                       {p.capabilities.map((c) => (
-                        <Badge key={c} variant="outline" className="text-[11px]">
+                        <Badge key={c} variant="outline" className="text-2xs">
                           {CAPABILITY_LABELS[c]}
                         </Badge>
                       ))}
@@ -134,15 +134,15 @@ function CapabilitiesOverviewPage() {
                     <div className="grid grid-cols-2 gap-2 text-sm">
                       <div className="rounded-md border p-2 text-center">
                         <div className="text-lg font-semibold">{p.matchingUsers}</div>
-                        <div className="text-[11px] text-muted-foreground">com todas as caps</div>
+                        <div className="text-2xs text-muted-foreground">com todas as caps</div>
                       </div>
                       <div className="rounded-md border p-2 text-center">
                         <div className="text-lg font-semibold">{p.partialUsers}</div>
-                        <div className="text-[11px] text-muted-foreground">parciais</div>
+                        <div className="text-2xs text-muted-foreground">parciais</div>
                       </div>
                     </div>
                     {p.requiresSuperAdmin && (
-                      <p className="text-[11px] text-amber-600 dark:text-amber-400">
+                      <p className="text-2xs text-amber-600 dark:text-amber-400">
                         Só o super admin pode aplicar este preset.
                       </p>
                     )}
@@ -270,7 +270,7 @@ function ApplyPresetDialog({
                   />
                   <div className="min-w-0 flex-1">
                     <div className="font-medium truncate">{u.full_name ?? "(sem nome)"}</div>
-                    <div className="text-[11px] text-muted-foreground truncate">
+                    <div className="text-2xs text-muted-foreground truncate">
                       {u.firm_name ?? "—"} · {u.capabilities.length} cap(s)
                     </div>
                   </div>
@@ -280,7 +280,7 @@ function ApplyPresetDialog({
           )}
         </div>
 
-        <p className="text-[11px] text-muted-foreground">
+        <p className="text-2xs text-muted-foreground">
           {selectedIds.length} usuário(s) selecionado(s).
           {mode === "replace" &&
             " Modo substituir remove as caps de escritório fora do preset."}

@@ -70,17 +70,17 @@ function PlatformAudit() {
                     <td className="px-4 py-2">
                       <code className="rounded bg-muted px-1.5 py-0.5 text-xs">{r.action}</code>
                     </td>
-                    <td className="px-4 py-2 font-mono text-[11px]">
+                    <td className="px-4 py-2 font-mono text-2xs">
                       {String(r.actor_user_id).slice(0, 8)}…
                     </td>
-                    <td className="px-4 py-2 font-mono text-[11px]">
+                    <td className="px-4 py-2 font-mono text-2xs">
                       {r.target_user_id ? `user:${String(r.target_user_id).slice(0, 8)}…` : "—"}
                       {r.target_customer_id
                         ? ` acc:${String(r.target_customer_id).slice(0, 8)}…`
                         : ""}
                     </td>
                     <td className="px-4 py-2">
-                      <code className="text-[11px] text-muted-foreground">
+                      <code className="text-2xs text-muted-foreground">
                         {JSON.stringify(r.metadata)}
                       </code>
                     </td>

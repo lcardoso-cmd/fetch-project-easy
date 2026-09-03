@@ -717,29 +717,29 @@ function ProposalPage() {
   const StatusPill = () => {
     if (saving)
       return (
-        <span role="status" aria-live="polite" className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground">
+        <span role="status" aria-live="polite" className="inline-flex items-center gap-1.5 text-2xs text-muted-foreground">
           <Loader2 className="h-3 w-3 animate-spin" /> Salvando…
         </span>
       );
     if (pending)
       return (
-        <span role="status" aria-live="polite" className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground">
+        <span role="status" aria-live="polite" className="inline-flex items-center gap-1.5 text-2xs text-muted-foreground">
           <span className="h-1.5 w-1.5 rounded-full bg-amber-500" /> Alterações pendentes
         </span>
       );
     if (syncError)
       return (
-        <span role="alert" className="inline-flex items-center gap-1.5 text-[11px] text-destructive">
+        <span role="alert" className="inline-flex items-center gap-1.5 text-2xs text-destructive">
           <CloudOff className="h-3 w-3" /> Falha ao sincronizar
         </span>
       );
     if (savedAt)
       return (
-        <span className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground">
+        <span className="inline-flex items-center gap-1.5 text-2xs text-muted-foreground">
           <Cloud className="h-3 w-3" /> Salvo {formatSavedAt(savedAt)}
         </span>
       );
-    return <span className="text-[11px] text-muted-foreground">Autosave ativo</span>;
+    return <span className="text-2xs text-muted-foreground">Autosave ativo</span>;
   };
 
   return (
@@ -776,7 +776,7 @@ function ProposalPage() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuLabel className="text-[11px] font-normal text-muted-foreground">
+              <DropdownMenuLabel className="text-2xs font-normal text-muted-foreground">
                 Rascunho
               </DropdownMenuLabel>
               <DropdownMenuItem onClick={openSavePopover}>
@@ -839,7 +839,7 @@ function ProposalPage() {
             >
               <span
                 className={cn(
-                  "flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-medium",
+                  "flex h-5 w-5 items-center justify-center rounded-full text-2xs font-medium",
                   active
                     ? "bg-primary text-primary-foreground"
                     : done
@@ -900,7 +900,7 @@ function ProposalPage() {
                 />
               </FieldRow>
               {clientSummary && (
-                <p className="pl-[188px] text-[11px] text-muted-foreground">
+                <p className="pl-[188px] text-2xs text-muted-foreground">
                   {clientSummary}
                 </p>
               )}
@@ -975,7 +975,7 @@ function ProposalPage() {
                 </Select>
               </FieldRow>
             </div>
-            <p className="text-[11px] text-muted-foreground">
+            <p className="text-2xs text-muted-foreground">
               Escritório e advogado responsável são preenchidos automaticamente pelo seu perfil.
             </p>
           </form>
@@ -1032,7 +1032,7 @@ function ProposalPage() {
                           <Label className="text-xs">Margens (mm)</Label>
                           <button
                             type="button"
-                            className="text-[11px] text-muted-foreground hover:text-foreground underline"
+                            className="text-2xs text-muted-foreground hover:text-foreground underline"
                             onClick={() => setPdfMargins({ top: 25, right: 25, bottom: 25, left: 25 })}
                           >
                             Redefinir
@@ -1041,7 +1041,7 @@ function ProposalPage() {
                         <div className="grid grid-cols-2 gap-2">
                           {(["top", "right", "bottom", "left"] as const).map((side) => (
                             <div key={side} className="space-y-1">
-                              <Label className="text-[11px] capitalize text-muted-foreground">
+                              <Label className="text-2xs capitalize text-muted-foreground">
                                 {side === "top" ? "Superior" : side === "right" ? "Direita" : side === "bottom" ? "Inferior" : "Esquerda"}
                               </Label>
                               <Input
@@ -1238,7 +1238,7 @@ function FieldRow({
       </Label>
       <div className="min-w-0">
         {children}
-        {error && <p className="mt-1 text-[11px] text-destructive">{error}</p>}
+        {error && <p className="mt-1 text-2xs text-destructive">{error}</p>}
       </div>
     </div>
   );
