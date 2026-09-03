@@ -670,16 +670,34 @@ function LandingPage() {
           <nav className="text-sm">
             <p className="font-heading font-bold text-foreground">Plataforma</p>
             <ul className="mt-3 space-y-2 text-muted-foreground">
-              <li>
-                <Link to="/entrar" className="hover:text-foreground">
-                  Entrar na plataforma
-                </Link>
-              </li>
-              <li>
-                <Link to="/entrar" search={TRIAL_SEARCH} className="hover:text-foreground">
-                  Criar conta
-                </Link>
-              </li>
+              {user ? (
+                <>
+                  <li>
+                    <Link to="/painel" className="hover:text-foreground">
+                      Abrir painel
+                    </Link>
+                  </li>
+                  <li>
+                    <Link to="/configuracoes" className="hover:text-foreground">
+                      Minha conta
+                    </Link>
+                  </li>
+                </>
+              ) : (
+                <>
+                  <li>
+                    <Link to="/entrar" className="hover:text-foreground">
+                      Entrar
+                    </Link>
+                  </li>
+                  <li>
+                    <Link to="/entrar" search={TRIAL_SEARCH} className="hover:text-foreground">
+                      Criar conta
+                    </Link>
+                  </li>
+                </>
+              )}
+
               <li>
                 <a href="#como-funciona" className="hover:text-foreground">
                   Como funciona
