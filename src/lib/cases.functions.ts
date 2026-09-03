@@ -428,7 +428,16 @@ ${snippet}
       });
     }
 
-    return { extracted: result, text_length: text.length, missing, warnings };
+    if (usedOcr) {
+      warnings.push({
+        field: null,
+        message:
+          "O PDF não tinha texto pesquisável; os dados foram lidos por reconhecimento de imagem das primeiras páginas. Confira tudo antes de criar o caso.",
+      });
+    }
+
+    return { extracted: result, text_length: text.length, used_ocr: usedOcr, missing, warnings };
+
   });
 
 
