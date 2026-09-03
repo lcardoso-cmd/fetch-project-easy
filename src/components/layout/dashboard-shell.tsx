@@ -514,7 +514,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                           to={item.to}
                           onClick={() => setMobileOpen(false)}
                           className={cn(
-                            "relative flex h-9 items-center gap-2.5 rounded-md px-2 text-[13px] transition-colors",
+                            "relative flex h-9 items-center gap-2.5 rounded-md px-2 text-sm transition-colors",
                             active
                               ? "bg-sidebar-accent font-medium text-foreground"
                               : "text-sidebar-foreground/80 hover:bg-sidebar-accent/60 hover:text-foreground",
@@ -528,6 +528,25 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                         </Link>
                       );
                     })}
+                    <div className="my-2" />
+                    {FOOTER_NAV.map((item) =>
+                      item.type !== "link" ? null : (
+                        <Link
+                          key={item.to}
+                          to={item.to}
+                          onClick={() => setMobileOpen(false)}
+                          className={cn(
+                            "flex h-9 items-center gap-2.5 rounded-md px-2 text-sm transition-colors",
+                            isActive(item.to, item.match)
+                              ? "bg-sidebar-accent font-medium text-foreground"
+                              : "text-sidebar-foreground/80 hover:bg-sidebar-accent/60 hover:text-foreground",
+                          )}
+                        >
+                          <item.icon className="h-[15px] w-[15px] shrink-0" strokeWidth={1.75} />
+                          <span className="truncate">{item.label}</span>
+                        </Link>
+                      ),
+                    )}
                   </nav>
                   <div className="border-t border-sidebar-border p-2 space-y-1">
                     {isSuperAdmin && <ViewAsSwitcher />}
