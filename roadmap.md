@@ -8,8 +8,8 @@
 - [x] Fase 2: parsers explícitos por formato, chunking estrutural versionado, metadados de procedência, indexação resiliente.
 - [ ] Fase 3: keywords no híbrido, diversidade, vizinhos, reranker com procedência, suficiência documental.
 - [ ] Fase 4: separação retrieved/cited/supporting, refs [F1], remoção do percentual de similaridade.
-- [ ] Fase 5: acesso efetivo ao caso no RAG (membros) + resumo hierárquico do caso.
-- [ ] Fase 6: benchmark antes/depois e promoção da nova pipeline.
+- [x] Fase 5: acesso efetivo ao caso no RAG (membros) + resumo hierárquico do caso.
+- [x] Fase 6: benchmark antes/depois e promoção da nova pipeline.
 
 ## Em aberto (homepage — legibilidade e demonstração)
 - [ ] Legibilidade/contraste WCAG AA (16px+ texto, 14px+ auxiliar, botões 44px).
