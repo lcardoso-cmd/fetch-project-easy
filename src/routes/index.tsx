@@ -257,13 +257,16 @@ function LandingPage() {
             </a>
           </nav>
           <div className="flex items-center gap-2">
-            {!user && (
-              <Button variant="ghost" asChild>
-                <Link to="/entrar">Entrar</Link>
-              </Button>
+            {user ? (
+              <OpenDashboardButton size="default" label="Abrir meu painel" />
+            ) : (
+              <>
+                <LoginButton />
+                <TrialSignupButton size="default" />
+              </>
             )}
-            <TrialButton size="default" />
           </div>
+
         </div>
       </header>
 
