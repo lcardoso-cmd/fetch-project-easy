@@ -33,8 +33,6 @@ export const ROUTE_RULES: readonly RouteRule[] = [
   { prefix: "/integracoes", permission: "integrations.view" },
   { prefix: "/integrations", permission: "integrations.view" },
   { prefix: "/contratar-b2b", permission: "services.view" },
-  { prefix: "/assistencias", permission: "ai.use" },
-  { prefix: "/cases", permission: "ai.use" },
   { prefix: "/assistente", permission: "ai.use" },
   { prefix: "/comercial", permission: "crm.view" },
   { prefix: "/propostas", permission: "proposals.use" },
