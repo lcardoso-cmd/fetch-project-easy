@@ -202,7 +202,7 @@ export const Route = createFileRoute("/api/public/proposal-response/$token")({
         // Reflete o resultado na oportunidade vinculada, quando existir.
         const { data: full } = await admin
           .from("proposals")
-          .select("opportunity_id, lead_id")
+          .select("opportunity_id, lead_id, owner_user_id, created_by_user_id")
           .eq("id", proposal.id)
           .maybeSingle();
         if (full?.opportunity_id) {
@@ -223,7 +223,9 @@ export const Route = createFileRoute("/api/public/proposal-response/$token")({
               outcome === "accepted"
                 ? `Aceite registrado pelo cliente (${name})`
                 : `Recusa registrada pelo cliente (${name}): ${reason}`,
-            created_by_user_id: proposal.organization_id ? undefined as unknown as string : undefined as unknown as string,
+            // O autor técnico do histórico é o responsável interno da proposta;
+            // a autoria real do cliente fica em `note` e em `proposal_events`.
+            created_by_user_id: full.owner_user_id ?? full.created_by_user_id,
           });
         }
 

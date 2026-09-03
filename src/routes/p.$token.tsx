@@ -226,15 +226,200 @@ function SharedProposalPage() {
                   </Button>
                 </div>
               )}
+
+              <ProposalResponseBlock token={token} password={password} />
             </>
           )}
 
           <p className="text-[11px] text-muted-foreground text-center pt-2">
             Link seguro emitido pelo JurisMind.
           </p>
+
         </CardContent>
       </Card>
     </main>
   );
 
+}
+
+type ResponseMeta = {
+  number: number;
+  title: string;
+  status: string;
+  valid_until: string | null;
+  responded_at: string | null;
+  response_name: string | null;
+  can_respond: boolean;
+  reason: string | null;
+};
+
+/**
+ * Aceite ou recusa da proposta pelo próprio cliente.
+ * O registro é idempotente: uma proposta já respondida apenas exibe
+ * a resposta anterior.
+ */
+function ProposalResponseBlock({ token, password }: { token: string; password: string }) {
+  const [meta, setMeta] = useState<ResponseMeta | null>(null);
+  const [mode, setMode] = useState<"accepted" | "declined" | null>(null);
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [comment, setComment] = useState("");
+  const [reason, setReason] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch(`/api/public/proposal-response/${encodeURIComponent(token)}`)
+      .then(async (r) => (r.ok ? ((await r.json()) as ResponseMeta) : null))
+      .then((m) => {
+        if (!cancelled) setMeta(m);
+      })
+      .catch(() => {
+        if (!cancelled) setMeta(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [token]);
+
+  if (!meta) return null;
+
+  async function submit(outcome: "accepted" | "declined") {
+    setSaving(true);
+    setError(null);
+    try {
+      const r = await fetch(`/api/public/proposal-response/${encodeURIComponent(token)}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          outcome,
+          name: name.trim(),
+          email: email.trim() || undefined,
+          comment: comment.trim() || undefined,
+          reason: reason.trim() || undefined,
+          password: password.trim() || undefined,
+        }),
+      });
+      if (!r.ok) throw new Error((await r.text()) || `Erro ${r.status}`);
+      const rMeta = await fetch(`/api/public/proposal-response/${encodeURIComponent(token)}`);
+      if (rMeta.ok) setMeta((await rMeta.json()) as ResponseMeta);
+      setMode(null);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Não foi possível registrar a resposta.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (meta.responded_at) {
+    return (
+      <div className="rounded border bg-background p-3 text-sm">
+        <p className="font-medium">
+          {meta.status === "accepted" ? "Proposta aceita" : "Proposta recusada"}
+        </p>
+        <p className="text-xs text-muted-foreground">
+          Resposta registrada em {new Date(meta.responded_at).toLocaleString("pt-BR")}
+          {meta.response_name ? ` por ${meta.response_name}` : ""}.
+        </p>
+      </div>
+    );
+  }
+
+  if (!meta.can_respond) {
+    return (
+      <div className="rounded border bg-muted/40 p-3 text-xs text-muted-foreground">
+        {meta.reason === "expired"
+          ? "O prazo de validade desta proposta terminou. Fale com o escritório."
+          : "Esta proposta ainda não está aberta para resposta."}
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3 rounded border bg-background p-3">
+      <p className="text-sm font-medium">
+        Proposta nº {meta.number} — registre sua decisão
+      </p>
+      {error && (
+        <div
+          role="alert"
+          className="rounded border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive"
+        >
+          {error}
+        </div>
+      )}
+      {mode === null ? (
+        <div className="grid grid-cols-2 gap-2">
+          <Button size="sm" onClick={() => setMode("accepted")}>
+            Aceitar proposta
+          </Button>
+          <Button size="sm" variant="outline" onClick={() => setMode("declined")}>
+            Recusar
+          </Button>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          <div className="space-y-1">
+            <Label htmlFor="resp-name">Seu nome completo</Label>
+            <Input
+              id="resp-name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Nome de quem responde"
+            />
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="resp-email">E-mail (opcional)</Label>
+            <Input
+              id="resp-email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+          </div>
+          {mode === "declined" ? (
+            <div className="space-y-1">
+              <Label htmlFor="resp-reason">Motivo da recusa</Label>
+              <Input
+                id="resp-reason"
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+                placeholder="Ex.: valor acima do previsto"
+              />
+            </div>
+          ) : (
+            <div className="space-y-1">
+              <Label htmlFor="resp-comment">Observações (opcional)</Label>
+              <Input
+                id="resp-comment"
+                value={comment}
+                onChange={(e) => setComment(e.target.value)}
+              />
+            </div>
+          )}
+          <div className="flex gap-2">
+            <Button
+              size="sm"
+              disabled={saving || name.trim().length < 3 || (mode === "declined" && reason.trim().length < 3)}
+              onClick={() => void submit(mode)}
+            >
+              {saving ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Registrando…
+                </>
+              ) : mode === "accepted" ? (
+                "Confirmar aceite"
+              ) : (
+                "Confirmar recusa"
+              )}
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => setMode(null)} disabled={saving}>
+              Voltar
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }
