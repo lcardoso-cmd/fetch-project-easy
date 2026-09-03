@@ -26,6 +26,9 @@ export const askWithRag = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { chatWithTools } = await import("./ai.server");
     const { prepareRagRun, persistChatTurn } = await import("./chat-rag.server");
+    const { splitSources, stripInvalidRefs } = await import("./rag/citations");
+    const { logRetrievalEvent } = await import("./rag/log.server");
+    const { EMBEDDING_MODEL } = await import("./rag.functions");
 
     const run = await prepareRagRun({
       supabase: context.supabase,
@@ -37,6 +40,19 @@ export const askWithRag = createServerFn({ method: "POST" })
       model: run.model,
       temperature: 0.2,
       maxSteps: 6,
+    });
+
+    // Rastreabilidade: remove refs inexistentes e separa citadas de apoio.
+    const answer = stripInvalidRefs(content, run.citations);
+    const sources = splitSources(answer, run.citations);
+
+    await logRetrievalEvent({
+      supabase: context.supabase,
+      userId: context.userId,
+      caseId: data.case_id,
+      threadId: data.thread_id ?? null,
+      log: run.retrievalLog,
+      embeddingModel: EMBEDDING_MODEL,
     });
 
     const toolSteps = steps.map((s) => ({
@@ -55,15 +71,20 @@ export const askWithRag = createServerFn({ method: "POST" })
         question: data.question,
         images: data.images,
         tier: run.tier,
-        content,
+        content: answer,
         toolSteps,
         citations: run.citations,
       });
     }
 
     return {
-      answer: content,
+      answer,
       citations: run.citations,
+      retrieved_sources: sources.retrieved_sources,
+      cited_sources: sources.cited_sources,
+      supporting_sources: sources.supporting_sources,
+      invalid_refs: sources.invalid_refs,
+      sufficiency: run.sufficiency,
       steps: toolSteps,
       thread_id: persistedThreadId,
     };
