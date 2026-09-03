@@ -47,7 +47,7 @@ import {
   type ExtractedCaseData,
 } from "@/lib/cases.functions";
 import { buildCaseTitle } from "@/lib/case-title";
-import { listTeamMembers, createTeamMember } from "@/lib/team.functions";
+import { listOrgMembers } from "@/lib/organization.functions";
 import { indexDocument } from "@/lib/rag.functions";
 import { createUploadSignedUrl } from "@/lib/documents.functions";
 import { Progress } from "@/components/ui/progress";
@@ -106,11 +106,11 @@ function NewCasePage() {
   const attachFn = useServerFn(attachDocumentToCase);
   const indexFn = useServerFn(indexDocument);
   const signUploadFn = useServerFn(createUploadSignedUrl);
-  const listTeamFn = useServerFn(listTeamMembers);
-  const createTeamFn = useServerFn(createTeamMember);
+  const listTeamFn = useServerFn(listOrgMembers);
+  const setTeamAccessFn = useServerFn(setCaseTeamAccess);
 
   const { data: team = [] } = useQuery({
-    queryKey: ["team-members"],
+    queryKey: ["org-members"],
     queryFn: () => listTeamFn(),
   });
 
@@ -261,25 +261,6 @@ function NewCasePage() {
       // quota / indisponível — silencioso
     }
   }, [REVIEW_STORAGE_KEY, hydratedReview, uploaded, missingFields, extractionWarnings, reviewConfirmed]);
-
-  // quick add team
-  const [newMemberName, setNewMemberName] = useState("");
-  const [newMemberRole, setNewMemberRole] = useState("");
-  const [addingMember, setAddingMember] = useState(false);
-
-  const addMemberMut = useMutation({
-    mutationFn: () =>
-      createTeamFn({ data: { name: newMemberName.trim(), role: newMemberRole.trim() } }),
-    onSuccess: (m) => {
-      toast.success("Membro adicionado");
-      setNewMemberName("");
-      setNewMemberRole("");
-      setAddingMember(false);
-      setSelectedMembers((prev) => [...prev, m.id]);
-      qc.invalidateQueries({ queryKey: ["team-members"] });
-    },
-    onError: (e: Error) => toast.error(e.message || "Falha ao adicionar"),
-  });
 
   const applyExtracted = (e: ExtractedCaseData) => {
     // Título só é preenchido a partir do documento se o usuário ainda não
@@ -497,7 +478,6 @@ function NewCasePage() {
           description: description.trim() || null,
           parties: cleanParties,
           represented_party: represented,
-          team_member_ids: selectedMembers,
           status: "active",
           matter_kind: "processo",
           practice_type: "advogado",
