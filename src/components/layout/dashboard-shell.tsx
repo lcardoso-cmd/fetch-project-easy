@@ -63,7 +63,7 @@ import {
   type LucideIcon,
   HelpCircle,
 } from "lucide-react";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 
 import { cn } from "@/lib/utils";
 import { NotificationBell } from "@/components/layout/notification-bell";
@@ -766,6 +766,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                   side="left"
                   className="flex w-[19rem] max-w-[88vw] flex-col overflow-x-hidden border-r border-sidebar-border bg-sidebar p-0 text-sidebar-foreground"
                 >
+                  <SheetTitle className="sr-only">Menu de navegação</SheetTitle>
                   <div className="flex h-16 shrink-0 items-center gap-3 px-3">
                     <JurisMindMark size={26} context={JURISMIND_CONTEXT.sidebar} interactive />
                     <span className="truncate font-heading text-lg font-bold text-sidebar-foreground">
