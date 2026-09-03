@@ -72,6 +72,7 @@ import { Route as ApiToolsPdfRouteImport } from './routes/api/tools/pdf'
 import { Route as ApiChatStreamRouteImport } from './routes/api/chat/stream'
 import { Route as AuthenticatedSettingsOauthRouteImport } from './routes/_authenticated/settings.oauth'
 import { Route as AuthenticatedSettingsFirmRouteImport } from './routes/_authenticated/settings.firm'
+import { Route as AuthenticatedOrganizacaoCobrancaRouteImport } from './routes/_authenticated/organizacao.cobranca'
 import { Route as AuthenticatedContratarB2bSolicitarRouteImport } from './routes/_authenticated/contratar-b2b.solicitar'
 import { Route as AuthenticatedContratarB2bRequestIdRouteImport } from './routes/_authenticated/contratar-b2b.$requestId'
 import { Route as AuthenticatedConfiguracoesOauthRouteImport } from './routes/_authenticated/configuracoes.oauth'
@@ -93,11 +94,18 @@ import { Route as AuthenticatedPlatformCredentialsIndexRouteImport } from './rou
 import { Route as AuthenticatedPlatformAuditIndexRouteImport } from './routes/_authenticated/platform.audit.index'
 import { Route as AuthenticatedPlataformaUsuariosIndexRouteImport } from './routes/_authenticated/plataforma.usuarios.index'
 import { Route as AuthenticatedPlataformaSolicitacoesIndexRouteImport } from './routes/_authenticated/plataforma.solicitacoes.index'
+import { Route as AuthenticatedPlataformaPlanosIndexRouteImport } from './routes/_authenticated/plataforma.planos.index'
+import { Route as AuthenticatedPlataformaPagamentosIndexRouteImport } from './routes/_authenticated/plataforma.pagamentos.index'
+import { Route as AuthenticatedPlataformaFaturasIndexRouteImport } from './routes/_authenticated/plataforma.faturas.index'
 import { Route as AuthenticatedPlataformaCredenciaisIndexRouteImport } from './routes/_authenticated/plataforma.credenciais.index'
+import { Route as AuthenticatedPlataformaConsumoIndexRouteImport } from './routes/_authenticated/plataforma.consumo.index'
+import { Route as AuthenticatedPlataformaConfiguracoesIndexRouteImport } from './routes/_authenticated/plataforma.configuracoes.index'
 import { Route as AuthenticatedPlataformaClientesIndexRouteImport } from './routes/_authenticated/plataforma.clientes.index'
 import { Route as AuthenticatedPlataformaAuditoriaIndexRouteImport } from './routes/_authenticated/plataforma.auditoria.index'
+import { Route as AuthenticatedPlataformaAssinaturasIndexRouteImport } from './routes/_authenticated/plataforma.assinaturas.index'
 import { Route as ApiPublicProposalShareTokenRouteImport } from './routes/api/public/proposal-share.$token'
 import { Route as ApiPublicProposalResponseTokenRouteImport } from './routes/api/public/proposal-response.$token'
+import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
 import { Route as ApiPublicOutlookCallbackRouteImport } from './routes/api/public/outlook/callback'
 import { Route as ApiPublicHooksFetchPublicationsRouteImport } from './routes/api/public/hooks/fetch-publications'
 import { Route as ApiPublicGoogleCallbackRouteImport } from './routes/api/public/google/callback'
@@ -439,6 +447,12 @@ const AuthenticatedSettingsFirmRoute =
     path: '/firm',
     getParentRoute: () => AuthenticatedSettingsRoute,
   } as any)
+const AuthenticatedOrganizacaoCobrancaRoute =
+  AuthenticatedOrganizacaoCobrancaRouteImport.update({
+    id: '/cobranca',
+    path: '/cobranca',
+    getParentRoute: () => AuthenticatedOrganizacaoRoute,
+  } as any)
 const AuthenticatedContratarB2bSolicitarRoute =
   AuthenticatedContratarB2bSolicitarRouteImport.update({
     id: '/contratar-b2b/solicitar',
@@ -562,10 +576,40 @@ const AuthenticatedPlataformaSolicitacoesIndexRoute =
     path: '/plataforma/solicitacoes/',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedPlataformaPlanosIndexRoute =
+  AuthenticatedPlataformaPlanosIndexRouteImport.update({
+    id: '/plataforma/planos/',
+    path: '/plataforma/planos/',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedPlataformaPagamentosIndexRoute =
+  AuthenticatedPlataformaPagamentosIndexRouteImport.update({
+    id: '/plataforma/pagamentos/',
+    path: '/plataforma/pagamentos/',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedPlataformaFaturasIndexRoute =
+  AuthenticatedPlataformaFaturasIndexRouteImport.update({
+    id: '/plataforma/faturas/',
+    path: '/plataforma/faturas/',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedPlataformaCredenciaisIndexRoute =
   AuthenticatedPlataformaCredenciaisIndexRouteImport.update({
     id: '/plataforma/credenciais/',
     path: '/plataforma/credenciais/',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedPlataformaConsumoIndexRoute =
+  AuthenticatedPlataformaConsumoIndexRouteImport.update({
+    id: '/plataforma/consumo/',
+    path: '/plataforma/consumo/',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedPlataformaConfiguracoesIndexRoute =
+  AuthenticatedPlataformaConfiguracoesIndexRouteImport.update({
+    id: '/plataforma/configuracoes/',
+    path: '/plataforma/configuracoes/',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
 const AuthenticatedPlataformaClientesIndexRoute =
@@ -580,6 +624,12 @@ const AuthenticatedPlataformaAuditoriaIndexRoute =
     path: '/plataforma/auditoria/',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedPlataformaAssinaturasIndexRoute =
+  AuthenticatedPlataformaAssinaturasIndexRouteImport.update({
+    id: '/plataforma/assinaturas/',
+    path: '/plataforma/assinaturas/',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const ApiPublicProposalShareTokenRoute =
   ApiPublicProposalShareTokenRouteImport.update({
     id: '/api/public/proposal-share/$token',
@@ -590,6 +640,12 @@ const ApiPublicProposalResponseTokenRoute =
   ApiPublicProposalResponseTokenRouteImport.update({
     id: '/api/public/proposal-response/$token',
     path: '/api/public/proposal-response/$token',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicPaymentsWebhookRoute =
+  ApiPublicPaymentsWebhookRouteImport.update({
+    id: '/api/public/payments/webhook',
+    path: '/api/public/payments/webhook',
     getParentRoute: () => rootRouteImport,
   } as any)
 const ApiPublicOutlookCallbackRoute =
@@ -670,7 +726,7 @@ export interface FileRoutesByFullPath {
   '/notificacoes': typeof AuthenticatedNotificacoesRoute
   '/notifications': typeof AuthenticatedNotificationsRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
-  '/organizacao': typeof AuthenticatedOrganizacaoRoute
+  '/organizacao': typeof AuthenticatedOrganizacaoRouteWithChildren
   '/painel': typeof AuthenticatedPainelRoute
   '/parecer-tecnico': typeof AuthenticatedParecerTecnicoRoute
   '/pecas': typeof AuthenticatedPecasRoute
@@ -698,6 +754,7 @@ export interface FileRoutesByFullPath {
   '/configuracoes/oauth': typeof AuthenticatedConfiguracoesOauthRoute
   '/contratar-b2b/$requestId': typeof AuthenticatedContratarB2bRequestIdRoute
   '/contratar-b2b/solicitar': typeof AuthenticatedContratarB2bSolicitarRoute
+  '/organizacao/cobranca': typeof AuthenticatedOrganizacaoCobrancaRoute
   '/settings/firm': typeof AuthenticatedSettingsFirmRoute
   '/settings/oauth': typeof AuthenticatedSettingsOauthRoute
   '/api/chat/stream': typeof ApiChatStreamRoute
@@ -719,11 +776,18 @@ export interface FileRoutesByFullPath {
   '/api/public/google/callback': typeof ApiPublicGoogleCallbackRoute
   '/api/public/hooks/fetch-publications': typeof ApiPublicHooksFetchPublicationsRoute
   '/api/public/outlook/callback': typeof ApiPublicOutlookCallbackRoute
+  '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/api/public/proposal-response/$token': typeof ApiPublicProposalResponseTokenRoute
   '/api/public/proposal-share/$token': typeof ApiPublicProposalShareTokenRoute
+  '/plataforma/assinaturas/': typeof AuthenticatedPlataformaAssinaturasIndexRoute
   '/plataforma/auditoria/': typeof AuthenticatedPlataformaAuditoriaIndexRoute
   '/plataforma/clientes/': typeof AuthenticatedPlataformaClientesIndexRoute
+  '/plataforma/configuracoes/': typeof AuthenticatedPlataformaConfiguracoesIndexRoute
+  '/plataforma/consumo/': typeof AuthenticatedPlataformaConsumoIndexRoute
   '/plataforma/credenciais/': typeof AuthenticatedPlataformaCredenciaisIndexRoute
+  '/plataforma/faturas/': typeof AuthenticatedPlataformaFaturasIndexRoute
+  '/plataforma/pagamentos/': typeof AuthenticatedPlataformaPagamentosIndexRoute
+  '/plataforma/planos/': typeof AuthenticatedPlataformaPlanosIndexRoute
   '/plataforma/solicitacoes/': typeof AuthenticatedPlataformaSolicitacoesIndexRoute
   '/plataforma/usuarios/': typeof AuthenticatedPlataformaUsuariosIndexRoute
   '/platform/audit/': typeof AuthenticatedPlatformAuditIndexRoute
@@ -765,7 +829,7 @@ export interface FileRoutesByTo {
   '/notificacoes': typeof AuthenticatedNotificacoesRoute
   '/notifications': typeof AuthenticatedNotificationsRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
-  '/organizacao': typeof AuthenticatedOrganizacaoRoute
+  '/organizacao': typeof AuthenticatedOrganizacaoRouteWithChildren
   '/painel': typeof AuthenticatedPainelRoute
   '/parecer-tecnico': typeof AuthenticatedParecerTecnicoRoute
   '/pecas': typeof AuthenticatedPecasRoute
@@ -793,6 +857,7 @@ export interface FileRoutesByTo {
   '/configuracoes/oauth': typeof AuthenticatedConfiguracoesOauthRoute
   '/contratar-b2b/$requestId': typeof AuthenticatedContratarB2bRequestIdRoute
   '/contratar-b2b/solicitar': typeof AuthenticatedContratarB2bSolicitarRoute
+  '/organizacao/cobranca': typeof AuthenticatedOrganizacaoCobrancaRoute
   '/settings/firm': typeof AuthenticatedSettingsFirmRoute
   '/settings/oauth': typeof AuthenticatedSettingsOauthRoute
   '/api/chat/stream': typeof ApiChatStreamRoute
@@ -814,11 +879,18 @@ export interface FileRoutesByTo {
   '/api/public/google/callback': typeof ApiPublicGoogleCallbackRoute
   '/api/public/hooks/fetch-publications': typeof ApiPublicHooksFetchPublicationsRoute
   '/api/public/outlook/callback': typeof ApiPublicOutlookCallbackRoute
+  '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/api/public/proposal-response/$token': typeof ApiPublicProposalResponseTokenRoute
   '/api/public/proposal-share/$token': typeof ApiPublicProposalShareTokenRoute
+  '/plataforma/assinaturas': typeof AuthenticatedPlataformaAssinaturasIndexRoute
   '/plataforma/auditoria': typeof AuthenticatedPlataformaAuditoriaIndexRoute
   '/plataforma/clientes': typeof AuthenticatedPlataformaClientesIndexRoute
+  '/plataforma/configuracoes': typeof AuthenticatedPlataformaConfiguracoesIndexRoute
+  '/plataforma/consumo': typeof AuthenticatedPlataformaConsumoIndexRoute
   '/plataforma/credenciais': typeof AuthenticatedPlataformaCredenciaisIndexRoute
+  '/plataforma/faturas': typeof AuthenticatedPlataformaFaturasIndexRoute
+  '/plataforma/pagamentos': typeof AuthenticatedPlataformaPagamentosIndexRoute
+  '/plataforma/planos': typeof AuthenticatedPlataformaPlanosIndexRoute
   '/plataforma/solicitacoes': typeof AuthenticatedPlataformaSolicitacoesIndexRoute
   '/plataforma/usuarios': typeof AuthenticatedPlataformaUsuariosIndexRoute
   '/platform/audit': typeof AuthenticatedPlatformAuditIndexRoute
@@ -864,7 +936,7 @@ export interface FileRoutesById {
   '/_authenticated/notificacoes': typeof AuthenticatedNotificacoesRoute
   '/_authenticated/notifications': typeof AuthenticatedNotificationsRoute
   '/_authenticated/onboarding': typeof AuthenticatedOnboardingRoute
-  '/_authenticated/organizacao': typeof AuthenticatedOrganizacaoRoute
+  '/_authenticated/organizacao': typeof AuthenticatedOrganizacaoRouteWithChildren
   '/_authenticated/painel': typeof AuthenticatedPainelRoute
   '/_authenticated/parecer-tecnico': typeof AuthenticatedParecerTecnicoRoute
   '/_authenticated/pecas': typeof AuthenticatedPecasRoute
@@ -892,6 +964,7 @@ export interface FileRoutesById {
   '/_authenticated/configuracoes/oauth': typeof AuthenticatedConfiguracoesOauthRoute
   '/_authenticated/contratar-b2b/$requestId': typeof AuthenticatedContratarB2bRequestIdRoute
   '/_authenticated/contratar-b2b/solicitar': typeof AuthenticatedContratarB2bSolicitarRoute
+  '/_authenticated/organizacao/cobranca': typeof AuthenticatedOrganizacaoCobrancaRoute
   '/_authenticated/settings/firm': typeof AuthenticatedSettingsFirmRoute
   '/_authenticated/settings/oauth': typeof AuthenticatedSettingsOauthRoute
   '/api/chat/stream': typeof ApiChatStreamRoute
@@ -913,11 +986,18 @@ export interface FileRoutesById {
   '/api/public/google/callback': typeof ApiPublicGoogleCallbackRoute
   '/api/public/hooks/fetch-publications': typeof ApiPublicHooksFetchPublicationsRoute
   '/api/public/outlook/callback': typeof ApiPublicOutlookCallbackRoute
+  '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/api/public/proposal-response/$token': typeof ApiPublicProposalResponseTokenRoute
   '/api/public/proposal-share/$token': typeof ApiPublicProposalShareTokenRoute
+  '/_authenticated/plataforma/assinaturas/': typeof AuthenticatedPlataformaAssinaturasIndexRoute
   '/_authenticated/plataforma/auditoria/': typeof AuthenticatedPlataformaAuditoriaIndexRoute
   '/_authenticated/plataforma/clientes/': typeof AuthenticatedPlataformaClientesIndexRoute
+  '/_authenticated/plataforma/configuracoes/': typeof AuthenticatedPlataformaConfiguracoesIndexRoute
+  '/_authenticated/plataforma/consumo/': typeof AuthenticatedPlataformaConsumoIndexRoute
   '/_authenticated/plataforma/credenciais/': typeof AuthenticatedPlataformaCredenciaisIndexRoute
+  '/_authenticated/plataforma/faturas/': typeof AuthenticatedPlataformaFaturasIndexRoute
+  '/_authenticated/plataforma/pagamentos/': typeof AuthenticatedPlataformaPagamentosIndexRoute
+  '/_authenticated/plataforma/planos/': typeof AuthenticatedPlataformaPlanosIndexRoute
   '/_authenticated/plataforma/solicitacoes/': typeof AuthenticatedPlataformaSolicitacoesIndexRoute
   '/_authenticated/plataforma/usuarios/': typeof AuthenticatedPlataformaUsuariosIndexRoute
   '/_authenticated/platform/audit/': typeof AuthenticatedPlatformAuditIndexRoute
@@ -991,6 +1071,7 @@ export interface FileRouteTypes {
     | '/configuracoes/oauth'
     | '/contratar-b2b/$requestId'
     | '/contratar-b2b/solicitar'
+    | '/organizacao/cobranca'
     | '/settings/firm'
     | '/settings/oauth'
     | '/api/chat/stream'
@@ -1012,11 +1093,18 @@ export interface FileRouteTypes {
     | '/api/public/google/callback'
     | '/api/public/hooks/fetch-publications'
     | '/api/public/outlook/callback'
+    | '/api/public/payments/webhook'
     | '/api/public/proposal-response/$token'
     | '/api/public/proposal-share/$token'
+    | '/plataforma/assinaturas/'
     | '/plataforma/auditoria/'
     | '/plataforma/clientes/'
+    | '/plataforma/configuracoes/'
+    | '/plataforma/consumo/'
     | '/plataforma/credenciais/'
+    | '/plataforma/faturas/'
+    | '/plataforma/pagamentos/'
+    | '/plataforma/planos/'
     | '/plataforma/solicitacoes/'
     | '/plataforma/usuarios/'
     | '/platform/audit/'
@@ -1086,6 +1174,7 @@ export interface FileRouteTypes {
     | '/configuracoes/oauth'
     | '/contratar-b2b/$requestId'
     | '/contratar-b2b/solicitar'
+    | '/organizacao/cobranca'
     | '/settings/firm'
     | '/settings/oauth'
     | '/api/chat/stream'
@@ -1107,11 +1196,18 @@ export interface FileRouteTypes {
     | '/api/public/google/callback'
     | '/api/public/hooks/fetch-publications'
     | '/api/public/outlook/callback'
+    | '/api/public/payments/webhook'
     | '/api/public/proposal-response/$token'
     | '/api/public/proposal-share/$token'
+    | '/plataforma/assinaturas'
     | '/plataforma/auditoria'
     | '/plataforma/clientes'
+    | '/plataforma/configuracoes'
+    | '/plataforma/consumo'
     | '/plataforma/credenciais'
+    | '/plataforma/faturas'
+    | '/plataforma/pagamentos'
+    | '/plataforma/planos'
     | '/plataforma/solicitacoes'
     | '/plataforma/usuarios'
     | '/platform/audit'
@@ -1184,6 +1280,7 @@ export interface FileRouteTypes {
     | '/_authenticated/configuracoes/oauth'
     | '/_authenticated/contratar-b2b/$requestId'
     | '/_authenticated/contratar-b2b/solicitar'
+    | '/_authenticated/organizacao/cobranca'
     | '/_authenticated/settings/firm'
     | '/_authenticated/settings/oauth'
     | '/api/chat/stream'
@@ -1205,11 +1302,18 @@ export interface FileRouteTypes {
     | '/api/public/google/callback'
     | '/api/public/hooks/fetch-publications'
     | '/api/public/outlook/callback'
+    | '/api/public/payments/webhook'
     | '/api/public/proposal-response/$token'
     | '/api/public/proposal-share/$token'
+    | '/_authenticated/plataforma/assinaturas/'
     | '/_authenticated/plataforma/auditoria/'
     | '/_authenticated/plataforma/clientes/'
+    | '/_authenticated/plataforma/configuracoes/'
+    | '/_authenticated/plataforma/consumo/'
     | '/_authenticated/plataforma/credenciais/'
+    | '/_authenticated/plataforma/faturas/'
+    | '/_authenticated/plataforma/pagamentos/'
+    | '/_authenticated/plataforma/planos/'
     | '/_authenticated/plataforma/solicitacoes/'
     | '/_authenticated/plataforma/usuarios/'
     | '/_authenticated/platform/audit/'
@@ -1247,6 +1351,7 @@ export interface RootRouteChildren {
   ApiPublicGoogleCallbackRoute: typeof ApiPublicGoogleCallbackRoute
   ApiPublicHooksFetchPublicationsRoute: typeof ApiPublicHooksFetchPublicationsRoute
   ApiPublicOutlookCallbackRoute: typeof ApiPublicOutlookCallbackRoute
+  ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
   ApiPublicProposalResponseTokenRoute: typeof ApiPublicProposalResponseTokenRoute
   ApiPublicProposalShareTokenRoute: typeof ApiPublicProposalShareTokenRoute
 }
@@ -1694,6 +1799,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSettingsFirmRouteImport
       parentRoute: typeof AuthenticatedSettingsRoute
     }
+    '/_authenticated/organizacao/cobranca': {
+      id: '/_authenticated/organizacao/cobranca'
+      path: '/cobranca'
+      fullPath: '/organizacao/cobranca'
+      preLoaderRoute: typeof AuthenticatedOrganizacaoCobrancaRouteImport
+      parentRoute: typeof AuthenticatedOrganizacaoRoute
+    }
     '/_authenticated/contratar-b2b/solicitar': {
       id: '/_authenticated/contratar-b2b/solicitar'
       path: '/contratar-b2b/solicitar'
@@ -1841,11 +1953,46 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedPlataformaSolicitacoesIndexRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/plataforma/planos/': {
+      id: '/_authenticated/plataforma/planos/'
+      path: '/plataforma/planos'
+      fullPath: '/plataforma/planos/'
+      preLoaderRoute: typeof AuthenticatedPlataformaPlanosIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/plataforma/pagamentos/': {
+      id: '/_authenticated/plataforma/pagamentos/'
+      path: '/plataforma/pagamentos'
+      fullPath: '/plataforma/pagamentos/'
+      preLoaderRoute: typeof AuthenticatedPlataformaPagamentosIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/plataforma/faturas/': {
+      id: '/_authenticated/plataforma/faturas/'
+      path: '/plataforma/faturas'
+      fullPath: '/plataforma/faturas/'
+      preLoaderRoute: typeof AuthenticatedPlataformaFaturasIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/plataforma/credenciais/': {
       id: '/_authenticated/plataforma/credenciais/'
       path: '/plataforma/credenciais'
       fullPath: '/plataforma/credenciais/'
       preLoaderRoute: typeof AuthenticatedPlataformaCredenciaisIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/plataforma/consumo/': {
+      id: '/_authenticated/plataforma/consumo/'
+      path: '/plataforma/consumo'
+      fullPath: '/plataforma/consumo/'
+      preLoaderRoute: typeof AuthenticatedPlataformaConsumoIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/plataforma/configuracoes/': {
+      id: '/_authenticated/plataforma/configuracoes/'
+      path: '/plataforma/configuracoes'
+      fullPath: '/plataforma/configuracoes/'
+      preLoaderRoute: typeof AuthenticatedPlataformaConfiguracoesIndexRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/plataforma/clientes/': {
@@ -1862,6 +2009,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedPlataformaAuditoriaIndexRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/plataforma/assinaturas/': {
+      id: '/_authenticated/plataforma/assinaturas/'
+      path: '/plataforma/assinaturas'
+      fullPath: '/plataforma/assinaturas/'
+      preLoaderRoute: typeof AuthenticatedPlataformaAssinaturasIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/api/public/proposal-share/$token': {
       id: '/api/public/proposal-share/$token'
       path: '/api/public/proposal-share/$token'
@@ -1874,6 +2028,13 @@ declare module '@tanstack/react-router' {
       path: '/api/public/proposal-response/$token'
       fullPath: '/api/public/proposal-response/$token'
       preLoaderRoute: typeof ApiPublicProposalResponseTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/payments/webhook': {
+      id: '/api/public/payments/webhook'
+      path: '/api/public/payments/webhook'
+      fullPath: '/api/public/payments/webhook'
+      preLoaderRoute: typeof ApiPublicPaymentsWebhookRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/outlook/callback': {
@@ -2018,6 +2179,21 @@ const AuthenticatedConfiguracoesRouteWithChildren =
     AuthenticatedConfiguracoesRouteChildren,
   )
 
+interface AuthenticatedOrganizacaoRouteChildren {
+  AuthenticatedOrganizacaoCobrancaRoute: typeof AuthenticatedOrganizacaoCobrancaRoute
+}
+
+const AuthenticatedOrganizacaoRouteChildren: AuthenticatedOrganizacaoRouteChildren =
+  {
+    AuthenticatedOrganizacaoCobrancaRoute:
+      AuthenticatedOrganizacaoCobrancaRoute,
+  }
+
+const AuthenticatedOrganizacaoRouteWithChildren =
+  AuthenticatedOrganizacaoRoute._addFileChildren(
+    AuthenticatedOrganizacaoRouteChildren,
+  )
+
 interface AuthenticatedSettingsRouteChildren {
   AuthenticatedSettingsFirmRoute: typeof AuthenticatedSettingsFirmRoute
   AuthenticatedSettingsOauthRoute: typeof AuthenticatedSettingsOauthRoute
@@ -2058,7 +2234,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedNotificacoesRoute: typeof AuthenticatedNotificacoesRoute
   AuthenticatedNotificationsRoute: typeof AuthenticatedNotificationsRoute
   AuthenticatedOnboardingRoute: typeof AuthenticatedOnboardingRoute
-  AuthenticatedOrganizacaoRoute: typeof AuthenticatedOrganizacaoRoute
+  AuthenticatedOrganizacaoRoute: typeof AuthenticatedOrganizacaoRouteWithChildren
   AuthenticatedPainelRoute: typeof AuthenticatedPainelRoute
   AuthenticatedParecerTecnicoRoute: typeof AuthenticatedParecerTecnicoRoute
   AuthenticatedPecasRoute: typeof AuthenticatedPecasRoute
@@ -2075,9 +2251,15 @@ interface AuthenticatedRouteChildren {
   AuthenticatedPlatformIndexRoute: typeof AuthenticatedPlatformIndexRoute
   AuthenticatedPlataformaClientesIdRoute: typeof AuthenticatedPlataformaClientesIdRoute
   AuthenticatedPlatformCustomersIdRoute: typeof AuthenticatedPlatformCustomersIdRoute
+  AuthenticatedPlataformaAssinaturasIndexRoute: typeof AuthenticatedPlataformaAssinaturasIndexRoute
   AuthenticatedPlataformaAuditoriaIndexRoute: typeof AuthenticatedPlataformaAuditoriaIndexRoute
   AuthenticatedPlataformaClientesIndexRoute: typeof AuthenticatedPlataformaClientesIndexRoute
+  AuthenticatedPlataformaConfiguracoesIndexRoute: typeof AuthenticatedPlataformaConfiguracoesIndexRoute
+  AuthenticatedPlataformaConsumoIndexRoute: typeof AuthenticatedPlataformaConsumoIndexRoute
   AuthenticatedPlataformaCredenciaisIndexRoute: typeof AuthenticatedPlataformaCredenciaisIndexRoute
+  AuthenticatedPlataformaFaturasIndexRoute: typeof AuthenticatedPlataformaFaturasIndexRoute
+  AuthenticatedPlataformaPagamentosIndexRoute: typeof AuthenticatedPlataformaPagamentosIndexRoute
+  AuthenticatedPlataformaPlanosIndexRoute: typeof AuthenticatedPlataformaPlanosIndexRoute
   AuthenticatedPlataformaSolicitacoesIndexRoute: typeof AuthenticatedPlataformaSolicitacoesIndexRoute
   AuthenticatedPlataformaUsuariosIndexRoute: typeof AuthenticatedPlataformaUsuariosIndexRoute
   AuthenticatedPlatformAuditIndexRoute: typeof AuthenticatedPlatformAuditIndexRoute
@@ -2111,7 +2293,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedNotificacoesRoute: AuthenticatedNotificacoesRoute,
   AuthenticatedNotificationsRoute: AuthenticatedNotificationsRoute,
   AuthenticatedOnboardingRoute: AuthenticatedOnboardingRoute,
-  AuthenticatedOrganizacaoRoute: AuthenticatedOrganizacaoRoute,
+  AuthenticatedOrganizacaoRoute: AuthenticatedOrganizacaoRouteWithChildren,
   AuthenticatedPainelRoute: AuthenticatedPainelRoute,
   AuthenticatedParecerTecnicoRoute: AuthenticatedParecerTecnicoRoute,
   AuthenticatedPecasRoute: AuthenticatedPecasRoute,
@@ -2131,12 +2313,24 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedPlataformaClientesIdRoute:
     AuthenticatedPlataformaClientesIdRoute,
   AuthenticatedPlatformCustomersIdRoute: AuthenticatedPlatformCustomersIdRoute,
+  AuthenticatedPlataformaAssinaturasIndexRoute:
+    AuthenticatedPlataformaAssinaturasIndexRoute,
   AuthenticatedPlataformaAuditoriaIndexRoute:
     AuthenticatedPlataformaAuditoriaIndexRoute,
   AuthenticatedPlataformaClientesIndexRoute:
     AuthenticatedPlataformaClientesIndexRoute,
+  AuthenticatedPlataformaConfiguracoesIndexRoute:
+    AuthenticatedPlataformaConfiguracoesIndexRoute,
+  AuthenticatedPlataformaConsumoIndexRoute:
+    AuthenticatedPlataformaConsumoIndexRoute,
   AuthenticatedPlataformaCredenciaisIndexRoute:
     AuthenticatedPlataformaCredenciaisIndexRoute,
+  AuthenticatedPlataformaFaturasIndexRoute:
+    AuthenticatedPlataformaFaturasIndexRoute,
+  AuthenticatedPlataformaPagamentosIndexRoute:
+    AuthenticatedPlataformaPagamentosIndexRoute,
+  AuthenticatedPlataformaPlanosIndexRoute:
+    AuthenticatedPlataformaPlanosIndexRoute,
   AuthenticatedPlataformaSolicitacoesIndexRoute:
     AuthenticatedPlataformaSolicitacoesIndexRoute,
   AuthenticatedPlataformaUsuariosIndexRoute:
@@ -2183,6 +2377,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicGoogleCallbackRoute: ApiPublicGoogleCallbackRoute,
   ApiPublicHooksFetchPublicationsRoute: ApiPublicHooksFetchPublicationsRoute,
   ApiPublicOutlookCallbackRoute: ApiPublicOutlookCallbackRoute,
+  ApiPublicPaymentsWebhookRoute: ApiPublicPaymentsWebhookRoute,
   ApiPublicProposalResponseTokenRoute: ApiPublicProposalResponseTokenRoute,
   ApiPublicProposalShareTokenRoute: ApiPublicProposalShareTokenRoute,
 }

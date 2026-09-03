@@ -5,106 +5,144 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/page-header";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Search, ArrowLeft } from "lucide-react";
-import { listCustomerAccounts } from "@/lib/platform.functions";
+import { Label } from "@/components/ui/label";
+import { Search } from "lucide-react";
+import { listOrganizations, listPlansAdmin } from "@/lib/platform-billing.functions";
 import { getMyCapabilities } from "@/lib/capabilities.functions";
+import {
+  BackToPlatform,
+  EmptyRow,
+  Money,
+  StatusPill,
+  dateBR,
+} from "@/components/platform/billing-ui";
+import { ORG_STATUSES, ORG_STATUS_LABELS } from "@/lib/billing-shared";
 
 export const Route = createFileRoute("/_authenticated/plataforma/clientes/")({
   beforeLoad: async () => {
     try {
       const caps = await getMyCapabilities();
-      if (!caps.includes("platform_admin") && !caps.includes("super_admin")) {
-        throw new Error("no");
-      }
+      if (!caps.includes("platform_admin") && !caps.includes("super_admin")) throw new Error("no");
     } catch {
       throw redirect({ to: "/painel" });
     }
   },
+  head: () => ({
+    meta: [
+      { title: "Clientes do SaaS — JurisMind" },
+      {
+        name: "description",
+        content: "Escritórios assinantes da JurisMind, planos contratados e receita recorrente.",
+      },
+      { property: "og:title", content: "Clientes do SaaS — JurisMind" },
+      { property: "og:description", content: "Gestão de contratos e clientes JurisMind." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+    ],
+  }),
   component: PlatformCustomers,
 });
 
-function money(cents: number) {
-  return (cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-}
-
-const STATUS_COLOR: Record<string, string> = {
-  trial: "bg-amber-500/15 text-amber-700 dark:text-amber-300",
-  active: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300",
-  suspended: "bg-orange-500/15 text-orange-700 dark:text-orange-300",
-  canceled: "bg-muted text-muted-foreground",
-};
+const PAGE_SIZE = 50;
 
 function PlatformCustomers() {
-  const listFn = useServerFn(listCustomerAccounts);
+  const listFn = useServerFn(listOrganizations);
+  const plansFn = useServerFn(listPlansAdmin);
   const [search, setSearch] = useState("");
-  const [status, setStatus] = useState<string>("");
-  const [plan, setPlan] = useState<string>("");
+  const [status, setStatus] = useState("");
+  const [planCode, setPlanCode] = useState("");
+  const [onlyDelinquent, setOnlyDelinquent] = useState(false);
+  const [page, setPage] = useState(0);
 
-  const { data, isLoading } = useQuery({
-    queryKey: ["platform-customers", search, status, plan],
+  const { data: plans } = useQuery({ queryKey: ["admin-plans"], queryFn: () => plansFn() });
+  const { data, isLoading, error } = useQuery({
+    queryKey: ["admin-organizations", search, status, planCode, onlyDelinquent, page],
     queryFn: () =>
       listFn({
         data: {
           search: search || undefined,
-          status: status || undefined,
-          plan: plan || undefined,
-          limit: 100,
-          offset: 0,
+          status: (status || undefined) as never,
+          plan_code: planCode || undefined,
+          only_delinquent: onlyDelinquent || undefined,
+          limit: PAGE_SIZE,
+          offset: page * PAGE_SIZE,
         },
       }),
   });
 
   return (
     <div className="space-y-6">
-      <div>
-        <Link
-          to="/plataforma"
-          className="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1"
-        >
-          <ArrowLeft className="h-3 w-3" /> Plataforma
-        </Link>
-        <div className="mt-2">
-          <PageHeader
-            title="Clientes SaaS"
-            subtitle="Escritórios e profissionais que assinaram a JurisMind. Cada conta é um tenant do sistema."
-          />
-        </div>
-      </div>
+      <BackToPlatform />
+      <PageHeader
+        title="Clientes do SaaS"
+        subtitle="Cada organização é um cliente da JurisMind, com seus próprios usuários, dados e contrato."
+      />
 
       <div className="grid gap-3 md:grid-cols-4">
         <div className="relative md:col-span-2">
           <Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Buscar por nome ou e-mail…"
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setPage(0);
+            }}
+            placeholder="Buscar por nome, razão social, CNPJ ou e-mail…"
             className="pl-8"
           />
         </div>
         <select
-          className="h-9 rounded-md border bg-background px-3 text-sm"
+          className="h-10 rounded-md border bg-background px-3 text-sm"
           value={status}
-          onChange={(e) => setStatus(e.target.value)}
+          onChange={(e) => {
+            setStatus(e.target.value);
+            setPage(0);
+          }}
         >
-          <option value="">Todos os status</option>
-          <option value="trial">Trial</option>
-          <option value="active">Ativo</option>
-          <option value="suspended">Suspenso</option>
-          <option value="canceled">Cancelado</option>
+          <option value="">Todas as situações</option>
+          {ORG_STATUSES.map((s) => (
+            <option key={s} value={s}>
+              {ORG_STATUS_LABELS[s]}
+            </option>
+          ))}
         </select>
         <select
-          className="h-9 rounded-md border bg-background px-3 text-sm"
-          value={plan}
-          onChange={(e) => setPlan(e.target.value)}
+          className="h-10 rounded-md border bg-background px-3 text-sm"
+          value={planCode}
+          onChange={(e) => {
+            setPlanCode(e.target.value);
+            setPage(0);
+          }}
         >
           <option value="">Todos os planos</option>
-          <option value="free">Free</option>
-          <option value="pro">Pro</option>
-          <option value="enterprise">Enterprise</option>
+          {(plans ?? []).map((p) => (
+            <option key={p.id} value={p.code}>
+              {p.name}
+            </option>
+          ))}
         </select>
       </div>
+
+      <Label className="flex w-fit items-center gap-2 text-sm">
+        <input
+          type="checkbox"
+          checked={onlyDelinquent}
+          onChange={(e) => {
+            setOnlyDelinquent(e.target.checked);
+            setPage(0);
+          }}
+        />
+        Mostrar apenas inadimplentes
+      </Label>
+
+      {error && (
+        <Card className="border-destructive/40">
+          <CardContent className="py-4 text-sm text-destructive">
+            {(error as Error).message}
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader className="pb-3">
@@ -118,44 +156,36 @@ function PlatformCustomers() {
               <thead className="bg-muted/50 text-xs uppercase text-muted-foreground">
                 <tr>
                   <th className="px-4 py-2 text-left">Cliente</th>
-                  <th className="px-4 py-2 text-left">E-mail cobrança</th>
                   <th className="px-4 py-2 text-left">Plano</th>
-                  <th className="px-4 py-2 text-left">Status</th>
+                  <th className="px-4 py-2 text-left">Situação</th>
+                  <th className="px-4 py-2 text-left">Assinatura</th>
                   <th className="px-4 py-2 text-right">MRR</th>
+                  <th className="px-4 py-2 text-right">Integrantes</th>
                   <th className="px-4 py-2 text-left">Desde</th>
-                  <th className="px-4 py-2 text-right"></th>
+                  <th className="px-4 py-2" />
                 </tr>
               </thead>
               <tbody>
-                {(data?.rows ?? []).map((r: any) => (
+                {(data?.rows ?? []).map((r) => (
                   <tr key={r.id} className="border-t hover:bg-muted/40">
                     <td className="px-4 py-2">
-                      <div className="font-medium">
-                        {r.name || r.owner_firm_name || r.owner_full_name || "—"}
-                      </div>
+                      <div className="font-medium">{r.name}</div>
                       <div className="text-xs text-muted-foreground">
-                        {r.owner_full_name ?? "—"}
+                        {r.billing_email ?? r.legal_name ?? "—"}
                       </div>
                     </td>
-                    <td className="px-4 py-2 text-muted-foreground">
-                      {r.billing_email ?? "—"}
+                    <td className="px-4 py-2">{r.plan_name ?? "—"}</td>
+                    <td className="px-4 py-2">
+                      <StatusPill status={r.status} kind="organization" />
                     </td>
                     <td className="px-4 py-2">
-                      <Badge variant="outline">{r.plan}</Badge>
+                      <StatusPill status={r.subscription_status} kind="subscription" />
                     </td>
-                    <td className="px-4 py-2">
-                      <span
-                        className={`inline-flex rounded-full px-2 py-0.5 text-xs ${STATUS_COLOR[r.status] ?? ""}`}
-                      >
-                        {r.status}
-                      </span>
+                    <td className="px-4 py-2 text-right">
+                      <Money cents={r.mrr_cents} />
                     </td>
-                    <td className="px-4 py-2 text-right tabular-nums">
-                      {money(r.mrr_cents ?? 0)}
-                    </td>
-                    <td className="px-4 py-2 text-muted-foreground">
-                      {new Date(r.created_at).toLocaleDateString("pt-BR")}
-                    </td>
+                    <td className="px-4 py-2 text-right tabular-nums">{r.active_members}</td>
+                    <td className="px-4 py-2 text-muted-foreground">{dateBR(r.created_at)}</td>
                     <td className="px-4 py-2 text-right">
                       <Link to="/plataforma/clientes/$id" params={{ id: r.id }}>
                         <Button variant="ghost" size="sm">
@@ -166,17 +196,33 @@ function PlatformCustomers() {
                   </tr>
                 ))}
                 {!isLoading && (data?.rows ?? []).length === 0 && (
-                  <tr>
-                    <td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">
-                      Nenhum cliente encontrado com os filtros atuais.
-                    </td>
-                  </tr>
+                  <EmptyRow colSpan={8}>Nenhum cliente encontrado com os filtros atuais.</EmptyRow>
                 )}
               </tbody>
             </table>
           </div>
         </CardContent>
       </Card>
+
+      <div className="flex items-center justify-between text-sm">
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={page === 0}
+          onClick={() => setPage((p) => Math.max(0, p - 1))}
+        >
+          Anterior
+        </Button>
+        <span className="text-muted-foreground">Página {page + 1}</span>
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={(data?.rows.length ?? 0) < PAGE_SIZE}
+          onClick={() => setPage((p) => p + 1)}
+        >
+          Próxima
+        </Button>
+      </div>
     </div>
   );
 }

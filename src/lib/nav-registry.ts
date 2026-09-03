@@ -41,9 +41,17 @@ export type NavKey =
   | "platform"
   | "platform-customers"
   | "platform-users"
+  | "platform-plans"
+  | "platform-subscriptions"
+  | "platform-invoices"
+  | "platform-payments"
+  | "platform-usage"
+  | "platform-commercial-settings"
   | "platform-credentials"
   | "platform-requests"
-  | "platform-audit";
+  | "platform-audit"
+  // Escritório — cobrança
+  | "billing";
 
 export type NavSectionKey =
   | "main"
@@ -167,6 +175,36 @@ export const NAV_ENTRIES: Record<NavKey, NavEntry> = {
   "platform-audit": {
     base: "Log de ações administrativas da B2B.",
     requires: "platform_admin",
+  },
+  "platform-plans": {
+    base: "Planos comerciais, preços e limites de cada contrato.",
+    requires: "platform_admin",
+  },
+  "platform-subscriptions": {
+    base: "Assinaturas vigentes, ciclos e receita recorrente.",
+    requires: "platform_admin",
+  },
+  "platform-invoices": {
+    base: "Faturas emitidas, vencimentos e inadimplência.",
+    requires: "platform_admin",
+  },
+  "platform-payments": {
+    base: "Pagamentos recebidos, falhas e conciliação.",
+    requires: "platform_admin",
+  },
+  "platform-usage": {
+    base: "Consumo de IA por cliente e custo agregado.",
+    requires: "platform_admin",
+  },
+  "platform-commercial-settings": {
+    base: "Regras comerciais: avaliação, tolerância e política de inadimplência.",
+    requires: "super_admin",
+  },
+
+  // Escritório — cobrança
+  billing: {
+    base: "Plano, assinatura, faturas e pagamentos do escritório.",
+    requires: "office_admin",
   },
 };
 
