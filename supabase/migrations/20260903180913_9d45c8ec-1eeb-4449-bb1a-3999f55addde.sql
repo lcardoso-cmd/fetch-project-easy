@@ -1,0 +1,11 @@
+ALTER TYPE public.org_permission ADD VALUE IF NOT EXISTS 'crm.view';
+ALTER TYPE public.org_permission ADD VALUE IF NOT EXISTS 'crm.manage_own';
+ALTER TYPE public.org_permission ADD VALUE IF NOT EXISTS 'crm.view_all';
+ALTER TYPE public.org_permission ADD VALUE IF NOT EXISTS 'crm.manage_all';
+ALTER TYPE public.org_permission ADD VALUE IF NOT EXISTS 'crm.view_values';
+ALTER TYPE public.org_permission ADD VALUE IF NOT EXISTS 'crm.proposals_create';
+ALTER TYPE public.org_permission ADD VALUE IF NOT EXISTS 'crm.proposals_approve';
+ALTER TYPE public.org_permission ADD VALUE IF NOT EXISTS 'crm.proposals_share';
+ALTER TYPE public.org_permission ADD VALUE IF NOT EXISTS 'crm.record_outcome';
+ALTER TYPE public.org_permission ADD VALUE IF NOT EXISTS 'crm.convert';
+ALTER TYPE public.org_permission ADD VALUE IF NOT EXISTS 'crm.admin';

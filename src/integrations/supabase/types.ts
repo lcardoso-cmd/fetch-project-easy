@@ -3171,6 +3171,17 @@ export type Database = {
         | "proposals.use"
         | "marketing.use"
         | "publications.use"
+        | "crm.view"
+        | "crm.manage_own"
+        | "crm.view_all"
+        | "crm.manage_all"
+        | "crm.view_values"
+        | "crm.proposals_create"
+        | "crm.proposals_approve"
+        | "crm.proposals_share"
+        | "crm.record_outcome"
+        | "crm.convert"
+        | "crm.admin"
       org_role:
         | "owner"
         | "admin"
@@ -3378,6 +3389,17 @@ export const Constants = {
         "proposals.use",
         "marketing.use",
         "publications.use",
+        "crm.view",
+        "crm.manage_own",
+        "crm.view_all",
+        "crm.manage_all",
+        "crm.view_values",
+        "crm.proposals_create",
+        "crm.proposals_approve",
+        "crm.proposals_share",
+        "crm.record_outcome",
+        "crm.convert",
+        "crm.admin",
       ],
       org_role: [
         "owner",
