@@ -47,8 +47,15 @@ function safeInternalPath(p: unknown): string | null {
 export const Route = createFileRoute("/entrar")({
   validateSearch: (search: Record<string, unknown>) => {
     const redirect = safeInternalPath(search.redirect);
-    return redirect ? { redirect } : {};
+    const modo = search.modo === "cadastro" ? "cadastro" : undefined;
+    const origem = typeof search.origem === "string" ? search.origem.slice(0, 40) : undefined;
+    return {
+      ...(redirect ? { redirect } : {}),
+      ...(modo ? { modo } : {}),
+      ...(origem ? { origem } : {}),
+    };
   },
+
   head: () => ({
     meta: [
       { title: "Entrar no JurisMind — IA para advogados" },
@@ -101,7 +108,9 @@ function AuthPage() {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
-  const [mode, setMode] = useState<"login" | "signup">("login");
+  const isTrialSignup = search.modo === "cadastro";
+  const [mode, setMode] = useState<"login" | "signup">(isTrialSignup ? "signup" : "login");
+
   const [pendingEmail, setPendingEmail] = useState<string | null>(null);
   const [resendCooldown, setResendCooldown] = useState(0);
   const [isResending, setIsResending] = useState(false);
@@ -531,11 +540,16 @@ function AuthPage() {
         <div className="w-full max-w-md space-y-6">
           <div className="text-center">
             <JurisMindMark size={48} context={JURISMIND_CONTEXT.auth} rounded className="mb-4" />
-            <h1 className="text-3xl font-bold text-foreground">Entrar no JurisMind</h1>
+            <h1 className="text-3xl font-bold text-foreground">
+              {isTrialSignup ? "Comece seu teste gratuito" : "Entrar no JurisMind"}
+            </h1>
             <p className="mt-2 text-sm text-muted-foreground">
-              Inteligência para escritórios de advocacia
+              {isTrialSignup
+                ? "Criar sua conta inicia o período gratuito de 30 dias."
+                : "Inteligência para escritórios de advocacia"}
             </p>
           </div>
+
 
           {pendingEmail && (
             <div
