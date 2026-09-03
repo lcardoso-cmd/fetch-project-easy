@@ -5,8 +5,8 @@ import { JurisMindMark, JURISMIND_CONTEXT } from "@/components/brand/jurismind-m
 import { useAuth } from "@/hooks/use-auth";
 import { UserMenu } from "@/components/layout/user-menu";
 import { useProfile } from "@/hooks/use-profile";
-import { useCapabilities, VIEW_AS_PRESETS } from "@/hooks/use-capabilities";
-import type { Capability } from "@/lib/capabilities.functions";
+import { useAccess, VIEW_AS_ROLES } from "@/hooks/use-access";
+import type { OrgPermission, OrgRole, PlatformRole } from "@/lib/org-permissions";
 import {
   NAV_ENTRIES,
   NAV_SECTIONS,
@@ -80,7 +80,8 @@ type NavLink = {
   label: string;
   icon: LucideIcon;
   match?: "exact" | "startsWith";
-  requires?: Capability;
+  requires?: OrgPermission;
+  platformRole?: PlatformRole;
   description: string;
 };
 
@@ -121,6 +122,7 @@ function link(
     icon,
     match,
     requires: entry.requires,
+    platformRole: entry.platformRole,
     description: describeNav(entry),
   };
 }
@@ -234,11 +236,11 @@ export function buildFooterNav(scope: ShellScope = "office"): NavLink[] {
  * Filtra links por capacidade e remove grupos/seções sem nenhum item
  * autorizado. Nada é revelado ao usuário sobre itens ocultos.
  */
-function applyCapabilities(
+function applyAccess(
   sections: NavSection[],
-  has: (c: Capability) => boolean,
+  can: (l: NavLink) => boolean,
 ): NavSection[] {
-  const allowed = (l: NavLink) => !l.requires || has(l.requires);
+  const allowed = can;
   const result: NavSection[] = [];
   for (const section of sections) {
     const nodes: NavNode[] = [];
@@ -268,9 +270,8 @@ function matchesPath(pathname: string, l: NavLink) {
 }
 
 function ViewAsSwitcher() {
-  const { isSuperAdmin, simulation, activePreset, setSimulation } = useCapabilities();
-  if (!isSuperAdmin) return null;
-  const currentId = simulation ?? "super_admin";
+  const { isPlatformUser, simulation, roleLabel, setSimulation } = useAccess();
+  if (!isPlatformUser) return null;
   return (
     <Popover>
       <PopoverTrigger asChild>
@@ -278,14 +279,14 @@ function ViewAsSwitcher() {
           type="button"
           className={cn(
             "flex min-h-11 w-full items-center gap-2 rounded-md px-3 py-2 text-left text-ui font-medium transition",
-            activePreset
+            simulation
               ? "bg-amber-400/20 text-amber-100 ring-1 ring-amber-300/60"
               : "text-sidebar-foreground/85 hover:bg-sidebar-accent hover:text-sidebar-foreground",
           )}
         >
           <Eye className="size-[18px] shrink-0" aria-hidden="true" />
           <span className="truncate">
-            {activePreset ? `Vendo como: ${activePreset.label}` : "Ver como…"}
+            {simulation ? `Vendo como: ${roleLabel}` : "Ver como…"}
           </span>
         </button>
       </PopoverTrigger>
@@ -295,24 +296,38 @@ function ViewAsSwitcher() {
           <span>Simulação visual — o servidor mantém sua permissão real.</span>
         </div>
         <ul className="space-y-0.5">
-          {VIEW_AS_PRESETS.map((p) => {
-            const active = currentId === p.id;
-            return (
-              <li key={p.id}>
-                <button
-                  type="button"
-                  onClick={() => setSimulation(p.id === "super_admin" ? null : p.id)}
-                  className={cn(
-                    "w-full rounded-md px-2.5 py-2 text-left text-ui transition",
-                    active ? "bg-primary/10 text-foreground" : "hover:bg-muted",
-                  )}
-                >
-                  <div className="font-medium">{p.label}</div>
-                  <div className="text-sm text-muted-foreground">{p.description}</div>
-                </button>
-              </li>
-            );
-          })}
+          <li>
+            <button
+              type="button"
+              onClick={() => setSimulation(null)}
+              className={cn(
+                "w-full rounded-md px-2.5 py-2 text-left text-ui transition",
+                !simulation ? "bg-primary/10 text-foreground" : "hover:bg-muted",
+              )}
+            >
+              <div className="font-medium">Minha visão real</div>
+              <div className="text-sm text-muted-foreground">
+                Papéis reais da sua conta.
+              </div>
+            </button>
+          </li>
+          {VIEW_AS_ROLES.map((p) => (
+            <li key={p.role}>
+              <button
+                type="button"
+                onClick={() => setSimulation(p.role as OrgRole)}
+                className={cn(
+                  "w-full rounded-md px-2.5 py-2 text-left text-ui transition",
+                  simulation === p.role ? "bg-primary/10 text-foreground" : "hover:bg-muted",
+                )}
+              >
+                <div className="font-medium">{p.label}</div>
+                <div className="text-sm text-muted-foreground">
+                  Permissões padrão do papel «{p.label}» na organização.
+                </div>
+              </button>
+            </li>
+          ))}
         </ul>
       </PopoverContent>
     </Popover>
