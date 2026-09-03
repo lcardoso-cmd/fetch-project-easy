@@ -146,7 +146,7 @@ describe("fusão e diversidade na recuperação", () => {
       candidate("4", "doc-1"),
       candidate("5", "doc-2"),
     ];
-    const out = diversifyByDocument(rows, 2, 5);
+    const out = diversifyByDocument(rows, 2);
     expect(out.filter((r) => r.document_id === "doc-1").length).toBeLessThanOrEqual(2);
     expect(out.some((r) => r.document_id === "doc-2")).toBe(true);
   });
