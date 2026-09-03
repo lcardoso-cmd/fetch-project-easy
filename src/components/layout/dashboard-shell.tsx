@@ -281,6 +281,72 @@ function ViewAsSwitcher() {
   );
 }
 
+/** Controle de contexto: separa o ambiente do escritório da administração B2B. */
+function ScopeSwitcher({
+  scope,
+  collapsed,
+  onNavigate,
+}: {
+  scope: ShellScope;
+  collapsed?: boolean;
+  onNavigate?: () => void;
+}) {
+  const options: { id: ShellScope; label: string; short: string; to: string; icon: LucideIcon }[] = [
+    { id: "office", label: "Ambiente do escritório", short: "Escritório", to: "/painel", icon: Building2 },
+    { id: "b2b", label: "Administração B2B", short: "B2B", to: "/plataforma", icon: Globe2 },
+  ];
+  if (collapsed) {
+    const other = options.find((o) => o.id !== scope)!;
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Link
+            to={other.to}
+            onClick={onNavigate}
+            aria-label={`Ir para ${other.label}`}
+            className="mx-auto mb-2 flex size-10 items-center justify-center rounded-md border border-sidebar-border text-sidebar-foreground/85 transition hover:bg-sidebar-accent hover:text-sidebar-foreground"
+          >
+            <other.icon className="size-[18px]" strokeWidth={1.75} aria-hidden="true" />
+          </Link>
+        </TooltipTrigger>
+        <TooltipContent side="right" className="text-xs">
+          {other.label}
+        </TooltipContent>
+      </Tooltip>
+    );
+  }
+  return (
+    <div
+      role="group"
+      aria-label="Contexto de trabalho"
+      className="mx-2 mb-3 grid grid-cols-2 gap-1 rounded-lg border border-sidebar-border bg-sidebar-accent/60 p-1"
+    >
+      {options.map((o) => {
+        const active = o.id === scope;
+        return (
+          <Link
+            key={o.id}
+            to={o.to}
+            onClick={onNavigate}
+            aria-current={active ? "page" : undefined}
+            title={o.label}
+            className={cn(
+              "flex min-h-10 items-center justify-center gap-1.5 rounded-md px-2 text-xs font-semibold transition-colors",
+              active
+                ? "bg-sidebar-primary text-sidebar-primary-foreground"
+                : "text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground",
+            )}
+          >
+            <o.icon className="size-4 shrink-0" strokeWidth={1.75} aria-hidden="true" />
+            <span className="truncate">{o.short}</span>
+          </Link>
+        );
+      })}
+    </div>
+  );
+}
+
+
 export function DashboardShell({ children }: { children: React.ReactNode }) {
   const { pathname } = useLocation();
   const { user, signOut } = useAuth();
