@@ -429,38 +429,24 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
             {isSuperAdmin && !collapsed && <ViewAsSwitcher />}
             {!collapsed && user && (
               <div className="flex items-center gap-2 px-1 py-1">
-                <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-sidebar-accent text-[10px] font-semibold uppercase text-foreground">
+                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-sidebar-accent text-xs font-semibold uppercase text-foreground">
                   {user.email?.charAt(0) ?? "U"}
                 </div>
-                <p className="truncate text-[11px] text-sidebar-foreground/75 flex-1">
+                <p className="truncate text-[13px] text-sidebar-foreground/75 flex-1">
                   {user.email}
                 </p>
               </div>
             )}
-            <Button
-              asChild
-              variant="ghost"
-              size={collapsed ? "icon" : "sm"}
-              className={cn(
-                "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-foreground",
-                collapsed ? "h-8 w-8 mx-auto" : "w-full justify-start gap-2 h-8 text-[12px] font-normal px-2",
-              )}
-            >
-              <Link to="/ajuda/permissoes" aria-label="Como liberar permissões">
-                <HelpCircle className="h-3.5 w-3.5" />
-                {!collapsed && "Ajuda"}
-              </Link>
-            </Button>
             <Button
               variant="ghost"
               size={collapsed ? "icon" : "sm"}
               onClick={signOut}
               className={cn(
                 "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-foreground",
-                collapsed ? "h-8 w-8 mx-auto" : "w-full justify-start gap-2 h-8 text-[12px] font-normal px-2",
+                collapsed ? "h-8 w-8 mx-auto" : "w-full justify-start gap-2 h-9 text-sm font-normal px-2",
               )}
             >
-              <LogOut className="h-3.5 w-3.5" />
+              <LogOut className="h-4 w-4" />
               {!collapsed && "Sair"}
             </Button>
           </div>

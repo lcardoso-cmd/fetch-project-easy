@@ -58,7 +58,9 @@ Fonte da verdade: organização é o cliente do SaaS. Sem migração gradual, se
 ## Fase 6 — em andamento
 - [x] Barra lateral reconstruída: Principal (Início, Casos, JurisMind AI, Meu trabalho, Biblioteca), Módulos (Monitoramento, Comercial), rodapé (Serviços especializados, Administração, Ajuda, Perfil).
 - [x] Tipografia do menu ≥ 14px.
-- [ ] Tela do caso como workspace com abas.
-- [ ] Reconstruir "Início" operacional.
-- [ ] Unificar tarefas + agenda em "Meu trabalho".
-- [ ] Biblioteca com filtros e status compreensível.
+- [x] Tela do caso como workspace com abas (Visão geral, Documentos, JurisMind AI, Produção, Prazos e tarefas, Atividade).
+- [x] "Início" operacional com dados reais e ações rápidas.
+- [x] Tarefas + agenda unificados em "Meu trabalho" (Hoje/Tarefas/Prazos/Agenda/Atrasados + filtros).
+- [x] Biblioteca com busca, filtros por caso/status e status compreensível.
+- [x] Peças Jurídicas incorporado em Produção via `PieceGenerator`; Google/Outlook apenas em Administração → Integrações (callbacks redirecionam para /integracoes).
+- [x] Auditoria de navegação: sem Marketing/Conversas/Peças no menu, sem "Ajuda" duplicada no rodapé.
