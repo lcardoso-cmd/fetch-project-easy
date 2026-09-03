@@ -469,7 +469,10 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
             </button>
           )}
 
+          {canAdminB2B && <ScopeSwitcher scope={scope} collapsed={collapsed} />}
+
           <nav className="flex-1 space-y-0.5 overflow-y-auto overflow-x-hidden px-2 py-2">
+
             {NAV.map((item, idx) => {
               if (item.type === "separator") {
                 return <div key={idx} className="my-2" />;
