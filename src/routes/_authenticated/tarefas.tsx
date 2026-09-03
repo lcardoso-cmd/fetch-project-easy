@@ -21,7 +21,10 @@ import { EmptyState } from "@/components/empty-state";
 import { toast } from "sonner";
 import {
   createTask,
+  deleteTask,
   listTasks,
+  reorderTasks,
+  updateTask,
   toggleTask,
   updateTaskStatus,
   TASK_STATUSES,
@@ -30,11 +33,11 @@ import {
 } from "@/lib/tasks.functions";
 import { listEvents, deleteEvent } from "@/lib/events.functions";
 import { getCases } from "@/lib/cases.functions";
-import { listTeamMembers } from "@/lib/team.functions";
+import { listOrgMembers } from "@/lib/organization.functions";
 import { listGoogleCalendarEvents } from "@/lib/google.functions";
 import { listOutlookCalendarEvents } from "@/lib/outlook.functions";
 import { AddTaskDialog } from "@/components/tasks/add-task-dialog";
-import { TaskKanban } from "@/components/tasks/task-kanban";
+import { KanbanBoard } from "@/components/tasks/kanban-board";
 import { AddEventDialog } from "@/components/work/add-event-dialog";
 import { AgendaPanel, type UnifiedEvent } from "@/components/work/agenda-panel";
 import { ClipboardCheck } from "lucide-react";
@@ -82,7 +85,10 @@ function MyWorkPage() {
   const listTasksFn = useServerFn(listTasks);
   const listEventsFn = useServerFn(listEvents);
   const casesFn = useServerFn(getCases);
-  const teamFn = useServerFn(listTeamMembers);
+  const teamFn = useServerFn(listOrgMembers);
+  const updateTaskFn = useServerFn(updateTask);
+  const reorderTasksFn = useServerFn(reorderTasks);
+  const deleteTaskFn = useServerFn(deleteTask);
   const createTaskFn = useServerFn(createTask);
   const updateStatusFn = useServerFn(updateTaskStatus);
   const toggleTaskFn = useServerFn(toggleTask);
@@ -106,7 +112,7 @@ function MyWorkPage() {
   });
   const { data: cases = [] } = useQuery({ queryKey: ["cases"], queryFn: () => casesFn() });
   const { data: team = [] } = useQuery({
-    queryKey: ["team-members"],
+    queryKey: ["org-members"],
     queryFn: () => teamFn(),
   });
 
@@ -140,9 +146,7 @@ function MyWorkPage() {
       }),
   });
 
-  const assignees = team
-    .filter((m) => m.member_user_id)
-    .map((m) => ({ id: m.member_user_id as string, name: m.name }));
+  const assignees = team.map((m) => ({ id: m.id, name: m.name }));
   const kanbanCases = cases.map((c) => ({ id: c.id, title: c.title }));
   const caseTitle = (id: string | null | undefined) =>
     id ? (cases.find((c) => c.id === id)?.title ?? null) : null;
@@ -476,11 +480,39 @@ function MyWorkPage() {
               description="Ajuste os filtros ou crie uma nova tarefa."
             />
           ) : (
-            <TaskKanban
+            <KanbanBoard
               tasks={filteredTasks as never}
               cases={kanbanCases}
               assignees={assignees}
-              onStatusChange={handleStatusChange}
+              onReorder={async (status, orderedIds) => {
+                try {
+                  await reorderTasksFn({
+                    data: { status, ordered_ids: orderedIds },
+                  });
+                  await qc.invalidateQueries({ queryKey: ["tasks"] });
+                } catch (e) {
+                  toast.error(
+                    e instanceof Error ? e.message : "Erro ao mover tarefa",
+                  );
+                  throw e;
+                }
+              }}
+              onEdit={async (id, values) => {
+                await updateTaskFn({ data: { id, ...values } });
+                await qc.invalidateQueries({ queryKey: ["tasks"] });
+                toast.success("Tarefa atualizada");
+              }}
+              onDelete={async (id) => {
+                try {
+                  await deleteTaskFn({ data: { id } });
+                  await qc.invalidateQueries({ queryKey: ["tasks"] });
+                  toast.success("Tarefa excluída");
+                } catch (e) {
+                  toast.error(
+                    e instanceof Error ? e.message : "Erro ao excluir tarefa",
+                  );
+                }
+              }}
             />
           )}
         </TabsContent>
