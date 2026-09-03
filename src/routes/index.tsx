@@ -1,6 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
-import { IconBox } from "@/components/ui/icon-box";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import {
   ArrowRight,
   ArrowDown,
@@ -11,37 +16,38 @@ import {
   ShieldCheck,
   Workflow,
   FileSearch,
-  Scale,
   Gauge,
   Users,
   Check,
   X,
   Quote,
-  Database,
-  ListChecks,
   BookOpen,
+  MessageSquare,
+  Library,
 } from "lucide-react";
 import { JurisMindMark, JURISMIND_CONTEXT } from "@/components/brand/jurismind-mark";
 import { useAuth } from "@/hooks/use-auth";
+
+const TRIAL_SEARCH = { modo: "cadastro", origem: "trial30" } as const;
 
 export const Route = createFileRoute("/")({
   component: LandingPage,
   head: () => ({
     meta: [
-      { title: "JurisMind AI — A camada de inteligência jurídica do seu escritório" },
+      { title: "JurisMind AI — Inteligência jurídica sobre os documentos do seu caso" },
       {
         name: "description",
         content:
-          "O JurisMind transforma os documentos e casos do escritório em uma base de conhecimento consultável por IA, com RAG jurídico, rastreabilidade por documento e trecho, operação e governança.",
+          "O JurisMind consulta os documentos de cada caso antes de responder, conectando inteligência artificial, produção jurídica e gestão do escritório. Teste grátis por 30 dias.",
       },
       {
         property: "og:title",
-        content: "JurisMind AI — Inteligência jurídica construída sobre seus documentos",
+        content: "JurisMind AI — Inteligência jurídica sobre os documentos do seu caso",
       },
       {
         property: "og:description",
         content:
-          "GPT e Gemini são modelos de IA. O JurisMind transforma essa tecnologia em inteligência jurídica aplicada aos casos e documentos do seu escritório.",
+          "Mais contexto para a IA. Mais controle para o advogado. O JurisMind consulta os documentos do caso antes de responder.",
       },
       { property: "og:url", content: "https://b2bjurismind.lovable.app/" },
       { property: "og:type", content: "website" },
@@ -51,11 +57,14 @@ export const Route = createFileRoute("/")({
           "https://storage.googleapis.com/gpt-engineer-file-uploads/Sls90jSFrMa8ECulf4OjLMG7sRB3/social-images/social-1783001247994-LOGO_JURISMIND_16-9.webp",
       },
       { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:title", content: "JurisMind AI — Inteligência jurídica sobre seus documentos" },
+      {
+        name: "twitter:title",
+        content: "JurisMind AI — Inteligência jurídica sobre seus documentos",
+      },
       {
         name: "twitter:description",
         content:
-          "RAG jurídico por caso, busca híbrida em português, rastreabilidade por documento e trecho, operação e governança de IA.",
+          "O JurisMind localiza os trechos relevantes nos documentos do caso antes de a IA responder.",
       },
       {
         name: "twitter:image",
@@ -67,75 +76,76 @@ export const Route = createFileRoute("/")({
   }),
 });
 
-const RAG_STEPS = [
+const FLOW = [
   {
-    icon: Scale,
+    icon: Library,
     n: "01",
-    t: "Organização por caso",
-    d: "Os documentos são vinculados ao contexto jurídico específico em que serão utilizados.",
+    t: "Documentos do caso",
+    d: "Contratos, petições, laudos, pareceres e demais documentos são reunidos no contexto correto.",
   },
   {
-    icon: Layers,
+    icon: MessageSquare,
     n: "02",
-    t: "Processamento documental",
-    d: "O conteúdo é extraído, segmentado e preparado para consulta inteligente.",
+    t: "Pergunta do advogado",
+    d: "O advogado pergunta o que precisa localizar, compreender ou analisar.",
   },
   {
     icon: Search,
     n: "03",
-    t: "Busca híbrida",
-    d: "A plataforma combina busca semântica por significado com busca textual em português.",
-  },
-  {
-    icon: Workflow,
-    n: "04",
-    t: "Fusão dos resultados",
-    d: "Diferentes sinais de relevância são combinados para selecionar os conteúdos mais relacionados à pergunta.",
-  },
-  {
-    icon: Sparkles,
-    n: "05",
-    t: "Reescrita e reranqueamento",
-    d: "Nos modos avançados, a consulta pode ser aprimorada e os trechos recuperados são novamente classificados antes da geração.",
+    t: "Busca dos trechos relevantes",
+    d: "O JurisMind procura nos documentos os conteúdos mais relacionados à pergunta.",
   },
   {
     icon: FileSearch,
-    n: "06",
-    t: "Resposta contextualizada",
-    d: "O modelo recebe os conteúdos selecionados e elabora uma resposta relacionada aos documentos e trechos utilizados.",
+    n: "04",
+    t: "Resposta com base documental",
+    d: "A IA recebe os trechos encontrados e elabora uma resposta que pode ser conferida pelo advogado.",
   },
 ];
 
-const TECH_CARDS = [
+const TECH = [
   {
-    icon: Search,
-    t: "Busca semântica",
-    d: "Localiza conteúdos relacionados ao significado da pergunta, ainda que utilizem palavras diferentes.",
+    icon: Sparkles,
+    t: "Busca por significado",
+    d: "Encontra conteúdos relacionados à ideia da pergunta, mesmo quando utilizam palavras diferentes.",
   },
   {
     icon: BookOpen,
     t: "Busca textual em português",
-    d: "Complementa a análise semântica com termos, expressões e referências específicas dos documentos.",
+    d: "Identifica termos, nomes, expressões e referências específicas.",
   },
   {
     icon: Layers,
-    t: "Fusão e reranqueamento",
-    d: "Combina e reorganiza os resultados para priorizar os trechos mais relevantes.",
+    t: "Combinação dos resultados",
+    d: "Reúne os diferentes resultados e prioriza os trechos mais relacionados.",
   },
   {
     icon: Workflow,
-    t: "Orquestração de modelos",
-    d: "A plataforma utiliza modelos avançados de inteligência artificial de acordo com o fluxo executado.",
+    t: "Reavaliação do contexto",
+    d: "Nos modos avançados, a pergunta e os resultados podem ser refinados antes da resposta.",
+  },
+];
+
+const BENEFITS = [
+  {
+    icon: Search,
+    t: "Encontre mais rápido",
+    d: "Localize informações relevantes sem pesquisar manualmente documento por documento.",
   },
   {
-    icon: Database,
-    t: "Contexto controlado",
-    d: "A resposta é construída a partir dos conteúdos recuperados no acervo selecionado.",
+    icon: FileText,
+    t: "Analise com mais contexto",
+    d: "Utilize o conteúdo do próprio caso na preparação de análises e minutas.",
   },
   {
-    icon: FileSearch,
-    t: "Rastreabilidade",
-    d: "Documentos e trechos relacionados permanecem disponíveis para conferência pelo advogado.",
+    icon: Library,
+    t: "Preserve o conhecimento",
+    d: "Mantenha documentos e informações organizados para continuidade do trabalho da equipe.",
+  },
+  {
+    icon: Gauge,
+    t: "Adote IA com controle",
+    d: "Acompanhe usuários, modelos, consumo e custos estimados.",
   },
 ];
 
@@ -143,26 +153,44 @@ const LAYERS = [
   {
     icon: Sparkles,
     t: "Inteligência",
-    d: "RAG por caso, consulta documental, análise e produção jurídica.",
-    items: ["Assistente por caso", "Consulta aos documentos", "Produção jurídica", "Pareceres"],
+    d: "Consulta documental por caso, análise e produção jurídica.",
   },
   {
     icon: Workflow,
     t: "Operação",
-    d: "Casos, documentos, tarefas, agenda, propostas e acompanhamento.",
-    items: ["Casos e documentos", "Tarefas e agenda", "Propostas comerciais", "Publicações e equipe"],
+    d: "Casos, documentos, tarefas, agenda, propostas e publicações.",
   },
   {
     icon: ShieldCheck,
     t: "Governança",
-    d: "Usuários, permissões, modelos, consumo, orçamento e custos estimados.",
-    items: ["Usuários e permissões", "Modelos utilizados", "Tokens e custos estimados", "Orçamento mensal"],
+    d: "Usuários, permissões, modelos, consumo e custos estimados.",
   },
 ];
 
 function LandingPage() {
   const { user } = useAuth();
-  const primaryTo = user ? "/painel" : "/entrar";
+
+  const TrialButton = ({
+    size = "lg",
+    className,
+    label,
+  }: {
+    size?: "default" | "lg";
+    className?: string;
+    label?: string;
+  }) =>
+    user ? (
+      <Button size={size} asChild className={className}>
+        <Link to="/painel">Abrir painel</Link>
+      </Button>
+    ) : (
+      <Button size={size} asChild className={className}>
+        <Link to="/entrar" search={TRIAL_SEARCH}>
+          {label ?? "Testar grátis por 30 dias"}
+          <ArrowRight className="ml-2 h-4 w-4" />
+        </Link>
+      </Button>
+    );
 
   return (
     <div className="min-h-screen bg-background">
@@ -175,40 +203,29 @@ function LandingPage() {
             </span>
           </Link>
           <nav className="hidden items-center gap-6 text-sm text-muted-foreground md:flex">
-            <a href="#tecnologia" className="hover:text-foreground">
-              Tecnologia
+            <a href="#como-funciona" className="hover:text-foreground">
+              Como funciona
             </a>
-            <a href="#evidencia" className="hover:text-foreground">
-              Rastreabilidade
+            <a href="#beneficios" className="hover:text-foreground">
+              Benefícios
             </a>
             <a href="#plataforma" className="hover:text-foreground">
               Plataforma
             </a>
-            <a href="#governanca" className="hover:text-foreground">
-              Governança
-            </a>
           </nav>
           <div className="flex items-center gap-2">
-            {user ? (
-              <Button asChild>
-                <Link to="/painel">Abrir painel</Link>
+            {!user && (
+              <Button variant="ghost" asChild>
+                <Link to="/entrar">Entrar</Link>
               </Button>
-            ) : (
-              <>
-                <Button variant="ghost" asChild>
-                  <Link to="/entrar">Entrar</Link>
-                </Button>
-                <Button asChild>
-                  <Link to="/entrar">Testar grátis por 30 dias</Link>
-                </Button>
-              </>
             )}
+            <TrialButton size="default" />
           </div>
         </div>
       </header>
 
       <main>
-        {/* HERO */}
+        {/* 1 · HERO */}
         <section className="relative overflow-hidden bg-primary text-primary-foreground">
           <div
             className="absolute inset-0 opacity-20"
@@ -217,69 +234,53 @@ function LandingPage() {
                 "radial-gradient(circle at 15% 25%, oklch(0.86 0.16 195) 0, transparent 42%), radial-gradient(circle at 85% 75%, oklch(0.65 0.16 220) 0, transparent 45%)",
             }}
           />
-          <div className="relative mx-auto grid max-w-6xl gap-12 px-4 py-20 lg:grid-cols-[1.05fr_1fr] lg:items-center lg:py-24">
+          <div className="relative mx-auto grid max-w-6xl gap-10 px-4 py-16 lg:grid-cols-[1.05fr_1fr] lg:items-center lg:py-20">
             <div>
               <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-accent/20 px-3 py-1 text-xs font-semibold text-accent">
                 <JurisMindMark size={14} context={JURISMIND_CONTEXT.inlineDark} />A camada de
                 inteligência jurídica do escritório
               </div>
-              <h1 className="font-heading text-4xl font-extrabold leading-[1.08] tracking-tight md:text-6xl">
+              <h1 className="font-heading text-4xl font-extrabold leading-[1.08] tracking-tight md:text-5xl">
                 A inteligência jurídica do seu escritório começa nos próprios documentos.
               </h1>
-              <p className="mt-6 max-w-xl text-lg text-primary-foreground/80">
-                O JurisMind transforma processos, contratos, pareceres e demais documentos de cada
-                caso em uma base de conhecimento consultável por IA — conectada à produção
-                jurídica, à operação e à governança do escritório.
+              <p className="mt-5 max-w-xl text-lg text-primary-foreground/80">
+                O JurisMind consulta os documentos de cada caso antes de responder, conectando
+                inteligência artificial, produção jurídica e gestão do escritório.
               </p>
 
               <div className="mt-8 flex flex-wrap gap-3">
-                <Button
-                  size="lg"
-                  asChild
-                  className="bg-accent text-accent-foreground hover:bg-accent/90"
-                >
-                  <Link to={primaryTo}>
-                    {user ? "Abrir painel" : "Testar grátis por 30 dias"}
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </Link>
-                </Button>
+                <TrialButton className="bg-accent text-accent-foreground hover:bg-accent/90" />
                 <Button
                   size="lg"
                   variant="outline"
                   asChild
                   className="border-primary-foreground/30 bg-transparent text-primary-foreground hover:bg-primary-foreground/10"
                 >
-                  <a href="#tecnologia">Conhecer a tecnologia</a>
+                  <a href="#como-funciona">Ver como funciona</a>
                 </Button>
               </div>
 
-              <p className="mt-6 max-w-xl text-sm text-primary-foreground/70">
-                Não apenas converse com uma IA. Trabalhe com uma inteligência construída sobre o
-                contexto real de cada caso.
+              <p className="mt-6 text-sm font-medium text-accent">
+                Mais contexto para a IA. Mais controle para o advogado.
               </p>
             </div>
 
-            {/* Composição visual: caso → documentos → pergunta → trechos → resposta → produção */}
+            {/* Demonstração visual única: documentos → pergunta → trechos → resposta */}
             <div className="relative rounded-3xl border border-primary-foreground/20 bg-primary/40 p-5 shadow-2xl backdrop-blur">
               <div className="rounded-2xl border border-primary-foreground/15 bg-primary/60 p-4">
                 <p className="text-[11px] font-semibold uppercase tracking-widest text-accent">
-                  Caso
+                  Documentos do caso
                 </p>
-                <p className="mt-1 font-heading text-base font-bold">
-                  Construtora X — atraso na entrega da obra
-                </p>
-                <div className="mt-3 flex flex-wrap gap-2 text-[11px]">
-                  {["Contrato de empreitada", "Notificações extrajudiciais", "Laudo de vistoria", "Contestação"].map(
-                    (d) => (
-                      <span
-                        key={d}
-                        className="inline-flex items-center gap-1 rounded-md border border-primary-foreground/20 bg-primary/50 px-2 py-1 text-primary-foreground/80"
-                      >
-                        <FileText className="h-3 w-3 text-accent" />
-                        {d}
-                      </span>
-                    ),
-                  )}
+                <div className="mt-2 flex flex-wrap gap-2 text-[11px]">
+                  {["Contrato", "Laudo de vistoria", "Contestação"].map((d) => (
+                    <span
+                      key={d}
+                      className="inline-flex items-center gap-1 rounded-md border border-primary-foreground/20 bg-primary/50 px-2 py-1 text-primary-foreground/80"
+                    >
+                      <FileText className="h-3 w-3 text-accent" />
+                      {d}
+                    </span>
+                  ))}
                 </div>
               </div>
 
@@ -289,7 +290,7 @@ function LandingPage() {
 
               <div className="rounded-2xl border border-accent/40 bg-accent/10 p-4">
                 <p className="text-[11px] font-semibold uppercase tracking-widest text-accent">
-                  Pergunta do advogado
+                  Pergunta
                 </p>
                 <p className="mt-1 text-sm">
                   Quais justificativas foram apresentadas para o atraso da obra?
@@ -302,14 +303,8 @@ function LandingPage() {
 
               <div className="space-y-2">
                 {[
-                  {
-                    doc: "Contestação",
-                    tr: "“…o atraso decorreu de chuvas atípicas registradas no período…”",
-                  },
-                  {
-                    doc: "Laudo de vistoria",
-                    tr: "“…paralisação por indisponibilidade de insumos entre março e maio…”",
-                  },
+                  { doc: "Contestação", tr: "“…chuvas atípicas registradas no período…”" },
+                  { doc: "Laudo de vistoria", tr: "“…indisponibilidade de insumos…”" },
                 ].map((t) => (
                   <div
                     key={t.doc}
@@ -317,7 +312,7 @@ function LandingPage() {
                   >
                     <p className="flex items-center gap-2 text-[11px] font-semibold text-accent">
                       <Quote className="h-3 w-3" />
-                      Trecho recuperado · {t.doc}
+                      Trecho encontrado · {t.doc}
                     </p>
                     <p className="mt-1 text-xs text-primary-foreground/80">{t.tr}</p>
                   </div>
@@ -333,414 +328,255 @@ function LandingPage() {
                   Resposta contextualizada
                 </p>
                 <p className="mt-1 text-xs text-primary-foreground/85">
-                  As justificativas identificadas nos documentos selecionados envolvem condições
-                  climáticas atípicas e indisponibilidade de insumos, com os trechos e documentos
-                  relacionados disponíveis para conferência.
+                  Resposta construída a partir dos trechos encontrados, com os documentos utilizados
+                  disponíveis para conferência.
                 </p>
-                <div className="mt-3 flex flex-wrap gap-2 text-[11px] text-primary-foreground/70">
-                  <span className="inline-flex items-center gap-1 rounded-md bg-accent/15 px-2 py-1 text-accent">
-                    <ListChecks className="h-3 w-3" /> Usar na produção jurídica
-                  </span>
-                  <span className="inline-flex items-center gap-1 rounded-md border border-primary-foreground/20 px-2 py-1">
-                    <FileSearch className="h-3 w-3" /> Conferir documentos utilizados
-                  </span>
-                </div>
               </div>
             </div>
           </div>
         </section>
 
-        {/* TESE */}
-        <section className="border-b bg-card">
-          <div className="mx-auto max-w-4xl px-4 py-12 text-center">
-            <p className="font-heading text-xl font-bold leading-snug text-foreground md:text-2xl">
-              GPT e Gemini são modelos de inteligência artificial. O JurisMind transforma essa
-              tecnologia em inteligência jurídica aplicada aos casos e documentos do seu escritório.
-            </p>
-            <p className="mt-4 text-sm text-muted-foreground">
-              Uma IA genérica conhece o mundo. O JurisMind trabalha sobre os documentos, os casos e
-              o conhecimento do seu escritório.
-            </p>
-          </div>
-        </section>
-
-        {/* CONTRASTE */}
-        <section className="mx-auto max-w-6xl px-4 py-20">
-          <div className="mx-auto max-w-2xl text-center">
-            <h2 className="font-heading text-3xl font-bold tracking-tight text-foreground md:text-4xl">
-              Por que não usar apenas uma IA genérica?
-            </h2>
-            <p className="mt-3 text-muted-foreground">
-              A comparação não é com um plano corporativo de terceiros, e sim com o uso isolado de
-              uma IA generalista no dia a dia do escritório.
-            </p>
-          </div>
-
-          <div className="mt-12 grid gap-6 md:grid-cols-2">
-            <div className="rounded-2xl border bg-muted/30 p-6">
-              <h3 className="font-heading text-lg font-bold text-foreground">
-                IA generalista utilizada isoladamente
-              </h3>
-              <ul className="mt-5 space-y-3 text-sm text-muted-foreground">
-                {[
-                  "Interação concentrada em conversas.",
-                  "Contexto fornecido manualmente pelo advogado.",
-                  "Documentos e informações separados da gestão do caso.",
-                  "Ausência de fluxo jurídico operacional integrado.",
-                  "Dificuldade de controlar o uso por equipe, caso e funcionalidade.",
-                  "Conhecimento produzido sem integração automática à rotina do escritório.",
-                ].map((i) => (
-                  <li key={i} className="flex items-start gap-3">
-                    <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
-                      <X className="h-3 w-3" />
-                    </span>
-                    <span>{i}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            <div className="rounded-2xl border border-accent/40 bg-accent/5 p-6 shadow-sm">
-              <h3 className="font-heading text-lg font-bold text-foreground">JurisMind</h3>
-              <ul className="mt-5 space-y-3 text-sm text-foreground/90">
-                {[
-                  "Inteligência organizada por caso.",
-                  "Documentos processados e transformados em base consultável.",
-                  "Recuperação automática dos conteúdos relevantes.",
-                  "Busca semântica e textual combinadas.",
-                  "Respostas relacionadas aos documentos e trechos utilizados.",
-                  "Produção jurídica conectada ao contexto documental.",
-                  "Gestão de usuários, permissões, consumo e custos de IA.",
-                  "Integração com casos, documentos, tarefas, agenda e propostas.",
-                ].map((i) => (
-                  <li key={i} className="flex items-start gap-3">
-                    <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-accent/15 text-accent">
-                      <Check className="h-3 w-3" />
-                    </span>
-                    <span>{i}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-        </section>
-
-        {/* TECNOLOGIA — RAG */}
-        <section id="tecnologia" className="border-y bg-muted/30">
-          <div className="mx-auto max-w-6xl px-4 py-20">
-            <div className="mx-auto max-w-3xl text-center">
-              <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-accent/40 bg-accent/10 px-3 py-1 text-xs font-semibold text-accent">
-                <Sparkles className="h-3.5 w-3.5" />
-                Arquitetura avançada de RAG
-              </div>
+        {/* 2 · FLUXO VISUAL (RAG explicado) */}
+        <section id="como-funciona" className="border-b bg-card">
+          <div className="mx-auto max-w-6xl px-4 py-16">
+            <div className="mx-auto max-w-2xl text-center">
               <h2 className="font-heading text-3xl font-bold tracking-tight text-foreground md:text-4xl">
-                RAG jurídico de última geração para compreender o contexto de cada caso.
+                Antes de responder, o JurisMind consulta os documentos do caso.
               </h2>
-              <p className="mt-4 text-muted-foreground">
-                O JurisMind não depende apenas da memória geral de um modelo de IA. A plataforma
-                localiza, combina e prioriza informações existentes nos documentos selecionados
-                antes de construir a resposta.
-              </p>
-              <p className="mt-3 text-sm text-foreground/80">
-                <strong className="font-semibold">RAG</strong> é a tecnologia que permite à
-                inteligência artificial consultar uma base documental antes de responder.
+              <p className="mt-3 text-muted-foreground">
+                É isso que transforma uma IA genérica em uma inteligência jurídica contextualizada.
               </p>
             </div>
 
-            <div className="mt-12 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {RAG_STEPS.map((s) => (
-                <div key={s.n} className="rounded-2xl border bg-card p-5">
+            <ol className="mt-10 grid gap-4 lg:grid-cols-4">
+              {FLOW.map((s) => (
+                <li
+                  key={s.n}
+                  className="relative rounded-2xl border bg-background p-5 shadow-sm"
+                >
                   <div className="flex items-center justify-between">
-                    <IconBox icon={s.icon} size="md" />
-                    <span className="font-heading text-sm font-bold text-muted-foreground">
+                    <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-accent/15 text-accent">
+                      <s.icon className="h-4 w-4" />
+                    </span>
+                    <span className="font-heading text-xs font-bold text-muted-foreground">
                       {s.n}
                     </span>
                   </div>
-                  <h3 className="mt-4 font-heading text-base font-bold uppercase tracking-wide text-foreground">
-                    {s.t}
-                  </h3>
+                  <h3 className="mt-4 font-heading text-base font-bold text-foreground">{s.t}</h3>
                   <p className="mt-2 text-sm text-muted-foreground">{s.d}</p>
-                </div>
+                </li>
               ))}
-            </div>
-          </div>
-        </section>
+            </ol>
 
-        {/* DEMONSTRAÇÃO */}
-        <section id="evidencia" className="mx-auto max-w-6xl px-4 py-20">
-          <div className="grid gap-10 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
-            <div>
-              <h2 className="font-heading text-3xl font-bold tracking-tight text-foreground md:text-4xl">
-                Da pergunta à evidência documental.
-              </h2>
-              <p className="mt-4 text-muted-foreground">
-                O advogado não recebe apenas um texto produzido por IA. Recebe uma análise
-                relacionada ao acervo documental selecionado para aquele caso.
+            <div className="mt-10 rounded-2xl border border-accent/40 bg-accent/5 p-6 md:p-8">
+              <p className="font-heading text-xl font-bold text-foreground">
+                O nome dessa tecnologia é RAG.
               </p>
-              <ul className="mt-6 space-y-3 text-sm text-foreground/90">
-                {[
-                  "Pesquisa nos documentos vinculados ao caso.",
-                  "Recuperação dos trechos mais relevantes.",
-                  "Identificação dos documentos relacionados.",
-                  "Organização da resposta a partir do contexto recuperado.",
-                  "Conferência da base documental utilizada pelo advogado.",
-                ].map((i) => (
-                  <li key={i} className="flex items-start gap-3">
-                    <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-accent/15 text-accent">
-                      <Check className="h-3 w-3" />
-                    </span>
-                    <span>{i}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            <div className="rounded-2xl border bg-card p-6 shadow-sm">
-              <div className="rounded-xl border bg-muted/40 p-4">
-                <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
-                  Pergunta
-                </p>
-                <p className="mt-1 font-heading text-base font-bold text-foreground">
-                  Quais justificativas foram apresentadas para o atraso da obra?
-                </p>
-              </div>
-
-              <div className="mt-4 grid gap-3 sm:grid-cols-3">
-                {[
-                  { t: "Busca semântica", d: "significado da pergunta" },
-                  { t: "Busca textual", d: "termos em português" },
-                  { t: "Fusão e reranqueamento", d: "prioriza trechos" },
-                ].map((c) => (
-                  <div key={c.t} className="rounded-xl border bg-background p-3">
-                    <p className="text-xs font-semibold text-foreground">{c.t}</p>
-                    <p className="mt-1 text-[11px] text-muted-foreground">{c.d}</p>
-                  </div>
-                ))}
-              </div>
-
-              <div className="mt-4 space-y-3">
-                {[
-                  {
-                    doc: "Contestação",
-                    tr: "“…o atraso decorreu de chuvas atípicas registradas no período…”",
-                  },
-                  {
-                    doc: "Laudo de vistoria",
-                    tr: "“…paralisação por indisponibilidade de insumos entre março e maio…”",
-                  },
-                  {
-                    doc: "Notificação extrajudicial",
-                    tr: "“…solicitação de novo cronograma apresentada pela contratada…”",
-                  },
-                ].map((t) => (
-                  <div key={t.doc} className="rounded-xl border bg-background p-3">
-                    <p className="flex items-center gap-2 text-[11px] font-semibold text-accent">
-                      <FileText className="h-3 w-3" />
-                      {t.doc} · trecho recuperado
-                    </p>
-                    <p className="mt-1 text-xs text-muted-foreground">{t.tr}</p>
-                  </div>
-                ))}
-              </div>
-
-              <div className="mt-4 rounded-xl border border-accent/40 bg-accent/5 p-4">
-                <p className="text-[11px] font-semibold uppercase tracking-widest text-accent">
-                  Resposta organizada
-                </p>
-                <p className="mt-1 text-sm text-foreground/90">
-                  Análise construída a partir dos trechos acima, com os documentos relacionados
-                  disponíveis para conferência e reutilização na produção jurídica.
-                </p>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* MEMÓRIA DO ESCRITÓRIO */}
-        <section className="border-y bg-muted/30">
-          <div className="mx-auto grid max-w-6xl gap-10 px-4 py-20 lg:grid-cols-2 lg:items-center">
-            <div>
-              <h2 className="font-heading text-3xl font-bold tracking-tight text-foreground md:text-4xl">
-                O conhecimento deixa de ficar preso em arquivos e conversas.
-              </h2>
-              <p className="mt-4 text-muted-foreground">
-                Casos, documentos e análises passam a compor uma estrutura de conhecimento que pode
-                ser consultada e utilizada no trabalho jurídico, respeitando os acessos definidos na
-                plataforma.
+              <p className="mt-3 max-w-3xl text-sm text-muted-foreground">
+                RAG permite que a inteligência artificial consulte uma base documental antes de
+                responder. No JurisMind, essa base é formada pelos documentos selecionados para cada
+                caso.
+              </p>
+              <p className="mt-3 text-sm font-medium text-foreground">
+                É como permitir que a IA abra e consulte os autos antes de responder ao advogado.
               </p>
             </div>
-            <div className="grid gap-3 sm:grid-cols-2">
-              {[
-                "Reaproveitamento do conhecimento documental.",
-                "Redução do tempo gasto procurando informações.",
-                "Maior consistência na análise.",
-                "Continuidade do trabalho entre profissionais.",
-                "Organização do histórico de cada caso.",
-              ].map((b) => (
-                <div key={b} className="rounded-2xl border bg-card p-4 text-sm text-foreground/90">
-                  <Check className="mb-2 h-4 w-4 text-accent" />
-                  {b}
-                </div>
-              ))}
-            </div>
           </div>
         </section>
 
-        {/* TECNOLOGIA DE PONTA */}
-        <section className="mx-auto max-w-6xl px-4 py-20">
+        {/* 3 · COMO FUNCIONA POR DENTRO */}
+        <section className="mx-auto max-w-6xl px-4 py-16">
           <div className="mx-auto max-w-2xl text-center">
             <h2 className="font-heading text-3xl font-bold tracking-tight text-foreground md:text-4xl">
-              Tecnologia avançada, aplicada ao trabalho jurídico real.
+              Tecnologia avançada por dentro. Simplicidade para o advogado.
             </h2>
+            <p className="mt-3 text-muted-foreground">
+              Para localizar os conteúdos mais relevantes, o JurisMind combina diferentes técnicas
+              de pesquisa e organização documental.
+            </p>
           </div>
-          <div className="mt-12 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {TECH_CARDS.map((c) => (
+
+          <div className="mt-10 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            {TECH.map((c) => (
               <div key={c.t} className="rounded-2xl border bg-card p-5">
-                <IconBox icon={c.icon} size="md" />
-                <h3 className="mt-4 font-heading text-base font-bold uppercase tracking-wide text-foreground">
-                  {c.t}
-                </h3>
+                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                  <c.icon className="h-4 w-4" />
+                </span>
+                <h3 className="mt-4 font-heading text-base font-bold text-foreground">{c.t}</h3>
                 <p className="mt-2 text-sm text-muted-foreground">{c.d}</p>
+              </div>
+            ))}
+          </div>
+
+          <Accordion type="single" collapsible className="mx-auto mt-8 max-w-3xl">
+            <AccordionItem value="termos">
+              <AccordionTrigger className="text-sm">
+                Termos técnicos utilizados nessa etapa
+              </AccordionTrigger>
+              <AccordionContent className="space-y-2 text-sm text-muted-foreground">
+                <p>
+                  <strong className="text-foreground">Busca híbrida:</strong> uso combinado da busca
+                  por significado com a busca textual em português.
+                </p>
+                <p>
+                  <strong className="text-foreground">Fusão:</strong> união dos resultados das
+                  diferentes buscas em uma única lista priorizada.
+                </p>
+                <p>
+                  <strong className="text-foreground">Reranqueamento:</strong> nova classificação
+                  dos trechos encontrados antes de a resposta ser gerada.
+                </p>
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
+        </section>
+
+        {/* 4 · CONTRASTE */}
+        <section className="border-y bg-muted/30">
+          <div className="mx-auto max-w-6xl px-4 py-16">
+            <div className="mx-auto max-w-3xl text-center">
+              <h2 className="font-heading text-3xl font-bold tracking-tight text-foreground md:text-4xl">
+                Por que não usar apenas uma IA genérica?
+              </h2>
+              <p className="mt-3 text-muted-foreground">
+                GPT e Gemini fornecem os modelos de inteligência artificial. O JurisMind organiza
+                como essa tecnologia trabalha sobre os casos, os documentos e a operação do
+                escritório.
+              </p>
+            </div>
+
+            <div className="mt-10 grid gap-6 md:grid-cols-2">
+              <div className="rounded-2xl border bg-background p-6">
+                <h3 className="font-heading text-lg font-bold text-foreground">
+                  IA genérica utilizada isoladamente
+                </h3>
+                <ul className="mt-5 space-y-3 text-sm text-muted-foreground">
+                  {[
+                    "Contexto inserido manualmente.",
+                    "Documentos separados da gestão do caso.",
+                    "Conhecimento concentrado em conversas.",
+                    "Pouca integração com a operação jurídica.",
+                  ].map((i) => (
+                    <li key={i} className="flex items-start gap-3">
+                      <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
+                        <X className="h-3 w-3" />
+                      </span>
+                      <span>{i}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              <div className="rounded-2xl border border-accent/40 bg-accent/5 p-6 shadow-sm">
+                <h3 className="font-heading text-lg font-bold text-foreground">JurisMind</h3>
+                <ul className="mt-5 space-y-3 text-sm text-foreground/90">
+                  {[
+                    "Contexto documental organizado por caso.",
+                    "Busca automática dos trechos relevantes.",
+                    "Respostas relacionadas aos documentos utilizados.",
+                    "Inteligência integrada à produção e à gestão do escritório.",
+                  ].map((i) => (
+                    <li key={i} className="flex items-start gap-3">
+                      <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-accent/15 text-accent">
+                        <Check className="h-3 w-3" />
+                      </span>
+                      <span>{i}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* 5 · BENEFÍCIOS */}
+        <section id="beneficios" className="mx-auto max-w-6xl px-4 py-16">
+          <h2 className="text-center font-heading text-3xl font-bold tracking-tight text-foreground md:text-4xl">
+            O que muda na rotina do escritório?
+          </h2>
+          <div className="mt-10 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            {BENEFITS.map((b) => (
+              <div
+                key={b.t}
+                className="rounded-2xl border-2 border-primary/15 bg-card p-6 shadow-sm"
+              >
+                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent/15 text-accent">
+                  <b.icon className="h-5 w-5" />
+                </span>
+                <h3 className="mt-4 font-heading text-lg font-bold text-foreground">{b.t}</h3>
+                <p className="mt-2 text-sm text-muted-foreground">{b.d}</p>
               </div>
             ))}
           </div>
         </section>
 
-        {/* PLATAFORMA */}
-        <section id="plataforma" className="border-y bg-primary text-primary-foreground">
-          <div className="mx-auto max-w-6xl px-4 py-20">
-            <div className="mx-auto max-w-3xl text-center">
-              <h2 className="font-heading text-3xl font-bold tracking-tight md:text-4xl">
-                Inteligência documental conectada à operação do escritório.
-              </h2>
-              <p className="mt-4 text-primary-foreground/80">
-                O diferencial não termina na resposta da IA. A inteligência documental se conecta à
-                gestão de casos, aos documentos, à produção jurídica, aos pareceres, às propostas
-                comerciais, às tarefas, à agenda, às publicações, à equipe e ao controle de consumo
-                e custos de IA.
-              </p>
+        {/* 6 · PLATAFORMA */}
+        <section id="plataforma" className="border-y bg-card">
+          <div className="mx-auto max-w-6xl px-4 py-16">
+            <h2 className="text-center font-heading text-3xl font-bold tracking-tight text-foreground md:text-4xl">
+              Inteligência documental conectada à operação do escritório.
+            </h2>
+            <div className="mt-10 grid gap-5 md:grid-cols-3">
+              {LAYERS.map((l) => (
+                <div key={l.t} className="rounded-2xl border bg-background p-6">
+                  <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                    <l.icon className="h-5 w-5" />
+                  </span>
+                  <h3 className="mt-4 font-heading text-lg font-bold text-foreground">{l.t}</h3>
+                  <p className="mt-2 text-sm text-muted-foreground">{l.d}</p>
+                </div>
+              ))}
             </div>
-
-            <div className="mt-12 grid gap-5 md:grid-cols-3">
-              {LAYERS.map((l) => {
-                const Icon = l.icon;
-                return (
-                  <div
-                    key={l.t}
-                    className="rounded-2xl border border-primary-foreground/15 bg-primary/40 p-6"
-                  >
-                    <span className="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-accent/20 text-accent">
-                      <Icon className="h-5 w-5" />
-                    </span>
-                    <h3 className="mt-4 font-heading text-lg font-bold uppercase tracking-wide">
-                      {l.t}
-                    </h3>
-                    <p className="mt-2 text-sm text-primary-foreground/75">{l.d}</p>
-                    <ul className="mt-4 space-y-2 text-sm text-primary-foreground/85">
-                      {l.items.map((i) => (
-                        <li key={i} className="flex items-start gap-2">
-                          <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-accent" />
-                          {i}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                );
-              })}
-            </div>
-
-            <p className="mt-8 text-center text-xs text-primary-foreground/60">
-              O módulo de marketing jurídico está disponível como funcionalidade complementar.
-            </p>
           </div>
         </section>
 
-        {/* GOVERNANÇA */}
-        <section id="governanca" className="mx-auto max-w-6xl px-4 py-20">
-          <div className="grid gap-10 lg:grid-cols-2 lg:items-center">
+        {/* 7 · CONFIANÇA */}
+        <section className="mx-auto max-w-6xl px-4 py-16">
+          <div className="grid gap-8 lg:grid-cols-[1fr_1fr] lg:items-center">
             <div>
-              <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-accent/40 bg-accent/10 px-3 py-1 text-xs font-semibold text-accent">
-                <ShieldCheck className="h-3.5 w-3.5" />
-                Governança
-              </div>
               <h2 className="font-heading text-3xl font-bold tracking-tight text-foreground md:text-4xl">
-                A adoção da IA sob o controle do escritório.
+                Controle profissional para a utilização da IA.
               </h2>
               <p className="mt-4 text-muted-foreground">
-                Utilizar inteligência artificial profissionalmente exige mais do que acesso a um
-                chatbot. O escritório precisa compreender como a tecnologia está sendo utilizada,
-                por quem e com qual impacto operacional.
+                O escritório acompanha quem utiliza os recursos de inteligência artificial, os
+                modelos acionados, o consumo registrado e os custos estimados.
               </p>
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
               {[
                 { icon: Users, t: "Usuários e permissões" },
-                { icon: Gauge, t: "Consumo por usuário" },
-                { icon: Workflow, t: "Modelos utilizados" },
-                { icon: Layers, t: "Tokens processados" },
-                { icon: Scale, t: "Custos estimados" },
+                { icon: FileSearch, t: "Histórico de utilização da IA" },
+                { icon: Gauge, t: "Tokens e custos estimados" },
                 { icon: ShieldCheck, t: "Orçamento mensal" },
-                { icon: ListChecks, t: "Histórico de uso da IA" },
-              ].map((g) => {
-                const Icon = g.icon;
-                return (
-                  <div
-                    key={g.t}
-                    className="flex items-center gap-3 rounded-xl border bg-card p-4 text-sm font-medium text-foreground"
-                  >
-                    <Icon className="h-4 w-4 text-accent" />
-                    {g.t}
-                  </div>
-                );
-              })}
+              ].map((i) => (
+                <div
+                  key={i.t}
+                  className="flex items-center gap-3 rounded-xl border bg-card p-4 text-sm font-medium text-foreground"
+                >
+                  <i.icon className="h-4 w-4 shrink-0 text-accent" />
+                  {i.t}
+                </div>
+              ))}
             </div>
           </div>
         </section>
 
-        {/* TESTE GRATUITO */}
-        <section className="border-y bg-muted/30">
-          <div className="mx-auto max-w-4xl px-4 py-20 text-center">
-            <h2 className="font-heading text-3xl font-bold tracking-tight text-foreground md:text-4xl">
-              Experimente a diferença entre conversar com uma IA e trabalhar com uma inteligência
-              jurídica.
-            </h2>
-            <p className="mt-4 text-muted-foreground">
-              Durante 30 dias, utilize o JurisMind para organizar um caso, incluir documentos, fazer
-              consultas sobre o conteúdo e conhecer os recursos de produção, operação e governança.
-            </p>
-            <Button size="lg" asChild className="mt-8">
-              <Link to={primaryTo}>
-                {user ? "Abrir painel" : "Começar meu teste gratuito"}
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Link>
-            </Button>
-            <p className="mt-4 text-sm text-muted-foreground">
-              30 dias para avaliar o JurisMind no contexto real do seu escritório.
-            </p>
-          </div>
-        </section>
-
-        {/* CTA FINAL */}
+        {/* 8 · TESTE GRATUITO */}
         <section className="bg-primary text-primary-foreground">
-          <div className="mx-auto max-w-4xl px-4 py-20 text-center">
+          <div className="mx-auto max-w-3xl px-4 py-16 text-center">
             <h2 className="font-heading text-3xl font-bold tracking-tight md:text-4xl">
-              Os modelos de IA são o começo. O diferencial está em como o escritório os utiliza.
+              Experimente o JurisMind em um caso real do seu escritório.
             </h2>
-            <p className="mt-4 text-primary-foreground/80">
-              Transforme documentos, casos e conhecimento jurídico em uma inteligência organizada,
-              consultável e integrada ao trabalho da equipe.
+            <p className="mx-auto mt-4 max-w-2xl text-primary-foreground/80">
+              Crie sua conta, organize um caso, inclua documentos e conheça durante 30 dias a
+              diferença entre conversar com uma IA e trabalhar com inteligência jurídica
+              contextualizada.
             </p>
             <div className="mt-8 flex flex-wrap justify-center gap-3">
-              <Button
-                size="lg"
-                asChild
+              <TrialButton
                 className="bg-accent text-accent-foreground hover:bg-accent/90"
-              >
-                <Link to={primaryTo}>
-                  {user ? "Abrir painel" : "Testar grátis por 30 dias"}
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Link>
-              </Button>
+                label="Começar meu teste gratuito"
+              />
               <Button
                 size="lg"
                 variant="outline"
@@ -750,14 +586,72 @@ function LandingPage() {
                 <Link to="/entrar">Entrar na plataforma</Link>
               </Button>
             </div>
+            <p className="mt-5 text-sm text-primary-foreground/70">Teste gratuito por 30 dias.</p>
           </div>
         </section>
       </main>
 
-      <footer className="border-t">
-        <div className="mx-auto max-w-6xl px-4 py-8 text-center text-sm text-muted-foreground">
-          © {new Date().getFullYear()} B2B | JurisMind AI. A camada de inteligência jurídica do seu
-          escritório.
+      <footer className="border-t bg-card">
+        <div className="mx-auto grid max-w-6xl gap-8 px-4 py-12 md:grid-cols-3">
+          <div>
+            <div className="flex items-center gap-2">
+              <JurisMindMark size={26} context={JURISMIND_CONTEXT.inlineLight} />
+              <span className="font-heading text-base font-bold text-foreground">JurisMind AI</span>
+            </div>
+            <p className="mt-3 text-sm text-muted-foreground">
+              Inteligência jurídica construída sobre os documentos de cada caso.
+            </p>
+            <p className="mt-3 text-sm text-muted-foreground">
+              Uma solução B2B Consulting.
+            </p>
+          </div>
+
+          <nav className="text-sm">
+            <p className="font-heading font-bold text-foreground">Plataforma</p>
+            <ul className="mt-3 space-y-2 text-muted-foreground">
+              <li>
+                <Link to="/entrar" className="hover:text-foreground">
+                  Entrar na plataforma
+                </Link>
+              </li>
+              <li>
+                <Link to="/entrar" search={TRIAL_SEARCH} className="hover:text-foreground">
+                  Criar conta
+                </Link>
+              </li>
+              <li>
+                <a href="#como-funciona" className="hover:text-foreground">
+                  Como funciona
+                </a>
+              </li>
+            </ul>
+          </nav>
+
+          <div className="text-sm">
+            <p className="font-heading font-bold text-foreground">Institucional</p>
+            <ul className="mt-3 space-y-2 text-muted-foreground">
+              <li>
+                <Link to="/privacidade" className="hover:text-foreground">
+                  Política de privacidade
+                </Link>
+              </li>
+              <li>
+                <Link to="/termos" className="hover:text-foreground">
+                  Termos de uso
+                </Link>
+              </li>
+              <li>
+                <a href="mailto:contato@b2bconsulting.com.br" className="hover:text-foreground">
+                  contato@b2bconsulting.com.br
+                </a>
+              </li>
+            </ul>
+          </div>
+        </div>
+        <div className="border-t">
+          <div className="mx-auto max-w-6xl px-4 py-5 text-xs text-muted-foreground">
+            © {new Date().getFullYear()} B2B Consulting · JurisMind AI
+          </div>
         </div>
       </footer>
     </div>
