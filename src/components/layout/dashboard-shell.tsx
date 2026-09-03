@@ -83,7 +83,13 @@ type NavLabel = {
 };
 type NavItem = NavLabel | { type: "separator" } | NavLink;
 
-function buildNav(_practice: PracticeType | null | undefined): NavItem[] {
+/** Ambientes de navegação: escritório (operação) e administração global B2B. */
+type ShellScope = "office" | "b2b";
+
+function buildNav(
+  _practice: PracticeType | null | undefined,
+  scope: ShellScope,
+): NavItem[] {
   const link = (
     key: NavKey,
     to: string,
@@ -108,6 +114,32 @@ function buildNav(_practice: PracticeType | null | undefined): NavItem[] {
     description: describeNav(NAV_SECTIONS[key]),
   });
 
+  if (scope === "b2b") {
+    return [
+      section("platform", "Administração B2B"),
+      link("platform", "/plataforma", "Visão geral", Globe2, "exact"),
+      link("platform-customers", "/plataforma/clientes", "Clientes SaaS", Building2, "startsWith"),
+      link("platform-users", "/plataforma/usuarios", "Usuários", Users2, "startsWith"),
+      { type: "separator" },
+      link("platform-plans", "/plataforma/planos", "Planos e limites", Layers, "startsWith"),
+      link("platform-subscriptions", "/plataforma/assinaturas", "Assinaturas", Repeat, "startsWith"),
+      link("platform-invoices", "/plataforma/faturas", "Faturas", ReceiptText, "startsWith"),
+      link("platform-payments", "/plataforma/pagamentos", "Pagamentos", CreditCard, "startsWith"),
+      { type: "separator" },
+      link("platform-usage", "/plataforma/consumo", "Consumo de IA", Gauge, "startsWith"),
+      link("platform-requests", "/plataforma/solicitacoes", "Solicitações B2B", Handshake, "startsWith"),
+      link("platform-credentials", "/plataforma/credenciais", "Credenciais SaaS", KeyRound, "startsWith"),
+      link(
+        "platform-commercial-settings",
+        "/plataforma/configuracoes",
+        "Configuração comercial",
+        SlidersHorizontal,
+        "startsWith",
+      ),
+      link("platform-audit", "/plataforma/auditoria", "Log de auditoria", ScrollText, "startsWith"),
+    ];
+  }
+
   return [
     // ─── PRINCIPAL ───
     section("main", "Principal"),
@@ -122,31 +154,9 @@ function buildNav(_practice: PracticeType | null | undefined): NavItem[] {
     section("modules", "Módulos"),
     link("monitoring", "/publicacoes", "Monitoramento", FileSearch),
     link("proposal", "/comercial", "Comercial", Handshake),
-
-    // ─── PLATAFORMA B2B ───
-    { type: "separator" },
-    section("platform", "Plataforma JurisMind"),
-    link("platform", "/plataforma", "Visão B2B", Globe2, "exact"),
-    link("platform-customers", "/plataforma/clientes", "Clientes SaaS", Building2, "startsWith"),
-    link("platform-users", "/plataforma/usuarios", "Usuários", Users2, "startsWith"),
-    link("platform-plans", "/plataforma/planos", "Planos e limites", Layers, "startsWith"),
-    link("platform-subscriptions", "/plataforma/assinaturas", "Assinaturas", Repeat, "startsWith"),
-    link("platform-invoices", "/plataforma/faturas", "Faturas", ReceiptText, "startsWith"),
-    link("platform-payments", "/plataforma/pagamentos", "Pagamentos", CreditCard, "startsWith"),
-    link("platform-usage", "/plataforma/consumo", "Consumo de IA", Gauge, "startsWith"),
-    link("platform-requests", "/plataforma/solicitacoes", "Solicitações B2B", Handshake, "startsWith"),
-    link("platform-credentials", "/plataforma/credenciais", "Credenciais SaaS", KeyRound, "startsWith"),
-    link(
-      "platform-commercial-settings",
-      "/plataforma/configuracoes",
-      "Configuração comercial",
-      SlidersHorizontal,
-      "startsWith",
-    ),
-    link("platform-audit", "/plataforma/auditoria", "Log de auditoria", ScrollText, "startsWith"),
-
   ];
 }
+
 
 /** Itens fixos do rodapé da barra lateral. */
 export function buildFooterNav(): NavItem[] {
