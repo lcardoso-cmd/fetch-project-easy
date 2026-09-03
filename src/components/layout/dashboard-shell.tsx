@@ -286,15 +286,20 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   const { user, signOut } = useAuth();
   const { data: profile } = useProfile();
   const { has, isSuperAdmin, activePreset, clearSimulation } = useCapabilities();
+  // Ambiente ativo: administração global B2B vive sob /plataforma;
+  // todo o restante é o ambiente do escritório.
+  const scope: ShellScope = pathname.startsWith("/plataforma") ? "b2b" : "office";
+  const canAdminB2B = has(NAV_ENTRIES.platform.requires ?? "view_dashboard");
   const raw = useMemo(
-    () => buildNav((profile?.practice_type as PracticeType | undefined) ?? null),
-    [profile?.practice_type],
+    () => buildNav((profile?.practice_type as PracticeType | undefined) ?? null, scope),
+    [profile?.practice_type, scope],
   );
   const NAV = useMemo(() => applyCapabilities(raw, has), [raw, has]);
   const FOOTER_NAV = useMemo(
-    () => applyCapabilities(buildFooterNav(), has),
-    [has],
+    () => applyCapabilities(buildFooterNav(scope), has),
+    [has, scope],
   );
+
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
