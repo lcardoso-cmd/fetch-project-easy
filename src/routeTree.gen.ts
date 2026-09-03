@@ -97,6 +97,7 @@ import { Route as AuthenticatedPlataformaPlanosIndexRouteImport } from './routes
 import { Route as AuthenticatedPlataformaPagamentosIndexRouteImport } from './routes/_authenticated/plataforma.pagamentos.index'
 import { Route as AuthenticatedPlataformaFaturasIndexRouteImport } from './routes/_authenticated/plataforma.faturas.index'
 import { Route as AuthenticatedPlataformaCredenciaisIndexRouteImport } from './routes/_authenticated/plataforma.credenciais.index'
+import { Route as AuthenticatedPlataformaConsumoIndexRouteImport } from './routes/_authenticated/plataforma.consumo.index'
 import { Route as AuthenticatedPlataformaClientesIndexRouteImport } from './routes/_authenticated/plataforma.clientes.index'
 import { Route as AuthenticatedPlataformaAuditoriaIndexRouteImport } from './routes/_authenticated/plataforma.auditoria.index'
 import { Route as AuthenticatedPlataformaAssinaturasIndexRouteImport } from './routes/_authenticated/plataforma.assinaturas.index'
@@ -591,6 +592,12 @@ const AuthenticatedPlataformaCredenciaisIndexRoute =
     path: '/plataforma/credenciais/',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedPlataformaConsumoIndexRoute =
+  AuthenticatedPlataformaConsumoIndexRouteImport.update({
+    id: '/plataforma/consumo/',
+    path: '/plataforma/consumo/',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedPlataformaClientesIndexRoute =
   AuthenticatedPlataformaClientesIndexRouteImport.update({
     id: '/plataforma/clientes/',
@@ -760,6 +767,7 @@ export interface FileRoutesByFullPath {
   '/plataforma/assinaturas/': typeof AuthenticatedPlataformaAssinaturasIndexRoute
   '/plataforma/auditoria/': typeof AuthenticatedPlataformaAuditoriaIndexRoute
   '/plataforma/clientes/': typeof AuthenticatedPlataformaClientesIndexRoute
+  '/plataforma/consumo/': typeof AuthenticatedPlataformaConsumoIndexRoute
   '/plataforma/credenciais/': typeof AuthenticatedPlataformaCredenciaisIndexRoute
   '/plataforma/faturas/': typeof AuthenticatedPlataformaFaturasIndexRoute
   '/plataforma/pagamentos/': typeof AuthenticatedPlataformaPagamentosIndexRoute
@@ -860,6 +868,7 @@ export interface FileRoutesByTo {
   '/plataforma/assinaturas': typeof AuthenticatedPlataformaAssinaturasIndexRoute
   '/plataforma/auditoria': typeof AuthenticatedPlataformaAuditoriaIndexRoute
   '/plataforma/clientes': typeof AuthenticatedPlataformaClientesIndexRoute
+  '/plataforma/consumo': typeof AuthenticatedPlataformaConsumoIndexRoute
   '/plataforma/credenciais': typeof AuthenticatedPlataformaCredenciaisIndexRoute
   '/plataforma/faturas': typeof AuthenticatedPlataformaFaturasIndexRoute
   '/plataforma/pagamentos': typeof AuthenticatedPlataformaPagamentosIndexRoute
@@ -964,6 +973,7 @@ export interface FileRoutesById {
   '/_authenticated/plataforma/assinaturas/': typeof AuthenticatedPlataformaAssinaturasIndexRoute
   '/_authenticated/plataforma/auditoria/': typeof AuthenticatedPlataformaAuditoriaIndexRoute
   '/_authenticated/plataforma/clientes/': typeof AuthenticatedPlataformaClientesIndexRoute
+  '/_authenticated/plataforma/consumo/': typeof AuthenticatedPlataformaConsumoIndexRoute
   '/_authenticated/plataforma/credenciais/': typeof AuthenticatedPlataformaCredenciaisIndexRoute
   '/_authenticated/plataforma/faturas/': typeof AuthenticatedPlataformaFaturasIndexRoute
   '/_authenticated/plataforma/pagamentos/': typeof AuthenticatedPlataformaPagamentosIndexRoute
@@ -1068,6 +1078,7 @@ export interface FileRouteTypes {
     | '/plataforma/assinaturas/'
     | '/plataforma/auditoria/'
     | '/plataforma/clientes/'
+    | '/plataforma/consumo/'
     | '/plataforma/credenciais/'
     | '/plataforma/faturas/'
     | '/plataforma/pagamentos/'
@@ -1168,6 +1179,7 @@ export interface FileRouteTypes {
     | '/plataforma/assinaturas'
     | '/plataforma/auditoria'
     | '/plataforma/clientes'
+    | '/plataforma/consumo'
     | '/plataforma/credenciais'
     | '/plataforma/faturas'
     | '/plataforma/pagamentos'
@@ -1271,6 +1283,7 @@ export interface FileRouteTypes {
     | '/_authenticated/plataforma/assinaturas/'
     | '/_authenticated/plataforma/auditoria/'
     | '/_authenticated/plataforma/clientes/'
+    | '/_authenticated/plataforma/consumo/'
     | '/_authenticated/plataforma/credenciais/'
     | '/_authenticated/plataforma/faturas/'
     | '/_authenticated/plataforma/pagamentos/'
@@ -1935,6 +1948,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedPlataformaCredenciaisIndexRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/plataforma/consumo/': {
+      id: '/_authenticated/plataforma/consumo/'
+      path: '/plataforma/consumo'
+      fullPath: '/plataforma/consumo/'
+      preLoaderRoute: typeof AuthenticatedPlataformaConsumoIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/plataforma/clientes/': {
       id: '/_authenticated/plataforma/clientes/'
       path: '/plataforma/clientes'
@@ -2179,6 +2199,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedPlataformaAssinaturasIndexRoute: typeof AuthenticatedPlataformaAssinaturasIndexRoute
   AuthenticatedPlataformaAuditoriaIndexRoute: typeof AuthenticatedPlataformaAuditoriaIndexRoute
   AuthenticatedPlataformaClientesIndexRoute: typeof AuthenticatedPlataformaClientesIndexRoute
+  AuthenticatedPlataformaConsumoIndexRoute: typeof AuthenticatedPlataformaConsumoIndexRoute
   AuthenticatedPlataformaCredenciaisIndexRoute: typeof AuthenticatedPlataformaCredenciaisIndexRoute
   AuthenticatedPlataformaFaturasIndexRoute: typeof AuthenticatedPlataformaFaturasIndexRoute
   AuthenticatedPlataformaPagamentosIndexRoute: typeof AuthenticatedPlataformaPagamentosIndexRoute
@@ -2242,6 +2263,8 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
     AuthenticatedPlataformaAuditoriaIndexRoute,
   AuthenticatedPlataformaClientesIndexRoute:
     AuthenticatedPlataformaClientesIndexRoute,
+  AuthenticatedPlataformaConsumoIndexRoute:
+    AuthenticatedPlataformaConsumoIndexRoute,
   AuthenticatedPlataformaCredenciaisIndexRoute:
     AuthenticatedPlataformaCredenciaisIndexRoute,
   AuthenticatedPlataformaFaturasIndexRoute:
