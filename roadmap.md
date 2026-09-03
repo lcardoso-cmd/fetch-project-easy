@@ -49,3 +49,16 @@ Fonte da verdade: organização é o cliente do SaaS. Sem migração gradual, se
 - [ ] Remover Marketing, Conversas e Peças Jurídicas da navegação principal
 - [ ] Tipografia mínima 13/14px, contraste, responsivo, acessibilidade
 - [ ] Correções de coerência (botão "Editar dados" não destrutivo, sem textos técnicos, sem duplicar Google/Outlook)
+
+## Fase 5 — concluída
+- Backend multiempresa compilável: typecheck limpo, 52 testes passando.
+- Conversas, publicações, geradores, notificações, B2B e callbacks OAuth migrados para `organization_id`.
+- Dedupe de publicações agora por (organization_id, hash).
+
+## Fase 6 — em andamento
+- [x] Barra lateral reconstruída: Principal (Início, Casos, JurisMind AI, Meu trabalho, Biblioteca), Módulos (Monitoramento, Comercial), rodapé (Serviços especializados, Administração, Ajuda, Perfil).
+- [x] Tipografia do menu ≥ 14px.
+- [ ] Tela do caso como workspace com abas.
+- [ ] Reconstruir "Início" operacional.
+- [ ] Unificar tarefas + agenda em "Meu trabalho".
+- [ ] Biblioteca com filtros e status compreensível.
