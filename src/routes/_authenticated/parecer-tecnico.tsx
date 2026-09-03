@@ -374,7 +374,7 @@ function RequestPanel({ requestId }: { requestId: string }) {
               >
                 <div className="min-w-0 flex-1">
                   <p className="truncate">{a.file_name}</p>
-                  <p className="text-[11px] text-muted-foreground">
+                  <p className="text-2xs text-muted-foreground">
                     {formatBytes(a.size_bytes)} ·{" "}
                     {new Date(a.created_at).toLocaleDateString("pt-BR")}
                   </p>
@@ -417,7 +417,7 @@ function RequestPanel({ requestId }: { requestId: string }) {
                   {eventIcon(ev.kind)}
                 </span>
                 <p className="text-sm">{eventLabel(ev)}</p>
-                <p className="text-[11px] text-muted-foreground">
+                <p className="text-2xs text-muted-foreground">
                   {new Date(ev.created_at).toLocaleString("pt-BR", {
                     day: "2-digit",
                     month: "short",

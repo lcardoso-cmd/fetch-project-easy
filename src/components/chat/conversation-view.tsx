@@ -387,7 +387,7 @@ export function ConversationView({
         <div className="relative flex-1">
           {mentionQuery !== null && mentionCandidates.length > 0 && (
             <div className="absolute bottom-full left-0 z-20 mb-1 w-64 overflow-hidden rounded-md border bg-popover shadow-lg">
-              <div className="px-3 py-1.5 text-[11px] uppercase tracking-wider text-muted-foreground">
+              <div className="px-3 py-1.5 text-2xs uppercase tracking-wider text-muted-foreground">
                 Mencionar
               </div>
               {mentionCandidates.map((p, i) => (
@@ -403,7 +403,7 @@ export function ConversationView({
                     i === mentionIndex ? "bg-accent text-accent-foreground" : "hover:bg-muted"
                   }`}
                 >
-                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-[11px] font-semibold text-primary">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-2xs font-semibold text-primary">
                     {initialsOf(p.name)}
                   </span>
                   <span className="truncate">{p.name}</span>
@@ -612,7 +612,7 @@ function MessageBubble({
           )}
 
           <div
-            className={`mt-1 text-[11px] ${
+            className={`mt-1 text-2xs ${
               mine && !removed ? "text-primary-foreground/70" : "text-muted-foreground"
             }`}
           >

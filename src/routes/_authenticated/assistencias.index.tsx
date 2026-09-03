@@ -128,7 +128,7 @@ function CasesPage() {
                     {caseItem.title}
                   </Link>
                   <div className="mt-0.5 flex items-center gap-2 text-xs text-muted-foreground">
-                    <Badge variant="secondary" className="text-[10px]">
+                    <Badge variant="secondary" className="text-2xs">
                       {labels.shortBadge}
                     </Badge>
                     {caseItem.client_name && (

@@ -100,7 +100,7 @@ export function LastInteractionCard() {
 function Field({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
     <div className="rounded-md border border-border/60 bg-muted/30 px-3 py-2">
-      <div className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+      <div className="text-2xs font-medium uppercase tracking-wide text-muted-foreground">
         {label}
       </div>
       <div className="mt-0.5 text-sm font-medium tabular-nums">{value}</div>

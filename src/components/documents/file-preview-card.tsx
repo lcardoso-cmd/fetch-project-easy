@@ -142,7 +142,7 @@ export function FilePreviewCard({
               {file.name}
             </p>
             <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
-              <Badge variant="secondary" className="h-4 px-1.5 text-[10px]">
+              <Badge variant="secondary" className="h-4 px-1.5 text-2xs">
                 {typeLabel(file)}
               </Badge>
               <span>{formatSize(file.size)}</span>
@@ -225,7 +225,7 @@ export function FilePreviewCard({
             </>
           )}
           <dt className="text-muted-foreground">Hash</dt>
-          <dd className="font-mono text-[10px]">
+          <dd className="font-mono text-2xs">
             {loading && !extracted.hash ? (
               <span className="inline-flex items-center gap-1 text-muted-foreground">
                 <Loader2 className="h-3 w-3 animate-spin" /> calculando…

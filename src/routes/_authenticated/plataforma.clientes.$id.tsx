@@ -424,7 +424,7 @@ function CustomerDetail() {
               <div>
                 <Label className="text-sm">Plano</Label>
                 <select
-                  className="mt-1 h-10 w-full rounded-md border bg-background px-3 text-sm"
+                  className="mt-1 h-11 w-full rounded-md border border-input bg-card px-3 text-base"
                   value={sub.plan_id}
                   onChange={(e) => {
                     const plan = (plans ?? []).find((p) => p.id === e.target.value);
@@ -453,7 +453,7 @@ function CustomerDetail() {
               <div>
                 <Label className="text-sm">Periodicidade</Label>
                 <select
-                  className="mt-1 h-10 w-full rounded-md border bg-background px-3 text-sm"
+                  className="mt-1 h-11 w-full rounded-md border border-input bg-card px-3 text-base"
                   value={sub.interval}
                   onChange={(e) => setSub({ ...sub, interval: e.target.value as BillingInterval })}
                 >
@@ -595,7 +595,7 @@ function CustomerDetail() {
               <div>
                 <Label className="text-sm">Fatura (opcional)</Label>
                 <select
-                  className="mt-1 h-10 w-full rounded-md border bg-background px-3 text-sm"
+                  className="mt-1 h-11 w-full rounded-md border border-input bg-card px-3 text-base"
                   value={pay.invoice_id}
                   onChange={(e) => setPay({ ...pay, invoice_id: e.target.value })}
                 >
@@ -613,7 +613,7 @@ function CustomerDetail() {
               <div>
                 <Label className="text-sm">Meio</Label>
                 <select
-                  className="mt-1 h-10 w-full rounded-md border bg-background px-3 text-sm"
+                  className="mt-1 h-11 w-full rounded-md border border-input bg-card px-3 text-base"
                   value={pay.method}
                   onChange={(e) => setPay({ ...pay, method: e.target.value as typeof pay.method })}
                 >

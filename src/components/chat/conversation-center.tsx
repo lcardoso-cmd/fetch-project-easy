@@ -160,7 +160,7 @@ export function ConversationCenter({ compact = false }: { compact?: boolean }) {
               {t.icon}
               {t.label}
               {unreadByTab(t.key) > 0 && (
-                <span className="ml-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-[11px] font-semibold text-primary-foreground">
+                <span className="ml-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-2xs font-semibold text-primary-foreground">
                   {unreadByTab(t.key)}
                 </span>
               )}
@@ -269,7 +269,7 @@ export function ConversationCenter({ compact = false }: { compact?: boolean }) {
                           {conversationLabel(c)}
                         </span>
                         {c.unread > 0 && (
-                          <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-[11px] font-semibold text-primary-foreground">
+                          <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-2xs font-semibold text-primary-foreground">
                             {c.unread}
                           </span>
                         )}

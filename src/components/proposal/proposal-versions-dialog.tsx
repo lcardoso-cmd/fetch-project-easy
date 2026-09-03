@@ -456,7 +456,7 @@ export function ProposalVersionsDialog({
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <p className="mb-1 text-[10px] font-semibold uppercase text-muted-foreground">De</p>
+                        <p className="mb-1 text-2xs font-semibold uppercase text-muted-foreground">De</p>
                         <Calendar
                           mode="single"
                           selected={dateFrom}
@@ -465,7 +465,7 @@ export function ProposalVersionsDialog({
                         />
                       </div>
                       <div>
-                        <p className="mb-1 text-[10px] font-semibold uppercase text-muted-foreground">Até</p>
+                        <p className="mb-1 text-2xs font-semibold uppercase text-muted-foreground">Até</p>
                         <Calendar
                           mode="single"
                           selected={dateTo}
@@ -606,12 +606,12 @@ export function ProposalVersionsDialog({
                                 {v.pinned && <Pin className="h-3.5 w-3.5 text-amber-500" />}
                                 <span className="truncate text-sm font-medium">{v.label}</span>
                                 {inCompare && (
-                                  <Badge className="ml-auto shrink-0 text-[10px]">
+                                  <Badge className="ml-auto shrink-0 text-2xs">
                                     {compareIndex === 0 ? "A" : "B"}
                                   </Badge>
                                 )}
                                 {!inCompare && (
-                                  <Badge variant="outline" className="ml-auto shrink-0 text-[10px] uppercase">
+                                  <Badge variant="outline" className="ml-auto shrink-0 text-2xs uppercase">
                                     {v.origin === "manual"
                                       ? "manual"
                                       : v.origin === "auto-generate"
@@ -622,7 +622,7 @@ export function ProposalVersionsDialog({
                               </div>
                               <span className="text-xs text-muted-foreground">{formatDate(v.created_at)}</span>
                               {clientOf(v) && (
-                                <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
+                                <p className="mt-0.5 truncate text-2xs text-muted-foreground">
                                   Cliente: {clientOf(v)}
                                 </p>
                               )}
@@ -773,7 +773,7 @@ export function ProposalVersionsDialog({
                             <tbody>
                               {formDiff.map((d) => (
                                 <tr key={d.field} className="border-t align-top">
-                                  <td className="p-2 font-mono text-[11px]">{d.field}</td>
+                                  <td className="p-2 font-mono text-2xs">{d.field}</td>
                                   <td className="p-2 text-red-700">
                                     {d.from || <em className="text-muted-foreground">vazio</em>}
                                   </td>
@@ -803,10 +803,10 @@ export function ProposalVersionsDialog({
                           {[versionA!, versionB!].map((v, idx) => (
                             <div key={v.id} className="flex min-h-0 flex-col rounded-md border bg-background">
                               <div className="flex items-center gap-2 border-b p-2">
-                                <Badge className="text-[10px]">{idx === 0 ? "A" : "B"}</Badge>
+                                <Badge className="text-2xs">{idx === 0 ? "A" : "B"}</Badge>
                                 <div className="min-w-0 flex-1">
                                   <p className="truncate text-xs font-semibold">{v.label}</p>
-                                  <p className="text-[10px] text-muted-foreground">{formatDate(v.created_at)}</p>
+                                  <p className="text-2xs text-muted-foreground">{formatDate(v.created_at)}</p>
                                 </div>
                                 <Button
                                   size="sm"
@@ -868,7 +868,7 @@ export function ProposalVersionsDialog({
                                 <tbody>
                                   {abFormDiff.map((d) => (
                                     <tr key={d.field} className="border-t align-top">
-                                      <td className="p-2 font-mono text-[11px]">{d.field}</td>
+                                      <td className="p-2 font-mono text-2xs">{d.field}</td>
                                       <td className="p-2 text-red-700">
                                         {d.from || <em className="text-muted-foreground">vazio</em>}
                                       </td>

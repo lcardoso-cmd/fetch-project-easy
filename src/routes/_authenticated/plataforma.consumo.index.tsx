@@ -54,7 +54,7 @@ function UsagePage() {
 
       <div className="grid gap-3 sm:grid-cols-3">
         <select
-          className="h-10 rounded-md border bg-background px-3 text-sm"
+          className="h-11 rounded-md border border-input bg-card px-3 text-base"
           value={days}
           onChange={(e) => setDays(Number(e.target.value))}
         >

@@ -256,7 +256,7 @@ function ViewAsSwitcher() {
                   )}
                 >
                   <div className="font-medium">{p.label}</div>
-                  <div className="text-[11px] text-muted-foreground">{p.description}</div>
+                  <div className="text-2xs text-muted-foreground">{p.description}</div>
                 </button>
               </li>
             );

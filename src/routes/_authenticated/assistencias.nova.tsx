@@ -1064,7 +1064,7 @@ function NewCasePage() {
                   }`}
                 >
                   <div className="space-y-1">
-                    <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                    <Label className="text-2xs uppercase tracking-wide text-muted-foreground">
                       Relação com você
                     </Label>
                     <Select
@@ -1084,7 +1084,7 @@ function NewCasePage() {
                     </Select>
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                    <Label className="text-2xs uppercase tracking-wide text-muted-foreground">
                       Papel processual
                     </Label>
                     <Input
@@ -1096,7 +1096,7 @@ function NewCasePage() {
                     />
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                    <Label className="text-2xs uppercase tracking-wide text-muted-foreground">
                       Nome
                     </Label>
                     <Input

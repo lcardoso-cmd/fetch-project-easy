@@ -509,7 +509,7 @@ export function UploadDialog({
                     />
                   ))}
                 </div>
-                <p className="text-[11px] text-muted-foreground">
+                <p className="text-2xs text-muted-foreground">
                   Confira o conteúdo e os metadados extraídos. Nada é gravado
                   no caso até você confirmar o envio.
                 </p>

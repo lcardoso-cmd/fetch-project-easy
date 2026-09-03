@@ -172,7 +172,7 @@ function NotificationsPage() {
                       <p className="truncate text-xs text-muted-foreground">
                         {notifPreview(n)}
                       </p>
-                      <p className="mt-0.5 text-[11px] text-muted-foreground">
+                      <p className="mt-0.5 text-2xs text-muted-foreground">
                         {new Date(n.created_at).toLocaleString("pt-BR")}
                       </p>
                     </div>

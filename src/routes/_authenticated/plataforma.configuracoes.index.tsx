@@ -151,7 +151,7 @@ function CommercialSettingsPage() {
                   <Label htmlFor="currency">Moeda</Label>
                   <select
                     id="currency"
-                    className="h-10 w-full rounded-md border bg-background px-3 text-sm"
+                    className="h-11 w-full rounded-md border border-input bg-card px-3 text-base"
                     value={form.default_currency}
                     onChange={(e) =>
                       setForm({
@@ -199,7 +199,7 @@ function CommercialSettingsPage() {
                   <Label htmlFor="trial_policy">Ao expirar o trial</Label>
                   <select
                     id="trial_policy"
-                    className="h-10 w-full rounded-md border bg-background px-3 text-sm"
+                    className="h-11 w-full rounded-md border border-input bg-card px-3 text-base"
                     value={form.trial_expired_policy}
                     onChange={(e) =>
                       setForm({
@@ -217,7 +217,7 @@ function CommercialSettingsPage() {
                   <Label htmlFor="delinquency_policy">Em caso de inadimplência</Label>
                   <select
                     id="delinquency_policy"
-                    className="h-10 w-full rounded-md border bg-background px-3 text-sm"
+                    className="h-11 w-full rounded-md border border-input bg-card px-3 text-base"
                     value={form.delinquency_policy}
                     onChange={(e) =>
                       setForm({

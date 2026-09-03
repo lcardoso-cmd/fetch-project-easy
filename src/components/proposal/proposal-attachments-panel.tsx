@@ -290,7 +290,7 @@ function AttachmentRow({
             <p className="mt-1 text-xs text-destructive">{att.extraction_error}</p>
           )}
           {att.extracted_fields && (
-            <div className="mt-2 flex flex-wrap gap-1 text-[11px] text-muted-foreground">
+            <div className="mt-2 flex flex-wrap gap-1 text-2xs text-muted-foreground">
               {att.extracted_fields.client_name && (
                 <span className="rounded bg-muted px-1.5 py-0.5">
                   Cliente: <strong>{att.extracted_fields.client_name}</strong>

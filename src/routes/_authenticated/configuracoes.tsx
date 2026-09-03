@@ -533,7 +533,7 @@ function MemberCapabilities({ userId }: { userId: string }) {
               />
               <span className="flex-1">
                 <span className="font-medium">{CAPABILITY_LABELS[cap]}</span>
-                <span className="block text-[11px] text-muted-foreground">
+                <span className="block text-2xs text-muted-foreground">
                   {CAPABILITY_DESCRIPTIONS[cap]}
                 </span>
               </span>
@@ -560,15 +560,15 @@ function MemberCapabilityAudit({ userId }: { userId: string }) {
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="text-[11px] font-medium text-muted-foreground hover:text-foreground"
+        className="text-2xs font-medium text-muted-foreground hover:text-foreground"
       >
         {open ? "Ocultar" : "Ver"} histórico de alterações
       </button>
       {open && (
         <div className="mt-2 space-y-1.5">
-          {isLoading && <p className="text-[11px] text-muted-foreground">Carregando…</p>}
+          {isLoading && <p className="text-2xs text-muted-foreground">Carregando…</p>}
           {!isLoading && (entries?.length ?? 0) === 0 && (
-            <p className="text-[11px] text-muted-foreground">Sem alterações registradas.</p>
+            <p className="text-2xs text-muted-foreground">Sem alterações registradas.</p>
           )}
           {(entries ?? []).map((e) => {
             const cap = e.metadata?.capability as Capability | undefined;
@@ -576,7 +576,7 @@ function MemberCapabilityAudit({ userId }: { userId: string }) {
             return (
               <div
                 key={e.id}
-                className="flex items-start justify-between gap-2 rounded border bg-background px-2 py-1 text-[11px]"
+                className="flex items-start justify-between gap-2 rounded border bg-background px-2 py-1 text-2xs"
               >
                 <div className="min-w-0">
                   <span
