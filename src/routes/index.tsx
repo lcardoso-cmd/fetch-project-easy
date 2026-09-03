@@ -167,30 +167,73 @@ const LAYERS = [
   },
 ];
 
+function LoginButton({
+  size = "default",
+  className,
+  variant = "ghost",
+  label = "Entrar",
+}: {
+  size?: "default" | "lg";
+  className?: string;
+  variant?: "ghost" | "outline" | "default";
+  label?: string;
+}) {
+  return (
+    <Button size={size} variant={variant} asChild className={className}>
+      <Link to="/entrar">{label}</Link>
+    </Button>
+  );
+}
+
+function TrialSignupButton({
+  size = "lg",
+  className,
+  label = "Testar grátis por 30 dias",
+}: {
+  size?: "default" | "lg";
+  className?: string;
+  label?: string;
+}) {
+  return (
+    <Button size={size} asChild className={className}>
+      <Link to="/entrar" search={TRIAL_SEARCH}>
+        {label}
+        <ArrowRight className="ml-2 h-4 w-4" />
+      </Link>
+    </Button>
+  );
+}
+
+function OpenDashboardButton({
+  size = "lg",
+  className,
+  label = "Abrir meu painel",
+}: {
+  size?: "default" | "lg";
+  className?: string;
+  label?: string;
+}) {
+  return (
+    <Button size={size} asChild className={className}>
+      <Link to="/painel">
+        {label}
+        <ArrowRight className="ml-2 h-4 w-4" />
+      </Link>
+    </Button>
+  );
+}
+
+function LearnMoreButton({ className }: { className?: string }) {
+  return (
+    <Button size="lg" variant="outline" asChild className={className}>
+      <a href="#como-funciona">Ver como funciona</a>
+    </Button>
+  );
+}
+
 function LandingPage() {
   const { user } = useAuth();
 
-  const TrialButton = ({
-    size = "lg",
-    className,
-    label,
-  }: {
-    size?: "default" | "lg";
-    className?: string;
-    label?: string;
-  }) =>
-    user ? (
-      <Button size={size} asChild className={className}>
-        <Link to="/painel">Abrir painel</Link>
-      </Button>
-    ) : (
-      <Button size={size} asChild className={className}>
-        <Link to="/entrar" search={TRIAL_SEARCH}>
-          {label ?? "Testar grátis por 30 dias"}
-          <ArrowRight className="ml-2 h-4 w-4" />
-        </Link>
-      </Button>
-    );
 
   return (
     <div className="min-h-screen bg-background">
@@ -214,13 +257,16 @@ function LandingPage() {
             </a>
           </nav>
           <div className="flex items-center gap-2">
-            {!user && (
-              <Button variant="ghost" asChild>
-                <Link to="/entrar">Entrar</Link>
-              </Button>
+            {user ? (
+              <OpenDashboardButton size="default" label="Abrir meu painel" />
+            ) : (
+              <>
+                <LoginButton />
+                <TrialSignupButton size="default" />
+              </>
             )}
-            <TrialButton size="default" />
           </div>
+
         </div>
       </header>
 
@@ -249,16 +295,14 @@ function LandingPage() {
               </p>
 
               <div className="mt-8 flex flex-wrap gap-3">
-                <TrialButton className="bg-accent text-accent-foreground hover:bg-accent/90" />
-                <Button
-                  size="lg"
-                  variant="outline"
-                  asChild
-                  className="border-primary-foreground/30 bg-transparent text-primary-foreground hover:bg-primary-foreground/10"
-                >
-                  <a href="#como-funciona">Ver como funciona</a>
-                </Button>
+                {user ? (
+                  <OpenDashboardButton className="bg-accent text-accent-foreground hover:bg-accent/90" />
+                ) : (
+                  <TrialSignupButton className="bg-accent text-accent-foreground hover:bg-accent/90" />
+                )}
+                <LearnMoreButton className="border-primary-foreground/30 bg-transparent text-primary-foreground hover:bg-primary-foreground/10" />
               </div>
+
 
               <p className="mt-6 text-sm font-medium text-accent">
                 Mais contexto para a IA. Mais controle para o advogado.
@@ -561,34 +605,51 @@ function LandingPage() {
           </div>
         </section>
 
-        {/* 8 · TESTE GRATUITO */}
+        {/* 8 · TESTE GRATUITO / CONTINUIDADE */}
         <section className="bg-primary text-primary-foreground">
           <div className="mx-auto max-w-3xl px-4 py-16 text-center">
-            <h2 className="font-heading text-3xl font-bold tracking-tight md:text-4xl">
-              Experimente o JurisMind em um caso real do seu escritório.
-            </h2>
-            <p className="mx-auto mt-4 max-w-2xl text-primary-foreground/80">
-              Crie sua conta, organize um caso, inclua documentos e conheça durante 30 dias a
-              diferença entre conversar com uma IA e trabalhar com inteligência jurídica
-              contextualizada.
-            </p>
-            <div className="mt-8 flex flex-wrap justify-center gap-3">
-              <TrialButton
-                className="bg-accent text-accent-foreground hover:bg-accent/90"
-                label="Começar meu teste gratuito"
-              />
-              <Button
-                size="lg"
-                variant="outline"
-                asChild
-                className="border-primary-foreground/30 bg-transparent text-primary-foreground hover:bg-primary-foreground/10"
-              >
-                <Link to="/entrar">Entrar na plataforma</Link>
-              </Button>
-            </div>
-            <p className="mt-5 text-sm text-primary-foreground/70">Teste gratuito por 30 dias.</p>
+            {user ? (
+              <>
+                <h2 className="font-heading text-3xl font-bold tracking-tight md:text-4xl">
+                  Continue seu trabalho no JurisMind.
+                </h2>
+                <p className="mx-auto mt-4 max-w-2xl text-primary-foreground/80">
+                  Acesse seus casos, documentos e recursos de inteligência jurídica.
+                </p>
+                <div className="mt-8 flex justify-center">
+                  <OpenDashboardButton className="bg-accent text-accent-foreground hover:bg-accent/90" />
+                </div>
+              </>
+            ) : (
+              <>
+                <h2 className="font-heading text-3xl font-bold tracking-tight md:text-4xl">
+                  Experimente o JurisMind em um caso real do seu escritório.
+                </h2>
+                <p className="mx-auto mt-4 max-w-2xl text-primary-foreground/80">
+                  Crie sua conta, organize um caso, inclua documentos e conheça durante 30 dias a
+                  diferença entre conversar com uma IA e trabalhar com inteligência jurídica
+                  contextualizada.
+                </p>
+                <div className="mt-8 flex justify-center">
+                  <TrialSignupButton
+                    className="bg-accent text-accent-foreground hover:bg-accent/90"
+                    label="Começar meu teste gratuito"
+                  />
+                </div>
+                <p className="mt-4 text-sm text-primary-foreground/70">
+                  Já possui uma conta?{" "}
+                  <Link to="/entrar" className="font-medium underline underline-offset-4">
+                    Entrar
+                  </Link>
+                </p>
+                <p className="mt-5 text-sm text-primary-foreground/70">
+                  Teste gratuito por 30 dias.
+                </p>
+              </>
+            )}
           </div>
         </section>
+
       </main>
 
       <footer className="border-t bg-card">
@@ -609,16 +670,34 @@ function LandingPage() {
           <nav className="text-sm">
             <p className="font-heading font-bold text-foreground">Plataforma</p>
             <ul className="mt-3 space-y-2 text-muted-foreground">
-              <li>
-                <Link to="/entrar" className="hover:text-foreground">
-                  Entrar na plataforma
-                </Link>
-              </li>
-              <li>
-                <Link to="/entrar" search={TRIAL_SEARCH} className="hover:text-foreground">
-                  Criar conta
-                </Link>
-              </li>
+              {user ? (
+                <>
+                  <li>
+                    <Link to="/painel" className="hover:text-foreground">
+                      Abrir painel
+                    </Link>
+                  </li>
+                  <li>
+                    <Link to="/configuracoes" className="hover:text-foreground">
+                      Minha conta
+                    </Link>
+                  </li>
+                </>
+              ) : (
+                <>
+                  <li>
+                    <Link to="/entrar" className="hover:text-foreground">
+                      Entrar
+                    </Link>
+                  </li>
+                  <li>
+                    <Link to="/entrar" search={TRIAL_SEARCH} className="hover:text-foreground">
+                      Criar conta
+                    </Link>
+                  </li>
+                </>
+              )}
+
               <li>
                 <a href="#como-funciona" className="hover:text-foreground">
                   Como funciona
