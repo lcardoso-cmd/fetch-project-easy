@@ -596,11 +596,15 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                 >
                   <div className="flex h-16 items-center gap-3 px-3">
                     <JurisMindMark size={26} context={JURISMIND_CONTEXT.sidebar} interactive />
-                    <span className="truncate font-heading text-[13px] font-semibold text-foreground">
+                    <span className="truncate font-heading text-lg font-bold text-sidebar-foreground">
                       JurisMind
                     </span>
                   </div>
-                  <nav className="h-[calc(100vh-3.5rem-4rem)] space-y-0.5 overflow-y-auto overflow-x-hidden px-2 py-2">
+                  {canAdminB2B && (
+                    <ScopeSwitcher scope={scope} onNavigate={() => setMobileOpen(false)} />
+                  )}
+                  <nav className="max-h-[calc(100dvh-14rem)] space-y-0.5 overflow-y-auto overflow-x-hidden px-2 py-2">
+
                     {NAV.map((item, idx) => {
                       if (item.type === "separator") {
                         return <div key={idx} className="my-2" />;
