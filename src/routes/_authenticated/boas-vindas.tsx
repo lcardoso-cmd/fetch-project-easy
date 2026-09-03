@@ -38,11 +38,7 @@ function OnboardingPage() {
   const mut = useMutation({
     mutationFn: () =>
       completeFn({
-        data: {
-          practice_type: "advogado",
-          specialty: null,
-          full_name: fullName.trim() || null,
-        },
+        data: { full_name: fullName.trim() || null },
       }),
     onSuccess: () => {
       toast.success("Perfil configurado");

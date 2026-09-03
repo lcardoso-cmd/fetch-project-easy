@@ -339,9 +339,6 @@ export default function PlatformUsers() {
                           <span className="block text-foreground">
                             {u.organization_name ?? u.firm_name ?? "—"}
                           </span>
-                          <span className="block text-sm text-muted-foreground">
-                            {u.practice_type ?? "—"}
-                          </span>
                         </td>
                         <td className="px-4 py-4">
                           {u.organization_role
