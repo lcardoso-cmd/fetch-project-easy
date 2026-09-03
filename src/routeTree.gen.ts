@@ -93,11 +93,15 @@ import { Route as AuthenticatedPlatformCredentialsIndexRouteImport } from './rou
 import { Route as AuthenticatedPlatformAuditIndexRouteImport } from './routes/_authenticated/platform.audit.index'
 import { Route as AuthenticatedPlataformaUsuariosIndexRouteImport } from './routes/_authenticated/plataforma.usuarios.index'
 import { Route as AuthenticatedPlataformaSolicitacoesIndexRouteImport } from './routes/_authenticated/plataforma.solicitacoes.index'
+import { Route as AuthenticatedPlataformaPlanosIndexRouteImport } from './routes/_authenticated/plataforma.planos.index'
+import { Route as AuthenticatedPlataformaFaturasIndexRouteImport } from './routes/_authenticated/plataforma.faturas.index'
 import { Route as AuthenticatedPlataformaCredenciaisIndexRouteImport } from './routes/_authenticated/plataforma.credenciais.index'
 import { Route as AuthenticatedPlataformaClientesIndexRouteImport } from './routes/_authenticated/plataforma.clientes.index'
 import { Route as AuthenticatedPlataformaAuditoriaIndexRouteImport } from './routes/_authenticated/plataforma.auditoria.index'
+import { Route as AuthenticatedPlataformaAssinaturasIndexRouteImport } from './routes/_authenticated/plataforma.assinaturas.index'
 import { Route as ApiPublicProposalShareTokenRouteImport } from './routes/api/public/proposal-share.$token'
 import { Route as ApiPublicProposalResponseTokenRouteImport } from './routes/api/public/proposal-response.$token'
+import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
 import { Route as ApiPublicOutlookCallbackRouteImport } from './routes/api/public/outlook/callback'
 import { Route as ApiPublicHooksFetchPublicationsRouteImport } from './routes/api/public/hooks/fetch-publications'
 import { Route as ApiPublicGoogleCallbackRouteImport } from './routes/api/public/google/callback'
@@ -562,6 +566,18 @@ const AuthenticatedPlataformaSolicitacoesIndexRoute =
     path: '/plataforma/solicitacoes/',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedPlataformaPlanosIndexRoute =
+  AuthenticatedPlataformaPlanosIndexRouteImport.update({
+    id: '/plataforma/planos/',
+    path: '/plataforma/planos/',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedPlataformaFaturasIndexRoute =
+  AuthenticatedPlataformaFaturasIndexRouteImport.update({
+    id: '/plataforma/faturas/',
+    path: '/plataforma/faturas/',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedPlataformaCredenciaisIndexRoute =
   AuthenticatedPlataformaCredenciaisIndexRouteImport.update({
     id: '/plataforma/credenciais/',
@@ -580,6 +596,12 @@ const AuthenticatedPlataformaAuditoriaIndexRoute =
     path: '/plataforma/auditoria/',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedPlataformaAssinaturasIndexRoute =
+  AuthenticatedPlataformaAssinaturasIndexRouteImport.update({
+    id: '/plataforma/assinaturas/',
+    path: '/plataforma/assinaturas/',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const ApiPublicProposalShareTokenRoute =
   ApiPublicProposalShareTokenRouteImport.update({
     id: '/api/public/proposal-share/$token',
@@ -590,6 +612,12 @@ const ApiPublicProposalResponseTokenRoute =
   ApiPublicProposalResponseTokenRouteImport.update({
     id: '/api/public/proposal-response/$token',
     path: '/api/public/proposal-response/$token',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicPaymentsWebhookRoute =
+  ApiPublicPaymentsWebhookRouteImport.update({
+    id: '/api/public/payments/webhook',
+    path: '/api/public/payments/webhook',
     getParentRoute: () => rootRouteImport,
   } as any)
 const ApiPublicOutlookCallbackRoute =
@@ -719,11 +747,15 @@ export interface FileRoutesByFullPath {
   '/api/public/google/callback': typeof ApiPublicGoogleCallbackRoute
   '/api/public/hooks/fetch-publications': typeof ApiPublicHooksFetchPublicationsRoute
   '/api/public/outlook/callback': typeof ApiPublicOutlookCallbackRoute
+  '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/api/public/proposal-response/$token': typeof ApiPublicProposalResponseTokenRoute
   '/api/public/proposal-share/$token': typeof ApiPublicProposalShareTokenRoute
+  '/plataforma/assinaturas/': typeof AuthenticatedPlataformaAssinaturasIndexRoute
   '/plataforma/auditoria/': typeof AuthenticatedPlataformaAuditoriaIndexRoute
   '/plataforma/clientes/': typeof AuthenticatedPlataformaClientesIndexRoute
   '/plataforma/credenciais/': typeof AuthenticatedPlataformaCredenciaisIndexRoute
+  '/plataforma/faturas/': typeof AuthenticatedPlataformaFaturasIndexRoute
+  '/plataforma/planos/': typeof AuthenticatedPlataformaPlanosIndexRoute
   '/plataforma/solicitacoes/': typeof AuthenticatedPlataformaSolicitacoesIndexRoute
   '/plataforma/usuarios/': typeof AuthenticatedPlataformaUsuariosIndexRoute
   '/platform/audit/': typeof AuthenticatedPlatformAuditIndexRoute
@@ -814,11 +846,15 @@ export interface FileRoutesByTo {
   '/api/public/google/callback': typeof ApiPublicGoogleCallbackRoute
   '/api/public/hooks/fetch-publications': typeof ApiPublicHooksFetchPublicationsRoute
   '/api/public/outlook/callback': typeof ApiPublicOutlookCallbackRoute
+  '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/api/public/proposal-response/$token': typeof ApiPublicProposalResponseTokenRoute
   '/api/public/proposal-share/$token': typeof ApiPublicProposalShareTokenRoute
+  '/plataforma/assinaturas': typeof AuthenticatedPlataformaAssinaturasIndexRoute
   '/plataforma/auditoria': typeof AuthenticatedPlataformaAuditoriaIndexRoute
   '/plataforma/clientes': typeof AuthenticatedPlataformaClientesIndexRoute
   '/plataforma/credenciais': typeof AuthenticatedPlataformaCredenciaisIndexRoute
+  '/plataforma/faturas': typeof AuthenticatedPlataformaFaturasIndexRoute
+  '/plataforma/planos': typeof AuthenticatedPlataformaPlanosIndexRoute
   '/plataforma/solicitacoes': typeof AuthenticatedPlataformaSolicitacoesIndexRoute
   '/plataforma/usuarios': typeof AuthenticatedPlataformaUsuariosIndexRoute
   '/platform/audit': typeof AuthenticatedPlatformAuditIndexRoute
@@ -913,11 +949,15 @@ export interface FileRoutesById {
   '/api/public/google/callback': typeof ApiPublicGoogleCallbackRoute
   '/api/public/hooks/fetch-publications': typeof ApiPublicHooksFetchPublicationsRoute
   '/api/public/outlook/callback': typeof ApiPublicOutlookCallbackRoute
+  '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/api/public/proposal-response/$token': typeof ApiPublicProposalResponseTokenRoute
   '/api/public/proposal-share/$token': typeof ApiPublicProposalShareTokenRoute
+  '/_authenticated/plataforma/assinaturas/': typeof AuthenticatedPlataformaAssinaturasIndexRoute
   '/_authenticated/plataforma/auditoria/': typeof AuthenticatedPlataformaAuditoriaIndexRoute
   '/_authenticated/plataforma/clientes/': typeof AuthenticatedPlataformaClientesIndexRoute
   '/_authenticated/plataforma/credenciais/': typeof AuthenticatedPlataformaCredenciaisIndexRoute
+  '/_authenticated/plataforma/faturas/': typeof AuthenticatedPlataformaFaturasIndexRoute
+  '/_authenticated/plataforma/planos/': typeof AuthenticatedPlataformaPlanosIndexRoute
   '/_authenticated/plataforma/solicitacoes/': typeof AuthenticatedPlataformaSolicitacoesIndexRoute
   '/_authenticated/plataforma/usuarios/': typeof AuthenticatedPlataformaUsuariosIndexRoute
   '/_authenticated/platform/audit/': typeof AuthenticatedPlatformAuditIndexRoute
@@ -1012,11 +1052,15 @@ export interface FileRouteTypes {
     | '/api/public/google/callback'
     | '/api/public/hooks/fetch-publications'
     | '/api/public/outlook/callback'
+    | '/api/public/payments/webhook'
     | '/api/public/proposal-response/$token'
     | '/api/public/proposal-share/$token'
+    | '/plataforma/assinaturas/'
     | '/plataforma/auditoria/'
     | '/plataforma/clientes/'
     | '/plataforma/credenciais/'
+    | '/plataforma/faturas/'
+    | '/plataforma/planos/'
     | '/plataforma/solicitacoes/'
     | '/plataforma/usuarios/'
     | '/platform/audit/'
@@ -1107,11 +1151,15 @@ export interface FileRouteTypes {
     | '/api/public/google/callback'
     | '/api/public/hooks/fetch-publications'
     | '/api/public/outlook/callback'
+    | '/api/public/payments/webhook'
     | '/api/public/proposal-response/$token'
     | '/api/public/proposal-share/$token'
+    | '/plataforma/assinaturas'
     | '/plataforma/auditoria'
     | '/plataforma/clientes'
     | '/plataforma/credenciais'
+    | '/plataforma/faturas'
+    | '/plataforma/planos'
     | '/plataforma/solicitacoes'
     | '/plataforma/usuarios'
     | '/platform/audit'
@@ -1205,11 +1253,15 @@ export interface FileRouteTypes {
     | '/api/public/google/callback'
     | '/api/public/hooks/fetch-publications'
     | '/api/public/outlook/callback'
+    | '/api/public/payments/webhook'
     | '/api/public/proposal-response/$token'
     | '/api/public/proposal-share/$token'
+    | '/_authenticated/plataforma/assinaturas/'
     | '/_authenticated/plataforma/auditoria/'
     | '/_authenticated/plataforma/clientes/'
     | '/_authenticated/plataforma/credenciais/'
+    | '/_authenticated/plataforma/faturas/'
+    | '/_authenticated/plataforma/planos/'
     | '/_authenticated/plataforma/solicitacoes/'
     | '/_authenticated/plataforma/usuarios/'
     | '/_authenticated/platform/audit/'
@@ -1247,6 +1299,7 @@ export interface RootRouteChildren {
   ApiPublicGoogleCallbackRoute: typeof ApiPublicGoogleCallbackRoute
   ApiPublicHooksFetchPublicationsRoute: typeof ApiPublicHooksFetchPublicationsRoute
   ApiPublicOutlookCallbackRoute: typeof ApiPublicOutlookCallbackRoute
+  ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
   ApiPublicProposalResponseTokenRoute: typeof ApiPublicProposalResponseTokenRoute
   ApiPublicProposalShareTokenRoute: typeof ApiPublicProposalShareTokenRoute
 }
@@ -1841,6 +1894,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedPlataformaSolicitacoesIndexRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/plataforma/planos/': {
+      id: '/_authenticated/plataforma/planos/'
+      path: '/plataforma/planos'
+      fullPath: '/plataforma/planos/'
+      preLoaderRoute: typeof AuthenticatedPlataformaPlanosIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/plataforma/faturas/': {
+      id: '/_authenticated/plataforma/faturas/'
+      path: '/plataforma/faturas'
+      fullPath: '/plataforma/faturas/'
+      preLoaderRoute: typeof AuthenticatedPlataformaFaturasIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/plataforma/credenciais/': {
       id: '/_authenticated/plataforma/credenciais/'
       path: '/plataforma/credenciais'
@@ -1862,6 +1929,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedPlataformaAuditoriaIndexRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/plataforma/assinaturas/': {
+      id: '/_authenticated/plataforma/assinaturas/'
+      path: '/plataforma/assinaturas'
+      fullPath: '/plataforma/assinaturas/'
+      preLoaderRoute: typeof AuthenticatedPlataformaAssinaturasIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/api/public/proposal-share/$token': {
       id: '/api/public/proposal-share/$token'
       path: '/api/public/proposal-share/$token'
@@ -1874,6 +1948,13 @@ declare module '@tanstack/react-router' {
       path: '/api/public/proposal-response/$token'
       fullPath: '/api/public/proposal-response/$token'
       preLoaderRoute: typeof ApiPublicProposalResponseTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/payments/webhook': {
+      id: '/api/public/payments/webhook'
+      path: '/api/public/payments/webhook'
+      fullPath: '/api/public/payments/webhook'
+      preLoaderRoute: typeof ApiPublicPaymentsWebhookRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/outlook/callback': {
@@ -2075,9 +2156,12 @@ interface AuthenticatedRouteChildren {
   AuthenticatedPlatformIndexRoute: typeof AuthenticatedPlatformIndexRoute
   AuthenticatedPlataformaClientesIdRoute: typeof AuthenticatedPlataformaClientesIdRoute
   AuthenticatedPlatformCustomersIdRoute: typeof AuthenticatedPlatformCustomersIdRoute
+  AuthenticatedPlataformaAssinaturasIndexRoute: typeof AuthenticatedPlataformaAssinaturasIndexRoute
   AuthenticatedPlataformaAuditoriaIndexRoute: typeof AuthenticatedPlataformaAuditoriaIndexRoute
   AuthenticatedPlataformaClientesIndexRoute: typeof AuthenticatedPlataformaClientesIndexRoute
   AuthenticatedPlataformaCredenciaisIndexRoute: typeof AuthenticatedPlataformaCredenciaisIndexRoute
+  AuthenticatedPlataformaFaturasIndexRoute: typeof AuthenticatedPlataformaFaturasIndexRoute
+  AuthenticatedPlataformaPlanosIndexRoute: typeof AuthenticatedPlataformaPlanosIndexRoute
   AuthenticatedPlataformaSolicitacoesIndexRoute: typeof AuthenticatedPlataformaSolicitacoesIndexRoute
   AuthenticatedPlataformaUsuariosIndexRoute: typeof AuthenticatedPlataformaUsuariosIndexRoute
   AuthenticatedPlatformAuditIndexRoute: typeof AuthenticatedPlatformAuditIndexRoute
@@ -2131,12 +2215,18 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedPlataformaClientesIdRoute:
     AuthenticatedPlataformaClientesIdRoute,
   AuthenticatedPlatformCustomersIdRoute: AuthenticatedPlatformCustomersIdRoute,
+  AuthenticatedPlataformaAssinaturasIndexRoute:
+    AuthenticatedPlataformaAssinaturasIndexRoute,
   AuthenticatedPlataformaAuditoriaIndexRoute:
     AuthenticatedPlataformaAuditoriaIndexRoute,
   AuthenticatedPlataformaClientesIndexRoute:
     AuthenticatedPlataformaClientesIndexRoute,
   AuthenticatedPlataformaCredenciaisIndexRoute:
     AuthenticatedPlataformaCredenciaisIndexRoute,
+  AuthenticatedPlataformaFaturasIndexRoute:
+    AuthenticatedPlataformaFaturasIndexRoute,
+  AuthenticatedPlataformaPlanosIndexRoute:
+    AuthenticatedPlataformaPlanosIndexRoute,
   AuthenticatedPlataformaSolicitacoesIndexRoute:
     AuthenticatedPlataformaSolicitacoesIndexRoute,
   AuthenticatedPlataformaUsuariosIndexRoute:
@@ -2183,6 +2273,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicGoogleCallbackRoute: ApiPublicGoogleCallbackRoute,
   ApiPublicHooksFetchPublicationsRoute: ApiPublicHooksFetchPublicationsRoute,
   ApiPublicOutlookCallbackRoute: ApiPublicOutlookCallbackRoute,
+  ApiPublicPaymentsWebhookRoute: ApiPublicPaymentsWebhookRoute,
   ApiPublicProposalResponseTokenRoute: ApiPublicProposalResponseTokenRoute,
   ApiPublicProposalShareTokenRoute: ApiPublicProposalShareTokenRoute,
 }
