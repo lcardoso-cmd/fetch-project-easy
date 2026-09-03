@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useLocation } from "@tanstack/react-router";
-import { Button } from "@/components/ui/button";
 import { JurisMindMark, JURISMIND_CONTEXT } from "@/components/brand/jurismind-mark";
 import { useAuth } from "@/hooks/use-auth";
 import { UserMenu } from "@/components/layout/user-menu";
@@ -38,7 +37,6 @@ import {
   FileSearch,
   Handshake,
   Settings2,
-  LogOut,
   MessageSquare,
   PanelLeftClose,
   PanelLeftOpen,
@@ -60,8 +58,8 @@ import {
   Cog,
   Activity,
   ChevronDown,
+  ChevronRight,
   type LucideIcon,
-  HelpCircle,
 } from "lucide-react";
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 
@@ -71,7 +69,7 @@ import { ConversationsDrawer } from "@/components/chat/conversations-drawer";
 
 /* ────────────────────────────────────────────────────────────────
    Modelo de navegação orientado a dados.
-   Uma única configuração alimenta desktop e mobile.
+   Uma única configuração alimenta desktop, recolhido e mobile.
    ──────────────────────────────────────────────────────────────── */
 
 type NavLink = {
@@ -197,7 +195,6 @@ function buildNavSections(scope: ShellScope): NavSection[] {
   return [
     {
       id: "office-main",
-      label: "Principal",
       description: sectionMeta("main"),
       nodes: [
         link("dashboard", "/painel", "Início", Home, "exact"),
@@ -214,26 +211,23 @@ function buildNavSections(scope: ShellScope): NavSection[] {
       nodes: [
         link("monitoring", "/publicacoes", "Monitoramento", FileSearch),
         link("proposal", "/comercial", "Comercial", Handshake),
+        link("hire-b2b", "/contratar-b2b", "Serviços especializados", ShieldCheck, "startsWith"),
       ],
     },
   ];
 }
 
-/** Itens fixos do rodapé da barra lateral, por ambiente. */
+/** Itens fixos do rodapé da barra lateral, por ambiente (máx. 2 no escritório). */
 export function buildFooterNav(scope: ShellScope = "office"): NavLink[] {
-  if (scope === "b2b") {
-    return [link("help", "/ajuda/permissoes", "Ajuda", HelpCircle, "startsWith")];
-  }
+  if (scope === "b2b") return [];
   return [
-    link("hire-b2b", "/contratar-b2b", "Serviços especializados", ShieldCheck, "startsWith"),
     link("billing", "/organizacao/cobranca", "Assinatura e cobrança", CreditCard, "startsWith"),
     link("settings", "/configuracoes", "Administração", Settings2, "startsWith"),
-    link("help", "/ajuda/permissoes", "Ajuda", HelpCircle, "startsWith"),
   ];
 }
 
 /**
- * Filtra links por capacidade e remove grupos/seções sem nenhum item
+ * Filtra links por permissão e remove grupos/seções sem nenhum item
  * autorizado. Nada é revelado ao usuário sobre itens ocultos.
  */
 function applyAccess(
@@ -269,68 +263,263 @@ function matchesPath(pathname: string, l: NavLink) {
     : pathname === l.to || pathname.startsWith(`${l.to}/`);
 }
 
-function ViewAsSwitcher() {
-  const { isPlatformUser, simulation, roleLabel, setSimulation } = useAccess();
-  if (!isPlatformUser) return null;
+/* ── Tokens visuais da barra lateral ──────────────────────────────
+   Dimensões e tipografia são idênticas em repouso, hover, foco e
+   estado ativo. O ativo muda apenas cor de fundo/marcador.
+   ──────────────────────────────────────────────────────────────── */
+
+const SIDEBAR_W = "15rem"; // 240px
+const SIDEBAR_W_COLLAPSED = "4rem"; // 64px
+
+/** Linha principal: 40px desktop / 44px mobile (alvo de toque). */
+const rowBase =
+  "group relative flex w-full items-center gap-2.5 rounded-[6px] text-[14px] font-medium leading-5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring";
+const rowHeight = "h-11 lg:h-10";
+const subRowHeight = "h-11 lg:h-9";
+const iconCls = "size-[17px] shrink-0";
+const idleText = "text-sidebar-foreground/[0.74] hover:bg-white/[0.06] hover:text-sidebar-foreground";
+const activeText = "bg-white/[0.08] text-sidebar-foreground";
+
+function ActiveMark() {
   return (
-    <Popover>
+    <span
+      aria-hidden="true"
+      className="absolute left-0 top-1/2 h-5 w-[2px] -translate-y-1/2 rounded-r-full bg-sidebar-primary"
+    />
+  );
+}
+
+function NavRow({
+  item,
+  active,
+  collapsed,
+  nested,
+  onNavigate,
+}: {
+  item: NavLink;
+  active: boolean;
+  collapsed?: boolean;
+  nested?: boolean;
+  onNavigate?: () => void;
+}) {
+  const Icon = item.icon;
+  const row = (
+    <Link
+      to={item.to}
+      onClick={onNavigate}
+      aria-current={active ? "page" : undefined}
+      className={cn(
+        rowBase,
+        nested ? subRowHeight : rowHeight,
+        nested && "text-[13px]",
+        collapsed ? "justify-center px-0" : nested ? "pl-[34px] pr-2.5" : "px-2.5",
+        active ? activeText : idleText,
+      )}
+    >
+      {active && !collapsed && <ActiveMark />}
+      <Icon className={iconCls} strokeWidth={1.75} aria-hidden="true" />
+      {!collapsed && <span className="truncate">{item.label}</span>}
+    </Link>
+  );
+  if (!collapsed) return row;
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>{row}</TooltipTrigger>
+      <TooltipContent side="right" className="text-[13px]">
+        {item.label}
+      </TooltipContent>
+    </Tooltip>
+  );
+}
+
+/** Grupo recolhido: um único ícone + flyout lateral com os subitens. */
+function CollapsedGroup({
+  group,
+  pathname,
+  onNavigate,
+}: {
+  group: NavGroup;
+  pathname: string;
+  onNavigate?: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const hasActive = group.items.some((i) => matchesPath(pathname, i));
+  const Icon = group.icon;
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <button
           type="button"
+          aria-label={group.label}
+          onMouseEnter={() => setOpen(true)}
           className={cn(
-            "flex min-h-11 w-full items-center gap-2 rounded-md px-3 py-2 text-left text-ui font-medium transition",
-            simulation
-              ? "bg-amber-400/20 text-amber-100 ring-1 ring-amber-300/60"
-              : "text-sidebar-foreground/85 hover:bg-sidebar-accent hover:text-sidebar-foreground",
+            rowBase,
+            rowHeight,
+            "justify-center px-0",
+            hasActive ? activeText : idleText,
           )}
         >
-          <Eye className="size-[18px] shrink-0" aria-hidden="true" />
-          <span className="truncate">
-            {simulation ? `Vendo como: ${roleLabel}` : "Ver como…"}
-          </span>
+          <Icon className={iconCls} strokeWidth={1.75} aria-hidden="true" />
+          {hasActive && (
+            <span
+              aria-hidden="true"
+              className="absolute right-1 top-1/2 size-1 -translate-y-1/2 rounded-full bg-sidebar-primary"
+            />
+          )}
         </button>
       </PopoverTrigger>
-      <PopoverContent side="right" align="start" className="w-72 p-2">
-        <div className="mb-2 flex items-center gap-1.5 px-2 pt-1 text-sm text-muted-foreground">
-          <ShieldCheck className="h-3.5 w-3.5" />
-          <span>Simulação visual — o servidor mantém sua permissão real.</span>
-        </div>
-        <ul className="space-y-0.5">
-          <li>
-            <button
-              type="button"
-              onClick={() => setSimulation(null)}
-              className={cn(
-                "w-full rounded-md px-2.5 py-2 text-left text-ui transition",
-                !simulation ? "bg-primary/10 text-foreground" : "hover:bg-muted",
-              )}
-            >
-              <div className="font-medium">Minha visão real</div>
-              <div className="text-sm text-muted-foreground">
-                Papéis reais da sua conta.
-              </div>
-            </button>
-          </li>
-          {VIEW_AS_ROLES.map((p) => (
-            <li key={p.role}>
-              <button
-                type="button"
-                onClick={() => setSimulation(p.role as OrgRole)}
+      <PopoverContent
+        side="right"
+        align="start"
+        sideOffset={6}
+        onMouseLeave={() => setOpen(false)}
+        className="w-56 border-sidebar-border bg-sidebar p-1.5 text-sidebar-foreground"
+      >
+        <p className="px-2 pb-1.5 pt-0.5 text-[12px] font-semibold text-sidebar-foreground">
+          {group.label}
+        </p>
+        <div className="space-y-0.5">
+          {group.items.map((item) => {
+            const active = matchesPath(pathname, item);
+            const ItemIcon = item.icon;
+            return (
+              <Link
+                key={item.to}
+                to={item.to}
+                onClick={() => {
+                  setOpen(false);
+                  onNavigate?.();
+                }}
+                aria-current={active ? "page" : undefined}
                 className={cn(
-                  "w-full rounded-md px-2.5 py-2 text-left text-ui transition",
-                  simulation === p.role ? "bg-primary/10 text-foreground" : "hover:bg-muted",
+                  rowBase,
+                  subRowHeight,
+                  "px-2.5 text-[13px]",
+                  active ? activeText : idleText,
                 )}
               >
-                <div className="font-medium">{p.label}</div>
-                <div className="text-sm text-muted-foreground">
-                  Permissões padrão do papel «{p.label}» na organização.
-                </div>
-              </button>
-            </li>
-          ))}
-        </ul>
+                {active && <ActiveMark />}
+                <ItemIcon className={iconCls} strokeWidth={1.75} aria-hidden="true" />
+                <span className="truncate">{item.label}</span>
+              </Link>
+            );
+          })}
+        </div>
       </PopoverContent>
     </Popover>
+  );
+}
+
+function NavGroupBlock({
+  group,
+  open,
+  onOpenChange,
+  pathname,
+  collapsed,
+  onNavigate,
+}: {
+  group: NavGroup;
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  pathname: string;
+  collapsed?: boolean;
+  onNavigate?: () => void;
+}) {
+  if (collapsed) {
+    return <CollapsedGroup group={group} pathname={pathname} onNavigate={onNavigate} />;
+  }
+
+  const hasActive = group.items.some((i) => matchesPath(pathname, i));
+  const Icon = group.icon;
+  return (
+    <Collapsible open={open} onOpenChange={onOpenChange}>
+      <CollapsibleTrigger
+        className={cn(
+          rowBase,
+          rowHeight,
+          "px-2.5 text-left",
+          hasActive && !open ? activeText : idleText,
+        )}
+      >
+        <Icon className={iconCls} strokeWidth={1.75} aria-hidden="true" />
+        <span className="flex-1 truncate">{group.label}</span>
+        {open ? (
+          <ChevronDown className="size-3.5 shrink-0 opacity-70" aria-hidden="true" />
+        ) : (
+          <ChevronRight className="size-3.5 shrink-0 opacity-70" aria-hidden="true" />
+        )}
+      </CollapsibleTrigger>
+      <CollapsibleContent className="mt-0.5 space-y-0.5">
+        {group.items.map((item) => (
+          <NavRow
+            key={item.to}
+            item={item}
+            active={matchesPath(pathname, item)}
+            nested
+            onNavigate={onNavigate}
+          />
+        ))}
+      </CollapsibleContent>
+    </Collapsible>
+  );
+}
+
+function NavTree({
+  sections,
+  pathname,
+  openGroupId,
+  setOpenGroupId,
+  collapsed,
+  onNavigate,
+}: {
+  sections: NavSection[];
+  pathname: string;
+  openGroupId: string | null;
+  setOpenGroupId: (id: string | null) => void;
+  collapsed?: boolean;
+  onNavigate?: () => void;
+}) {
+  return (
+    <>
+      {sections.map((section) => (
+        <div key={section.id} className="mb-2 last:mb-0">
+          {section.label && !collapsed && (
+            <div className="px-2.5 pb-1 pt-3 text-[12px] font-semibold leading-4 tracking-[0.06em] text-sidebar-foreground">
+              {section.label}
+            </div>
+          )}
+          {section.label && collapsed && (
+            <div
+              aria-hidden="true"
+              className="mx-3 my-2 border-t border-white/[0.12]"
+            />
+          )}
+          <div className="space-y-0.5">
+            {section.nodes.map((node) =>
+              node.kind === "link" ? (
+                <NavRow
+                  key={node.to}
+                  item={node}
+                  active={matchesPath(pathname, node)}
+                  collapsed={collapsed}
+                  onNavigate={onNavigate}
+                />
+              ) : (
+                <NavGroupBlock
+                  key={node.id}
+                  group={node}
+                  open={openGroupId === node.id}
+                  onOpenChange={(v) => setOpenGroupId(v ? node.id : null)}
+                  pathname={pathname}
+                  collapsed={collapsed}
+                  onNavigate={onNavigate}
+                />
+              ),
+            )}
+          </div>
+        </div>
+      ))}
+    </>
   );
 }
 
@@ -364,12 +553,12 @@ function ScopeSwitcher({
             to={other.to}
             onClick={onNavigate}
             aria-label={`Alternar para ${other.label}`}
-            className="mx-auto mb-2 flex size-11 items-center justify-center rounded-md border border-sidebar-border text-sidebar-foreground/85 transition hover:bg-sidebar-accent hover:text-sidebar-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring"
+            className="mx-auto mb-1 flex size-9 items-center justify-center rounded-[6px] text-sidebar-foreground/[0.74] transition hover:bg-white/[0.06] hover:text-sidebar-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring"
           >
-            <other.icon className="size-[18px]" strokeWidth={1.75} aria-hidden="true" />
+            <other.icon className="size-[15px]" strokeWidth={1.75} aria-hidden="true" />
           </Link>
         </TooltipTrigger>
-        <TooltipContent side="right" className="text-sm">
+        <TooltipContent side="right" className="text-[13px]">
           Alternar para {other.label}
         </TooltipContent>
       </Tooltip>
@@ -379,7 +568,7 @@ function ScopeSwitcher({
     <div
       role="group"
       aria-label="Contexto de trabalho"
-      className="mx-2 mb-3 grid grid-cols-2 gap-1 rounded-lg border border-sidebar-border p-1"
+      className="mx-2.5 mb-1.5 grid h-9 grid-cols-2 gap-0.5 rounded-[6px] border border-white/[0.12] p-0.5"
     >
       {SCOPE_OPTIONS.map((o) => {
         const active = o.id === scope;
@@ -391,19 +580,19 @@ function ScopeSwitcher({
             aria-current={active ? "page" : undefined}
             title={o.label}
             className={cn(
-              "relative flex min-h-11 items-center justify-center gap-1.5 rounded-md px-2 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring",
+              "relative flex items-center justify-center gap-1.5 rounded-[4px] px-1.5 text-[13px] font-medium leading-4 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring",
               active
-                ? "bg-sidebar-accent text-sidebar-foreground"
-                : "text-sidebar-foreground/78 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground",
+                ? "bg-white/[0.08] text-sidebar-foreground"
+                : "text-sidebar-foreground/[0.74] hover:bg-white/[0.06] hover:text-sidebar-foreground",
             )}
           >
             {active && (
               <span
                 aria-hidden="true"
-                className="absolute inset-x-2 bottom-0.5 h-[3px] rounded-full bg-sidebar-primary"
+                className="absolute inset-x-2 bottom-0 h-[2px] rounded-full bg-sidebar-primary"
               />
             )}
-            <o.icon className="size-[18px] shrink-0" strokeWidth={1.75} aria-hidden="true" />
+            <o.icon className="size-[15px] shrink-0" strokeWidth={1.75} aria-hidden="true" />
             <span className="truncate">{o.short}</span>
           </Link>
         );
@@ -412,192 +601,80 @@ function ScopeSwitcher({
   );
 }
 
-/* ── Primitivas visuais reutilizadas por desktop e mobile ── */
-
-const rowBase =
-  "group relative flex min-h-11 items-center gap-3 rounded-md pr-2 text-ui transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring";
-
-function NavRow({
-  item,
-  active,
-  collapsed,
-  nested,
-  onNavigate,
-}: {
-  item: NavLink;
-  active: boolean;
-  collapsed?: boolean;
-  nested?: boolean;
-  onNavigate?: () => void;
-}) {
-  const Icon = item.icon;
-  const row = (
-    <Link
-      to={item.to}
-      onClick={onNavigate}
-      aria-current={active ? "page" : undefined}
-      title={collapsed ? undefined : item.description}
-      className={cn(
-        rowBase,
-        collapsed ? "justify-center px-0" : nested ? "pl-6" : "pl-3",
-        active
-          ? "bg-sidebar-accent font-semibold text-sidebar-accent-foreground"
-          : "font-medium text-sidebar-foreground/85 hover:bg-sidebar-accent/70 hover:text-sidebar-foreground",
-      )}
-    >
-      {active && !collapsed && (
-        <span
-          aria-hidden="true"
-          className="absolute left-0 top-1/2 h-6 w-[3px] -translate-y-1/2 rounded-r bg-sidebar-primary"
-        />
-      )}
-      <Icon className="size-[18px] shrink-0" strokeWidth={1.75} aria-hidden="true" />
-      {!collapsed && <span className="truncate">{item.label}</span>}
-    </Link>
-  );
-  if (!collapsed) return row;
+/** “Ver como…” — controle do cabeçalho, visível apenas para a equipe B2B. */
+function ViewAsSwitcher() {
+  const { isPlatformUser, simulation, roleLabel, setSimulation } = useAccess();
+  if (!isPlatformUser) return null;
   return (
-    <Tooltip>
-      <TooltipTrigger asChild>{row}</TooltipTrigger>
-      <TooltipContent side="right" className="text-sm">
-        {item.label}
-      </TooltipContent>
-    </Tooltip>
-  );
-}
-
-function NavGroupBlock({
-  group,
-  open,
-  onOpenChange,
-  pathname,
-  collapsed,
-  onNavigate,
-}: {
-  group: NavGroup;
-  open: boolean;
-  onOpenChange: (v: boolean) => void;
-  pathname: string;
-  collapsed?: boolean;
-  onNavigate?: () => void;
-}) {
-  const hasActive = group.items.some((i) => matchesPath(pathname, i));
-
-  // Recolhida: grupos viram lista plana de ícones, com tooltip por item.
-  if (collapsed) {
-    return (
-      <div className="space-y-0.5 border-t border-sidebar-border/60 pt-1">
-        {group.items.map((item) => (
-          <NavRow
-            key={item.to}
-            item={item}
-            active={matchesPath(pathname, item)}
-            collapsed
-            onNavigate={onNavigate}
-          />
-        ))}
-      </div>
-    );
-  }
-
-  const Icon = group.icon;
-  return (
-    <Collapsible open={open} onOpenChange={onOpenChange}>
-      <CollapsibleTrigger
-        className={cn(
-          rowBase,
-          "w-full pl-3 text-left font-semibold",
-          hasActive
-            ? "text-sidebar-foreground"
-            : "text-sidebar-foreground/85 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground",
-        )}
-      >
-        <Icon className="size-[18px] shrink-0" strokeWidth={1.75} aria-hidden="true" />
-        <span className="flex-1 truncate">{group.label}</span>
-        <ChevronDown
-          aria-hidden="true"
-          className={cn("size-4 shrink-0 transition-transform", open && "rotate-180")}
-        />
-      </CollapsibleTrigger>
-      <CollapsibleContent className="mt-0.5 space-y-0.5 pb-1">
-        {group.items.map((item) => (
-          <NavRow
-            key={item.to}
-            item={item}
-            active={matchesPath(pathname, item)}
-            nested
-            onNavigate={onNavigate}
-          />
-        ))}
-      </CollapsibleContent>
-    </Collapsible>
-  );
-}
-
-function NavTree({
-  sections,
-  pathname,
-  openGroups,
-  setOpenGroup,
-  collapsed,
-  onNavigate,
-}: {
-  sections: NavSection[];
-  pathname: string;
-  openGroups: Record<string, boolean>;
-  setOpenGroup: (id: string, v: boolean) => void;
-  collapsed?: boolean;
-  onNavigate?: () => void;
-}) {
-  return (
-    <>
-      {sections.map((section) => (
-        <div key={section.id} className="mb-3 last:mb-0">
-          {section.label && !collapsed && (
-            <div
-              className="px-3 pb-2 pt-3 text-sm font-semibold uppercase tracking-[0.08em] text-sidebar-foreground/72"
-              title={section.description}
-            >
-              {section.label}
-            </div>
+    <Popover>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          className={cn(
+            "flex h-9 items-center gap-1.5 rounded-[6px] border px-2.5 text-[13px] font-medium transition",
+            simulation
+              ? "border-amber-400/60 bg-amber-400/15 text-foreground"
+              : "border-border text-muted-foreground hover:bg-accent hover:text-foreground",
           )}
-          <div className="space-y-1">
-            {section.nodes.map((node) =>
-              node.kind === "link" ? (
-                <NavRow
-                  key={node.to}
-                  item={node}
-                  active={matchesPath(pathname, node)}
-                  collapsed={collapsed}
-                  onNavigate={onNavigate}
-                />
-              ) : (
-                <NavGroupBlock
-                  key={node.id}
-                  group={node}
-                  open={openGroups[node.id] ?? false}
-                  onOpenChange={(v) => setOpenGroup(node.id, v)}
-                  pathname={pathname}
-                  collapsed={collapsed}
-                  onNavigate={onNavigate}
-                />
-              ),
-            )}
-          </div>
+        >
+          <Eye className="size-[15px] shrink-0" aria-hidden="true" />
+          <span className="hidden max-w-[170px] truncate sm:inline">
+            {simulation ? `Vendo como: ${roleLabel}` : "Ver como…"}
+          </span>
+        </button>
+      </PopoverTrigger>
+      <PopoverContent side="bottom" align="end" className="w-72 p-2">
+        <div className="mb-2 flex items-center gap-1.5 px-2 pt-1 text-[13px] text-muted-foreground">
+          <ShieldCheck className="size-3.5" />
+          <span>Simulação visual — o servidor mantém sua permissão real.</span>
         </div>
-      ))}
-    </>
+        <ul className="space-y-0.5">
+          <li>
+            <button
+              type="button"
+              onClick={() => setSimulation(null)}
+              className={cn(
+                "w-full rounded-[6px] px-2.5 py-2 text-left text-[14px] transition",
+                !simulation ? "bg-primary/10 text-foreground" : "hover:bg-muted",
+              )}
+            >
+              <div className="font-medium">Minha visão real</div>
+              <div className="text-[13px] text-muted-foreground">
+                Papéis reais da sua conta.
+              </div>
+            </button>
+          </li>
+          {VIEW_AS_ROLES.map((p) => (
+            <li key={p.role}>
+              <button
+                type="button"
+                onClick={() => setSimulation(p.role as OrgRole)}
+                className={cn(
+                  "w-full rounded-[6px] px-2.5 py-2 text-left text-[14px] transition",
+                  simulation === p.role ? "bg-primary/10 text-foreground" : "hover:bg-muted",
+                )}
+              >
+                <div className="font-medium">{p.label}</div>
+                <div className="text-[13px] text-muted-foreground">
+                  Permissões padrão do papel «{p.label}» na organização.
+                </div>
+              </button>
+            </li>
+          ))}
+        </ul>
+      </PopoverContent>
+    </Popover>
   );
 }
 
 export function DashboardShell({ children }: { children: React.ReactNode }) {
   const { pathname } = useLocation();
-  const { user, signOut } = useAuth();
+  useAuth();
   useProfile();
   const {
     hasOrgPermission,
     hasPlatformRole,
-    isPlatformUser,
+    isSuperAdmin,
     simulation,
     roleLabel,
     clearSimulation,
@@ -612,7 +689,6 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   // Ambiente ativo: administração global B2B vive sob /plataforma;
   // todo o restante é o ambiente do escritório.
   const scope: ShellScope = pathname.startsWith("/plataforma") ? "b2b" : "office";
-  // Só quem tem papel interno da B2B vê o ambiente de administração global.
   const canAdminB2B = hasPlatformRole("platform_admin");
 
   const sections = useMemo(
@@ -624,7 +700,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
     [can, scope],
   );
 
-  // Grupo da rota ativa abre automaticamente; os demais iniciam recolhidos.
+  // Grupo da rota ativa: apenas ele fica aberto.
   const activeGroupId = useMemo(() => {
     for (const section of sections) {
       for (const node of section.nodes) {
@@ -636,18 +712,19 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
     return null;
   }, [sections, pathname]);
 
-  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
+  // Um único grupo aberto por vez; nunca persistido.
+  const [openGroupId, setOpenGroupId] = useState<string | null>(activeGroupId);
   useEffect(() => {
-    if (activeGroupId) setOpenGroups((prev) => ({ ...prev, [activeGroupId]: true }));
+    setOpenGroupId(activeGroupId);
   }, [activeGroupId]);
-
-  const setOpenGroup = (id: string, v: boolean) =>
-    setOpenGroups((prev) => ({ ...prev, [id]: v }));
+  // Trocar de ambiente limpa o estado anterior.
+  useEffect(() => {
+    setOpenGroupId(null);
+  }, [scope]);
 
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  // Fecha o menu mobile ao navegar
   useEffect(() => {
     setMobileOpen(false);
   }, [pathname]);
@@ -673,6 +750,17 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
     return match?.label ?? "Painel";
   }, [sections, footerNav, pathname]);
 
+  const navTree = (opts: { collapsed?: boolean; onNavigate?: () => void }) => (
+    <NavTree
+      sections={sections}
+      pathname={pathname}
+      openGroupId={openGroupId}
+      setOpenGroupId={setOpenGroupId}
+      collapsed={opts.collapsed}
+      onNavigate={opts.onNavigate}
+    />
+  );
+
   const footerRows = (opts: { collapsed?: boolean; onNavigate?: () => void }) =>
     footerNav.map((item) => (
       <NavRow
@@ -687,17 +775,16 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   return (
     <TooltipProvider delayDuration={200}>
       <div className="flex h-dvh w-full overflow-hidden bg-background">
-        {/* Simulation banner */}
         {simulation && (
-          <div className="fixed inset-x-0 top-0 z-50 flex items-center justify-center gap-3 bg-secondary py-1.5 text-center text-sm font-medium text-secondary-foreground shadow">
-            <Eye className="h-3.5 w-3.5" />
+          <div className="fixed inset-x-0 top-0 z-50 flex items-center justify-center gap-3 bg-secondary py-1.5 text-center text-[13px] font-medium text-secondary-foreground shadow">
+            <Eye className="size-3.5" />
             <span>
               Você está vendo o sistema como <strong>{roleLabel}</strong>. As
               autorizações do servidor continuam usando sua conta real.
             </span>
             <button
               type="button"
-              className="rounded-md border border-border bg-card px-2.5 py-1 text-sm font-medium hover:bg-secondary"
+              className="rounded-[6px] border border-border bg-card px-2.5 py-1 text-[13px] font-medium hover:bg-secondary"
               onClick={clearSimulation}
             >
               Sair da simulação
@@ -707,26 +794,27 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
 
         {/* Sidebar desktop */}
         <aside
+          style={{ width: collapsed ? SIDEBAR_W_COLLAPSED : SIDEBAR_W }}
           className={cn(
-            "relative hidden min-h-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-[width] duration-200 ease-out lg:flex",
-            collapsed ? "w-[4.5rem]" : "w-[16.5rem]",
+            "relative hidden min-h-0 shrink-0 flex-col border-r border-white/[0.12] bg-sidebar text-sidebar-foreground transition-[width] duration-200 ease-out lg:flex",
             simulation && "mt-6",
           )}
         >
+          {/* Cabeçalho da sidebar: 56px */}
           <div
             className={cn(
-              "flex h-16 shrink-0 items-center gap-2 px-3",
+              "flex h-14 shrink-0 items-center gap-2 px-2.5",
               collapsed && "justify-center px-0",
             )}
           >
             <Link
               to="/painel"
-              aria-label="Ir para o Dashboard"
-              className="group flex min-w-0 flex-1 items-center gap-2 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              aria-label="Ir para o Início"
+              className="flex min-w-0 items-center gap-2 rounded-[6px] outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring"
             >
-              <JurisMindMark size={26} context={JURISMIND_CONTEXT.sidebar} interactive />
+              <JurisMindMark size={22} context={JURISMIND_CONTEXT.sidebar} interactive />
               {!collapsed && (
-                <span className="truncate font-heading text-lg font-bold tracking-tight text-sidebar-foreground">
+                <span className="truncate font-heading text-[16px] font-semibold leading-5 tracking-tight text-sidebar-foreground">
                   JurisMind
                 </span>
               )}
@@ -734,20 +822,20 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
             {!collapsed && (
               <button
                 onClick={toggle}
-                className="ml-auto flex size-9 items-center justify-center rounded-md text-sidebar-foreground/85 transition hover:bg-sidebar-accent hover:text-sidebar-foreground"
-                aria-label="Recolher"
+                className="ml-auto flex size-8 shrink-0 items-center justify-center rounded-[6px] text-sidebar-foreground/[0.74] transition hover:bg-white/[0.06] hover:text-sidebar-foreground"
+                aria-label="Recolher barra lateral"
               >
-                <PanelLeftClose className="size-[18px]" />
+                <PanelLeftClose className="size-[17px]" />
               </button>
             )}
           </div>
           {collapsed && (
             <button
               onClick={toggle}
-              className="mx-auto mb-1 flex size-11 shrink-0 items-center justify-center rounded-md text-sidebar-foreground/85 transition hover:bg-sidebar-accent hover:text-sidebar-foreground"
-              aria-label="Expandir"
+              className="mx-auto mb-1 flex size-9 shrink-0 items-center justify-center rounded-[6px] text-sidebar-foreground/[0.74] transition hover:bg-white/[0.06] hover:text-sidebar-foreground"
+              aria-label="Expandir barra lateral"
             >
-              <PanelLeftOpen className="size-[18px]" />
+              <PanelLeftOpen className="size-[17px]" />
             </button>
           )}
 
@@ -759,46 +847,41 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
 
           <nav
             aria-label="Navegação principal"
-            className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-2 py-1"
+            className="sidebar-scroll min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-2 py-1"
           >
-            <NavTree
-              sections={sections}
-              pathname={pathname}
-              openGroups={openGroups}
-              setOpenGroup={setOpenGroup}
-              collapsed={collapsed}
-            />
+            {navTree({ collapsed })}
           </nav>
 
-          {/* Footer — perfil/sair ficam no UserMenu do cabeçalho */}
-          <div className="shrink-0 space-y-1 border-t border-sidebar-border p-2">
-            {footerRows({ collapsed })}
-            {isPlatformUser && !collapsed && <ViewAsSwitcher />}
-          </div>
+          {/* Rodapé — só existe quando há acesso autorizado */}
+          {footerNav.length > 0 && (
+            <div className="shrink-0 space-y-0.5 border-t border-white/[0.12] px-2 py-2">
+              {footerRows({ collapsed })}
+            </div>
+          )}
         </aside>
 
         {/* Main column */}
         <div className={cn("flex flex-1 flex-col min-w-0", simulation && "mt-6")}>
-          <header className="flex h-16 items-center justify-between gap-3 border-b bg-card/95 px-4 lg:hidden">
+          <header className="flex h-14 items-center justify-between gap-3 border-b bg-card/95 px-3 lg:hidden">
             <div className="flex min-w-0 flex-1 items-center gap-2">
               <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
                 <SheetTrigger asChild>
                   <button
                     type="button"
                     aria-label="Abrir menu"
-                    className="flex size-11 shrink-0 items-center justify-center rounded-md text-foreground/70 transition hover:bg-accent hover:text-foreground"
+                    className="flex size-11 shrink-0 items-center justify-center rounded-[6px] text-foreground/70 transition hover:bg-accent hover:text-foreground"
                   >
-                    <Menu className="h-5 w-5" />
+                    <Menu className="size-5" />
                   </button>
                 </SheetTrigger>
                 <SheetContent
                   side="left"
-                  className="flex w-[19rem] max-w-[88vw] flex-col overflow-x-hidden border-r border-sidebar-border bg-sidebar p-0 text-sidebar-foreground"
+                  className="flex w-[18rem] max-w-[88vw] flex-col overflow-x-hidden border-r border-white/[0.12] bg-sidebar p-0 text-sidebar-foreground"
                 >
                   <SheetTitle className="sr-only">Menu de navegação</SheetTitle>
-                  <div className="flex h-16 shrink-0 items-center gap-3 px-3">
-                    <JurisMindMark size={26} context={JURISMIND_CONTEXT.sidebar} interactive />
-                    <span className="truncate font-heading text-lg font-bold text-sidebar-foreground">
+                  <div className="flex h-14 shrink-0 items-center gap-2 px-3">
+                    <JurisMindMark size={22} context={JURISMIND_CONTEXT.sidebar} interactive />
+                    <span className="truncate font-heading text-[16px] font-semibold text-sidebar-foreground">
                       JurisMind
                     </span>
                   </div>
@@ -809,59 +892,24 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                   )}
                   <nav
                     aria-label="Navegação principal"
-                    className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-2 py-1"
+                    className="sidebar-scroll min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-2 py-1"
                   >
-                    <NavTree
-                      sections={sections}
-                      pathname={pathname}
-                      openGroups={openGroups}
-                      setOpenGroup={setOpenGroup}
-                      onNavigate={() => setMobileOpen(false)}
-                    />
-                    <div className="mt-3 space-y-1 border-t border-sidebar-border pt-3">
+                    {navTree({ onNavigate: () => setMobileOpen(false) })}
+                  </nav>
+                  {footerNav.length > 0 && (
+                    <div className="shrink-0 space-y-0.5 border-t border-white/[0.12] px-2 py-2">
                       {footerRows({ onNavigate: () => setMobileOpen(false) })}
                     </div>
-                  </nav>
-                  <div className="shrink-0 space-y-1 border-t border-sidebar-border p-2">
-                    {isPlatformUser && <ViewAsSwitcher />}
-                    {user && (
-                      <p className="truncate px-3 py-1 text-sm text-sidebar-foreground/78">
-                        {user.email}
-                      </p>
-                    )}
-                    <Button
-                      asChild
-                      variant="ghost"
-                      size="sm"
-                      className="h-11 w-full justify-start gap-3 pl-3 text-ui font-medium text-sidebar-foreground/85 hover:bg-sidebar-accent hover:text-sidebar-foreground"
-                    >
-                      <Link to="/configuracoes" onClick={() => setMobileOpen(false)}>
-                        <Settings2 className="size-[18px]" aria-hidden="true" />
-                        Meu perfil
-                      </Link>
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        setMobileOpen(false);
-                        signOut();
-                      }}
-                      className="h-11 w-full justify-start gap-3 pl-3 text-ui font-medium text-sidebar-foreground/85 hover:bg-sidebar-accent hover:text-sidebar-foreground"
-                    >
-                      <LogOut className="size-[18px]" aria-hidden="true" />
-                      Sair
-                    </Button>
-                  </div>
+                  )}
                 </SheetContent>
               </Sheet>
               <Link
                 to="/painel"
-                aria-label="Ir para o Dashboard"
-                className="group flex min-w-0 items-center gap-2 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                aria-label="Ir para o Início"
+                className="group flex min-w-0 items-center gap-2 rounded-[6px] outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
-                <JurisMindMark size={28} context={JURISMIND_CONTEXT.header} interactive />
-                <span className="font-heading text-base font-bold whitespace-nowrap truncate sm:text-lg">
+                <JurisMindMark size={26} context={JURISMIND_CONTEXT.header} interactive />
+                <span className="truncate whitespace-nowrap font-heading text-[15px] font-semibold sm:text-[16px]">
                   B2B | JurisMind AI
                 </span>
               </Link>
@@ -873,24 +921,25 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
             </div>
           </header>
 
-          <header className="hidden h-16 items-center justify-between gap-4 border-b border-border bg-card px-6 lg:flex xl:px-10">
+          <header className="hidden h-14 items-center justify-between gap-4 border-b border-border bg-card px-6 lg:flex xl:px-10">
             <div className="flex min-w-0 items-center gap-3">
               <nav aria-label="Trilha de navegação" className="flex min-w-0 items-center gap-2">
                 <Link
                   to={scope === "b2b" ? "/plataforma" : "/painel"}
-                  className="whitespace-nowrap text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+                  className="whitespace-nowrap text-[13px] font-medium text-muted-foreground transition-colors hover:text-foreground"
                 >
                   {scope === "b2b" ? "Administração B2B" : "Ambiente do escritório"}
                 </Link>
                 <span aria-hidden="true" className="text-muted-foreground">
                   /
                 </span>
-                <span className="truncate text-ui font-semibold text-foreground">
+                <span className="truncate text-[14px] font-semibold text-foreground">
                   {currentSection}
                 </span>
               </nav>
             </div>
             <div className="flex shrink-0 items-center gap-2">
+              {isSuperAdmin && <ViewAsSwitcher />}
               <ConversationsDrawer />
               <NotificationBell />
               <UserMenu />
