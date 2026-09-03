@@ -92,6 +92,12 @@
   --color-brand-on-navy: var(--brand-on-navy);
   --color-brand-surface: var(--brand-surface);
   --color-brand-on-surface: var(--brand-on-surface);
+
+  /* Superfícies operacionais (blocos discretos, não cartões pesados). */
+  --color-surface-1: var(--surface-1);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+
 }
 
 
