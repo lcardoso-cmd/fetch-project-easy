@@ -353,7 +353,7 @@ export function ShareProposalDialog({ open, onOpenChange, snapshot }: Props) {
                       <Button
                         size="icon"
                         variant="ghost"
-                        className="h-7 w-7"
+                        className="size-9"
                         onClick={() => copy(s.token)}
                         aria-label="Copiar link"
                         disabled={!!s.revoked_at}

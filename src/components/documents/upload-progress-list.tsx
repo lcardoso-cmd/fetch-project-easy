@@ -147,7 +147,7 @@ export function UploadProgressList({
                     type="button"
                     size="icon"
                     variant="ghost"
-                    className="h-7 w-7"
+                    className="size-9"
                     onClick={() => onRetry(it.id)}
                     title="Tentar novamente"
                   >
@@ -159,7 +159,7 @@ export function UploadProgressList({
                     type="button"
                     size="icon"
                     variant="ghost"
-                    className="h-7 w-7"
+                    className="size-9"
                     onClick={() => onRemove(it.id)}
                     title="Remover da lista"
                   >

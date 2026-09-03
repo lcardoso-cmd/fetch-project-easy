@@ -433,19 +433,19 @@ export function ProposalVersionsDialog({
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-2" align="start">
                     <div className="flex flex-wrap gap-1 pb-2">
-                      <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => applyPreset(7)}>
+                      <Button size="sm" variant="ghost" className="h-9 text-sm" onClick={() => applyPreset(7)}>
                         7 dias
                       </Button>
-                      <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => applyPreset(30)}>
+                      <Button size="sm" variant="ghost" className="h-9 text-sm" onClick={() => applyPreset(30)}>
                         30 dias
                       </Button>
-                      <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => applyPreset(90)}>
+                      <Button size="sm" variant="ghost" className="h-9 text-sm" onClick={() => applyPreset(90)}>
                         90 dias
                       </Button>
                       <Button
                         size="sm"
                         variant="ghost"
-                        className="h-7 text-xs"
+                        className="h-9 text-sm"
                         onClick={() => {
                           setDateFrom(undefined);
                           setDateTo(undefined);
@@ -527,7 +527,7 @@ export function ProposalVersionsDialog({
                   </Label>
                 </div>
                 {hasFilter && (
-                  <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={clearFilters}>
+                  <Button size="sm" variant="ghost" className="h-9 text-sm" onClick={clearFilters}>
                     <X className="mr-1 h-3 w-3" /> Limpar
                   </Button>
                 )}
@@ -542,7 +542,7 @@ export function ProposalVersionsDialog({
                   <Button
                     size="sm"
                     variant="ghost"
-                    className="h-6 px-2 text-xs"
+                    className="h-9 px-3 text-sm"
                     onClick={() => setCompareIds([])}
                   >
                     Limpar
@@ -634,7 +634,7 @@ export function ProposalVersionsDialog({
                         )}
                         {editing !== v.id && (
                           <div className="mt-1 flex flex-wrap gap-1 pl-6">
-                            <Button size="sm" variant="ghost" className="h-6 px-2 text-xs" onClick={() => togglePin(v)}>
+                            <Button size="sm" variant="ghost" className="h-9 px-3 text-sm" onClick={() => togglePin(v)}>
                               {v.pinned ? (
                                 <>
                                   <PinOff className="mr-1 h-3 w-3" /> Desafixar
@@ -645,13 +645,13 @@ export function ProposalVersionsDialog({
                                 </>
                               )}
                             </Button>
-                            <Button size="sm" variant="ghost" className="h-6 px-2 text-xs" onClick={() => startEdit(v)}>
+                            <Button size="sm" variant="ghost" className="h-9 px-3 text-sm" onClick={() => startEdit(v)}>
                               <Pencil className="mr-1 h-3 w-3" /> Editar
                             </Button>
                             <Button
                               size="sm"
                               variant="ghost"
-                              className="h-6 px-2 text-xs"
+                              className="h-9 px-3 text-sm"
                               onClick={() => handleDownloadPdf(v)}
                               disabled={downloadingId === v.id || !v.output}
                               title="Baixar esta versão em PDF"
@@ -811,7 +811,7 @@ export function ProposalVersionsDialog({
                                 <Button
                                   size="sm"
                                   variant="ghost"
-                                  className="h-7 px-2 text-xs"
+                                  className="h-9 px-3 text-sm"
                                   onClick={() => handleRestore(v)}
                                 >
                                   <RotateCcw className="mr-1 h-3 w-3" />

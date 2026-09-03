@@ -1587,7 +1587,7 @@ export function JurisMindChat({
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7"
+                    className="absolute right-1 top-1/2 -translate-y-1/2 size-9"
                     onClick={() => setDateRange(undefined)}
                   >
                     <X className="h-3.5 w-3.5" />

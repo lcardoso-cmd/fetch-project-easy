@@ -181,7 +181,7 @@ export function FloatingTeamChat({ caseId }: { caseId: string }) {
             <Button
               variant="ghost"
               size="icon"
-              className="h-7 w-7"
+              className="size-9"
               onClick={() => setListOpen(false)}
             >
               <X className="h-4 w-4" />
