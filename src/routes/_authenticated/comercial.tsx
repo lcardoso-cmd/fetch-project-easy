@@ -24,7 +24,7 @@ import {
 import { CrmSettingsDialog } from "@/components/crm/crm-settings-dialog";
 import { useQueryClient } from "@tanstack/react-query";
 
-const VIEWS = [
+export const VIEWS = [
   "visao-geral",
   "pipeline",
   "oportunidades",

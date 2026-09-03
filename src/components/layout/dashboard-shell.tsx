@@ -83,7 +83,13 @@ type NavLabel = {
 };
 type NavItem = NavLabel | { type: "separator" } | NavLink;
 
-function buildNav(_practice: PracticeType | null | undefined): NavItem[] {
+/** Ambientes de navegação: escritório (operação) e administração global B2B. */
+type ShellScope = "office" | "b2b";
+
+function buildNav(
+  _practice: PracticeType | null | undefined,
+  scope: ShellScope,
+): NavItem[] {
   const link = (
     key: NavKey,
     to: string,
@@ -108,6 +114,32 @@ function buildNav(_practice: PracticeType | null | undefined): NavItem[] {
     description: describeNav(NAV_SECTIONS[key]),
   });
 
+  if (scope === "b2b") {
+    return [
+      section("platform", "Administração B2B"),
+      link("platform", "/plataforma", "Visão geral", Globe2, "exact"),
+      link("platform-customers", "/plataforma/clientes", "Clientes SaaS", Building2, "startsWith"),
+      link("platform-users", "/plataforma/usuarios", "Usuários", Users2, "startsWith"),
+      { type: "separator" },
+      link("platform-plans", "/plataforma/planos", "Planos e limites", Layers, "startsWith"),
+      link("platform-subscriptions", "/plataforma/assinaturas", "Assinaturas", Repeat, "startsWith"),
+      link("platform-invoices", "/plataforma/faturas", "Faturas", ReceiptText, "startsWith"),
+      link("platform-payments", "/plataforma/pagamentos", "Pagamentos", CreditCard, "startsWith"),
+      { type: "separator" },
+      link("platform-usage", "/plataforma/consumo", "Consumo de IA", Gauge, "startsWith"),
+      link("platform-requests", "/plataforma/solicitacoes", "Solicitações B2B", Handshake, "startsWith"),
+      link("platform-credentials", "/plataforma/credenciais", "Credenciais SaaS", KeyRound, "startsWith"),
+      link(
+        "platform-commercial-settings",
+        "/plataforma/configuracoes",
+        "Configuração comercial",
+        SlidersHorizontal,
+        "startsWith",
+      ),
+      link("platform-audit", "/plataforma/auditoria", "Log de auditoria", ScrollText, "startsWith"),
+    ];
+  }
+
   return [
     // ─── PRINCIPAL ───
     section("main", "Principal"),
@@ -122,34 +154,12 @@ function buildNav(_practice: PracticeType | null | undefined): NavItem[] {
     section("modules", "Módulos"),
     link("monitoring", "/publicacoes", "Monitoramento", FileSearch),
     link("proposal", "/comercial", "Comercial", Handshake),
-
-    // ─── PLATAFORMA B2B ───
-    { type: "separator" },
-    section("platform", "Plataforma JurisMind"),
-    link("platform", "/plataforma", "Visão B2B", Globe2, "exact"),
-    link("platform-customers", "/plataforma/clientes", "Clientes SaaS", Building2, "startsWith"),
-    link("platform-users", "/plataforma/usuarios", "Usuários", Users2, "startsWith"),
-    link("platform-plans", "/plataforma/planos", "Planos e limites", Layers, "startsWith"),
-    link("platform-subscriptions", "/plataforma/assinaturas", "Assinaturas", Repeat, "startsWith"),
-    link("platform-invoices", "/plataforma/faturas", "Faturas", ReceiptText, "startsWith"),
-    link("platform-payments", "/plataforma/pagamentos", "Pagamentos", CreditCard, "startsWith"),
-    link("platform-usage", "/plataforma/consumo", "Consumo de IA", Gauge, "startsWith"),
-    link("platform-requests", "/plataforma/solicitacoes", "Solicitações B2B", Handshake, "startsWith"),
-    link("platform-credentials", "/plataforma/credenciais", "Credenciais SaaS", KeyRound, "startsWith"),
-    link(
-      "platform-commercial-settings",
-      "/plataforma/configuracoes",
-      "Configuração comercial",
-      SlidersHorizontal,
-      "startsWith",
-    ),
-    link("platform-audit", "/plataforma/auditoria", "Log de auditoria", ScrollText, "startsWith"),
-
   ];
 }
 
-/** Itens fixos do rodapé da barra lateral. */
-export function buildFooterNav(): NavItem[] {
+
+/** Itens fixos do rodapé da barra lateral, por ambiente. */
+export function buildFooterNav(scope: ShellScope = "office"): NavItem[] {
   const link = (
     key: NavKey,
     to: string,
@@ -168,6 +178,9 @@ export function buildFooterNav(): NavItem[] {
       description: describeNav(entry),
     };
   };
+  if (scope === "b2b") {
+    return [link("help", "/ajuda/permissoes", "Ajuda", HelpCircle, "startsWith")];
+  }
   return [
     link("hire-b2b", "/contratar-b2b", "Serviços especializados", ShieldCheck, "startsWith"),
     link("billing", "/organizacao/cobranca", "Assinatura e cobrança", CreditCard, "startsWith"),
@@ -176,6 +189,7 @@ export function buildFooterNav(): NavItem[] {
     link("help", "/ajuda/permissoes", "Ajuda", HelpCircle, "startsWith"),
   ];
 }
+
 
 // Filtra links por capacidade e remove labels/separators órfãos.
 // Não expõe nada ao usuário sobre itens escondidos.
@@ -267,20 +281,93 @@ function ViewAsSwitcher() {
   );
 }
 
+/** Controle de contexto: separa o ambiente do escritório da administração B2B. */
+function ScopeSwitcher({
+  scope,
+  collapsed,
+  onNavigate,
+}: {
+  scope: ShellScope;
+  collapsed?: boolean;
+  onNavigate?: () => void;
+}) {
+  const options: { id: ShellScope; label: string; short: string; to: string; icon: LucideIcon }[] = [
+    { id: "office", label: "Ambiente do escritório", short: "Escritório", to: "/painel", icon: Building2 },
+    { id: "b2b", label: "Administração B2B", short: "B2B", to: "/plataforma", icon: Globe2 },
+  ];
+  if (collapsed) {
+    const other = options.find((o) => o.id !== scope)!;
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Link
+            to={other.to}
+            onClick={onNavigate}
+            aria-label={`Ir para ${other.label}`}
+            className="mx-auto mb-2 flex size-10 items-center justify-center rounded-md border border-sidebar-border text-sidebar-foreground/85 transition hover:bg-sidebar-accent hover:text-sidebar-foreground"
+          >
+            <other.icon className="size-[18px]" strokeWidth={1.75} aria-hidden="true" />
+          </Link>
+        </TooltipTrigger>
+        <TooltipContent side="right" className="text-xs">
+          {other.label}
+        </TooltipContent>
+      </Tooltip>
+    );
+  }
+  return (
+    <div
+      role="group"
+      aria-label="Contexto de trabalho"
+      className="mx-2 mb-3 grid grid-cols-2 gap-1 rounded-lg border border-sidebar-border bg-sidebar-accent/60 p-1"
+    >
+      {options.map((o) => {
+        const active = o.id === scope;
+        return (
+          <Link
+            key={o.id}
+            to={o.to}
+            onClick={onNavigate}
+            aria-current={active ? "page" : undefined}
+            title={o.label}
+            className={cn(
+              "flex min-h-10 items-center justify-center gap-1.5 rounded-md px-2 text-xs font-semibold transition-colors",
+              active
+                ? "bg-sidebar-primary text-sidebar-primary-foreground"
+                : "text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground",
+            )}
+          >
+            <o.icon className="size-4 shrink-0" strokeWidth={1.75} aria-hidden="true" />
+            <span className="truncate">{o.short}</span>
+          </Link>
+        );
+      })}
+    </div>
+  );
+}
+
+
 export function DashboardShell({ children }: { children: React.ReactNode }) {
   const { pathname } = useLocation();
   const { user, signOut } = useAuth();
   const { data: profile } = useProfile();
   const { has, isSuperAdmin, activePreset, clearSimulation } = useCapabilities();
+  // Ambiente ativo: administração global B2B vive sob /plataforma;
+  // todo o restante é o ambiente do escritório.
+  const scope: ShellScope = pathname.startsWith("/plataforma") ? "b2b" : "office";
+  const platformRequires = NAV_ENTRIES.platform.requires;
+  const canAdminB2B = platformRequires ? has(platformRequires) : true;
+
   const raw = useMemo(
-    () => buildNav((profile?.practice_type as PracticeType | undefined) ?? null),
-    [profile?.practice_type],
+    () => buildNav((profile?.practice_type as PracticeType | undefined) ?? null, scope),
+    [profile?.practice_type, scope],
   );
   const NAV = useMemo(() => applyCapabilities(raw, has), [raw, has]);
   const FOOTER_NAV = useMemo(
-    () => applyCapabilities(buildFooterNav(), has),
-    [has],
+    () => applyCapabilities(buildFooterNav(scope), has),
+    [has, scope],
   );
+
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -382,7 +469,10 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
             </button>
           )}
 
+          {canAdminB2B && <ScopeSwitcher scope={scope} collapsed={collapsed} />}
+
           <nav className="flex-1 space-y-0.5 overflow-y-auto overflow-x-hidden px-2 py-2">
+
             {NAV.map((item, idx) => {
               if (item.type === "separator") {
                 return <div key={idx} className="my-2" />;
@@ -506,11 +596,15 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                 >
                   <div className="flex h-16 items-center gap-3 px-3">
                     <JurisMindMark size={26} context={JURISMIND_CONTEXT.sidebar} interactive />
-                    <span className="truncate font-heading text-[13px] font-semibold text-foreground">
+                    <span className="truncate font-heading text-lg font-bold text-sidebar-foreground">
                       JurisMind
                     </span>
                   </div>
-                  <nav className="h-[calc(100vh-3.5rem-4rem)] space-y-0.5 overflow-y-auto overflow-x-hidden px-2 py-2">
+                  {canAdminB2B && (
+                    <ScopeSwitcher scope={scope} onNavigate={() => setMobileOpen(false)} />
+                  )}
+                  <nav className="max-h-[calc(100dvh-14rem)] space-y-0.5 overflow-y-auto overflow-x-hidden px-2 py-2">
+
                     {NAV.map((item, idx) => {
                       if (item.type === "separator") {
                         return <div key={idx} className="my-2" />;
@@ -618,10 +712,10 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
             <div className="flex min-w-0 items-center gap-3">
               <nav aria-label="Trilha de navegação" className="flex min-w-0 items-center gap-2">
                 <Link
-                  to="/painel"
-                  className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+                  to={scope === "b2b" ? "/plataforma" : "/painel"}
+                  className="whitespace-nowrap text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
                 >
-                  JurisMind
+                  {scope === "b2b" ? "Administração B2B" : "Ambiente do escritório"}
                 </Link>
                 <span aria-hidden="true" className="text-muted-foreground">
                   /
@@ -630,6 +724,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                   {currentSection}
                 </span>
               </nav>
+
             </div>
             <div className="flex shrink-0 items-center gap-2">
               <ConversationsDrawer />
