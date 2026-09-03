@@ -37,7 +37,7 @@ export const Route = createFileRoute("/_authenticated/contratar-b2b/solicitar")(
   component: HireB2bRequestForm,
 });
 
-const MAX_SIZE = 20 * 1024 * 1024;
+const MAX_SIZE = 250 * 1024 * 1024;
 const MAX_FILES = 8;
 
 function HireB2bRequestForm() {
@@ -208,7 +208,7 @@ function HireB2bRequestForm() {
     for (const f of Array.from(list)) {
       if (next.length >= MAX_FILES) break;
       if (f.size > MAX_SIZE) {
-        toast.error(`${f.name} excede 20 MB`);
+        toast.error(`${f.name} excede 250 MB`);
         continue;
       }
       next.push(f);
@@ -416,7 +416,7 @@ function HireB2bRequestForm() {
         </CardHeader>
         <CardContent className="space-y-3">
           <p className="text-sm text-muted-foreground">
-            Até {MAX_FILES} arquivos, 20 MB cada. Petições, contratos, laudos ou
+            Até {MAX_FILES} arquivos, 250 MB cada. Petições, contratos, laudos ou
             planilhas que ajudem a equipe a dimensionar o trabalho.
           </p>
           <Input

@@ -62,7 +62,7 @@ const ACCEPT_STRING = [
   ".jpeg",
   ...ACCEPTED_TYPES,
 ].join(",");
-const MAX_SIZE = 20 * 1024 * 1024; // 20 MB
+const MAX_SIZE = 250 * 1024 * 1024; // 250 MB
 
 interface ExistingDoc {
   id: string;
@@ -184,7 +184,7 @@ export function UploadDialog({
       valid.push(f);
     }
     if (oversized.length)
-      toast.error(`Arquivos > 20 MB ignorados: ${oversized.join(", ")}`);
+      toast.error(`Arquivos > 250 MB ignorados: ${oversized.join(", ")}`);
     if (invalid.length)
       toast.error(`Tipo não suportado: ${invalid.join(", ")}`);
     setFiles((prev) => {
@@ -447,7 +447,7 @@ export function UploadDialog({
             <DialogHeader>
               <DialogTitle>Carregar documentos</DialogTitle>
               <DialogDescription>
-                Arraste ou selecione PDF, DOCX, XLSX, CSV, TXT, PNG, JPG (até 20 MB cada).
+                Arraste ou selecione PDF, DOCX, XLSX, CSV, TXT, PNG, JPG (até 250 MB cada).
               </DialogDescription>
             </DialogHeader>
 

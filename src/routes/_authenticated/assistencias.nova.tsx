@@ -334,8 +334,8 @@ function NewCasePage() {
 
   const handleFile = async (file: File) => {
     if (!user) return;
-    if (file.size > 20 * 1024 * 1024) {
-      toast.error("Arquivo excede 20 MB");
+    if (file.size > 250 * 1024 * 1024) {
+      toast.error("Arquivo excede 250 MB");
       return;
     }
     setExtracting(true);
@@ -742,7 +742,7 @@ function NewCasePage() {
                     <UploadCloud className="h-8 w-8 text-muted-foreground" />
                     <div>
                       <p className="font-medium">Arraste o documento aqui</p>
-                      <p className="text-xs text-muted-foreground">PDF, DOCX, TXT — até 20 MB</p>
+                      <p className="text-xs text-muted-foreground">PDF, DOCX, TXT — até 250 MB</p>
                     </div>
                     <Button
                       type="button"

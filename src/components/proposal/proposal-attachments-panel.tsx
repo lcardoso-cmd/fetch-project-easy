@@ -34,7 +34,7 @@ type Props = {
 
 const ACCEPT =
   ".pdf,.doc,.docx,.txt,.png,.jpg,.jpeg,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,image/*";
-const MAX_SIZE = 20 * 1024 * 1024;
+const MAX_SIZE = 250 * 1024 * 1024;
 const MAX_FILES = 10;
 
 function humanSize(bytes: number) {
@@ -104,7 +104,7 @@ export function ProposalAttachmentsPanel({ caseId, userId, onSuggestFields }: Pr
     try {
       for (const file of toUpload) {
         if (file.size > MAX_SIZE) {
-          toast.error(`${file.name} excede 20 MB e foi ignorado.`);
+          toast.error(`${file.name} excede 250 MB e foi ignorado.`);
           continue;
         }
         const safeName = file.name.replace(/[^\w.\-]+/g, "_");
@@ -184,7 +184,7 @@ export function ProposalAttachmentsPanel({ caseId, userId, onSuggestFields }: Pr
             </button>
           </p>
           <p className="mt-1 text-xs text-muted-foreground">
-            PDF, DOCX, TXT, imagens · até 20 MB cada · máx {MAX_FILES} arquivos
+            PDF, DOCX, TXT, imagens · até 250 MB cada · máx {MAX_FILES} arquivos
           </p>
           <input
             ref={inputRef}
