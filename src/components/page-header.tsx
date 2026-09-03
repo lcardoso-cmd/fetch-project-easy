@@ -9,8 +9,8 @@ interface PageHeaderProps {
 }
 
 /**
- * Padrão Minimal Editorial: título text-xl font-medium, subtítulo text-sm text-muted-foreground,
- * sem card ao redor. Ações à direita.
+ * Escala institucional: título de página 28px (text-page-title), subtítulo 16px
+ * com largura de leitura confortável. Sem card ao redor; ações à direita.
  */
 export function PageHeader({ title, subtitle, actions, className }: PageHeaderProps) {
   return (
@@ -21,11 +21,11 @@ export function PageHeader({ title, subtitle, actions, className }: PageHeaderPr
       )}
     >
       <div className="min-w-0">
-        <h1 className="font-heading text-xl font-medium tracking-tight break-words">
+        <h1 className="text-page-title break-words text-foreground">
           {title}
         </h1>
         {subtitle ? (
-          <p className="mt-1 text-sm text-muted-foreground">{subtitle}</p>
+          <p className="mt-2 text-base prose-measure text-muted-foreground">{subtitle}</p>
         ) : null}
       </div>
       {actions ? (
