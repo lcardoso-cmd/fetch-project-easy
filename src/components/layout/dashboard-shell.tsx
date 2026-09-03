@@ -58,6 +58,8 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 
 import { cn } from "@/lib/utils";
 import { NotificationBell } from "@/components/layout/notification-bell";
+import { ConversationsDrawer } from "@/components/chat/conversations-drawer";
+
 
 type NavLink = {
   type: "link";
