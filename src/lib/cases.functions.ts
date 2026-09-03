@@ -158,14 +158,46 @@ const FromDocSchema = z.object({
   matter_kind: MatterKindEnum.optional().default("processo"),
 });
 
+/** Nº máximo de páginas lidas do PDF para preencher o formulário do caso. */
+const PDF_TEXT_PAGE_LIMIT = 20;
+/** Nº máximo de páginas enviadas para OCR quando não há camada de texto. */
+const PDF_OCR_PAGE_LIMIT = 4;
+
+/**
+ * Lê o texto de um PDF página por página, com limite.
+ * PDFs grandes (centenas de páginas / dezenas de MB) estouram memória e tempo
+ * quando extraídos por inteiro no runtime serverless — para preencher o
+ * cadastro do caso, as primeiras páginas já contêm capa, partes e nº do processo.
+ */
+async function extractPdfText(
+  buffer: Uint8Array,
+  pageLimit = PDF_TEXT_PAGE_LIMIT,
+): Promise<{ text: string; pageCount: number; pagesRead: number }> {
+  const { getDocumentProxy } = await import("unpdf");
+  const pdf = await getDocumentProxy(buffer);
+  const pageCount = pdf.numPages as number;
+  const pagesRead = Math.min(pageCount, pageLimit);
+  const parts: string[] = [];
+  for (let i = 1; i <= pagesRead; i++) {
+    try {
+      const page = await pdf.getPage(i);
+      const content = (await page.getTextContent()) as {
+        items: Array<{ str?: string }>;
+      };
+      parts.push(content.items.map((it) => it.str ?? "").join(" "));
+    } catch {
+      parts.push("");
+    }
+  }
+  return { text: parts.join("\n\n"), pageCount, pagesRead };
+}
+
 export async function extractTextFromBlob(blob: Blob, filename: string, fileType: string) {
   const lower = filename.toLowerCase();
   if (fileType === "application/pdf" || lower.endsWith(".pdf")) {
-    const { extractText, getDocumentProxy } = await import("unpdf");
     const buffer = new Uint8Array(await blob.arrayBuffer());
-    const pdf = await getDocumentProxy(buffer);
-    const { text } = await extractText(pdf, { mergePages: true });
-    return Array.isArray(text) ? text.join("\n") : text;
+    const { text } = await extractPdfText(buffer);
+    return text;
   }
   if (
     lower.endsWith(".docx") ||
@@ -178,6 +210,7 @@ export async function extractTextFromBlob(blob: Blob, filename: string, fileType
   }
   return await blob.text();
 }
+
 
 export type ExtractedCaseData = {
   title: string;
