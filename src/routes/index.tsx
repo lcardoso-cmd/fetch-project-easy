@@ -295,16 +295,14 @@ function LandingPage() {
               </p>
 
               <div className="mt-8 flex flex-wrap gap-3">
-                <TrialButton className="bg-accent text-accent-foreground hover:bg-accent/90" />
-                <Button
-                  size="lg"
-                  variant="outline"
-                  asChild
-                  className="border-primary-foreground/30 bg-transparent text-primary-foreground hover:bg-primary-foreground/10"
-                >
-                  <a href="#como-funciona">Ver como funciona</a>
-                </Button>
+                {user ? (
+                  <OpenDashboardButton className="bg-accent text-accent-foreground hover:bg-accent/90" />
+                ) : (
+                  <TrialSignupButton className="bg-accent text-accent-foreground hover:bg-accent/90" />
+                )}
+                <LearnMoreButton className="border-primary-foreground/30 bg-transparent text-primary-foreground hover:bg-primary-foreground/10" />
               </div>
+
 
               <p className="mt-6 text-sm font-medium text-accent">
                 Mais contexto para a IA. Mais controle para o advogado.
