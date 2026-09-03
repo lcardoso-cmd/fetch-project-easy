@@ -21,6 +21,8 @@ import { Loader2, Copy, Download, FileText, Check, Trash2, History, Save, Cloud,
 import { toast } from "sonner";
 import { generateProposal } from "@/lib/generators.functions";
 import { getCases } from "@/lib/cases.functions";
+import { getProposal, updateProposal } from "@/lib/crm-proposals.functions";
+
 import { useProfile } from "@/hooks/use-profile";
 import { RichTextEditor } from "@/components/chat/rich-text-editor";
 import { z } from "zod";
@@ -77,9 +79,16 @@ const proposalSchema = z.object({
 
 type FieldErrors = Partial<Record<keyof z.infer<typeof proposalSchema>, string>>;
 
+const propostasSearchSchema = z.object({
+  /** Vincula o editor a uma proposta do módulo Comercial. */
+  proposal: z.string().uuid().optional(),
+});
+
 export const Route = createFileRoute("/_authenticated/propostas")({
+  validateSearch: (s) => propostasSearchSchema.parse(s),
   component: ProposalPage,
 });
+
 
 const NO_CASE = "__none__";
 
@@ -300,6 +309,65 @@ function ProposalPage() {
       if (saveTimer.current) clearTimeout(saveTimer.current);
     };
   }, [form, output, hydrated, activeCaseId, upsertDraftFn]);
+
+  // ---- Vínculo com a entidade `proposals` (módulo Comercial) ----
+  const { proposal: linkedProposalId } = Route.useSearch();
+  const getProposalFn = useServerFn(getProposal);
+  const updateProposalFn = useServerFn(updateProposal);
+  const linkedProposalQ = useQuery({
+    queryKey: ["crm-proposal", linkedProposalId ?? "none"],
+    queryFn: () => getProposalFn({ data: { id: linkedProposalId! } }),
+    enabled: !!linkedProposalId,
+  });
+  const linkedProposal = linkedProposalQ.data?.proposal as
+    | {
+        id: string;
+        number: string | null;
+        title: string;
+        status: string;
+        content_html: string | null;
+      }
+    | undefined;
+  const linkedHydratedRef = useRef<string | null>(null);
+  const linkedSyncTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const linkedLastRef = useRef<string>("");
+
+  // Carrega o conteúdo salvo da proposta uma única vez por id.
+  useEffect(() => {
+    if (!linkedProposal) return;
+    if (linkedHydratedRef.current === linkedProposal.id) return;
+    linkedHydratedRef.current = linkedProposal.id;
+    if (linkedProposal.content_html) {
+      setOutput(linkedProposal.content_html);
+      linkedLastRef.current = linkedProposal.content_html;
+    }
+    setForm((f) => ({
+      ...f,
+      client_name: f.client_name || "",
+    }));
+  }, [linkedProposal]);
+
+  // Autosave do conteúdo na proposta vinculada.
+  useEffect(() => {
+    if (!linkedProposalId || !linkedProposal) return;
+    if (["accepted", "declined", "canceled"].includes(linkedProposal.status)) return;
+    if (output === linkedLastRef.current) return;
+    if (linkedSyncTimer.current) clearTimeout(linkedSyncTimer.current);
+    linkedSyncTimer.current = setTimeout(async () => {
+      try {
+        await updateProposalFn({
+          data: { id: linkedProposalId, content_html: output },
+        });
+        linkedLastRef.current = output;
+      } catch (err) {
+        setSyncError(err instanceof Error ? err.message : "Falha ao salvar a proposta");
+      }
+    }, DRAFT_DEBOUNCE_MS);
+    return () => {
+      if (linkedSyncTimer.current) clearTimeout(linkedSyncTimer.current);
+    };
+  }, [output, linkedProposalId, linkedProposal, updateProposalFn]);
+
 
   // Confirmação ao sair quando há alterações não salvas (autosave pendente).
   const hasUnsavedChanges =
@@ -676,7 +744,22 @@ function ProposalPage() {
 
   return (
     <div className="mx-auto w-full max-w-3xl px-4 py-8 sm:py-12 space-y-8">
+      {linkedProposal && (
+        <div
+          role="status"
+          className="rounded border bg-muted/40 px-3 py-2 text-[13px]"
+        >
+          Editando a proposta{" "}
+          <strong>
+            {linkedProposal.number ? `${linkedProposal.number} — ` : ""}
+            {linkedProposal.title}
+          </strong>{" "}
+          do módulo Comercial. As alterações do conteúdo são salvas automaticamente na
+          proposta.
+        </div>
+      )}
       {/* Header */}
+
       <header className="flex items-start justify-between gap-4">
         <div className="min-w-0">
           <h1 className="font-heading text-xl font-medium tracking-tight">Proposta Comercial</h1>

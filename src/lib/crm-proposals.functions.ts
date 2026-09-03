@@ -142,7 +142,7 @@ export const getProposal = createServerFn({ method: "GET" })
         .order("created_at", { ascending: false }),
       ctx.supabase
         .from("proposal_attachments")
-        .select("id, filename, mime_type, size_bytes, created_at")
+        .select("id, filename, file_type, file_size, created_at")
         .eq("organization_id", ctx.organizationId)
         .eq("proposal_id", data.id)
         .order("created_at", { ascending: false }),
@@ -413,7 +413,7 @@ export const convertProposalToCase = createServerFn({ method: "POST" })
         created_by_user_id: ctx.userId,
         title: data.case_title ?? proposal.title,
         client_name: clientName,
-        opposing_party: data.opposing_party ?? null,
+        parties: data.opposing_party ? { opposing_party: data.opposing_party } : null,
         opportunity_id: proposal.opportunity_id ?? null,
         proposal_id: proposal.id,
         lead_id: proposal.lead_id ?? null,

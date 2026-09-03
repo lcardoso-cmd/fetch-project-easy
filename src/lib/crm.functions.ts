@@ -575,7 +575,7 @@ export const getOpportunity = createServerFn({ method: "GET" })
           .order("created_at", { ascending: false }),
         ctx.supabase
           .from("events")
-          .select("id, title, kind, starts_at, ends_at")
+          .select("id, title, event_type, starts_at, ends_at")
           .eq("organization_id", ctx.organizationId)
           .eq("opportunity_id", data.id)
           .order("starts_at", { ascending: true }),
@@ -856,10 +856,10 @@ export const runConflictCheck = createServerFn({ method: "POST" })
       const [cases, leads] = await Promise.all([
         ctx.supabase
           .from("cases")
-          .select("id, title, client_name, opposing_party")
+          .select("id, title, client_name, assisted_party_name, parties")
           .eq("organization_id", ctx.organizationId)
           .or(
-            `title.ilike.%${safe}%,client_name.ilike.%${safe}%,opposing_party.ilike.%${safe}%`,
+            `title.ilike.%${safe}%,client_name.ilike.%${safe}%,assisted_party_name.ilike.%${safe}%`,
           )
           .limit(20),
         ctx.supabase
@@ -1030,7 +1030,7 @@ export const createActivity = createServerFn({ method: "POST" })
           opportunity_id: data.opportunity_id ?? null,
           title: data.title,
           description: data.description ?? null,
-          kind: data.kind === "meeting" ? "meeting" : "other",
+          event_type: data.kind === "meeting" ? "meeting" : "other",
           starts_at: startsAt,
           ends_at: new Date(new Date(startsAt).getTime() + 3_600_000).toISOString(),
         })

@@ -113,7 +113,7 @@ function buildNav(_practice: PracticeType | null | undefined): NavItem[] {
     { type: "separator" },
     section("modules", "Módulos"),
     link("monitoring", "/publicacoes", "Monitoramento", FileSearch),
-    link("proposal", "/propostas", "Comercial", Handshake),
+    link("proposal", "/comercial", "Comercial", Handshake),
 
     // ─── PLATAFORMA B2B ───
     { type: "separator" },
