@@ -1,5 +1,3 @@
-import type { PracticeType } from "@/lib/profile.functions";
-
 export type MatterKind = "processo" | "pericia" | "assistencia_tecnica";
 
 /** Vocabulário adaptado por perfil profissional / tipo de matéria. */
@@ -44,13 +42,6 @@ const BY_MATTER: Record<MatterKind, PracticeLabels> = {
     shortBadge: "Assistência",
   },
 };
-
-/** Tipo de matéria padrão sugerido a partir do perfil principal. */
-export function defaultMatterKindFor(practice: PracticeType | null | undefined): MatterKind {
-  if (practice === "perito_judicial") return "pericia";
-  if (practice === "assistente_tecnico") return "assistencia_tecnica";
-  return "processo";
-}
 
 export function labelsForMatter(kind: MatterKind): PracticeLabels {
   return BY_MATTER[kind] ?? BY_MATTER.processo;
