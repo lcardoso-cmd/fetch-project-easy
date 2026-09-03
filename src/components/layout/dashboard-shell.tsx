@@ -712,10 +712,10 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
             <div className="flex min-w-0 items-center gap-3">
               <nav aria-label="Trilha de navegação" className="flex min-w-0 items-center gap-2">
                 <Link
-                  to="/painel"
-                  className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+                  to={scope === "b2b" ? "/plataforma" : "/painel"}
+                  className="whitespace-nowrap text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
                 >
-                  JurisMind
+                  {scope === "b2b" ? "Administração B2B" : "Ambiente do escritório"}
                 </Link>
                 <span aria-hidden="true" className="text-muted-foreground">
                   /
@@ -724,6 +724,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                   {currentSection}
                 </span>
               </nav>
+
             </div>
             <div className="flex shrink-0 items-center gap-2">
               <ConversationsDrawer />
