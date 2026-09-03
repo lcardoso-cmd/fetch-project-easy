@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as SemPermissaoRouteImport } from './routes/sem-permissao'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
+import { Route as PrivacidadeRouteImport } from './routes/privacidade'
 import { Route as McpRouteImport } from './routes/mcp'
 import { Route as EntrarRouteImport } from './routes/entrar'
 import { Route as AuthRouteImport } from './routes/auth'
@@ -114,6 +115,11 @@ const SemPermissaoRoute = SemPermissaoRouteImport.update({
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
   id: '/reset-password',
   path: '/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PrivacidadeRoute = PrivacidadeRouteImport.update({
+  id: '/privacidade',
+  path: '/privacidade',
   getParentRoute: () => rootRouteImport,
 } as any)
 const McpRoute = McpRouteImport.update({
@@ -607,6 +613,7 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/entrar': typeof EntrarRoute
   '/mcp': typeof McpRoute
+  '/privacidade': typeof PrivacidadeRoute
   '/reset-password': typeof ResetPasswordRoute
   '/sem-permissao': typeof SemPermissaoRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -699,6 +706,7 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/entrar': typeof EntrarRoute
   '/mcp': typeof McpRoute
+  '/privacidade': typeof PrivacidadeRoute
   '/reset-password': typeof ResetPasswordRoute
   '/sem-permissao': typeof SemPermissaoRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -791,6 +799,7 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/entrar': typeof EntrarRoute
   '/mcp': typeof McpRoute
+  '/privacidade': typeof PrivacidadeRoute
   '/reset-password': typeof ResetPasswordRoute
   '/sem-permissao': typeof SemPermissaoRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -885,6 +894,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/entrar'
     | '/mcp'
+    | '/privacidade'
     | '/reset-password'
     | '/sem-permissao'
     | '/sitemap.xml'
@@ -977,6 +987,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/entrar'
     | '/mcp'
+    | '/privacidade'
     | '/reset-password'
     | '/sem-permissao'
     | '/sitemap.xml'
@@ -1068,6 +1079,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/entrar'
     | '/mcp'
+    | '/privacidade'
     | '/reset-password'
     | '/sem-permissao'
     | '/sitemap.xml'
@@ -1162,6 +1174,7 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   EntrarRoute: typeof EntrarRoute
   McpRoute: typeof McpRoute
+  PrivacidadeRoute: typeof PrivacidadeRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   SemPermissaoRoute: typeof SemPermissaoRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
@@ -1207,6 +1220,13 @@ declare module '@tanstack/react-router' {
       path: '/reset-password'
       fullPath: '/reset-password'
       preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/privacidade': {
+      id: '/privacidade'
+      path: '/privacidade'
+      fullPath: '/privacidade'
+      preLoaderRoute: typeof PrivacidadeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/mcp': {
@@ -2055,6 +2075,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   EntrarRoute: EntrarRoute,
   McpRoute: McpRoute,
+  PrivacidadeRoute: PrivacidadeRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   SemPermissaoRoute: SemPermissaoRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
