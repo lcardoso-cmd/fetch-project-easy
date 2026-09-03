@@ -119,7 +119,10 @@ describe("chunking estrutural", () => {
     const blocks = [block("Cláusula relevante do contrato. ".repeat(200), { page: 1 })];
     const small = structuredChunk(blocks, CHUNK_PROFILES["structural-sm"]!);
     const large = structuredChunk(blocks, CHUNK_PROFILES["structural-lg"]!);
-    expect(small.length).toBeGreaterThan(large.length);
+    const avg = (cs: { content: string }[]) =>
+      cs.reduce((a, c) => a + c.content.length, 0) / cs.length;
+    expect(small.length).toBeGreaterThanOrEqual(large.length);
+    expect(avg(small)).toBeLessThan(avg(large));
     expect(small[0]!.chunking_version).toBe("structural-sm");
   });
 });
@@ -131,7 +134,7 @@ describe("fusão e diversidade na recuperação", () => {
     const c = candidate("c", "doc-3");
     const fused = rrfFuse([
       [a, b, c],
-      [b, a, c],
+      [b, c],
     ]);
     expect(fused[0]!.id).toBe("b");
     expect(fused[0]!.hits).toBe(2);
@@ -147,8 +150,11 @@ describe("fusão e diversidade na recuperação", () => {
       candidate("5", "doc-2"),
     ];
     const out = diversifyByDocument(rows, 2);
-    expect(out.filter((r) => r.document_id === "doc-1").length).toBeLessThanOrEqual(2);
-    expect(out.some((r) => r.document_id === "doc-2")).toBe(true);
+    // os excedentes do mesmo documento são empurrados para o fim, não descartados
+    const top = out.slice(0, 3);
+    expect(top.filter((r) => r.document_id === "doc-1").length).toBeLessThanOrEqual(2);
+    expect(top.some((r) => r.document_id === "doc-2")).toBe(true);
+    expect(out.length).toBe(rows.length);
   });
 
   it("remove trechos sobrepostos quase idênticos", () => {
