@@ -123,9 +123,22 @@ function buildNav(_practice: PracticeType | null | undefined): NavItem[] {
     link("platform", "/plataforma", "Visão B2B", Globe2, "exact"),
     link("platform-customers", "/plataforma/clientes", "Clientes SaaS", Building2, "startsWith"),
     link("platform-users", "/plataforma/usuarios", "Usuários", Users2, "startsWith"),
+    link("platform-plans", "/plataforma/planos", "Planos e limites", Layers, "startsWith"),
+    link("platform-subscriptions", "/plataforma/assinaturas", "Assinaturas", Repeat, "startsWith"),
+    link("platform-invoices", "/plataforma/faturas", "Faturas", ReceiptText, "startsWith"),
+    link("platform-payments", "/plataforma/pagamentos", "Pagamentos", CreditCard, "startsWith"),
+    link("platform-usage", "/plataforma/consumo", "Consumo de IA", Gauge, "startsWith"),
     link("platform-requests", "/plataforma/solicitacoes", "Solicitações B2B", Handshake, "startsWith"),
     link("platform-credentials", "/plataforma/credenciais", "Credenciais SaaS", KeyRound, "startsWith"),
+    link(
+      "platform-commercial-settings",
+      "/plataforma/configuracoes",
+      "Configuração comercial",
+      SlidersHorizontal,
+      "startsWith",
+    ),
     link("platform-audit", "/plataforma/auditoria", "Log de auditoria", ScrollText, "startsWith"),
+
   ];
 }
 
