@@ -215,7 +215,7 @@ function LandingPage() {
       <header className="sticky top-0 z-40 border-b bg-background/85 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3">
           <Link to="/" className="flex items-center gap-2">
-            <JurisMindMark size={28} context={JURISMIND_CONTEXT.inlineLight} />
+            <JurisMindMark size={28} context={JURISMIND_CONTEXT.inline} />
             <span className="font-heading text-lg font-bold tracking-tight text-foreground">
               JurisMind AI
             </span>
