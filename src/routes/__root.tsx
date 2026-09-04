@@ -9,8 +9,6 @@ import {
 import { type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
-import brainSquareNavy from "@/assets/brain-square-navy.png.asset.json";
-
 import ogBrain from "@/assets/og-brain.jpg.asset.json";
 const OG_IMAGE_URL = `https://jurismind.b2bconsulting.com.br${ogBrain.url}`;
 import { AuthProvider } from "@/hooks/use-auth";
