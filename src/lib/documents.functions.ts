@@ -10,11 +10,18 @@ const UploadSchema = z.object({
   filename: z.string().min(1).max(300),
   file_type: z.string().max(120),
   file_size: z.number().int().nonnegative(),
-  storage_path: z.string().min(1),
+  storage_path: z.string().min(1).nullable().optional(),
   extracted_text: z.string().optional(),
   content_hash: z.string().max(128).optional(),
   replaces_document_id: z.string().uuid().optional(),
   reason: z.string().max(500).optional(),
+  parent_document_id: z.string().uuid().optional(),
+  split_group_id: z.string().uuid().optional(),
+  part_index: z.number().int().min(1).optional(),
+  part_count: z.number().int().min(1).optional(),
+  page_offset: z.number().int().min(0).optional(),
+  page_count: z.number().int().min(1).optional(),
+  is_split_root: z.boolean().optional(),
 });
 
 type AuditAction =
@@ -64,7 +71,9 @@ export const listDocuments = createServerFn({ method: "GET" })
   .handler(async ({ data, context }) => {
     const { data: docs, error } = await context.supabase
       .from("documents")
-      .select("id, filename, file_type, file_size, processing_status, created_at")
+      .select(
+        "id, filename, file_type, file_size, processing_status, created_at, parent_document_id, split_group_id, part_index, part_count, page_offset, page_count, is_split_root",
+      )
       .eq("case_id", data.case_id)
       .eq("organization_id", context.organizationId)
       .order("created_at", { ascending: false });
@@ -131,7 +140,7 @@ export const getDocumentUrl = createServerFn({ method: "POST" })
       .eq("id", data.id)
       .eq("organization_id", context.organizationId)
       .single();
-    if (!doc) throw new Error("Documento não encontrado");
+    if (!doc?.storage_path) throw new Error("Documento não possui arquivo");
     const { data: signed, error } = await context.supabase.storage
       .from("documents")
       .createSignedUrl(doc.storage_path, 300);
@@ -237,10 +246,12 @@ export const registerDocument = createServerFn({ method: "POST" })
         .maybeSingle();
       if (byHash) {
         // limpa o arquivo recém enviado, já temos um igual
-        await context.supabase.storage
-          .from("documents")
-          .remove([data.storage_path])
-          .catch(() => {});
+        if (data.storage_path) {
+          await context.supabase.storage
+            .from("documents")
+            .remove([data.storage_path])
+            .catch(() => {});
+        }
         await logAudit(context.supabase, context.organizationId, context.userId, {
           case_id: data.case_id,
           action: "duplicate_ignored",
@@ -250,11 +261,12 @@ export const registerDocument = createServerFn({ method: "POST" })
           reason: "Hash idêntico ao arquivo já existente",
           metadata: { existing_filename: byHash.filename },
         });
+        const existingFilename: string = String(byHash.filename ?? data.filename);
         return {
           duplicate: true as const,
           reason: "content_hash" as const,
           existing_id: byHash.id as string,
-          existing_filename: byHash.filename as string,
+          existing_filename: existingFilename,
         };
       }
     }
@@ -267,10 +279,12 @@ export const registerDocument = createServerFn({ method: "POST" })
       .eq("filename", data.filename)
       .maybeSingle();
     if (byName) {
-      await context.supabase.storage
-        .from("documents")
-        .remove([data.storage_path])
-        .catch(() => {});
+      if (data.storage_path) {
+        await context.supabase.storage
+          .from("documents")
+          .remove([data.storage_path])
+          .catch(() => {});
+      }
       await logAudit(context.supabase, context.organizationId, context.userId, {
         case_id: data.case_id,
         action: "duplicate_ignored",
@@ -301,6 +315,13 @@ export const registerDocument = createServerFn({ method: "POST" })
         extracted_text: data.extracted_text,
         content_hash: data.content_hash,
         processing_status: "pending",
+        parent_document_id: data.parent_document_id,
+        split_group_id: data.split_group_id,
+        part_index: data.part_index,
+        part_count: data.part_count,
+        page_offset: data.page_offset,
+        page_count: data.page_count,
+        is_split_root: data.is_split_root,
       })
       .select()
       .single();

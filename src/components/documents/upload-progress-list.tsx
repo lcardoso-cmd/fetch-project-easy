@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils";
 
 export type UploadPhase =
   | "queued"
+  | "splitting"
   | "hashing"
   | "uploading"
   | "registering"
@@ -33,6 +34,7 @@ export interface UploadItem {
 
 const PHASE_LABEL: Record<UploadPhase, string> = {
   queued: "Aguardando…",
+  splitting: "Dividindo em partes…",
   hashing: "Calculando hash…",
   uploading: "Enviando…",
   registering: "Registrando…",
