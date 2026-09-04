@@ -147,7 +147,11 @@ function StatusCell({
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
-      <span className="text-[11px] leading-tight text-muted-foreground">{info.hint}</span>
+      {status !== "ready" && (
+        <span className="max-w-[220px] text-[11px] leading-tight text-muted-foreground">
+          {info.hint}
+        </span>
+      )}
 
       {canRetry && (
         <Button
