@@ -64,9 +64,22 @@ export const listIndexJobs = createServerFn({ method: "POST" })
         };
       });
 
+    // Se há trabalho parado na fila e nada rodando, acorda o processador.
+    const runningNow = all.filter((r) => r.status === "running").length;
+    const stalledRunning = all.some(
+      (r) =>
+        r.status === "running" &&
+        r.heartbeat_at &&
+        now - new Date(r.heartbeat_at as string).getTime() > STALE_MS,
+    );
+    if (queuedOrder.length > 0 && (runningNow === 0 || stalledRunning)) {
+      const { kickDocumentWorker } = await import("@/lib/jobs/worker.server");
+      void kickDocumentWorker().catch(() => {});
+    }
+
     return {
       jobs,
-      running_total: all.filter((r) => r.status === "running").length,
+      running_total: runningNow,
       queued_total: queuedOrder.length,
     };
   });
