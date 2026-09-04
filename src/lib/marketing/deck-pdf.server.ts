@@ -347,7 +347,7 @@ function coverSlide(doc: PDFDocument, f: Fonts, total: number) {
     color: WHITE,
   });
 
-  let y = SLIDE.height - 170;
+  let y = SLIDE.height - 210;
   y = drawText(page, PITCH.hero.eyebrow.toUpperCase(), {
     x: MARGIN,
     y,
@@ -647,7 +647,7 @@ function ctaSlide(doc: PDFDocument, f: Fonts, index: number, total: number) {
   drawMark(page, SLIDE.width / 2, SLIDE.height - 96, 36, CYAN);
 
   const c = PITCH.cta;
-  let y = SLIDE.height - 190;
+  let y = SLIDE.height - 205;
   const titleLines = wrapText(c.title, f.bold, 32, 700);
   for (const line of titleLines) {
     const w = f.bold.widthOfTextAtSize(line, 32);
