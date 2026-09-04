@@ -91,6 +91,29 @@ export const Route = createFileRoute("/api/chat/stream")({
           return new Response("Unauthorized", { status: 401 });
         }
 
+        // Autorização real no servidor: apenas quem tem `ai.use` na organização
+        // ativa pode consumir o JurisMind AI (ocultar o botão não é suficiente).
+        {
+          const { data: allowed, error: permError } = await (
+            auth.supabase as unknown as {
+              rpc: (
+                fn: string,
+                args: Record<string, unknown>,
+              ) => Promise<{ data: boolean | null; error: { message: string } | null }>;
+            }
+          ).rpc("has_org_permission", {
+            _organization_id: auth.organizationId,
+            _user_id: auth.userId,
+            _permission: "ai.use",
+          });
+          if (permError) return new Response(permError.message, { status: 500 });
+          if (allowed !== true) {
+            return new Response("Forbidden: permissão \"ai.use\" necessária", { status: 403 });
+          }
+        }
+
+
+
         let body: z.infer<typeof AskSchema>;
         try {
           body = AskSchema.parse(await request.json());
