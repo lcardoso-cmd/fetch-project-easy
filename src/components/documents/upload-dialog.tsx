@@ -21,6 +21,18 @@ import { UploadProgressList } from "./upload-progress-list";
 import { isUploadActive, useUploadManager } from "./upload-manager";
 import { ImportFromLibraryDialog } from "./import-from-library-dialog";
 import { FilePreviewCard } from "./file-preview-card";
+import {
+  DEFAULT_MAX_PART_PAGES,
+  PART_SIZE_OPTIONS,
+} from "@/lib/documents/pdf-splitter";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
 
 const ACCEPTED_TYPES = [
   "application/pdf",
@@ -75,8 +87,12 @@ export function UploadDialog({
   const [importOpen, setImportOpen] = useState(false);
   const [files, setFiles] = useState<File[]>([]);
   const [dragOver, setDragOver] = useState(false);
+  const [partSize, setPartSize] = useState<number>(DEFAULT_MAX_PART_PAGES);
 
   const items = itemsForCase(caseId);
+  const hasPdf = files.some(
+    (f) => f.type === "application/pdf" || /\.pdf$/i.test(f.name),
+  );
 
   const addFiles = (incoming: File[]) => {
     const valid: File[] = [];
@@ -121,12 +137,14 @@ export function UploadDialog({
       files,
       hashes: precomputedHashesRef.current,
       existingDocuments,
+      maxPartPages: partSize,
     });
     setFiles([]);
     toast.success(
       "Envio iniciado — você pode fechar esta janela e continuar usando o sistema.",
     );
   };
+
 
   const retryItem = (id: string) => {
     toast.info("Selecione o arquivo novamente para reenviar");
@@ -235,10 +253,41 @@ export function UploadDialog({
                     />
                   ))}
                 </div>
+                {hasPdf && (
+                  <div className="rounded-lg border bg-muted/40 p-3">
+                    <label
+                      htmlFor="part-size"
+                      className="text-sm font-medium"
+                    >
+                      Dividir PDFs longos automaticamente
+                    </label>
+                    <p className="mb-2 text-xs text-muted-foreground">
+                      PDFs com muitas páginas são divididos em partes antes do
+                      envio, para que a leitura não trave. As partes continuam
+                      agrupadas como um único documento.
+                    </p>
+                    <Select
+                      value={String(partSize)}
+                      onValueChange={(v) => setPartSize(Number(v))}
+                    >
+                      <SelectTrigger id="part-size" className="w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {PART_SIZE_OPTIONS.map((o) => (
+                          <SelectItem key={o.value} value={String(o.value)}>
+                            {o.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
                 <p className="text-2xs text-muted-foreground">
                   Confira o conteúdo e os metadados extraídos. Nada é gravado
                   no caso até você confirmar o envio.
                 </p>
+
               </div>
             )}
 

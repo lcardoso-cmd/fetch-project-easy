@@ -32,18 +32,21 @@ export interface SplitPdfResult {
   }[];
 }
 
-const DEFAULT_MAX_PART_PAGES = 200;
-const DEFAULT_MIN_SPLIT_PAGES = 60;
+export const DEFAULT_MAX_PART_PAGES = 200;
+export const DEFAULT_MIN_SPLIT_PAGES = 60;
 
-function createWorker(): { worker: Worker; url: string } {
-  // Inline worker: evita problemas de bundler com workers dedicados.
-  const code = [
-    `import "${new URL("./pdf-splitter.worker.ts", import.meta.url).href}";`,
-  ];
-  const blob = new Blob(code, { type: "application/javascript" });
-  const url = URL.createObjectURL(blob);
-  const worker = new Worker(url, { type: "module" });
-  return { worker, url };
+/** Opções de tamanho de parte oferecidas no envio. */
+export const PART_SIZE_OPTIONS = [
+  { value: 100, label: "100 páginas por parte (mais rápido por parte)" },
+  { value: 200, label: "200 páginas por parte (recomendado)" },
+  { value: 500, label: "500 páginas por parte (menos arquivos)" },
+  { value: 0, label: "Não dividir" },
+] as const;
+
+function createWorker(): Worker {
+  return new Worker(new URL("./pdf-splitter.worker.ts", import.meta.url), {
+    type: "module",
+  });
 }
 
 export function splitPdf({
@@ -52,15 +55,15 @@ export function splitPdf({
   minSplitPages = DEFAULT_MIN_SPLIT_PAGES,
 }: SplitPdfOptions): Promise<SplitPdfResult> {
   return new Promise((resolve, reject) => {
-    const { worker, url } = createWorker();
+    const worker = createWorker();
     let cleaned = false;
 
     const cleanup = () => {
       if (cleaned) return;
       cleaned = true;
       worker.terminate();
-      URL.revokeObjectURL(url);
     };
+
 
     worker.onmessage = (event: MessageEvent<SplitterWorkerOutput | SplitterWorkerError>) => {
       const data = event.data;
