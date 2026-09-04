@@ -267,10 +267,17 @@ export async function indexDocumentCore(
         return data.signedUrl;
       });
 
-      const { openRemotePdf } = await import("./pdf-range.server");
+      const { openRemotePdf, remoteFileSize } = await import("./pdf-range.server");
+      // Tamanho real do arquivo: o cadastro pode estar zerado/desatualizado e é
+      // ele que decide se o OCR (que exige o arquivo em memória) é possível.
+      let effectiveSize = fileSize;
+      if (effectiveSize <= 0) {
+        effectiveSize = await remoteFileSize(signedUrl).catch(() => 0);
+      }
       const pdf = await step("parse", () =>
-        openRemotePdf(signedUrl, fileSize || undefined),
+        openRemotePdf(signedUrl, effectiveSize || undefined),
       );
+
       pageCount = pdf.numPages;
       const weakPages: number[] = [];
 
@@ -329,48 +336,77 @@ export async function indexDocumentCore(
           ? Array.from({ length: pageCount }, (_, i) => i + 1)
           : weakPages;
         if (targetOcr.length > 0) {
-          if (fileSize > 0 && fileSize > OCR_MAX_FILE_BYTES) {
+          // Sem tamanho conhecido, presume-se grande: melhor entregar o
+          // documento parcial do que estourar a memória do servidor.
+          if (effectiveSize <= 0 || effectiveSize > OCR_MAX_FILE_BYTES) {
             ocrSkippedPages = targetOcr;
           } else {
-            await setStatus("ocr_processing");
-            await report("ocr_processing", { pages: targetOcr.length, percent: 85 });
-            const pages = targetOcr.slice(0, OCR_PAGE_LIMIT);
-            if (targetOcr.length > pages.length) {
-              ocrSkippedPages = targetOcr.slice(OCR_PAGE_LIMIT);
-            }
-            const bytes = await step("download", async () => {
-              const { data, error } = await supabase.storage
-                .from("documents")
-                .download(doc.storage_path as string);
-              if (error || !data) throw new Error("Falha ao baixar arquivo do storage");
-              return new Uint8Array(await data.arrayBuffer());
-            });
-            const out = await step("ocr", () =>
-              ocrPdfPages({ bytes, filename: doc.filename as string, pages }),
-            );
-            ocrFailedPages = out.failedPages;
-            ocrPagesRun = pages.length;
-            if (out.blocks.length > 0) visionChunks += await embedAndInsert(out.blocks);
-            for (const p of out.pages) {
-              if (p.text.trim() && plainAccum.length < 200_000) plainAccum += `${p.text}\n\n`;
+            try {
+              await setStatus("ocr_processing");
+              await report("ocr_processing", { pages: targetOcr.length, percent: 85 });
+              const pages = targetOcr.slice(0, OCR_PAGE_LIMIT);
+              if (targetOcr.length > pages.length) {
+                ocrSkippedPages = targetOcr.slice(OCR_PAGE_LIMIT);
+              }
+              const bytes = await step("download", async () => {
+                const res = await fetch(signedUrl);
+                if (!res.ok) throw new Error("Falha ao baixar arquivo do storage");
+                const buf = new Uint8Array(await res.arrayBuffer());
+                if (buf.byteLength > OCR_MAX_FILE_BYTES) {
+                  throw new FileTooLargeForMemoryError(
+                    "Arquivo grande demais para OCR completo nesta execução.",
+                  );
+                }
+                return buf;
+              });
+
+              const out = await step("ocr", () =>
+                ocrPdfPages({ bytes, filename: doc.filename as string, pages }),
+              );
+              ocrFailedPages = out.failedPages;
+              ocrPagesRun = pages.length;
+              if (out.blocks.length > 0) visionChunks += await embedAndInsert(out.blocks);
+              for (const p of out.pages) {
+                if (p.text.trim() && plainAccum.length < 200_000) plainAccum += `${p.text}\n\n`;
+              }
+            } catch {
+              // O texto já indexado permanece: as páginas de imagem ficam
+              // marcadas como pendentes de OCR em vez de invalidar o documento.
+              ocrSkippedPages = targetOcr;
             }
           }
+
         }
       }
     } else {
       // ---------- Formatos leves: leitura direta, com teto de tamanho ----------
-      if (fileSize > DIRECT_DOWNLOAD_MAX_BYTES) {
+      const { remoteFileSize } = await import("./pdf-range.server");
+      const lightUrl = await step("download", async () => {
+        const { data, error } = await supabase.storage
+          .from("documents")
+          .createSignedUrl(doc.storage_path as string, 3600);
+        if (error || !data?.signedUrl) throw new Error("Falha ao acessar o arquivo no storage");
+        return data.signedUrl;
+      });
+      // Tamanho real, mesmo quando o cadastro está zerado.
+      const lightSize = fileSize > 0 ? fileSize : await remoteFileSize(lightUrl).catch(() => 0);
+      if (lightSize > DIRECT_DOWNLOAD_MAX_BYTES) {
         throw new FileTooLargeForMemoryError(
-          `Arquivo grande demais para leitura direta (${Math.round(fileSize / 1024 / 1024)} MB). Converta para PDF ou divida o arquivo.`,
+          `Arquivo grande demais para leitura direta (${Math.round(lightSize / 1024 / 1024)} MB). Converta para PDF ou divida o arquivo.`,
         );
       }
       const blob = await step("download", async () => {
-        const { data, error } = await supabase.storage
-          .from("documents")
-          .download(doc.storage_path as string);
-        if (error || !data) throw new Error("Falha ao baixar arquivo do storage");
-        return data;
+        const res = await fetch(lightUrl);
+        if (!res.ok) throw new Error("Falha ao baixar arquivo do storage");
+        const buf = await res.arrayBuffer();
+        if (buf.byteLength > DIRECT_DOWNLOAD_MAX_BYTES) {
+          throw new FileTooLargeForMemoryError(
+            "Arquivo grande demais para leitura direta. Converta para PDF ou divida o arquivo.",
+          );
+        }
+        return new Blob([buf], { type: (doc.file_type as string) || "application/octet-stream" });
       });
+
 
       await report("parse");
       const parsed = await step("parse", () =>
