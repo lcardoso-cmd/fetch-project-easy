@@ -30,15 +30,13 @@ import {
 } from "@/lib/documents.functions";
 import { indexDocument } from "@/lib/rag.functions";
 import {
-  splitPdf,
+  splitPdfStream,
   shouldSplitPdf,
   DEFAULT_MAX_PART_PAGES,
 } from "@/lib/documents/pdf-splitter";
+import { partFilename } from "@/lib/documents/pdf-splitter.core";
 
-import {
-  UploadProgressList,
-  type UploadItem,
-} from "./upload-progress-list";
+import { UploadProgressList, type UploadItem } from "./upload-progress-list";
 
 export interface CaseUploadItem extends UploadItem {
   caseId: string;
@@ -46,9 +44,6 @@ export interface CaseUploadItem extends UploadItem {
   partIndex?: number;
   partCount?: number;
 }
-
-
-
 
 interface EnqueueArgs {
   caseId: string;
@@ -68,6 +63,8 @@ interface QueueEntry {
   hash?: string;
   existing?: { id: string; filename: string }[];
   maxPartPages?: number;
+  /** Escolha explícita após uma falha: enviar o original sem nova tentativa. */
+  skipSplit?: boolean;
   /** Já é uma parte pronta (não tentar dividir de novo). */
   partMeta?: {
     splitGroupId: string;
@@ -78,7 +75,6 @@ interface QueueEntry {
   };
 }
 
-
 interface UploadManagerValue {
   items: CaseUploadItem[];
   itemsForCase: (caseId: string) => CaseUploadItem[];
@@ -88,15 +84,13 @@ interface UploadManagerValue {
   removeItem: (id: string) => void;
   clearFinished: (caseId?: string) => void;
   forceUpload: (id: string) => void;
-
 }
 
 const UploadManagerContext = createContext<UploadManagerValue | null>(null);
 
 export function useUploadManager() {
   const ctx = useContext(UploadManagerContext);
-  if (!ctx)
-    throw new Error("useUploadManager precisa estar dentro de UploadManagerProvider");
+  if (!ctx) throw new Error("useUploadManager precisa estar dentro de UploadManagerProvider");
   return ctx;
 }
 
@@ -122,7 +116,6 @@ async function hashBlob(blob: Blob): Promise<string> {
     .map((b) => b.toString(16).padStart(2, "0"))
     .join("");
 }
-
 
 function putWithProgress(
   signedUrl: string,
@@ -181,13 +174,11 @@ export function UploadManagerProvider({ children }: { children: ReactNode }) {
   >(null);
   const [replacing, setReplacing] = useState(false);
 
-
   const abortersRef = useRef<Map<string, AbortController>>(new Map());
   const cancelledRef = useRef<Set<string>>(new Set());
   const runningRef = useRef(false);
   const queueRef = useRef<QueueEntry[]>([]);
   const pendingForceRef = useRef<Map<string, QueueEntry>>(new Map());
-
 
   const patchItem = useCallback(
     (id: string, patch: Partial<CaseUploadItem>) =>
@@ -253,11 +244,10 @@ export function UploadManagerProvider({ children }: { children: ReactNode }) {
         if ("duplicate" in res && res.duplicate) {
           uploadedPath = null;
           if (res.reason === "filename") {
-            const existing =
-              entry.existing?.find((d) => d.id === res.existing_id) ?? {
-                id: res.existing_id,
-                filename: res.existing_filename,
-              };
+            const existing = entry.existing?.find((d) => d.id === res.existing_id) ?? {
+              id: res.existing_id,
+              filename: res.existing_filename,
+            };
             patchItem(itemId, {
               phase: "duplicate",
               message: "Já existe um arquivo com esse nome",
@@ -322,74 +312,130 @@ export function UploadManagerProvider({ children }: { children: ReactNode }) {
   );
 
   /**
-   * Divide PDFs grandes em partes reais antes do upload. Retorna as entradas
-   * que devem ir para a fila no lugar da entrada original.
+   * Para PDFs, divide e envia uma parte por vez. O callback do divisor só
+   * libera a criação da próxima parte depois que o upload e o registro da
+   * atual terminam, evitando manter todas as partes na memória.
    */
-  const expandEntry = useCallback(
-    async (entry: QueueEntry): Promise<QueueEntry[]> => {
+  const processEntry = useCallback(
+    async (entry: QueueEntry): Promise<void> => {
       const limit = entry.maxPartPages ?? DEFAULT_MAX_PART_PAGES;
       if (
         entry.partMeta ||
-        limit <= 0 ||
+        entry.skipSplit ||
         !(entry.file instanceof File) ||
         !shouldSplitPdf(entry.file)
       ) {
-        return [entry];
+        await uploadOne(entry);
+        return;
       }
+
+      const splitController = new AbortController();
+      abortersRef.current.set(entry.itemId, splitController);
+      let hasMultipleParts = false;
+      let partItemIds: string[] = [];
+      const splitGroupId = crypto.randomUUID();
+
       try {
         patchItem(entry.itemId, { phase: "splitting", pct: 0 });
-        const result = await splitPdf({ file: entry.file, maxPartPages: limit });
-        if (result.parts.length <= 1) return [entry];
-
-        const splitGroupId = crypto.randomUUID();
-        const entries: QueueEntry[] = result.parts.map((part) => ({
-          file: part.blob,
-          filename: part.filename,
-          fileType: "application/pdf",
-          itemId: `${entry.itemId}-p${part.partIndex}`,
-          caseId: entry.caseId,
-          existing: entry.existing,
-          partMeta: {
-            splitGroupId,
-            partIndex: part.partIndex,
-            partCount: part.partCount,
-            pageOffset: part.pageOffset,
-            pageCount: part.pageCount,
+        await splitPdfStream({
+          file: entry.file,
+          maxPartPages: limit,
+          signal: splitController.signal,
+          onPlan: ({ ranges }) => {
+            if (ranges.length <= 1) return;
+            hasMultipleParts = true;
+            partItemIds = ranges.map((range) => `${entry.itemId}-p${range.partIndex}`);
+            const estimatedPartSize = Math.ceil(entry.file.size / ranges.length);
+            setItems((prev) => [
+              ...prev.filter((item) => item.id !== entry.itemId),
+              ...ranges.map((range) => ({
+                id: `${entry.itemId}-p${range.partIndex}`,
+                caseId: entry.caseId,
+                filename: partFilename(entry.filename, range.partIndex, range.partCount),
+                size: estimatedPartSize,
+                pct: 0,
+                phase: "queued" as const,
+                partIndex: range.partIndex,
+                partCount: range.partCount,
+              })),
+            ]);
+            toast.info(`“${entry.filename}” será enviado em ${ranges.length} partes seguras.`);
           },
-        }));
+          onPart: async (part) => {
+            if (part.partCount <= 1) {
+              await uploadOne(entry);
+              return;
+            }
 
-        setItems((prev) => [
-          ...prev.filter((x) => x.id !== entry.itemId),
-          ...entries.map((e) => ({
-            id: e.itemId,
-            caseId: e.caseId,
-            filename: e.filename,
-            size: e.file.size,
-            pct: 0,
-            phase: "queued" as const,
-            partIndex: e.partMeta?.partIndex,
-            partCount: e.partMeta?.partCount,
-          })),
-        ]);
-        toast.info(
-          `“${entry.filename}” foi dividido em ${result.parts.length} partes para processar com segurança.`,
-        );
-        return entries;
-      } catch (e) {
-        // Divisão falhou: não enviamos o arquivo inteiro silenciosamente.
-        console.error("Falha ao dividir PDF:", e);
-        pendingForceRef.current.set(entry.itemId, { ...entry, maxPartPages: 0 });
-        patchItem(entry.itemId, {
-          phase: "split_failed",
-          message: `Não foi possível dividir “${entry.filename}”: ${
-            e instanceof Error ? e.message : String(e)
-          }`,
+            const partEntry: QueueEntry = {
+              file: part.blob,
+              filename: part.filename,
+              fileType: "application/pdf",
+              itemId: `${entry.itemId}-p${part.partIndex}`,
+              caseId: entry.caseId,
+              existing: entry.existing,
+              partMeta: {
+                splitGroupId,
+                partIndex: part.partIndex,
+                partCount: part.partCount,
+                pageOffset: part.pageOffset,
+                pageCount: part.pageCount,
+              },
+            };
+            patchItem(partEntry.itemId, { size: part.blob.size });
+            if (cancelledRef.current.has(partEntry.itemId)) {
+              cancelledRef.current.delete(partEntry.itemId);
+              patchItem(partEntry.itemId, {
+                phase: "cancelled",
+                message: "Envio cancelado",
+              });
+              return;
+            }
+            await uploadOne(partEntry);
+          },
         });
-        return [];
-      }
+      } catch (e) {
+        const isAbort =
+          splitController.signal.aborted || (e instanceof DOMException && e.name === "AbortError");
+        if (isAbort) {
+          patchItem(entry.itemId, {
+            phase: "cancelled",
+            message: "Envio cancelado",
+          });
+          return;
+        }
 
+        console.error("Falha ao dividir PDF:", e);
+        const message = e instanceof Error ? e.message : String(e);
+        if (!hasMultipleParts) {
+          // Antes de qualquer parte ser criada, ainda é seguro oferecer ao
+          // usuário a tentativa deliberada com o arquivo original.
+          pendingForceRef.current.set(entry.itemId, { ...entry, skipSplit: true });
+          patchItem(entry.itemId, {
+            phase: "split_failed",
+            message: `Não foi possível dividir “${entry.filename}”: ${message}`,
+          });
+          return;
+        }
+
+        setItems((prev) =>
+          prev.map((item) =>
+            partItemIds.includes(item.id) && isUploadActive(item.phase)
+              ? {
+                  ...item,
+                  phase: "error" as const,
+                  message: `A divisão foi interrompida: ${message}`,
+                }
+              : item,
+          ),
+        );
+      } finally {
+        if (abortersRef.current.get(entry.itemId) === splitController) {
+          abortersRef.current.delete(entry.itemId);
+        }
+      }
     },
-    [patchItem],
+    [patchItem, uploadOne],
   );
 
   const drain = useCallback(async () => {
@@ -403,20 +449,12 @@ export function UploadManagerProvider({ children }: { children: ReactNode }) {
           patchItem(next.itemId, { phase: "cancelled", message: "Envio cancelado" });
           continue;
         }
-        const expanded = await expandEntry(next);
-        for (const item of expanded) {
-          if (cancelledRef.current.has(item.itemId)) {
-            cancelledRef.current.delete(item.itemId);
-            patchItem(item.itemId, { phase: "cancelled", message: "Envio cancelado" });
-            continue;
-          }
-          await uploadOne(item);
-        }
+        await processEntry(next);
       }
     } finally {
       runningRef.current = false;
     }
-  }, [expandEntry, patchItem, uploadOne]);
+  }, [patchItem, processEntry]);
 
   const enqueue = useCallback(
     ({ caseId, files, hashes, existingDocuments, maxPartPages }: EnqueueArgs) => {
@@ -447,7 +485,6 @@ export function UploadManagerProvider({ children }: { children: ReactNode }) {
     },
     [drain],
   );
-
 
   const cancelItem = useCallback(
     (id: string) => {
@@ -482,10 +519,7 @@ export function UploadManagerProvider({ children }: { children: ReactNode }) {
   const clearFinished = useCallback(
     (caseId?: string) =>
       setItems((prev) =>
-        prev.filter(
-          (x) =>
-            isUploadActive(x.phase) || (caseId ? x.caseId !== caseId : false),
-        ),
+        prev.filter((x) => isUploadActive(x.phase) || (caseId ? x.caseId !== caseId : false)),
       ),
     [],
   );
@@ -547,8 +581,6 @@ export function UploadManagerProvider({ children }: { children: ReactNode }) {
     [drain, patchItem],
   );
 
-
-
   const value = useMemo<UploadManagerValue>(
     () => ({
       items,
@@ -560,17 +592,7 @@ export function UploadManagerProvider({ children }: { children: ReactNode }) {
       clearFinished,
       forceUpload,
     }),
-    [
-      items,
-      itemsForCase,
-      enqueue,
-      cancelItem,
-      cancelCase,
-      removeItem,
-      clearFinished,
-      forceUpload,
-    ],
-
+    [items, itemsForCase, enqueue, cancelItem, cancelCase, removeItem, clearFinished, forceUpload],
   );
 
   return (
@@ -583,8 +605,8 @@ export function UploadManagerProvider({ children }: { children: ReactNode }) {
             <AlertDialogTitle>Substituir arquivo?</AlertDialogTitle>
             <AlertDialogDescription>
               Já existe um arquivo chamado{" "}
-              <span className="font-bold">{replacement?.filename}</span> neste caso.
-              Substituir vai excluir o anterior e todos os dados indexados.
+              <span className="font-bold">{replacement?.filename}</span> neste caso. Substituir vai
+              excluir o anterior e todos os dados indexados.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

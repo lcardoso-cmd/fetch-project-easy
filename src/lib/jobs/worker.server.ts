@@ -119,6 +119,8 @@ export async function runDocumentQueues(
             organizationId: job.organization_id,
             userId: job.requested_by_user_id,
             forceVision: job.force_vision,
+            resumeProgress: (job.progress ?? null) as
+              import("@/lib/rag/index-document.server").IndexResumeProgress | null,
             // Um documento pesado não consome o orçamento inteiro do lote:
             // devolve o progresso e volta para a fila para continuar depois.
             deadlineAt: Math.min(deadline, Date.now() + 40_000),
@@ -142,6 +144,13 @@ export async function runDocumentQueues(
           }),
       );
       if (result.incomplete) {
+        const ocrProgress = result.resume_progress?.phase === "ocr_processing";
+        const resumePagesDone = ocrProgress
+          ? (result.resume_progress?.ocr_pages_done?.length ?? 0)
+          : (result.pages_done ?? null);
+        const resumePagesTotal = ocrProgress
+          ? (result.resume_progress?.ocr_pages_total ?? null)
+          : (result.pages_total ?? null);
         // Progresso real gravado: volta para a fila para continuar da próxima
         // página, sem gastar tentativas.
         await supabaseAdmin
@@ -150,12 +159,15 @@ export async function runDocumentQueues(
             status: "queued",
             attempt_count: 0,
             progress: {
-              stage: "extracting_text",
-              pages_done: result.pages_done ?? null,
-              pages_total: result.pages_total ?? null,
+              stage: result.resume_progress?.phase ?? "extracting_text",
+              ...(result.resume_progress ?? {}),
+              pages_done: resumePagesDone,
+              pages_total: resumePagesTotal,
               percent:
-                result.pages_total && result.pages_done
-                  ? 30 + Math.round((result.pages_done / result.pages_total) * 50)
+                resumePagesTotal && resumePagesDone !== null
+                  ? ocrProgress
+                    ? 80 + Math.round((resumePagesDone / resumePagesTotal) * 18)
+                    : 30 + Math.round((resumePagesDone / resumePagesTotal) * 50)
                   : null,
             },
             heartbeat_at: new Date().toISOString(),
@@ -222,7 +234,13 @@ export async function runDocumentQueues(
   }
 
   const remaining = halted ? false : await hasPendingWork();
-  return { processed: intakeDone + indexDone, intake: intakeDone, index: indexDone, remaining, halted };
+  return {
+    processed: intakeDone + indexDone,
+    intake: intakeDone,
+    index: indexDone,
+    remaining,
+    halted,
+  };
 }
 
 /** Existe trabalho pendente em alguma das filas? */

@@ -6,13 +6,22 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireOrg, requireOrgPermission } from "@/lib/org-middleware";
-import {
-  MAX_DOCUMENT_SIZE_BYTES,
-  validateDocumentUpload,
-} from "@/lib/documents-limits";
+import { MAX_DOCUMENT_SIZE_BYTES, validateDocumentUpload } from "@/lib/documents-limits";
 import { storagePathBelongsToOrg } from "@/lib/intake/intake-core";
 
 const IntakeRefSchema = z.object({ id: z.string().uuid() });
+
+const IntakePartSchema = z.object({
+  storage_path: z.string().min(1).max(600),
+  filename: z.string().min(1).max(300),
+  file_type: z.string().max(160).default("application/pdf"),
+  file_size: z.number().int().positive().max(MAX_DOCUMENT_SIZE_BYTES),
+  split_group_id: z.string().uuid(),
+  part_index: z.number().int().positive(),
+  part_count: z.number().int().min(2).max(64),
+  page_offset: z.number().int().nonnegative(),
+  page_count: z.number().int().positive(),
+});
 
 type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };
 
@@ -57,6 +66,8 @@ export const registerIntakeDocument = createServerFn({ method: "POST" })
         filename: z.string().min(1).max(300),
         file_type: z.string().max(160).default("application/octet-stream"),
         file_size: z.number().int().positive().max(MAX_DOCUMENT_SIZE_BYTES),
+        original_file_size: z.number().int().positive().max(MAX_DOCUMENT_SIZE_BYTES).optional(),
+        parts: z.array(IntakePartSchema).min(2).max(64).optional(),
       })
       .parse(i),
   )
@@ -70,6 +81,35 @@ export const registerIntakeDocument = createServerFn({ method: "POST" })
     });
     if (!check.ok) throw new Error(check.message);
 
+    const parts = data.parts ?? [];
+    if (parts.length > 0) {
+      const partCount = parts[0].part_count;
+      const groupId = parts[0].split_group_id;
+      const ordered = [...parts].sort((a, b) => a.part_index - b.part_index);
+      const structurallyValid =
+        parts.length === partCount &&
+        ordered.every(
+          (part, index) =>
+            part.part_index === index + 1 &&
+            part.part_count === partCount &&
+            part.split_group_id === groupId &&
+            storagePathBelongsToOrg(part.storage_path, context.organizationId),
+        ) &&
+        ordered[0]?.storage_path === data.storage_path &&
+        typeof data.original_file_size === "number" &&
+        parts.reduce((total, part) => total + part.file_size, 0) <= data.original_file_size * 3;
+      if (!structurallyValid) {
+        throw new Error("As partes do PDF não formam um conjunto válido.");
+      }
+      for (const part of parts) {
+        const partCheck = validateDocumentUpload({
+          filename: part.filename,
+          file_size: part.file_size,
+        });
+        if (!partCheck.ok) throw new Error(partCheck.message);
+      }
+    }
+
     // Confirma que o objeto realmente chegou ao Storage e o tamanho declarado.
     const folder = data.storage_path.slice(0, data.storage_path.lastIndexOf("/"));
     const name = data.storage_path.slice(data.storage_path.lastIndexOf("/") + 1);
@@ -80,12 +120,26 @@ export const registerIntakeDocument = createServerFn({ method: "POST" })
     if (!found) {
       throw new Error("O arquivo não chegou ao servidor. Envie novamente.");
     }
-    const realSize = Number(
-      (found.metadata as { size?: number } | null)?.size ?? data.file_size,
-    );
+    const realSize = Number((found.metadata as { size?: number } | null)?.size ?? data.file_size);
     if (realSize > MAX_DOCUMENT_SIZE_BYTES) {
       await context.supabase.storage.from("documents").remove([data.storage_path]);
       throw new Error("O arquivo excede o limite de 250 MB.");
+    }
+
+    if (parts.length > 0 && realSize !== parts[0].file_size) {
+      throw new Error("O tamanho da primeira parte do PDF não confere.");
+    }
+    for (const part of parts.slice(1)) {
+      const partFolder = part.storage_path.slice(0, part.storage_path.lastIndexOf("/"));
+      const partName = part.storage_path.slice(part.storage_path.lastIndexOf("/") + 1);
+      const { data: partObjects } = await context.supabase.storage
+        .from("documents")
+        .list(partFolder, { search: partName, limit: 10 });
+      const partObject = (partObjects ?? []).find((object) => object.name === partName);
+      const storedPartSize = Number((partObject?.metadata as { size?: number } | null)?.size ?? 0);
+      if (!partObject || storedPartSize !== part.file_size) {
+        throw new Error(`A parte ${part.part_index} do PDF não chegou completa ao servidor.`);
+      }
     }
 
     const { data: row, error } = await context.supabase
@@ -108,6 +162,24 @@ export const registerIntakeDocument = createServerFn({ method: "POST" })
       .select(SELECT_FIELDS)
       .single();
     if (error) throw error;
+
+    if (parts.length > 0) {
+      const { error: partsError } = await context.supabase
+        .from("case_intake_document_parts")
+        .upsert(
+          parts.map((part) => ({
+            intake_document_id: row.id,
+            organization_id: context.organizationId,
+            created_by_user_id: context.userId,
+            ...part,
+          })),
+          { onConflict: "storage_path" },
+        );
+      if (partsError) {
+        await context.supabase.from("case_intake_documents").delete().eq("id", row.id);
+        throw partsError;
+      }
+    }
 
     const { kickDocumentWorker } = await import("@/lib/jobs/worker.server");
     await kickDocumentWorker();
@@ -135,8 +207,7 @@ export const getIntakeDocument = createServerFn({ method: "POST" })
     );
     if (active) {
       const stale =
-        Date.now() - new Date(view.updated_at).getTime() > 90_000 ||
-        view.status === "queued";
+        Date.now() - new Date(view.updated_at).getTime() > 90_000 || view.status === "queued";
       if (stale) {
         const { kickDocumentWorker } = await import("@/lib/jobs/worker.server");
         await kickDocumentWorker();
@@ -213,12 +284,24 @@ export const discardIntakeDocument = createServerFn({ method: "POST" })
       .maybeSingle();
     if (!row) return { ok: true as const };
 
+    const { data: parts } = await context.supabase
+      .from("case_intake_document_parts")
+      .select("storage_path, document_id")
+      .eq("intake_document_id", row.id)
+      .eq("organization_id", context.organizationId);
+
     // Só apaga o arquivo se ele ainda não foi anexado a um caso.
     if (!row.document_id) {
-      await context.supabase.storage
-        .from("documents")
-        .remove([row.storage_path as string])
-        .catch(() => {});
+      const removablePaths =
+        parts && parts.length > 0
+          ? parts.filter((part) => !part.document_id).map((part) => part.storage_path as string)
+          : [row.storage_path as string];
+      if (removablePaths.length > 0) {
+        await context.supabase.storage
+          .from("documents")
+          .remove(removablePaths)
+          .catch(() => {});
+      }
     }
     await context.supabase
       .from("case_intake_documents")
@@ -249,6 +332,103 @@ export const convertIntakeToCaseDocument = createServerFn({ method: "POST" })
 
     if (row.document_id) {
       return { document_id: row.document_id as string, already: true as const };
+    }
+
+    const { data: splitParts, error: splitPartsError } = await context.supabase
+      .from("case_intake_document_parts")
+      .select(
+        "id, storage_path, filename, file_type, file_size, split_group_id, part_index, part_count, page_offset, page_count, document_id",
+      )
+      .eq("intake_document_id", row.id)
+      .eq("organization_id", context.organizationId)
+      .order("part_index", { ascending: true });
+    if (splitPartsError) throw splitPartsError;
+
+    if (splitParts && splitParts.length > 0) {
+      const documentIds: string[] = [];
+      for (const part of splitParts) {
+        let documentId = part.document_id as string | null;
+        let wasCreated = false;
+        if (!documentId) {
+          const { data: created, error: createError } = await context.supabase
+            .from("documents")
+            .insert({
+              organization_id: context.organizationId,
+              created_by_user_id: context.userId,
+              case_id: data.case_id,
+              filename: part.filename as string,
+              file_type: part.file_type as string,
+              file_size: part.file_size as number,
+              storage_path: part.storage_path as string,
+              processing_status: "queued",
+              split_group_id: part.split_group_id as string,
+              part_index: part.part_index as number,
+              part_count: part.part_count as number,
+              page_offset: part.page_offset as number,
+              page_count: part.page_count as number,
+            })
+            .select("id")
+            .single();
+          if (createError) throw createError;
+          documentId = created.id as string;
+          wasCreated = true;
+          await context.supabase
+            .from("case_intake_document_parts")
+            .update({ document_id: documentId })
+            .eq("id", part.id);
+        }
+        documentIds.push(documentId);
+
+        await context.supabase
+          .from("document_index_jobs")
+          .insert({
+            organization_id: context.organizationId,
+            document_id: documentId,
+            case_id: data.case_id,
+            requested_by_user_id: context.userId,
+          })
+          .then((result) => {
+            if (result.error && !result.error.message.includes("duplicate key")) {
+              console.warn("[intake] fila de indexação", result.error.message);
+            }
+          });
+
+        if (wasCreated) {
+          await context.supabase.from("document_audit_events").insert({
+            case_id: data.case_id,
+            organization_id: context.organizationId,
+            actor_user_id: context.userId,
+            action: "uploaded",
+            document_id: documentId,
+            filename: part.filename as string,
+            reason: "Parte de PDF enviada no fluxo de novo caso",
+            metadata: {
+              intake_id: row.id,
+              storage_path: part.storage_path,
+              split_group_id: part.split_group_id,
+              part_index: part.part_index,
+              part_count: part.part_count,
+            },
+          });
+        }
+      }
+
+      await context.supabase
+        .from("case_intake_documents")
+        .update({
+          status: "converted",
+          case_id: data.case_id,
+          document_id: documentIds[0],
+        })
+        .eq("id", row.id);
+
+      const { kickDocumentWorker } = await import("@/lib/jobs/worker.server");
+      await kickDocumentWorker();
+      return {
+        document_id: documentIds[0],
+        document_ids: documentIds,
+        already: false as const,
+      };
     }
 
     const { data: doc, error: insErr } = await context.supabase
@@ -308,9 +488,7 @@ export const convertIntakeToCaseDocument = createServerFn({ method: "POST" })
 export const enqueueDocumentIndexing = createServerFn({ method: "POST" })
   .middleware([requireOrgPermission("documents.upload")])
   .inputValidator((i: unknown) =>
-    z
-      .object({ document_id: z.string().uuid(), force_vision: z.boolean().optional() })
-      .parse(i),
+    z.object({ document_id: z.string().uuid(), force_vision: z.boolean().optional() }).parse(i),
   )
   .handler(async ({ data, context }) => {
     const { data: doc } = await context.supabase

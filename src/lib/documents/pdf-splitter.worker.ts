@@ -1,72 +1,178 @@
 /**
- * Web Worker que divide PDFs grandes em partes menores usando pdf-lib.
+ * Web Worker que divide PDFs grandes sem bloquear a interface.
  *
- * Por que no navegador: o servidor que processa documentos tem teto rígido de
- * memória. Abrir um PDF de centenas de MB inteiro lá é a causa dos documentos
- * que ficam presos em "Lendo imagens (OCR)". No navegador há memória de sobra
- * para abrir o arquivo original, cortá-lo em partes e enviar cada parte.
+ * O arquivo original é transferido (não clonado) para o worker. Cada parte é
+ * produzida e devolvida isoladamente; a seguinte só é criada quando a thread
+ * principal confirma que terminou de consumir a atual. Isso limita o pico de
+ * memória mesmo para arquivos próximos de 250 MiB.
  */
 
-import { splitPdfBytes } from "./pdf-splitter.core";
+import {
+  DEFAULT_TARGET_PART_BYTES,
+  partFilename,
+  planSplit,
+  type SplitPlanRange,
+} from "./pdf-splitter.core";
 
-export interface SplitterWorkerInput {
-  bytes: Uint8Array;
+export interface SplitterWorkerStart {
+  type: "start";
+  bytes: ArrayBuffer;
   filename: string;
-  fileType: string;
   maxPartPages: number;
   minSplitPages: number;
+  targetPartBytes: number;
 }
 
-export interface SplitterWorkerOutput {
-  ok: true;
-  originalPageCount: number;
-  parts: {
-    bytes: ArrayBuffer;
-    filename: string;
-    pageCount: number;
-    partIndex: number;
-    partCount: number;
-    pageOffset: number;
-  }[];
+export interface SplitterWorkerContinue {
+  type: "continue";
 }
+
+export type SplitterWorkerInput = SplitterWorkerStart | SplitterWorkerContinue;
+
+export interface SplitterWorkerPlan {
+  ok: true;
+  type: "plan";
+  originalPageCount: number;
+  ranges: SplitPlanRange[];
+}
+
+export interface SplitterWorkerPart {
+  ok: true;
+  type: "part";
+  bytes: ArrayBuffer;
+  filename: string;
+  pageCount: number;
+  partIndex: number;
+  partCount: number;
+  pageOffset: number;
+}
+
+export interface SplitterWorkerDone {
+  ok: true;
+  type: "done";
+}
+
+export type SplitterWorkerOutput = SplitterWorkerPlan | SplitterWorkerPart | SplitterWorkerDone;
 
 export interface SplitterWorkerError {
   ok: false;
+  type: "error";
   message: string;
 }
 
-function toArrayBuffer(bytes: Uint8Array): ArrayBuffer {
-  return bytes.buffer.slice(
-    bytes.byteOffset,
-    bytes.byteOffset + bytes.byteLength,
-  ) as ArrayBuffer;
+interface SplitSession {
+  filename: string;
+  source: Awaited<ReturnType<typeof import("pdf-lib").PDFDocument.load>>;
+  ranges: SplitPlanRange[];
+  nextRange: number;
+  busy: boolean;
 }
 
-self.onmessage = async (event: MessageEvent<SplitterWorkerInput>) => {
+let session: SplitSession | null = null;
+
+function postWithTransfer(message: unknown, transfer: Transferable[] = []) {
+  (
+    self as unknown as {
+      postMessage: (value: unknown, transfer: Transferable[]) => void;
+    }
+  ).postMessage(message, transfer);
+}
+
+function fail(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error);
+  self.postMessage({ ok: false, type: "error", message } satisfies SplitterWorkerError);
+  session = null;
+}
+
+async function emitNextPart() {
+  if (!session || session.busy) return;
+  const current = session;
+  const range = current.ranges[current.nextRange];
+  if (!range) {
+    self.postMessage({ ok: true, type: "done" } satisfies SplitterWorkerDone);
+    session = null;
+    return;
+  }
+
+  current.busy = true;
   try {
-    const { bytes, filename, maxPartPages, minSplitPages } = event.data;
     const { PDFDocument } = await import("pdf-lib");
-    const { originalPageCount, parts } = await splitPdfBytes(
-      bytes,
-      filename,
-      maxPartPages,
-      minSplitPages,
-      PDFDocument,
+    const output = await PDFDocument.create();
+    const pageIndices = Array.from(
+      { length: range.end - range.start },
+      (_, index) => range.start + index,
     );
-    const payload: SplitterWorkerOutput = {
+    const pages = await output.copyPages(current.source, pageIndices);
+    for (const page of pages) output.addPage(page);
+    const saved = await output.save();
+    const bytes = saved.buffer.slice(
+      saved.byteOffset,
+      saved.byteOffset + saved.byteLength,
+    ) as ArrayBuffer;
+
+    current.nextRange += 1;
+    current.busy = false;
+    const message: SplitterWorkerPart = {
       ok: true,
-      originalPageCount,
-      parts: parts.map((p) => ({ ...p, bytes: toArrayBuffer(p.bytes) })),
+      type: "part",
+      bytes,
+      filename: partFilename(current.filename, range.partIndex, range.partCount),
+      pageCount: range.end - range.start,
+      partIndex: range.partIndex,
+      partCount: range.partCount,
+      pageOffset: range.start,
     };
-    (self as unknown as {
-      postMessage: (msg: unknown, transfer: Transferable[]) => void;
-    }).postMessage(
-      payload,
-      payload.parts.map((p) => p.bytes),
+    postWithTransfer(message, [bytes]);
+  } catch (error) {
+    fail(error);
+  }
+}
+
+async function start(input: SplitterWorkerStart) {
+  try {
+    const { PDFDocument } = await import("pdf-lib");
+    const bytes = new Uint8Array(input.bytes);
+    const source = await PDFDocument.load(bytes, { ignoreEncryption: true });
+    const originalPageCount = source.getPageCount();
+    const ranges = planSplit(
+      originalPageCount,
+      input.maxPartPages,
+      input.minSplitPages,
+      bytes.byteLength,
+      input.targetPartBytes || DEFAULT_TARGET_PART_BYTES,
     );
 
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    self.postMessage({ ok: false, message } satisfies SplitterWorkerError);
+    self.postMessage({
+      ok: true,
+      type: "plan",
+      originalPageCount,
+      ranges,
+    } satisfies SplitterWorkerPlan);
+
+    // Quando não há divisão, o File original continua disponível na thread
+    // principal; não há motivo para serializar e devolver outra cópia dele.
+    if (ranges.length <= 1) {
+      self.postMessage({ ok: true, type: "done" } satisfies SplitterWorkerDone);
+      return;
+    }
+
+    session = {
+      filename: input.filename,
+      source,
+      ranges,
+      nextRange: 0,
+      busy: false,
+    };
+    await emitNextPart();
+  } catch (error) {
+    fail(error);
   }
+}
+
+self.onmessage = (event: MessageEvent<SplitterWorkerInput>) => {
+  if (event.data.type === "start") {
+    void start(event.data);
+    return;
+  }
+  void emitNextPart();
 };

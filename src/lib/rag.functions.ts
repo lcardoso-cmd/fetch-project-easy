@@ -30,15 +30,19 @@ export const indexDocument = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { data: doc } = await context.supabase
       .from("documents")
-      .select("id, case_id, file_size")
+      .select("id, case_id, file_size, file_type, filename")
       .eq("id", data.document_id)
       .eq("organization_id", context.organizationId)
       .maybeSingle();
     if (!doc) throw new Error("Documento não encontrado");
 
     const size = (doc.file_size as number | null) ?? 0;
+    const isPdf =
+      doc.file_type === "application/pdf" || /\.pdf$/i.test((doc.filename as string | null) ?? "");
 
-    if (size > INLINE_INDEX_MAX_BYTES) {
+    // PDFs e OCR sempre usam a fila retomável. Mesmo um PDF pequeno pode ser
+    // composto por imagens e ultrapassar o tempo de uma requisição comum.
+    if (size > INLINE_INDEX_MAX_BYTES || isPdf || data.force_vision) {
       const { data: active } = await context.supabase
         .from("document_index_jobs")
         .select("id")
@@ -47,6 +51,12 @@ export const indexDocument = createServerFn({ method: "POST" })
         .maybeSingle();
 
       let jobId = active?.id as string | undefined;
+      if (jobId && data.force_vision) {
+        await context.supabase
+          .from("document_index_jobs")
+          .update({ force_vision: true })
+          .eq("id", jobId);
+      }
       if (!jobId) {
         const { data: job, error } = await context.supabase
           .from("document_index_jobs")
@@ -90,7 +100,9 @@ export const indexDocument = createServerFn({ method: "POST" })
 export const reindexCaseDocuments = createServerFn({ method: "POST" })
   .middleware([requireOrg])
   .inputValidator((i: unknown) =>
-    z.object({ case_id: z.string().uuid(), limit: z.number().int().min(1).max(20).optional() }).parse(i),
+    z
+      .object({ case_id: z.string().uuid(), limit: z.number().int().min(1).max(20).optional() })
+      .parse(i),
   )
   .handler(async ({ data, context }) => {
     const { data: docs } = await context.supabase

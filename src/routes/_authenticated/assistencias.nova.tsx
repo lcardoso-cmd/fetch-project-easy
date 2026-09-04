@@ -16,17 +16,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   ArrowLeft,
   UploadCloud,
   Loader2,
-  
   Trash2,
   Plus,
   Users,
@@ -40,11 +34,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { labelsForMatter, type MatterKind } from "@/lib/practice-labels";
 import { PARTY_RELATIONS, representedRelationFor, guessRelation } from "@/lib/party-relations";
-import {
-  createCase,
-  setCaseTeamAccess,
-  type ExtractedCaseData,
-} from "@/lib/cases.functions";
+import { createCase, setCaseTeamAccess, type ExtractedCaseData } from "@/lib/cases.functions";
 import {
   registerIntakeDocument,
   getIntakeDocument,
@@ -68,6 +58,11 @@ import { listOrgMembers } from "@/lib/organization.functions";
 import { createUploadSignedUrl } from "@/lib/documents.functions";
 import { Progress } from "@/components/ui/progress";
 import { useUnsavedChangesGuard } from "@/hooks/use-unsaved-changes-guard";
+import {
+  DEFAULT_MAX_PART_PAGES,
+  splitPdfStream,
+  type SplitPdfPart,
+} from "@/lib/documents/pdf-splitter";
 
 export const Route = createFileRoute("/_authenticated/assistencias/nova")({
   component: NewCasePage,
@@ -80,6 +75,13 @@ type UploadedDoc = {
   filename: string;
   file_type: string;
   file_size: number;
+};
+
+type UploadedSplitPart = Omit<SplitPdfPart, "blob"> & {
+  storage_path: string;
+  file_type: string;
+  file_size: number;
+  split_group_id: string;
 };
 
 type FieldKey =
@@ -160,7 +162,7 @@ function NewCasePage() {
   const [uploaded, setUploaded] = useState<UploadedDoc | null>(null);
   const [extracting, setExtracting] = useState(false);
   const [uploadPhase, setUploadPhase] = useState<
-    "idle" | "uploading" | "extracting" | "done"
+    "idle" | "splitting" | "uploading" | "extracting" | "done"
   >("idle");
   const [uploadPct, setUploadPct] = useState(0);
   // Registro persistente da leitura do documento (continua no servidor).
@@ -262,7 +264,9 @@ function NewCasePage() {
           setExtractionWarnings(
             s.extractionWarnings.filter(
               (w): w is ExtractionWarning =>
-                !!w && typeof w === "object" && typeof (w as ExtractionWarning).message === "string",
+                !!w &&
+                typeof w === "object" &&
+                typeof (w as ExtractionWarning).message === "string",
             ),
           );
         }
@@ -280,18 +284,37 @@ function NewCasePage() {
   useEffect(() => {
     if (!REVIEW_STORAGE_KEY || !hydratedReview) return;
     try {
-      if (!uploaded && missingFields.length === 0 && extractionWarnings.length === 0 && !reviewConfirmed) {
+      if (
+        !uploaded &&
+        missingFields.length === 0 &&
+        extractionWarnings.length === 0 &&
+        !reviewConfirmed
+      ) {
         localStorage.removeItem(REVIEW_STORAGE_KEY);
       } else {
         localStorage.setItem(
           REVIEW_STORAGE_KEY,
-          JSON.stringify({ uploaded, intakeId, missingFields, extractionWarnings, reviewConfirmed }),
+          JSON.stringify({
+            uploaded,
+            intakeId,
+            missingFields,
+            extractionWarnings,
+            reviewConfirmed,
+          }),
         );
       }
     } catch {
       // quota / indisponível — silencioso
     }
-  }, [REVIEW_STORAGE_KEY, hydratedReview, uploaded, intakeId, missingFields, extractionWarnings, reviewConfirmed]);
+  }, [
+    REVIEW_STORAGE_KEY,
+    hydratedReview,
+    uploaded,
+    intakeId,
+    missingFields,
+    extractionWarnings,
+    reviewConfirmed,
+  ]);
 
   const applyExtracted = (e: ExtractedCaseData) => {
     // Título só é preenchido a partir do documento se o usuário ainda não
@@ -303,11 +326,13 @@ function NewCasePage() {
     setJurisdiction((current) => current || e.jurisdiction || "");
     setCaseType((current) => current || e.case_type || "");
     setDescription((current) => current || e.description || "");
-    setParties((current) => current.length > 0 ? current :
-      (e.parties ?? []).map((p) => {
-        const withRel = p as Party;
-        return { ...withRel, relation: withRel.relation ?? guessRelation(p, matterKind) };
-      }),
+    setParties((current) =>
+      current.length > 0
+        ? current
+        : (e.parties ?? []).map((p) => {
+            const withRel = p as Party;
+            return { ...withRel, relation: withRel.relation ?? guessRelation(p, matterKind) };
+          }),
     );
   };
 
@@ -345,62 +370,128 @@ function NewCasePage() {
       return;
     }
     setExtracting(true);
-    setUploadPhase("uploading");
+    setUploadPhase("splitting");
     setUploadPct(0);
+    const uploadedPaths: string[] = [];
+    let registered = false;
     try {
-      // 1. Link de envio direto (com progresso real), já validado no servidor.
-      const { signedUrl, path } = await signUploadFn({
-        data: {
-          filename: file.name,
-          file_type: file.type || "application/octet-stream",
-          file_size: file.size,
-        },
-      });
-
-      // 2. PUT via XHR para exibir % em tempo real
-      await new Promise<void>((resolve, reject) => {
-        const xhr = new XMLHttpRequest();
-        xhr.open("PUT", signedUrl);
-        xhr.setRequestHeader(
-          "Content-Type",
-          file.type || "application/octet-stream",
-        );
-        xhr.upload.onprogress = (e) => {
-          if (e.lengthComputable) setUploadPct((e.loaded / e.total) * 100);
-        };
-        xhr.onload = () =>
-          xhr.status >= 200 && xhr.status < 300
-            ? resolve()
-            : reject(new Error(`Upload falhou (HTTP ${xhr.status})`));
-        xhr.onerror = () => reject(new Error("Erro de rede durante upload"));
-        xhr.send(file);
-      });
-      setUploadPct(100);
-
-      const meta: UploadedDoc = {
-        storage_path: path,
-        filename: file.name,
-        file_type: file.type || "application/octet-stream",
-        file_size: file.size,
+      const isPdf = file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
+      const splitGroupId = crypto.randomUUID();
+      const uploadedParts: UploadedSplitPart[] = [];
+      const uploadPart = async (part: SplitPdfPart) => {
+        setUploadPhase("uploading");
+        const fileType = part.blob.type || (isPdf ? "application/pdf" : "application/octet-stream");
+        const { signedUrl, path } = await signUploadFn({
+          data: {
+            filename: part.filename,
+            file_type: fileType,
+            file_size: part.blob.size,
+          },
+        });
+        uploadedPaths.push(path);
+        await new Promise<void>((resolve, reject) => {
+          const xhr = new XMLHttpRequest();
+          xhr.open("PUT", signedUrl);
+          xhr.setRequestHeader("Content-Type", fileType);
+          xhr.upload.onprogress = (event) => {
+            if (!event.lengthComputable) return;
+            const withinPart = event.loaded / event.total;
+            setUploadPct(((part.partIndex - 1 + withinPart) / part.partCount) * 100);
+          };
+          xhr.onload = () =>
+            xhr.status >= 200 && xhr.status < 300
+              ? resolve()
+              : reject(new Error(`Upload falhou (HTTP ${xhr.status})`));
+          xhr.onerror = () => reject(new Error("Erro de rede durante upload"));
+          xhr.send(part.blob);
+        });
+        uploadedParts.push({
+          storage_path: path,
+          filename: part.filename,
+          file_type: fileType,
+          file_size: part.blob.size,
+          split_group_id: splitGroupId,
+          pageCount: part.pageCount,
+          partIndex: part.partIndex,
+          partCount: part.partCount,
+          pageOffset: part.pageOffset,
+        });
       };
-      setUploaded(meta);
+
+      if (isPdf) {
+        await splitPdfStream({
+          file,
+          maxPartPages: DEFAULT_MAX_PART_PAGES,
+          onPlan: ({ ranges }) => {
+            if (ranges.length > 1) {
+              toast.info(
+                `PDF grande: envio seguro em ${ranges.length} partes. A análise começará pela primeira.`,
+              );
+            }
+          },
+          onPart: uploadPart,
+        });
+      } else {
+        await uploadPart({
+          blob: file,
+          filename: file.name,
+          pageCount: 1,
+          partIndex: 1,
+          partCount: 1,
+          pageOffset: 0,
+        });
+      }
+
+      uploadedParts.sort((a, b) => a.partIndex - b.partIndex);
+      const firstPart = uploadedParts[0];
+      if (!firstPart) throw new Error("Nenhuma parte do arquivo foi enviada.");
+      setUploadPct(100);
 
       // 3. Registra o documento e coloca a análise na fila. A leitura continua
       //    no servidor mesmo se a página for fechada.
       setUploadPhase("extracting");
       const row = await registerIntakeFn({
         data: {
-          storage_path: path,
+          storage_path: firstPart.storage_path,
           filename: file.name,
           file_type: file.type || "application/octet-stream",
-          file_size: file.size,
+          file_size: firstPart.file_size,
+          original_file_size: file.size,
+          ...(uploadedParts.length > 1
+            ? {
+                parts: uploadedParts.map((part) => ({
+                  storage_path: part.storage_path,
+                  filename: part.filename,
+                  file_type: part.file_type,
+                  file_size: part.file_size,
+                  split_group_id: part.split_group_id,
+                  part_index: part.partIndex,
+                  part_count: part.partCount,
+                  page_offset: part.pageOffset,
+                  page_count: part.pageCount,
+                })),
+              }
+            : {}),
         },
+      });
+      registered = true;
+      setUploaded({
+        storage_path: firstPart.storage_path,
+        filename: file.name,
+        file_type: file.type || "application/octet-stream",
+        file_size: file.size,
       });
       setIntakeId(row.id);
       setIntakeStatus(row.status as IntakeStatus);
       await qc.invalidateQueries({ queryKey: ["pending-intake-documents"] });
       toast.info("Documento recebido. Estamos lendo o conteúdo.");
     } catch (e) {
+      if (!registered && uploadedPaths.length > 0) {
+        await supabase.storage
+          .from("documents")
+          .remove(uploadedPaths)
+          .catch(() => {});
+      }
       const msg = e instanceof Error ? e.message : String(e);
       toast.error(`Falha: ${msg}`);
       setUploadPhase("idle");
@@ -414,7 +505,10 @@ function NewCasePage() {
     if (intakeId) {
       await discardIntakeFn({ data: { id: intakeId } }).catch(() => {});
     } else if (uploaded) {
-      await supabase.storage.from("documents").remove([uploaded.storage_path]).catch(() => {});
+      await supabase.storage
+        .from("documents")
+        .remove([uploaded.storage_path])
+        .catch(() => {});
     }
     setUploaded(null);
     setIntakeId(null);
@@ -438,15 +532,12 @@ function NewCasePage() {
       setUploadPhase("extracting");
       await qc.invalidateQueries({ queryKey: ["pending-intake-documents"] });
       toast.info(
-        mode === "ocr"
-          ? "Relendo o documento como imagem."
-          : "Nova tentativa de leitura iniciada.",
+        mode === "ocr" ? "Relendo o documento como imagem." : "Nova tentativa de leitura iniciada.",
       );
     } catch (e) {
       toast.error(e instanceof Error ? e.message : String(e));
     }
   };
-
 
   // Acompanha a leitura em andamento. O trabalho roda no servidor; aqui só
   // consultamos o andamento e aplicamos o resultado quando ele fica pronto.
@@ -594,7 +685,9 @@ function NewCasePage() {
   const errors = validate();
   const showError = (k: string) => (attemptedSubmit || touched[k]) && !!errors[k];
   const errorRing = (k: string) =>
-    showError(k) ? "border-destructive ring-1 ring-destructive/40 focus-visible:ring-destructive" : "";
+    showError(k)
+      ? "border-destructive ring-1 ring-destructive/40 focus-visible:ring-destructive"
+      : "";
   const ErrorMsg = ({ k }: { k: string }) =>
     showError(k) ? (
       <p className="text-xs text-destructive flex items-start gap-1">
@@ -620,9 +713,7 @@ function NewCasePage() {
     try {
       const cleanParties = parties.filter((p) => p.name.trim() || p.role.trim());
       const repRel = representedRelationFor(matterKind);
-      const represented = repRel
-        ? cleanParties.find((p) => p.relation === repRel) ?? null
-        : null;
+      const represented = repRel ? (cleanParties.find((p) => p.relation === repRel) ?? null) : null;
       const newCase = await createCaseFn({
         data: {
           title: title.trim(),
@@ -661,10 +752,13 @@ function NewCasePage() {
         }
       }
 
-
       await qc.invalidateQueries({ queryKey: ["cases"] });
       if (REVIEW_STORAGE_KEY) {
-        try { localStorage.removeItem(REVIEW_STORAGE_KEY); } catch { /* noop */ }
+        try {
+          localStorage.removeItem(REVIEW_STORAGE_KEY);
+        } catch {
+          /* noop */
+        }
       }
       toast.success("Caso criado");
       setSubmitted(true);
@@ -702,14 +796,12 @@ function NewCasePage() {
         {isMissing && (
           <p className="text-xs text-amber-700 dark:text-amber-400 flex items-start gap-1">
             <AlertTriangle className="h-3 w-3 mt-0.5 shrink-0" />
-            {MISSING_FIELD_HINTS[field] ?? "Não identificado pelo JurisMind — preencha manualmente."}
+            {MISSING_FIELD_HINTS[field] ??
+              "Não identificado pelo JurisMind — preencha manualmente."}
           </p>
         )}
         {fieldWarnings.map((m, i) => (
-          <p
-            key={i}
-            className="text-xs text-amber-700 dark:text-amber-400 flex items-start gap-1"
-          >
+          <p key={i} className="text-xs text-amber-700 dark:text-amber-400 flex items-start gap-1">
             <AlertTriangle className="h-3 w-3 mt-0.5 shrink-0" />
             {m}
           </p>
@@ -759,7 +851,8 @@ function NewCasePage() {
         <Card>
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
-              <JurisMindMark size={20} context={JURISMIND_CONTEXT.inlineLight} /> Importar documento (opcional)
+              <JurisMindMark size={20} context={JURISMIND_CONTEXT.inlineLight} /> Importar documento
+              (opcional)
             </CardTitle>
             <CardDescription>
               Envie a petição, contrato ou processo. O JurisMind lê e preenche os campos abaixo.
@@ -810,22 +903,18 @@ function NewCasePage() {
 
                 {intakeStatus && isIntakeActive(intakeStatus) && (
                   <div className="space-y-1">
-                    <Progress
-                      value={INTAKE_STATUS_PROGRESS[intakeStatus]}
-                      className="h-2"
-                    />
+                    <Progress value={INTAKE_STATUS_PROGRESS[intakeStatus]} className="h-2" />
                     <p className="text-sm text-muted-foreground">
-                      A leitura continua no servidor — você pode continuar preenchendo
-                      o formulário enquanto isso.
+                      A leitura continua no servidor — você pode continuar preenchendo o formulário
+                      enquanto isso.
                     </p>
                   </div>
                 )}
 
                 {intakeInfo?.pages_total ? (
                   <p className="text-sm text-muted-foreground">
-                    {intakeInfo.pages_analyzed ?? 0} de {intakeInfo.pages_total} páginas
-                    analisadas para preencher o formulário. O arquivo completo fica
-                    anexado ao caso.
+                    {intakeInfo.pages_analyzed ?? 0} de {intakeInfo.pages_total} páginas analisadas
+                    para preencher o formulário. O arquivo completo fica anexado ao caso.
                   </p>
                 ) : null}
 
@@ -858,7 +947,6 @@ function NewCasePage() {
                 )}
               </div>
             ) : (
-
               <div
                 onDragOver={(e) => e.preventDefault()}
                 onDrop={(e) => {
@@ -875,7 +963,9 @@ function NewCasePage() {
                       <p className="text-sm font-medium">
                         {uploadPhase === "uploading"
                           ? `Enviando arquivo… ${Math.round(uploadPct)}%`
-                          : "Lendo documento e extraindo dados…"}
+                          : uploadPhase === "splitting"
+                            ? "Preparando o PDF em partes seguras…"
+                            : "Lendo documento e extraindo dados…"}
                       </p>
                     </div>
                     <Progress
@@ -885,7 +975,9 @@ function NewCasePage() {
                     <p className="text-xs text-muted-foreground">
                       {uploadPhase === "uploading"
                         ? "Não feche esta janela até o upload terminar."
-                        : "Extração pode levar alguns segundos para documentos grandes."}
+                        : uploadPhase === "splitting"
+                          ? "O arquivo é dividido no seu navegador; nenhuma página é descartada."
+                          : "Extração pode levar alguns segundos para documentos grandes."}
                     </p>
                   </div>
                 ) : (
@@ -930,9 +1022,11 @@ function NewCasePage() {
               </CardTitle>
               <CardDescription>
                 O JurisMind preencheu os campos abaixo a partir do documento.
-                <strong> Edite o que precisar — os valores que ficarem aqui
-                serão salvos no caso.</strong> Os campos destacados em âmbar
-                precisam da sua atenção.
+                <strong>
+                  {" "}
+                  Edite o que precisar — os valores que ficarem aqui serão salvos no caso.
+                </strong>{" "}
+                Os campos destacados em âmbar precisam da sua atenção.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
@@ -981,7 +1075,6 @@ function NewCasePage() {
             </CardContent>
           </Card>
         )}
-
 
         {/* Dados do caso — editáveis; o que estiver aqui é o que será salvo */}
         <Card>
@@ -1131,7 +1224,8 @@ function NewCasePage() {
             <CardTitle className="text-lg">Partes envolvidas *</CardTitle>
             <CardDescription>
               Adicione cada participante do processo e classifique a relação dele com o escritório
-              (cliente, parte contrária, perito do juízo, assistente técnico, advogado adverso, etc.).
+              (cliente, parte contrária, perito do juízo, assistente técnico, advogado adverso,
+              etc.).
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
@@ -1247,9 +1341,7 @@ function NewCasePage() {
                     />
                     <div className="min-w-0">
                       <p className="text-ui font-medium truncate">{m.name}</p>
-                      <p className="text-sm text-muted-foreground truncate">
-                        {m.role_label}
-                      </p>
+                      <p className="text-sm text-muted-foreground truncate">{m.role_label}</p>
                     </div>
                   </label>
                 ))}
@@ -1257,8 +1349,7 @@ function NewCasePage() {
             )}
 
             <p className="text-sm text-muted-foreground">
-              Integrantes alocados passam a ver e editar este caso. Novos acessos são
-              concedidos em{" "}
+              Integrantes alocados passam a ver e editar este caso. Novos acessos são concedidos em{" "}
               <Link to="/configuracoes/equipe" className="underline">
                 Equipe e permissões
               </Link>
@@ -1275,16 +1366,19 @@ function NewCasePage() {
             </p>
           )}
           <div className="flex justify-end gap-2">
-            <Button type="button" variant="ghost" onClick={handleCancel} disabled={cancelling || submitting}>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={handleCancel}
+              disabled={cancelling || submitting}
+            >
               {cancelling && <Loader2 className="h-4 w-4 animate-spin" />}
               Cancelar
             </Button>
             <Button
               type="submit"
               disabled={
-                submitting ||
-                (needsReview && !reviewConfirmed) ||
-                (attemptedSubmit && hasErrors)
+                submitting || (needsReview && !reviewConfirmed) || (attemptedSubmit && hasErrors)
               }
             >
               {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
@@ -1297,9 +1391,7 @@ function NewCasePage() {
       <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
         <DialogContent className="max-w-5xl h-[85vh] flex flex-col p-0">
           <DialogHeader className="px-6 pt-6 pb-3 border-b">
-            <DialogTitle className="truncate pr-8">
-              {uploaded?.filename ?? "Documento"}
-            </DialogTitle>
+            <DialogTitle className="truncate pr-8">{uploaded?.filename ?? "Documento"}</DialogTitle>
           </DialogHeader>
           <div className="flex-1 min-h-0 bg-muted/30">
             {previewLoading || !previewUrl ? (

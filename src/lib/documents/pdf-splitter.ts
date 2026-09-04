@@ -1,35 +1,49 @@
 /**
  * Cliente do divisor de PDFs.
  *
- * Usa um Web Worker para não travar a thread principal enquanto abre e
- * fatia PDFs grandes. As partes geradas são reais: cada uma é um PDF
- * válido com suas próprias páginas, e o servidor as processa como
- * documentos independentes, depois agrupando visualmente pelo
- * parent_document_id.
+ * O Web Worker recebe o ArrayBuffer por transferência e devolve uma parte de
+ * cada vez. A próxima parte só é criada depois que `onPart` termina, permitindo
+ * que o chamador envie/libere cada Blob antes de continuar.
  */
 
+import { DEFAULT_TARGET_PART_BYTES } from "./pdf-splitter.core";
 import type {
   SplitterWorkerError,
   SplitterWorkerInput,
   SplitterWorkerOutput,
+  SplitterWorkerPlan,
 } from "./pdf-splitter.worker";
 
 export interface SplitPdfOptions {
   file: File;
   maxPartPages?: number;
   minSplitPages?: number;
+  targetPartBytes?: number;
+  signal?: AbortSignal;
+}
+
+export interface SplitPdfPart {
+  blob: Blob;
+  filename: string;
+  pageCount: number;
+  partIndex: number;
+  partCount: number;
+  pageOffset: number;
 }
 
 export interface SplitPdfResult {
   originalPageCount: number;
-  parts: {
-    blob: Blob;
-    filename: string;
-    pageCount: number;
-    partIndex: number;
-    partCount: number;
-    pageOffset: number;
-  }[];
+  parts: SplitPdfPart[];
+}
+
+export interface SplitPdfStreamOptions extends SplitPdfOptions {
+  onPlan?: (plan: SplitterWorkerPlan) => void | Promise<void>;
+  onPart: (part: SplitPdfPart) => void | Promise<void>;
+}
+
+export interface SplitPdfStreamResult {
+  originalPageCount: number;
+  partCount: number;
 }
 
 export const DEFAULT_MAX_PART_PAGES = 200;
@@ -40,7 +54,7 @@ export const PART_SIZE_OPTIONS = [
   { value: 100, label: "100 páginas por parte (mais rápido por parte)" },
   { value: 200, label: "200 páginas por parte (recomendado)" },
   { value: 500, label: "500 páginas por parte (menos arquivos)" },
-  { value: 0, label: "Não dividir" },
+  { value: 0, label: "Não dividir por páginas" },
 ] as const;
 
 function createWorker(): Worker {
@@ -49,65 +63,127 @@ function createWorker(): Worker {
   });
 }
 
-export function splitPdf({
+export function splitPdfStream({
   file,
   maxPartPages = DEFAULT_MAX_PART_PAGES,
   minSplitPages = DEFAULT_MIN_SPLIT_PAGES,
-}: SplitPdfOptions): Promise<SplitPdfResult> {
+  targetPartBytes = DEFAULT_TARGET_PART_BYTES,
+  signal,
+  onPlan,
+  onPart,
+}: SplitPdfStreamOptions): Promise<SplitPdfStreamResult> {
   return new Promise((resolve, reject) => {
     const worker = createWorker();
-    let cleaned = false;
+    let settled = false;
+    let plan: SplitterWorkerPlan | null = null;
+    let messageChain = Promise.resolve();
 
     const cleanup = () => {
-      if (cleaned) return;
-      cleaned = true;
       worker.terminate();
+      signal?.removeEventListener("abort", onAbort);
     };
+    const finishWithError = (error: unknown) => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      reject(error instanceof Error ? error : new Error(String(error)));
+    };
+    const onAbort = () => finishWithError(new DOMException("Divisão cancelada", "AbortError"));
 
-
-    worker.onmessage = (event: MessageEvent<SplitterWorkerOutput | SplitterWorkerError>) => {
-      const data = event.data;
+    const handleMessage = async (data: SplitterWorkerOutput | SplitterWorkerError) => {
+      if (settled) return;
       if (!data.ok) {
-        cleanup();
-        reject(new Error(data.message));
+        finishWithError(new Error(data.message));
         return;
       }
+
+      if (data.type === "plan") {
+        plan = data;
+        await onPlan?.(data);
+        if (data.ranges.length <= 1) {
+          // O parse já terminou; libere imediatamente a cópia transferida ao
+          // worker antes de começar o upload do File original.
+          worker.terminate();
+          signal?.removeEventListener("abort", onAbort);
+          await onPart({
+            blob: file,
+            filename: file.name,
+            pageCount: data.originalPageCount,
+            partIndex: 1,
+            partCount: 1,
+            pageOffset: 0,
+          });
+          settled = true;
+          resolve({
+            originalPageCount: data.originalPageCount,
+            partCount: 1,
+          });
+        }
+        return;
+      }
+
+      if (data.type === "part") {
+        await onPart({
+          blob: new Blob([data.bytes], { type: "application/pdf" }),
+          filename: data.filename,
+          pageCount: data.pageCount,
+          partIndex: data.partIndex,
+          partCount: data.partCount,
+          pageOffset: data.pageOffset,
+        });
+        const next: SplitterWorkerInput = { type: "continue" };
+        worker.postMessage(next);
+        return;
+      }
+
+      if (!plan) throw new Error("O divisor terminou sem informar o plano do PDF.");
+      settled = true;
       cleanup();
       resolve({
-        originalPageCount: data.originalPageCount,
-        parts: data.parts.map((p) => ({
-          blob: new Blob([p.bytes], { type: "application/pdf" }),
-          filename: p.filename,
-          pageCount: p.pageCount,
-          partIndex: p.partIndex,
-          partCount: p.partCount,
-          pageOffset: p.pageOffset,
-        })),
+        originalPageCount: plan.originalPageCount,
+        partCount: plan.ranges.length,
       });
     };
 
-    worker.onerror = (err) => {
-      cleanup();
-      reject(err);
+    worker.onmessage = (event: MessageEvent<SplitterWorkerOutput | SplitterWorkerError>) => {
+      messageChain = messageChain.then(() => handleMessage(event.data)).catch(finishWithError);
     };
+    worker.onerror = (error) => finishWithError(error);
+
+    if (signal?.aborted) {
+      onAbort();
+      return;
+    }
+    signal?.addEventListener("abort", onAbort, { once: true });
 
     file
       .arrayBuffer()
-      .then((buffer) => {
+      .then((bytes) => {
+        if (signal?.aborted) return;
         const input: SplitterWorkerInput = {
-          bytes: new Uint8Array(buffer),
+          type: "start",
+          bytes,
           filename: file.name,
-          fileType: file.type,
           maxPartPages,
           minSplitPages,
+          targetPartBytes,
         };
-        worker.postMessage(input);
+        worker.postMessage(input, [bytes]);
       })
-      .catch((err) => {
-        cleanup();
-        reject(err);
-      });
+      .catch(finishWithError);
   });
+}
+
+/** Compatibilidade para consumidores que realmente precisam de todas as partes. */
+export async function splitPdf(options: SplitPdfOptions): Promise<SplitPdfResult> {
+  const parts: SplitPdfPart[] = [];
+  const result = await splitPdfStream({
+    ...options,
+    onPart: (part) => {
+      parts.push(part);
+    },
+  });
+  return { originalPageCount: result.originalPageCount, parts };
 }
 
 export function shouldSplitPdf(file: File): boolean {

@@ -19,26 +19,49 @@ export interface SplitPlanRange {
   partCount: number;
 }
 
+/**
+ * Mantém cada parte confortavelmente abaixo do teto de 40 MiB usado pelo OCR
+ * no servidor. A margem absorve recursos que o pdf-lib pode repetir ao salvar
+ * documentos derivados (fontes, imagens e metadados).
+ */
+export const DEFAULT_TARGET_PART_BYTES = 24 * 1024 * 1024;
+
 /** Calcula as faixas de páginas de cada parte, equilibrando os tamanhos. */
 export function planSplit(
   totalPages: number,
   maxPartPages: number,
   minSplitPages: number,
+  fileSizeBytes = 0,
+  targetPartBytes = DEFAULT_TARGET_PART_BYTES,
 ): SplitPlanRange[] {
   if (totalPages <= 0) return [];
-  if (maxPartPages <= 0 || totalPages <= minSplitPages || totalPages <= maxPartPages) {
+
+  const pagePartCount =
+    maxPartPages > 0 && totalPages > minSplitPages && totalPages > maxPartPages
+      ? Math.ceil(totalPages / maxPartPages)
+      : 1;
+  // O tamanho prevalece inclusive quando o usuário desativa a divisão por
+  // páginas: arquivos acima do limite seguro ainda precisam ser fragmentados.
+  const sizePartCount =
+    targetPartBytes > 0 && fileSizeBytes > targetPartBytes
+      ? Math.ceil(fileSizeBytes / targetPartBytes)
+      : 1;
+  const partCount = Math.min(totalPages, Math.max(pagePartCount, sizePartCount));
+
+  if (partCount <= 1) {
     return [{ start: 0, end: totalPages, partIndex: 1, partCount: 1 }];
   }
-  const partCount = Math.ceil(totalPages / maxPartPages);
-  const partSize = Math.ceil(totalPages / partCount);
   const ranges: SplitPlanRange[] = [];
+  const basePartSize = Math.floor(totalPages / partCount);
+  const largerParts = totalPages % partCount;
+  let cursor = 0;
   for (let i = 0; i < partCount; i++) {
-    const start = i * partSize;
-    const end = Math.min(start + partSize, totalPages);
-    if (start >= end) break;
+    const start = cursor;
+    const end = start + basePartSize + (i < largerParts ? 1 : 0);
     ranges.push({ start, end, partIndex: i + 1, partCount });
+    cursor = end;
   }
-  return ranges.map((r) => ({ ...r, partCount: ranges.length }));
+  return ranges;
 }
 
 export function partFilename(original: string, index: number, count: number) {
@@ -53,10 +76,11 @@ export async function splitPdfBytes(
   maxPartPages: number,
   minSplitPages: number,
   PDFDocument: typeof import("pdf-lib").PDFDocument,
+  targetPartBytes = DEFAULT_TARGET_PART_BYTES,
 ): Promise<{ originalPageCount: number; parts: SplitPart[] }> {
   const src = await PDFDocument.load(bytes, { ignoreEncryption: true });
   const total = src.getPageCount();
-  const ranges = planSplit(total, maxPartPages, minSplitPages);
+  const ranges = planSplit(total, maxPartPages, minSplitPages, bytes.byteLength, targetPartBytes);
 
   if (ranges.length <= 1) {
     return {

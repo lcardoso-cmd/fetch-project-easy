@@ -3,7 +3,7 @@
 
 import type { DocBlock } from "./chunking";
 
-export const OCR_VERSION = "ocr-v2";
+export const OCR_VERSION = "ocr-v3";
 
 export interface OcrPageResult {
   page: number;
@@ -15,16 +15,20 @@ export interface OcrBatchOutcome {
   blocks: DocBlock[];
   pages: OcrPageResult[];
   failedPages: number[];
+  completedPages: number[];
+  incomplete: boolean;
 }
 
 /** Extrai um subconjunto de páginas do PDF como um novo PDF (pdf-lib). */
-async function slicePdf(bytes: Uint8Array, pages: number[]): Promise<Uint8Array> {
+async function slicePdf(
+  source: Awaited<ReturnType<typeof import("pdf-lib").PDFDocument.load>>,
+  pages: number[],
+): Promise<Uint8Array> {
   const { PDFDocument } = await import("pdf-lib");
-  const src = await PDFDocument.load(bytes, { ignoreEncryption: true });
   const out = await PDFDocument.create();
-  const total = src.getPageCount();
+  const total = source.getPageCount();
   const indices = pages.map((p) => p - 1).filter((i) => i >= 0 && i < total);
-  const copied = await out.copyPages(src, indices);
+  const copied = await out.copyPages(source, indices);
   for (const p of copied) out.addPage(p);
   return new Uint8Array(await out.save());
 }
@@ -49,34 +53,73 @@ export async function ocrPdfPages(opts: {
   filename: string;
   pages: number[];
   batchSize?: number;
+  deadlineAt?: number;
+  /** Persiste cada lote antes de o próximo começar. */
+  onBatch?: (outcome: Omit<OcrBatchOutcome, "incomplete">) => void | Promise<void>;
 }): Promise<OcrBatchOutcome> {
   const { visionExtractPdfSlice } = await import("../ai.server");
+  const { PDFDocument } = await import("pdf-lib");
   const batchSize = opts.batchSize ?? 4;
   const results: OcrPageResult[] = [];
   const failed: number[] = [];
+  const completed: number[] = [];
+  let incomplete = false;
+  // Carrega a estrutura do PDF uma única vez. Antes, cada lote e cada
+  // retentativa reabria o documento inteiro, multiplicando memória e CPU.
+  const source = await PDFDocument.load(opts.bytes, { ignoreEncryption: true });
 
   const batches: number[][] = [];
   for (let i = 0; i < opts.pages.length; i += batchSize) {
     batches.push(opts.pages.slice(i, i + batchSize));
   }
 
-  for (const batch of batches) {
+  for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
+    if (opts.deadlineAt && Date.now() >= opts.deadlineAt) {
+      incomplete = true;
+      break;
+    }
+    const batch = batches[batchIndex];
+    const batchResults: OcrPageResult[] = [];
+    const batchFailed: number[] = [];
     try {
-      const slice = await slicePdf(opts.bytes, batch);
+      const slice = await slicePdf(source, batch);
       const text = await visionExtractPdfSlice(slice, opts.filename, batch);
-      results.push(...parsePageMarkers(text, batch));
+      batchResults.push(...parsePageMarkers(text, batch));
     } catch {
       for (const page of batch) {
         try {
-          const slice = await slicePdf(opts.bytes, [page]);
+          const slice = await slicePdf(source, [page]);
           const text = await visionExtractPdfSlice(slice, opts.filename, [page]);
-          results.push({ page, text: text.trim() });
+          batchResults.push({ page, text: text.trim() });
         } catch (e2) {
           const msg = e2 instanceof Error ? e2.message : String(e2);
-          results.push({ page, text: "", error: msg });
-          failed.push(page);
+          batchResults.push({ page, text: "", error: msg });
+          batchFailed.push(page);
         }
       }
+    }
+
+    const batchBlocks: DocBlock[] = batchResults
+      .filter((result) => result.text.trim().length > 0)
+      .sort((a, b) => a.page - b.page)
+      .map((result) => ({
+        content: result.text,
+        kind: "vision" as const,
+        page: result.page,
+      }));
+    results.push(...batchResults);
+    failed.push(...batchFailed);
+    completed.push(...batch);
+    await opts.onBatch?.({
+      blocks: batchBlocks,
+      pages: batchResults,
+      failedPages: batchFailed,
+      completedPages: batch,
+    });
+
+    if (opts.deadlineAt && Date.now() >= opts.deadlineAt && batchIndex < batches.length - 1) {
+      incomplete = true;
+      break;
     }
   }
 
@@ -85,7 +128,13 @@ export async function ocrPdfPages(opts: {
     .sort((a, b) => a.page - b.page)
     .map((r) => ({ content: r.text, kind: "vision" as const, page: r.page }));
 
-  return { blocks, pages: results, failedPages: failed };
+  return {
+    blocks,
+    pages: results,
+    failedPages: failed,
+    completedPages: completed,
+    incomplete,
+  };
 }
 
 /** OCR de uma imagem isolada (PNG/JPG) enviada como documento. */

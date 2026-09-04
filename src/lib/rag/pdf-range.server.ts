@@ -30,7 +30,13 @@ async function fetchRange(url: string, begin: number, endInclusive: number): Pro
     if (res.status === 404) throw new Error("file_missing");
     throw new Error(`range_fetch_failed_${res.status}`);
   }
-  if (res.status !== 206 && begin > 0) throw new RangeNotSupportedError();
+  // Um servidor que ignora Range responde 200 e pode começar a transmitir o
+  // arquivo inteiro. Interrompemos antes de materializar o corpo na memória —
+  // inclusive na primeira faixa, quando `begin` é zero.
+  if (res.status !== 206) {
+    await res.body?.cancel().catch(() => {});
+    throw new RangeNotSupportedError();
+  }
   return new Uint8Array(await res.arrayBuffer());
 }
 
@@ -103,9 +109,7 @@ export async function openRemotePdf(url: string, knownLength?: number): Promise<
     async pageText(page: number) {
       const p = await doc.getPage(page);
       const content = await p.getTextContent();
-      const text = content.items
-        .map((it) => ("str" in it ? (it.str ?? "") : ""))
-        .join(" ");
+      const text = content.items.map((it) => ("str" in it ? (it.str ?? "") : "")).join(" ");
       // Libera recursos da página imediatamente (documentos longos).
       if (typeof (p as { cleanup?: () => void }).cleanup === "function") {
         (p as { cleanup: () => void }).cleanup();

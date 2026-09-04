@@ -4,9 +4,7 @@ import { planSplit, partFilename, splitPdfBytes } from "../pdf-splitter.core";
 
 describe("planSplit", () => {
   it("não divide documentos curtos", () => {
-    expect(planSplit(40, 200, 60)).toEqual([
-      { start: 0, end: 40, partIndex: 1, partCount: 1 },
-    ]);
+    expect(planSplit(40, 200, 60)).toEqual([{ start: 0, end: 40, partIndex: 1, partCount: 1 }]);
   });
 
   it("não divide quando o limite está desativado", () => {
@@ -30,6 +28,24 @@ describe("planSplit", () => {
     }
     expect(cursor).toBe(4137);
     expect(ranges.every((r) => r.end - r.start <= 200)).toBe(true);
+  });
+
+  it("divide por tamanho mesmo com poucas páginas", () => {
+    const mib = 1024 * 1024;
+    const ranges = planSplit(50, 200, 60, 250 * mib, 24 * mib);
+    expect(ranges).toHaveLength(11);
+    expect(ranges[0]).toMatchObject({ start: 0, partIndex: 1, partCount: 11 });
+    expect(ranges.at(-1)).toMatchObject({ end: 50, partIndex: 11, partCount: 11 });
+  });
+
+  it("mantém arquivo pequeno inteiro quando divisão por páginas está desligada", () => {
+    const mib = 1024 * 1024;
+    expect(planSplit(500, 0, 60, 10 * mib, 24 * mib)).toHaveLength(1);
+  });
+
+  it("a proteção por tamanho prevalece sobre a divisão por páginas desligada", () => {
+    const mib = 1024 * 1024;
+    expect(planSplit(100, 0, 60, 100 * mib, 24 * mib)).toHaveLength(5);
   });
 });
 
@@ -60,7 +76,7 @@ describe("splitPdfBytes", () => {
       totalPages += part.pageCount;
     }
     expect(totalPages).toBe(250);
-    expect(result.parts.map((p) => p.pageOffset)).toEqual([0, 84, 168]);
+    expect(result.parts.map((p) => p.pageOffset)).toEqual([0, 84, 167]);
   }, 60_000);
 
   it("devolve o arquivo inteiro quando é pequeno", async () => {

@@ -26,6 +26,17 @@ const DIRECT_DOWNLOAD_MAX_BYTES = 40 * 1024 * 1024;
 const OCR_PAGE_LIMIT = 60;
 const MIN_CHARS_PER_PAGE = 120;
 
+export interface IndexResumeProgress {
+  run_id?: string;
+  phase?: "extracting_text" | "ocr_processing";
+  text_pages_done?: number;
+  pages_total?: number;
+  weak_pages?: number[];
+  ocr_pages_done?: number[];
+  ocr_failed_pages?: number[];
+  ocr_pages_total?: number;
+}
+
 export interface IndexDocumentParams {
   supabase: SupabaseClient;
   documentId: string;
@@ -35,6 +46,8 @@ export interface IndexDocumentParams {
   chunkProfile?: "structural-sm" | "structural-md" | "structural-lg";
   /** Momento (ms epoch) em que a execução deve parar e devolver o progresso. */
   deadlineAt?: number;
+  /** Estado durável salvo em document_index_jobs.progress. */
+  resumeProgress?: IndexResumeProgress | null;
   /** Chamado entre etapas longas — usado pela fila para manter o bloqueio. */
   onProgress?: (stage: string, detail?: Record<string, unknown>) => void | Promise<void>;
 }
@@ -56,6 +69,8 @@ export interface IndexDocumentResult {
   pages_total?: number;
   /** Páginas de imagem que ficaram sem OCR (arquivo grande demais). */
   ocr_skipped_pages?: number[];
+  /** Estado necessário para continuar exatamente de onde parou. */
+  resume_progress?: IndexResumeProgress;
 }
 
 export class FileTooLargeForMemoryError extends Error {
@@ -69,18 +84,11 @@ function weakText(text: string): boolean {
   return text.replace(/\s+/g, "").length < MIN_CHARS_PER_PAGE;
 }
 
-export async function indexDocumentCore(
-  params: IndexDocumentParams,
-): Promise<IndexDocumentResult> {
+export async function indexDocumentCore(params: IndexDocumentParams): Promise<IndexDocumentResult> {
   const { supabase, documentId, organizationId, userId } = params;
   const { embedTexts } = await import("../ai.server");
-  const {
-    parseDocument,
-    detectFormat,
-    UnsupportedFormatError,
-    PARSER_VERSION,
-    splitByHeadings,
-  } = await import("./parsers.server");
+  const { parseDocument, detectFormat, UnsupportedFormatError, PARSER_VERSION, splitByHeadings } =
+    await import("./parsers.server");
   const { ocrPdfPages, ocrImage } = await import("./ocr.server");
   const { structuredChunk, CHUNK_PROFILES, DEFAULT_CHUNK_PROFILE } = await import("./chunking");
   const { withStepRetry, describeStepFailure } = await import("./step-retry");
@@ -95,21 +103,33 @@ export async function indexDocumentCore(
     done: 100,
   };
 
+  let resumeState: IndexResumeProgress = {
+    ...(params.resumeProgress ?? {}),
+    run_id: params.resumeProgress?.run_id ?? crypto.randomUUID(),
+    weak_pages: [...(params.resumeProgress?.weak_pages ?? [])],
+    ocr_pages_done: [...(params.resumeProgress?.ocr_pages_done ?? [])],
+    ocr_failed_pages: [...(params.resumeProgress?.ocr_failed_pages ?? [])],
+  };
   let currentStage = "extracting";
   let currentPercent: number | null = null;
   const report = async (stage: string, detail?: Record<string, unknown>) => {
     currentStage = stage;
     const percent = (detail?.percent as number | undefined) ?? STAGE_PCT[stage] ?? null;
     currentPercent = percent;
-    await params.onProgress?.(stage, { ...(detail ?? {}), percent });
+    await params.onProgress?.(stage, {
+      ...resumeState,
+      ...(detail ?? {}),
+      percent,
+    });
   };
 
   /** Repete a etapa em falhas transitórias e registra o motivo para o usuário. */
-  const step = <T,>(name: string, fn: () => Promise<T>, attempts = 3) =>
+  const step = <T>(name: string, fn: () => Promise<T>, attempts = 3) =>
     withStepRetry(name, fn, {
       attempts,
       onAttemptFailed: async (info) => {
         await params.onProgress?.(currentStage, {
+          ...resumeState,
           percent: currentPercent,
           step: info.step,
           step_attempt: info.attempt,
@@ -126,7 +146,9 @@ export async function indexDocumentCore(
 
   const { data: doc, error: docErr } = await supabase
     .from("documents")
-    .select("id, case_id, storage_path, file_type, filename, page_offset, file_size, extracted_text")
+    .select(
+      "id, case_id, storage_path, file_type, filename, page_offset, file_size, extracted_text",
+    )
     .eq("id", documentId)
     .eq("organization_id", organizationId)
     .single();
@@ -137,8 +159,7 @@ export async function indexDocumentCore(
     ? (CHUNK_PROFILES[params.chunkProfile] ?? DEFAULT_CHUNK_PROFILE)
     : DEFAULT_CHUNK_PROFILE;
   const pageOffset = Number((doc as { page_offset?: number | null }).page_offset ?? 0) || 0;
-  const shiftPage = (p: number | null | undefined) =>
-    typeof p === "number" ? p + pageOffset : p;
+  const shiftPage = (p: number | null | undefined) => (typeof p === "number" ? p + pageOffset : p);
 
   try {
     let format: ReturnType<typeof detectFormat>;
@@ -164,24 +185,23 @@ export async function indexDocumentCore(
       .from("document_chunks")
       .select("page_end")
       .eq("document_id", documentId)
+      .eq("source_kind", "text")
       .not("page_end", "is", null)
       .order("page_end", { ascending: false })
       .limit(1);
-    const indexedUntilPage = params.forceVision
-      ? 0
-      : Math.max(0, ((pageRows?.[0]?.page_end as number | undefined) ?? 0) - pageOffset);
+    const resumedTextPage = Math.max(0, Number(params.resumeProgress?.text_pages_done ?? 0) || 0);
+    const hasDurableResume =
+      params.resumeProgress?.phase === "extracting_text" ||
+      params.resumeProgress?.phase === "ocr_processing";
+    // Chunks existentes, sozinhos, não significam que este trabalho é uma
+    // continuação: um clique em “Processar novamente” precisa gerar um índice
+    // novo. Só usamos o maior page_end quando há checkpoint da fila.
+    const indexedUntilPage =
+      !params.forceVision && hasDurableResume
+        ? Math.max(0, ((pageRows?.[0]?.page_end as number | undefined) ?? 0) - pageOffset)
+        : 0;
 
-    const resuming = indexedUntilPage > 0;
-
-    /** Ids anteriores que devem sair quando a reindexação começar do zero. */
-    let staleIds: string[] = [];
-    if (!resuming) {
-      const { data: existing } = await supabase
-        .from("document_chunks")
-        .select("id")
-        .eq("document_id", documentId);
-      staleIds = ((existing ?? []) as Array<{ id: string }>).map((r) => r.id);
-    }
+    const resuming = indexedUntilPage > 0 || resumedTextPage > 0;
 
     const insertChunks = async (
       chunks: Array<{
@@ -219,7 +239,11 @@ export async function indexDocumentCore(
         embedding_model: EMBEDDING_MODEL,
         token_count: c.token_count,
         content_hash: c.content_hash,
-        metadata: { format, block_kind: c.source_kind },
+        metadata: {
+          format,
+          block_kind: c.source_kind,
+          index_run_id: resumeState.run_id,
+        },
       }));
       await step("insert", async () => {
         const { error } = await supabase.from("document_chunks").insert(rows);
@@ -245,10 +269,10 @@ export async function indexDocumentCore(
     let textChunks = 0;
     let visionChunks = 0;
     let ocrPagesRun = 0;
-    let ocrFailedPages: number[] = [];
+    let ocrFailedPages: number[] = [...(params.resumeProgress?.ocr_failed_pages ?? [])];
     let ocrSkippedPages: number[] = [];
     let pageCount = 0;
-    let pagesDone = indexedUntilPage;
+    let pagesDone = Math.max(indexedUntilPage, resumedTextPage);
     let incomplete = false;
     let plainAccum = resuming
       ? String((doc as { extracted_text?: string | null }).extracted_text ?? "")
@@ -274,12 +298,18 @@ export async function indexDocumentCore(
       if (effectiveSize <= 0) {
         effectiveSize = await remoteFileSize(signedUrl).catch(() => 0);
       }
-      const pdf = await step("parse", () =>
-        openRemotePdf(signedUrl, effectiveSize || undefined),
-      );
+      const pdf = await step("parse", () => openRemotePdf(signedUrl, effectiveSize || undefined));
 
       pageCount = pdf.numPages;
-      const weakPages: number[] = [];
+      const weakPageSet = new Set<number>(params.resumeProgress?.weak_pages ?? []);
+      const weakPages = () => [...weakPageSet].sort((a, b) => a - b);
+      resumeState = {
+        ...resumeState,
+        phase: "extracting_text",
+        text_pages_done: pagesDone,
+        pages_total: pageCount,
+        weak_pages: weakPages(),
+      };
 
       try {
         await report("extracting_text", {
@@ -302,7 +332,7 @@ export async function indexDocumentCore(
               text = "";
             }
             if (weakText(text)) {
-              weakPages.push(page);
+              weakPageSet.add(page);
               if (!text.trim()) continue;
             }
             for (const b of splitByHeadings(text.replace(/\r\n?/g, "\n").trim())) {
@@ -314,6 +344,13 @@ export async function indexDocumentCore(
           if (blocks.length > 0) textChunks += await embedAndInsert(blocks);
 
           pagesDone = end;
+          resumeState = {
+            ...resumeState,
+            phase: "extracting_text",
+            text_pages_done: pagesDone,
+            pages_total: pageCount,
+            weak_pages: weakPages(),
+          };
           const percent = 30 + Math.round((pagesDone / Math.max(1, pageCount)) * 50);
           await report("extracting_text", {
             pages: pageCount,
@@ -334,7 +371,7 @@ export async function indexDocumentCore(
       if (!incomplete) {
         const targetOcr = params.forceVision
           ? Array.from({ length: pageCount }, (_, i) => i + 1)
-          : weakPages;
+          : weakPages();
         if (targetOcr.length > 0) {
           // Sem tamanho conhecido, presume-se grande: melhor entregar o
           // documento parcial do que estourar a memória do servidor.
@@ -343,39 +380,87 @@ export async function indexDocumentCore(
           } else {
             try {
               await setStatus("ocr_processing");
-              await report("ocr_processing", { pages: targetOcr.length, percent: 85 });
-              const pages = targetOcr.slice(0, OCR_PAGE_LIMIT);
-              if (targetOcr.length > pages.length) {
-                ocrSkippedPages = targetOcr.slice(OCR_PAGE_LIMIT);
-              }
-              const bytes = await step("download", async () => {
-                const res = await fetch(signedUrl);
-                if (!res.ok) throw new Error("Falha ao baixar arquivo do storage");
-                const buf = new Uint8Array(await res.arrayBuffer());
-                if (buf.byteLength > OCR_MAX_FILE_BYTES) {
-                  throw new FileTooLargeForMemoryError(
-                    "Arquivo grande demais para OCR completo nesta execução.",
-                  );
-                }
-                return buf;
+              const completedOcr = new Set<number>(params.resumeProgress?.ocr_pages_done ?? []);
+              const failedOcr = new Set<number>(ocrFailedPages);
+              const remainingOcr = targetOcr.filter((page) => !completedOcr.has(page));
+              const pages = remainingOcr.slice(0, OCR_PAGE_LIMIT);
+              resumeState = {
+                ...resumeState,
+                phase: "ocr_processing",
+                text_pages_done: pagesDone,
+                pages_total: pageCount,
+                weak_pages: weakPages(),
+                ocr_pages_done: [...completedOcr].sort((a, b) => a - b),
+                ocr_failed_pages: [...failedOcr].sort((a, b) => a - b),
+                ocr_pages_total: targetOcr.length,
+              };
+              await report("ocr_processing", {
+                pages: targetOcr.length,
+                pages_done: completedOcr.size,
+                pages_total: targetOcr.length,
+                percent: 80 + Math.round((completedOcr.size / targetOcr.length) * 18),
               });
 
-              const out = await step("ocr", () =>
-                ocrPdfPages({ bytes, filename: doc.filename as string, pages }),
-              );
-              ocrFailedPages = out.failedPages;
-              ocrPagesRun = pages.length;
-              if (out.blocks.length > 0) visionChunks += await embedAndInsert(out.blocks);
-              for (const p of out.pages) {
-                if (p.text.trim() && plainAccum.length < 200_000) plainAccum += `${p.text}\n\n`;
+              if (pages.length === 0) {
+                ocrFailedPages = [...failedOcr].sort((a, b) => a - b);
+              } else {
+                const bytes = await step("download", async () => {
+                  const res = await fetch(signedUrl);
+                  if (!res.ok) throw new Error("Falha ao baixar arquivo do storage");
+                  const buf = new Uint8Array(await res.arrayBuffer());
+                  if (buf.byteLength > OCR_MAX_FILE_BYTES) {
+                    throw new FileTooLargeForMemoryError(
+                      "Arquivo grande demais para OCR completo nesta execução.",
+                    );
+                  }
+                  return buf;
+                });
+
+                const out = await ocrPdfPages({
+                  bytes,
+                  filename: doc.filename as string,
+                  pages,
+                  deadlineAt: params.deadlineAt,
+                  onBatch: async (batch) => {
+                    if (batch.blocks.length > 0) {
+                      visionChunks += await embedAndInsert(batch.blocks);
+                    }
+                    for (const page of batch.pages) {
+                      if (page.text.trim() && plainAccum.length < 200_000) {
+                        plainAccum += `${page.text}\n\n`;
+                      }
+                    }
+                    batch.completedPages.forEach((page) => completedOcr.add(page));
+                    batch.failedPages.forEach((page) => failedOcr.add(page));
+                    ocrPagesRun += batch.completedPages.length;
+                    ocrFailedPages = [...failedOcr].sort((a, b) => a - b);
+                    resumeState = {
+                      ...resumeState,
+                      phase: "ocr_processing",
+                      ocr_pages_done: [...completedOcr].sort((a, b) => a - b),
+                      ocr_failed_pages: ocrFailedPages,
+                    };
+                    await report("ocr_processing", {
+                      pages: targetOcr.length,
+                      pages_done: completedOcr.size,
+                      pages_total: targetOcr.length,
+                      percent: 80 + Math.round((completedOcr.size / targetOcr.length) * 18),
+                    });
+                  },
+                });
+                const stillPending = targetOcr.some((page) => !completedOcr.has(page));
+                if (out.incomplete || stillPending) incomplete = true;
               }
-            } catch {
-              // O texto já indexado permanece: as páginas de imagem ficam
-              // marcadas como pendentes de OCR em vez de invalidar o documento.
-              ocrSkippedPages = targetOcr;
+            } catch (error) {
+              if (error instanceof FileTooLargeForMemoryError) {
+                ocrSkippedPages = targetOcr.filter(
+                  (page) => !(params.resumeProgress?.ocr_pages_done ?? []).includes(page),
+                );
+              } else {
+                throw error;
+              }
             }
           }
-
         }
       }
     } else {
@@ -406,7 +491,6 @@ export async function indexDocumentCore(
         }
         return new Blob([buf], { type: (doc.file_type as string) || "application/octet-stream" });
       });
-
 
       await report("parse");
       const parsed = await step("parse", () =>
@@ -452,8 +536,19 @@ export async function indexDocumentCore(
       throw new Error("Nenhum conteúdo indexável encontrado no documento.");
     }
 
-    if (!incomplete && staleIds.length > 0) {
-      // Remove o índice anterior só depois que o novo já está gravado.
+    if (!incomplete) {
+      // Remove versões anteriores apenas quando a nova terminou. O run_id
+      // sobrevive às retomadas e evita deixar chunks antigos misturados.
+      const { data: existingChunks } = await supabase
+        .from("document_chunks")
+        .select("id, metadata")
+        .eq("document_id", documentId);
+      const staleIds = (existingChunks ?? [])
+        .filter((chunk) => {
+          const metadata = (chunk.metadata ?? {}) as Record<string, unknown>;
+          return metadata.index_run_id !== resumeState.run_id;
+        })
+        .map((chunk) => chunk.id as string);
       for (let i = 0; i < staleIds.length; i += 200) {
         await supabase
           .from("document_chunks")
@@ -464,7 +559,9 @@ export async function indexDocumentCore(
 
     const partialOcr = ocrFailedPages.length > 0;
     const status = incomplete
-      ? "extracting"
+      ? resumeState.phase === "ocr_processing"
+        ? "ocr_processing"
+        : "extracting"
       : ocrSkippedPages.length > 0
         ? `partial: ${ocrSkippedPages.length} página(s) de imagem sem OCR (arquivo grande). Divida o arquivo em partes para ler as imagens.`
         : partialOcr
@@ -495,6 +592,7 @@ export async function indexDocumentCore(
       ...(incomplete ? { incomplete: true } : {}),
       pages_done: pagesDone,
       pages_total: pageCount,
+      ...(incomplete ? { resume_progress: resumeState } : {}),
       ...(ocrSkippedPages.length > 0 ? { ocr_skipped_pages: ocrSkippedPages } : {}),
     };
   } catch (err) {
