@@ -177,6 +177,10 @@ function StatusCell({
     !isEmpty &&
     !status.startsWith("error") &&
     job?.status !== "error";
+  const isQueuedOnly =
+    status === "queued" || status === "pending" || (!!job && job.status === "queued");
+  // "Processar agora" só faz sentido enquanto o documento aguarda a vez.
+  const isRunningNow = inProgress && !isQueuedOnly;
   const pct = isPartial ? 100 : readingPercent(status, job);
   const stageInfo = describeReadingStage(job, status);
 
