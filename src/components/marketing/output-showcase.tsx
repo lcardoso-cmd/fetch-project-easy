@@ -348,7 +348,7 @@ function PresentationOutput() {
           </div>
         </div>
 
-        <ul className="grid grid-cols-2 gap-2 lg:grid-cols-1">
+        <ul className="grid grid-cols-2 content-start gap-2">
           {SLIDES.slice(0, 4).map((s, i) => (
             <li
               key={s}
