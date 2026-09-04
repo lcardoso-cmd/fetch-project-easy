@@ -211,8 +211,8 @@ function Column({
     <div
       ref={setNodeRef}
       className={cn(
-        "flex h-full min-h-[240px] flex-col rounded-lg border bg-muted/40 p-3 transition-colors",
-        isOver && "bg-muted/70 ring-2 ring-primary/40",
+        "flex h-full min-h-[240px] flex-col rounded-xl border border-border bg-muted p-2 transition-colors",
+        isOver && "ring-2 ring-ring",
       )}
     >
       <h3 className="mb-3 text-center text-sm font-semibold">

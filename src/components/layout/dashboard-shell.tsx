@@ -775,7 +775,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
 
         {/* Main column */}
         <div className="flex flex-1 flex-col min-w-0">
-          <header className="flex h-14 items-center justify-between gap-3 border-b bg-card/95 px-3 lg:hidden">
+          <header className="flex h-14 items-center justify-between gap-3 border-b border-border bg-header/95 px-3 lg:hidden">
             <div className="flex min-w-0 flex-1 items-center gap-2">
               <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
                 <SheetTrigger asChild>
@@ -835,7 +835,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
             </div>
           </header>
 
-          <header className="hidden h-14 items-center justify-between gap-4 border-b border-border bg-card pl-6 pr-[4.5rem] lg:flex xl:pl-10">
+          <header className="hidden h-14 items-center justify-between gap-4 border-b border-border bg-header pl-6 pr-[4.5rem] lg:flex xl:pl-10">
             <div className="flex min-w-0 items-center gap-3">
               <nav aria-label="Trilha de navegação" className="flex min-w-0 items-center gap-2">
                 <Link
