@@ -520,11 +520,6 @@ export function HeroCarousel({ children }: { children?: ReactNode }) {
         {label}
       </div>
 
-      {/* Texto institucional sobreposto — canto inferior esquerdo */}
-      <div className="relative mx-auto flex min-h-[calc(100svh-4rem)] w-full max-w-6xl flex-col justify-end px-4 pb-16 pt-24 lg:pb-20">
-        <div className="max-w-2xl">{children}</div>
-      </div>
-
       {/* Pontos de navegação ao centro, sobre a base do hero */}
       <div className="absolute inset-x-0 bottom-4 flex items-center justify-center gap-2">
         {SLIDES.map((s, i) => (
