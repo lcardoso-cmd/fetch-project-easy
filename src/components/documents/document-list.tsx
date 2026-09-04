@@ -229,11 +229,22 @@ function StatusCell({
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
+      {status !== "ready" && pct !== null && (
+        <div className="w-full max-w-[240px]">
+          <Progress
+            value={pct}
+            className="h-1.5"
+            aria-label={`Progresso da leitura: ${pct}%`}
+          />
+          <span className="mt-1 block text-[11px] text-muted-foreground">{pct}%</span>
+        </div>
+      )}
       {status !== "ready" && (
         <span className="max-w-[240px] text-xs leading-snug text-muted-foreground">
           {detail ?? info.hint}
         </span>
       )}
+
 
       {canForce && (
         <Button
