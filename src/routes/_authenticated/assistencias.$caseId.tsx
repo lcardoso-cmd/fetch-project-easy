@@ -232,29 +232,84 @@ function CaseWorkspacePage() {
             )}
           </div>
           <div className="flex shrink-0 items-center gap-2">
-            {canUseAi && (
-              <Button
-                size="sm"
-                onClick={() => setAiOpen(true)}
-                className="h-10 gap-2 px-4 font-medium"
-                aria-haspopup="dialog"
-                aria-expanded={aiOpen}
-              >
-                <JurisMindMark
-                  size={20}
-                  context={JURISMIND_CONTEXT.chipDark}
-                  className="shrink-0"
-                />
-                <span className="hidden sm:inline">Perguntar ao JurisMind</span>
-                <span className="sm:hidden">JurisMind</span>
-              </Button>
-            )}
             <Button variant="outline" size="sm" onClick={openEdit} className="h-10">
               Editar dados
             </Button>
           </div>
         </div>
       </header>
+
+      {/* ── Ação principal do caso: JurisMind AI ── */}
+      {canUseAi && (
+        <section
+          aria-label="JurisMind AI neste caso"
+          className="rounded-xl bg-[#000038] p-5 text-white shadow-sm"
+        >
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="flex min-w-0 items-start gap-3">
+              <JurisMindMark
+                size={40}
+                context={JURISMIND_CONTEXT.chipDark}
+                className="shrink-0"
+              />
+              <div className="min-w-0">
+                <h2 className="font-heading text-lg font-medium">
+                  Perguntar ao JurisMind sobre este caso
+                </h2>
+                <p className="mt-1 text-sm text-white/75">
+                  {readyDocIds.length > 0
+                    ? `${readyDocIds.length} ${readyDocIds.length === 1 ? "documento" : "documentos"} deste caso já podem ser consultados, com as fontes citadas na resposta.`
+                    : "Envie documentos ao caso para que as respostas venham com as fontes citadas."}
+                </p>
+              </div>
+            </div>
+            <Button
+              size="lg"
+              onClick={() => openAi()}
+              aria-haspopup="dialog"
+              aria-expanded={aiOpen}
+              className="bg-[#00FFFF] font-medium text-[#000038] hover:bg-[#00FFFF]/85"
+            >
+              Abrir JurisMind
+            </Button>
+          </div>
+
+          <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+            {[
+              {
+                label: "Analisar documentos",
+                prompt:
+                  "Analise os documentos deste caso e aponte as conclusões principais, citando as fontes.",
+              },
+              {
+                label: "Redigir peça",
+                prompt:
+                  "Redija uma minuta de peça com base nos documentos selecionados deste caso.",
+              },
+              {
+                label: "Gerar planilha",
+                prompt:
+                  "Organize em uma planilha comparativa os valores e datas relevantes dos documentos deste caso.",
+              },
+              {
+                label: "Montar apresentação",
+                prompt:
+                  "Prepare uma apresentação executiva deste caso para reunião com o cliente.",
+              },
+            ].map((a) => (
+              <button
+                key={a.label}
+                type="button"
+                onClick={() => openAi(a.prompt)}
+                className="rounded-lg border border-white/25 bg-white/5 px-3 py-2.5 text-left text-[15px] font-medium text-white transition hover:border-[#00FFFF]/70 hover:bg-white/10"
+              >
+                {a.label}
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
+
 
       <Tabs defaultValue={tab && tab !== "jurismind" ? tab : "visao-geral"} className="space-y-4">
         <TabsList className="flex-wrap">
