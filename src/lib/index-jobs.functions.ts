@@ -75,6 +75,7 @@ export const listIndexJobs = createServerFn({ method: "POST" })
           max_attempts: (r.max_attempts as number) ?? 3,
           last_error_message: (r.last_error_message as string | null) ?? null,
           heartbeat_at: (r.heartbeat_at as string | null) ?? null,
+          started_at: ((r as { started_at?: string | null }).started_at as string | null) ?? null,
           queue_position: position >= 0 ? position + 1 : null,
           stalled: r.status === "running" && beat > 0 && now - beat > STALE_MS,
           percent: typeof progress.percent === "number" ? progress.percent : null,
