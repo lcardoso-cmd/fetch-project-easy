@@ -10,7 +10,7 @@ import {
 import { useServerFn } from "@tanstack/react-start";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { ChevronDown, ChevronUp, StopCircle, UploadCloud } from "lucide-react";
+import { ChevronDown, ChevronUp, UploadCloud } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
@@ -460,5 +460,3 @@ function UploadDock() {
     </div>
   );
 }
-
-export { StopCircle };
