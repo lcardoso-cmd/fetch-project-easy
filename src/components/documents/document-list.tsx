@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
-import { describeReadingStage } from "@/lib/documents/reading-eta";
+import { describeReadingStage, isResuming } from "@/lib/documents/reading-eta";
 
 import {
   Table,
@@ -70,6 +70,11 @@ function formatBytes(b: number | null) {
   return `${(b / Math.pow(k, i)).toFixed(1)} ${sizes[i]}`;
 }
 
+/** Documento já consultável pelo JurisMind (inclui leitura parcial). */
+function isDocUsable(status: string | null | undefined): boolean {
+  return status === "ready" || Boolean(status?.startsWith("partial"));
+}
+
 const STAGE_LABEL: Record<string, string> = {
   download: "baixando o arquivo",
   parse: "abrindo o arquivo",
@@ -96,6 +101,8 @@ function jobDetail(job: IndexJobView | undefined): string | null {
   }
   if (job.status === "queued") {
     const warning = job.step_warning ? ` ${job.step_warning}` : "";
+    if (isResuming(job))
+      return `Leitura em andamento: ${job.pages_done} de ${job.pages_total ?? "?"} página(s) lidas. Arquivos grandes são lidos em partes e continuam sozinhos.${warning}`;
     if (job.queue_position === 1)
       return `É o próximo da fila. A leitura começa em instantes.${warning}`;
     if (job.queue_position && job.queue_position > 1)
@@ -159,16 +166,18 @@ function StatusCell({
 }) {
   const isError = status.startsWith("error") || job?.status === "error" || job?.status === "paused";
   const isEmpty = status === "empty";
+  const isPartial = status.startsWith("partial");
   const canRetry = isError || isEmpty;
   const detail = jobDetail(job);
-  const canForce = status !== "ready" && !isEmpty && status !== "cancelled";
+  const canForce = status !== "ready" && !isPartial && !isEmpty && status !== "cancelled";
   const inProgress =
     status !== "ready" &&
     status !== "cancelled" &&
+    !isPartial &&
     !isEmpty &&
     !status.startsWith("error") &&
     job?.status !== "error";
-  const pct = readingPercent(status, job);
+  const pct = isPartial ? 100 : readingPercent(status, job);
   const stageInfo = describeReadingStage(job, status);
 
   const map: Record<
@@ -235,9 +244,26 @@ function StatusCell({
         icon: AlertCircle,
         color: "text-destructive",
         label: "Erro",
-        hint: status.replace(/^error:\s*/, "") || "Falha ao processar o documento.",
+        hint:
+          job?.last_error_message ||
+          status.replace(/^error:\s*/, "") ||
+          "Falha ao processar o documento.",
       }
-    : map[status] ?? {
+    : isPartial
+      ? {
+          icon: AlertTriangle,
+          color: "text-amber-500",
+          label: "Pronto (parcial)",
+          hint: status.replace(/^partial:\s*/, ""),
+        }
+      : isResuming(job)
+      ? {
+          icon: BrainCircuit,
+          color: "text-primary animate-pulse",
+          label: "Lendo o texto",
+          hint: "Arquivo grande: está sendo lido em partes e continua automaticamente até o fim.",
+        }
+      : map[status] ?? {
         icon: Clock,
         color: "text-muted-foreground",
         label: "Processando",
@@ -259,7 +285,7 @@ function StatusCell({
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
-      {status !== "ready" && status !== "cancelled" && pct !== null && (
+      {status !== "ready" && status !== "cancelled" && !isPartial && pct !== null && (
         <div className="w-full max-w-[260px]">
           <Progress
             value={pct}
@@ -377,7 +403,7 @@ export function DocumentList({
   const [cancellingId, setCancellingId] = useState<string | null>(null);
 
   const pending = documents.some(
-    (d) => d.processing_status !== "ready" && d.processing_status !== "cancelled",
+    (d) => !isDocUsable(d.processing_status) && d.processing_status !== "cancelled",
   );
   const jobsQuery = useQuery({
     queryKey: ["index-jobs", caseId],
@@ -482,7 +508,7 @@ export function DocumentList({
     }
   };
 
-  const readyCount = documents.filter((d) => d.processing_status === "ready").length;
+  const readyCount = documents.filter((d) => isDocUsable(d.processing_status)).length;
 
   return (
     <Card>
@@ -544,7 +570,7 @@ export function DocumentList({
               </TableHeader>
               <TableBody>
                 {documents.map((d) => {
-                  const ready = d.processing_status === "ready";
+                  const ready = isDocUsable(d.processing_status);
                   return (
                     <TableRow key={d.id}>
                       <TableCell>
