@@ -5,7 +5,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { UserMenu } from "@/components/layout/user-menu";
 import { useProfile } from "@/hooks/use-profile";
 import { useAccess } from "@/hooks/use-access";
-import type { OrgPermission, OrgRole, PlatformRole } from "@/lib/org-permissions";
+import type { OrgPermission, PlatformRole } from "@/lib/org-permissions";
 import {
   NAV_ENTRIES,
   NAV_SECTIONS,
@@ -52,7 +52,6 @@ import {
   Building2,
   KeyRound,
   ScrollText,
-  Eye,
   ShieldCheck,
   Wallet,
   Cog,
