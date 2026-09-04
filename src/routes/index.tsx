@@ -30,6 +30,7 @@ import {
 } from "lucide-react";
 import { JurisMindMark, JURISMIND_CONTEXT } from "@/components/brand/jurismind-mark";
 import { OutputShowcase } from "@/components/marketing/output-showcase";
+import { HeroCarousel } from "@/components/marketing/hero-carousel";
 import { useAuth } from "@/hooks/use-auth";
 
 const TRIAL_SEARCH = { modo: "cadastro", origem: "trial30" } as const;
@@ -225,90 +226,6 @@ function LearnMoreButton({ className }: { className?: string }) {
   );
 }
 
-/**
- * Demonstração compacta do MESMO caso usado em toda a página.
- * Dados FICTÍCIOS e determinísticos: documentos → comando → resposta com [F].
- */
-function CaseConsole() {
-  return (
-    <div className="relative rounded-3xl border border-primary-foreground/25 bg-primary/40 p-4 shadow-2xl backdrop-blur sm:p-5">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="font-heading text-base font-bold text-primary-foreground">
-          Reclamação Trabalhista — Maria Silva
-        </p>
-        <span className="inline-flex items-center gap-1.5 rounded-full border border-accent/50 bg-accent/15 px-2.5 py-1 text-sm font-semibold text-accent">
-          <CheckCircle2 className="h-3.5 w-3.5" aria-hidden />
-          Fontes prontas
-        </span>
-      </div>
-
-      <ul className="mt-3 space-y-2">
-        {["Cartões de ponto", "Recibos de pagamento", "Contrato de trabalho"].map((d) => (
-          <li
-            key={d}
-            className="flex items-center gap-2 rounded-md border border-primary-foreground/25 bg-primary/55 px-2.5 py-1.5 text-base text-primary-foreground/90"
-          >
-            <FileText className="h-3.5 w-3.5 shrink-0 text-accent" aria-hidden />
-            <span className="min-w-0 flex-1 truncate">{d}</span>
-          </li>
-        ))}
-      </ul>
-
-      <div className="my-2 flex justify-center">
-        <ArrowDown className="h-4 w-4 text-accent" aria-hidden />
-      </div>
-
-      <div className="rounded-2xl border border-accent/50 bg-accent/15 p-4">
-        <p className="text-sm font-semibold uppercase tracking-wide text-accent">
-          Comando do advogado
-        </p>
-        <p className="mt-1 text-base font-medium text-primary-foreground">
-          “Compare os cartões de ponto com os recibos e mostre a diferença.”
-        </p>
-      </div>
-
-      <div className="my-2 flex justify-center">
-        <ArrowDown className="h-4 w-4 text-accent" aria-hidden />
-      </div>
-
-      <div className="rounded-2xl border border-primary-foreground/20 bg-primary/70 p-4">
-        <p className="text-sm font-semibold uppercase tracking-wide text-accent">
-          Resposta do JurisMind
-        </p>
-        <p className="mt-2 text-base leading-relaxed text-primary-foreground">
-          Os cartões registram <strong>67h30</strong> de jornada extraordinária entre janeiro e
-          março [F1]; os recibos remuneram <strong>20h00</strong> [F2]. Diferença aparente de{" "}
-          <strong>47h30</strong>.
-        </p>
-        <div className="mt-3 space-y-1.5">
-          {[
-            { r: "F1", d: "Cartões de ponto · Março/2024, linhas 12–38" },
-            { r: "F2", d: "Recibos de pagamento · p. 2, verba 0031" },
-          ].map((e) => (
-            <p
-              key={e.r}
-              className="flex items-start gap-2 text-sm text-primary-foreground/85"
-            >
-              <Quote className="mt-0.5 h-3.5 w-3.5 shrink-0 text-accent" aria-hidden />
-              <span>
-                <span className="font-semibold text-accent">[{e.r}]</span> {e.d}
-              </span>
-            </p>
-          ))}
-        </div>
-        <p className="mt-3 border-t border-primary-foreground/20 pt-2 text-sm text-primary-foreground/80">
-          <span className="font-semibold text-accent">O que falta: </span>
-          os cartões de abril e maio não estão no acervo.
-        </p>
-      </div>
-
-      <p className="mt-3 text-sm text-primary-foreground/75">
-        Exemplo fictício. No produto, cada referência abre o documento na página citada — e o mesmo
-        caso segue em peça, planilha, apresentação e tarefa.
-      </p>
-    </div>
-  );
-}
 
 function LandingPage() {
   const { user } = useAuth();
@@ -392,7 +309,7 @@ function LandingPage() {
               </p>
             </div>
 
-            <CaseConsole />
+            <HeroCarousel />
           </div>
         </section>
 
