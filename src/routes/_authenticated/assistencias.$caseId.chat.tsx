@@ -58,7 +58,14 @@ function CaseChatFullPage() {
     refetchInterval: 15000,
   });
 
-  const [activeThreadId, setActiveThreadId] = useState<string | null>(null);
+  // Thread vinda do painel lateral do caso (?thread=...) tem prioridade:
+  // é a MESMA thread persistida, então a conversa continua sem perder contexto.
+  const [activeThreadId, setActiveThreadId] = useState<string | null>(threadFromUrl ?? null);
+
+  useEffect(() => {
+    if (threadFromUrl && threadFromUrl !== activeThreadId) setActiveThreadId(threadFromUrl);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [threadFromUrl]);
 
   // Seleciona a primeira thread automaticamente
   useEffect(() => {
