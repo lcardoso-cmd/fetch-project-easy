@@ -15,7 +15,14 @@ export interface IndexJobView {
   queue_position: number | null;
   /** Verdadeiro quando o processador parou de dar sinal de vida. */
   stalled: boolean;
+  /** Progresso salvo no servidor (sobrevive a recarregar a página). */
+  percent: number | null;
+  /** Motivo da última falha de etapa, já em linguagem do usuário. */
+  step_warning: string | null;
+  step_attempt: number | null;
+  step_attempts: number | null;
 }
+
 
 const STALE_MS = 5 * 60 * 1000;
 
