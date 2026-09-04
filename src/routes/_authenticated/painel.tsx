@@ -265,7 +265,7 @@ function HomePage() {
             <ClipboardCheck className="mr-2 h-4 w-4" /> Criar tarefa
           </Button>
         </AddTaskDialog>
-        <AddEventDialog cases={caseOptions} onCreated={refresh}>
+        <AddEventDialog cases={caseOptions}>
           <Button variant="outline" size="sm" className="min-h-10">
             <CalendarPlus className="mr-2 h-4 w-4" /> Criar evento
           </Button>
@@ -647,7 +647,7 @@ function HomePage() {
           <div className="flex items-center justify-between gap-2">
             <h2 className="font-heading text-section-title">Documentos recentes</h2>
             <Button variant="ghost" size="sm" className="min-h-10" asChild>
-              <Link to="/biblioteca">Ver biblioteca</Link>
+              <Link to="/documentos">Ver biblioteca</Link>
             </Button>
           </div>
           <ul className="divide-y divide-border rounded-lg border border-border bg-card">
