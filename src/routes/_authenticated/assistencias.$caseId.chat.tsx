@@ -9,6 +9,8 @@ import {
   Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
+import { z } from "zod";
+
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -20,21 +22,30 @@ import {
   listThreads,
 } from "@/lib/threads.functions";
 import { JurisMindChat } from "@/components/chat/jurismind-chat";
+import { useAccess } from "@/hooks/use-access";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
+const searchSchema = z.object({ thread: z.string().uuid().optional() });
+
 export const Route = createFileRoute("/_authenticated/assistencias/$caseId/chat")({
+  validateSearch: (s) => searchSchema.parse(s),
   component: CaseChatFullPage,
 });
 
 function CaseChatFullPage() {
   const { caseId } = Route.useParams();
+  const { thread: threadFromUrl } = Route.useSearch();
+
   const qc = useQueryClient();
   const getCaseFn = useServerFn(getCase);
   const listDocsFn = useServerFn(listDocuments);
   const listThreadsFn = useServerFn(listThreads);
   const createThreadFn = useServerFn(createThread);
   const deleteThreadFn = useServerFn(deleteThread);
+
+  const { hasOrgPermission, isLoading: accessLoading } = useAccess();
+  const canUseAi = hasOrgPermission("ai.use");
 
   const { data: caseData } = useQuery({
     queryKey: ["case", caseId],
@@ -51,7 +62,14 @@ function CaseChatFullPage() {
     refetchInterval: 15000,
   });
 
-  const [activeThreadId, setActiveThreadId] = useState<string | null>(null);
+  // Thread vinda do painel lateral do caso (?thread=...) tem prioridade:
+  // é a MESMA thread persistida, então a conversa continua sem perder contexto.
+  const [activeThreadId, setActiveThreadId] = useState<string | null>(threadFromUrl ?? null);
+
+  useEffect(() => {
+    if (threadFromUrl && threadFromUrl !== activeThreadId) setActiveThreadId(threadFromUrl);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [threadFromUrl]);
 
   // Seleciona a primeira thread automaticamente
   useEffect(() => {
@@ -106,6 +124,23 @@ function CaseChatFullPage() {
       return next;
     });
   }, [readyDocIds]);
+
+  if (!accessLoading && !canUseAi) {
+    return (
+      <div className="space-y-3 p-6">
+        <p className="font-medium">Sem acesso ao JurisMind AI</p>
+        <p className="text-sm text-muted-foreground">
+          Seu perfil não possui a permissão para usar o assistente de IA. Fale com o
+          administrador do escritório.
+        </p>
+        <Button variant="outline" size="sm" asChild>
+          <Link to="/assistencias/$caseId" params={{ caseId }}>
+            <ArrowLeft className="mr-1 h-4 w-4" /> Voltar ao caso
+          </Link>
+        </Button>
+      </div>
+    );
+  }
 
   if (!caseData) {
     return <p className="p-6 text-muted-foreground">Carregando…</p>;
