@@ -81,7 +81,7 @@ export const Route = createFileRoute("/")({
 
 /**
  * Ícones por chave. Todo o texto vem de `PITCH` — fonte única compartilhada
- * com a apresentação em PDF (src/lib/marketing/deck-pdf.server.ts).
+ * com a apresentação em PDF (asset estático servido por `/api/public/deck`).
  */
 const FLOW_ICONS: Record<string, typeof Search> = {
   localizar: Search,
