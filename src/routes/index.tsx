@@ -144,7 +144,12 @@ function LoginButton({
   label?: string;
 }) {
   return (
-    <Button size={size} variant={variant} asChild className={className}>
+    <Button
+      size={size}
+      variant={variant}
+      asChild
+      className={`whitespace-nowrap ${className ?? ""}`}
+    >
       <Link to="/entrar">{label}</Link>
     </Button>
   );
@@ -160,7 +165,7 @@ function TrialSignupButton({
   label?: string;
 }) {
   return (
-    <Button size={size} asChild className={className}>
+    <Button size={size} asChild className={`whitespace-nowrap ${className ?? ""}`}>
       <Link to="/entrar" search={TRIAL_SEARCH}>
         {label}
         <ArrowRight className="ml-2 h-4 w-4" />
@@ -179,7 +184,7 @@ function OpenDashboardButton({
   label?: string;
 }) {
   return (
-    <Button size={size} asChild className={className}>
+    <Button size={size} asChild className={`whitespace-nowrap ${className ?? ""}`}>
       <Link to="/painel">
         {label}
         <ArrowRight className="ml-2 h-4 w-4" />
@@ -190,7 +195,12 @@ function OpenDashboardButton({
 
 function LearnMoreButton({ className }: { className?: string }) {
   return (
-    <Button size="lg" variant="outline" asChild className={className}>
+    <Button
+      size="lg"
+      variant="outline"
+      asChild
+      className={`whitespace-nowrap ${className ?? ""}`}
+    >
       <a href="#entregas">Ver o que o JurisMind entrega</a>
     </Button>
   );
@@ -242,7 +252,7 @@ function LandingPage() {
 
       <main>
         {/* 1 · HERO */}
-        <section className="relative overflow-hidden bg-primary text-primary-foreground">
+        <section className="relative overflow-hidden bg-brand-navy text-brand-on-navy">
           <div
             className="absolute inset-0 opacity-20"
             style={{
@@ -252,28 +262,28 @@ function LandingPage() {
           />
           <div className="relative mx-auto grid max-w-6xl gap-10 px-4 py-16 lg:grid-cols-[1.05fr_1fr] lg:items-center lg:py-20">
             <div>
-              <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-accent/20 px-3 py-1 text-sm font-semibold text-accent">
+              <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-brand-cyan/15 px-3 py-1 text-sm font-semibold text-brand-cyan">
                 <JurisMindMark size={14} context={JURISMIND_CONTEXT.inlineDark} />
                 {PITCH.hero.eyebrow}
               </div>
               <h1 className="font-heading text-4xl font-extrabold leading-[1.08] tracking-tight md:text-5xl">
                 {PITCH.hero.title}
               </h1>
-              <p className="mt-5 max-w-xl text-lg text-primary-foreground/90">
+              <p className="mt-5 max-w-xl text-lg text-brand-on-navy/90">
                 {PITCH.hero.subtitle}
               </p>
 
-              <div className="mt-8 flex flex-wrap gap-3">
+              <div className="mt-8 flex flex-col gap-3 lg:flex-row lg:flex-nowrap [&>*]:w-full lg:[&>*]:w-auto">
                 {user ? (
-                  <OpenDashboardButton className="bg-accent text-accent-foreground hover:bg-accent/90" />
+                  <OpenDashboardButton className="bg-brand-cyan text-brand-navy hover:bg-brand-cyan/90" />
                 ) : (
-                  <TrialSignupButton className="bg-accent text-accent-foreground hover:bg-accent/90" />
+                  <TrialSignupButton className="bg-brand-cyan text-brand-navy hover:bg-brand-cyan/90" />
                 )}
-                <LearnMoreButton className="border-primary-foreground/30 bg-transparent text-primary-foreground hover:bg-primary-foreground/10" />
-                <DeckDownloadButton className="border-primary-foreground/30 bg-transparent text-primary-foreground hover:bg-primary-foreground/10" />
+                <LearnMoreButton className="border-brand-on-navy/35 bg-transparent text-brand-on-navy hover:bg-brand-on-navy/10" />
+                <DeckDownloadButton className="border-brand-on-navy/35 bg-transparent text-brand-on-navy hover:bg-brand-on-navy/10" />
               </div>
 
-              <p className="mt-6 text-base font-medium text-accent">
+              <p className="mt-6 text-base font-medium text-brand-cyan">
                 {PITCH.hero.highlight}
               </p>
             </div>
@@ -546,19 +556,19 @@ function LandingPage() {
         </section>
 
         {/* 9 · TESTE GRATUITO / CONTINUIDADE */}
-        <section className="bg-primary text-primary-foreground">
+        <section className="bg-brand-navy text-brand-on-navy">
           <div className="mx-auto max-w-3xl px-4 py-16 text-center">
             {user ? (
               <>
                 <h2 className="font-heading text-3xl font-bold tracking-tight md:text-4xl">
                   {PITCH.cta.authenticatedTitle}
                 </h2>
-                <p className="mx-auto mt-4 max-w-2xl text-primary-foreground/85">
+                <p className="mx-auto mt-4 max-w-2xl text-brand-on-navy/85">
                   {PITCH.cta.authenticatedSubtitle}
                 </p>
-                <div className="mt-8 flex flex-wrap justify-center gap-3">
-                  <OpenDashboardButton className="bg-accent text-accent-foreground hover:bg-accent/90" />
-                  <DeckDownloadButton className="border-primary-foreground/30 bg-transparent text-primary-foreground hover:bg-primary-foreground/10" />
+                <div className="mt-8 flex flex-col items-center gap-3 lg:flex-row lg:flex-nowrap lg:justify-center [&>*]:w-full lg:[&>*]:w-auto">
+                  <OpenDashboardButton className="bg-brand-cyan text-brand-navy hover:bg-brand-cyan/90" />
+                  <DeckDownloadButton className="border-brand-on-navy/35 bg-transparent text-brand-on-navy hover:bg-brand-on-navy/10" />
                 </div>
               </>
             ) : (
@@ -566,23 +576,23 @@ function LandingPage() {
                 <h2 className="font-heading text-3xl font-bold tracking-tight md:text-4xl">
                   {PITCH.cta.title}
                 </h2>
-                <p className="mx-auto mt-4 max-w-2xl text-primary-foreground/85">
+                <p className="mx-auto mt-4 max-w-2xl text-brand-on-navy/85">
                   {PITCH.cta.subtitle}
                 </p>
-                <div className="mt-8 flex flex-wrap justify-center gap-3">
+                <div className="mt-8 flex flex-col items-center gap-3 lg:flex-row lg:flex-nowrap lg:justify-center [&>*]:w-full lg:[&>*]:w-auto">
                   <TrialSignupButton
-                    className="bg-accent text-accent-foreground hover:bg-accent/90"
+                    className="bg-brand-cyan text-brand-navy hover:bg-brand-cyan/90"
                     label={PITCH.cta.button}
                   />
-                  <DeckDownloadButton className="border-primary-foreground/30 bg-transparent text-primary-foreground hover:bg-primary-foreground/10" />
+                  <DeckDownloadButton className="border-brand-on-navy/35 bg-transparent text-brand-on-navy hover:bg-brand-on-navy/10" />
                 </div>
-                <p className="mt-4 text-base text-primary-foreground/85">
+                <p className="mt-4 text-base text-brand-on-navy/85">
                   Já possui uma conta?{" "}
                   <Link to="/entrar" className="font-medium underline underline-offset-4">
                     Entrar
                   </Link>
                 </p>
-                <p className="mt-5 text-base text-primary-foreground/85">
+                <p className="mt-5 text-base text-brand-on-navy/85">
                   {PITCH.cta.note}
                 </p>
               </>

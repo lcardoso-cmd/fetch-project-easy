@@ -102,8 +102,8 @@ const SLIDES = [
 
 function RefChip({ ref: r, doc, where }: { ref: string; doc: string; where: string }) {
   return (
-    <span className="inline-flex max-w-full items-center gap-1.5 rounded-md border border-accent/45 bg-accent/10 px-2 py-1 text-sm font-medium text-foreground">
-      <span className="font-semibold text-accent-foreground/90 dark:text-accent">[{r}]</span>
+    <span className="inline-flex max-w-full items-center gap-1.5 rounded-md border border-brand-cyan/45 bg-brand-cyan/10 px-2 py-1 text-sm font-medium text-foreground">
+      <span className="font-semibold text-brand-cyan-foreground/90 dark:text-brand-cyan">[{r}]</span>
       <span className="truncate">{doc}</span>
       <span className="hidden text-muted-foreground sm:inline">· {where}</span>
     </span>
@@ -179,17 +179,17 @@ function SheetOutput() {
             Comparativo fictício entre horas registradas e horas pagas
           </caption>
           <thead>
-            <tr className="bg-primary text-primary-foreground">
-              <th scope="col" className="border border-primary/60 px-3 py-2 text-left font-semibold">
+            <tr className="bg-brand-navy text-brand-on-navy">
+              <th scope="col" className="border border-brand-navy/60 px-3 py-2 text-left font-semibold">
                 Competência
               </th>
-              <th scope="col" className="border border-primary/60 px-3 py-2 text-right font-semibold">
+              <th scope="col" className="border border-brand-navy/60 px-3 py-2 text-right font-semibold">
                 Horas registradas
               </th>
-              <th scope="col" className="border border-primary/60 px-3 py-2 text-right font-semibold">
+              <th scope="col" className="border border-brand-navy/60 px-3 py-2 text-right font-semibold">
                 Horas pagas
               </th>
-              <th scope="col" className="border border-primary/60 px-3 py-2 text-right font-semibold">
+              <th scope="col" className="border border-brand-navy/60 px-3 py-2 text-right font-semibold">
                 Diferença
               </th>
             </tr>
@@ -205,15 +205,15 @@ function SheetOutput() {
                 </td>
               </tr>
             ))}
-            <tr className="bg-accent/15">
-              <td className="border border-accent/40 px-3 py-2 font-bold text-foreground">Total</td>
-              <td className="border border-accent/40 px-3 py-2 text-right font-bold tabular-nums text-foreground">
+            <tr className="bg-brand-cyan/15">
+              <td className="border border-brand-cyan/40 px-3 py-2 font-bold text-foreground">Total</td>
+              <td className="border border-brand-cyan/40 px-3 py-2 text-right font-bold tabular-nums text-foreground">
                 67h30
               </td>
-              <td className="border border-accent/40 px-3 py-2 text-right font-bold tabular-nums text-foreground">
+              <td className="border border-brand-cyan/40 px-3 py-2 text-right font-bold tabular-nums text-foreground">
                 20h00
               </td>
-              <td className="border border-accent/40 px-3 py-2 text-right font-bold tabular-nums text-foreground">
+              <td className="border border-brand-cyan/40 px-3 py-2 text-right font-bold tabular-nums text-foreground">
                 47h30
               </td>
             </tr>
@@ -303,20 +303,20 @@ function PresentationOutput() {
   return (
     <>
       <div className="grid gap-4 lg:grid-cols-[1.6fr_1fr]">
-        <div className="aspect-video overflow-hidden rounded-xl bg-primary p-5 text-primary-foreground sm:p-7">
+        <div className="aspect-video overflow-hidden rounded-xl bg-brand-navy p-5 text-brand-on-navy sm:p-7">
           <div className="flex h-full flex-col justify-between">
-            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-accent">
+            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-brand-cyan">
               JurisMind AI · B2B Consulting
             </p>
             <div>
               <p className="font-heading text-2xl font-extrabold leading-tight sm:text-3xl">
                 Análise executiva do caso
               </p>
-              <p className="mt-2 text-base text-primary-foreground/85">
+              <p className="mt-2 text-base text-brand-on-navy/85">
                 Reclamação Trabalhista nº 0001234-56.2024.5.02.0012
               </p>
             </div>
-            <div className="h-1 w-24 rounded-full bg-accent" />
+            <div className="h-1 w-24 rounded-full bg-brand-cyan" />
           </div>
         </div>
 
@@ -324,9 +324,9 @@ function PresentationOutput() {
           {SLIDES.slice(0, 4).map((s, i) => (
             <li
               key={s}
-              className="flex aspect-video flex-col justify-between rounded-lg border border-primary/25 bg-primary/90 p-2.5 text-primary-foreground"
+              className="flex aspect-video flex-col justify-between rounded-lg border border-brand-navy/25 bg-brand-navy/90 p-2.5 text-brand-on-navy"
             >
-              <span className="text-sm font-semibold text-accent">
+              <span className="text-sm font-semibold text-brand-cyan">
                 {String(i + 2).padStart(2, "0")}
               </span>
               <span className="text-sm font-medium leading-snug">{s}</span>
@@ -353,7 +353,7 @@ function TaskOutput() {
   return (
     <div className="rounded-xl border bg-card p-4">
       <div className="flex items-start gap-3">
-        <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-accent/15 text-accent-foreground dark:text-accent">
+        <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brand-cyan/15 text-brand-cyan-foreground dark:text-brand-cyan">
           <CheckCircle2 className="h-4 w-4" aria-hidden />
         </span>
         <div>
@@ -449,8 +449,8 @@ export function OutputShowcase() {
             5 documentos indexados · Demonstração com dados fictícios
           </p>
         </div>
-        <span className="inline-flex w-fit items-center gap-2 rounded-full border border-accent/50 bg-accent/10 px-3 py-1 text-sm font-semibold text-foreground">
-          <CheckCircle2 className="h-4 w-4 text-accent-foreground/90 dark:text-accent" aria-hidden />
+        <span className="inline-flex w-fit items-center gap-2 rounded-full border border-brand-cyan/50 bg-brand-cyan/10 px-3 py-1 text-sm font-semibold text-foreground">
+          <CheckCircle2 className="h-4 w-4 text-brand-cyan-foreground/90 dark:text-brand-cyan" aria-hidden />
           Fontes prontas
         </span>
       </div>
@@ -476,7 +476,7 @@ export function OutputShowcase() {
               className={`flex items-center gap-2 rounded-xl border px-3 py-2.5 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
                 selected
                   ? "border-primary bg-primary text-primary-foreground shadow-sm"
-                  : "bg-background text-foreground hover:border-primary/40"
+                  : "bg-background text-foreground hover:border-brand-navy/40"
               }`}
             >
               <s.icon className="h-4 w-4 shrink-0" aria-hidden />
