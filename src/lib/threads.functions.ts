@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { requireOrg, requireOrgPermission } from "@/lib/org-middleware";
+import { requireOrgPermission } from "@/lib/org-middleware";
 
 export interface AiThread {
   id: string;
