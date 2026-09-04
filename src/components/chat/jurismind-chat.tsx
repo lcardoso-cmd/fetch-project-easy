@@ -488,6 +488,13 @@ export function JurisMindChat({
   const [retryInfo, setRetryInfo] = useState<{ attempt: number; max: number } | null>(null);
   const consecutiveSegmentFailuresRef = useRef<number>(0);
 
+  // Atalho do caso: pré-preenche o pedido no campo de mensagem.
+  useEffect(() => {
+    if (initialPrompt) setInput(initialPrompt);
+  }, [initialPrompt]);
+
+
+
 
   // Seletor de microfone
   const MIC_STORAGE_KEY = "jurismind:mic-device-id";
