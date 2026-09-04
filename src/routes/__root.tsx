@@ -18,6 +18,7 @@ import { ThemeProvider } from "@/hooks/use-theme";
 import { Toaster } from "@/components/ui/sonner";
 import { ErrorFallback } from "@/components/errors/error-fallback";
 import { GlobalErrorBoundary } from "@/components/errors/global-error-boundary";
+import { UploadManagerProvider } from "@/components/documents/upload-manager";
 
 
 function NotFoundComponent() {
