@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Download, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import deckAsset from "@/assets/jurismind-apresentacao.pdf.asset.json";
 
 const DECK_URL = deckAsset.url;
 const FILE_NAME = "JurisMind-Apresentacao-Executiva.pdf";
