@@ -45,6 +45,7 @@ export function CaseJurisMindPanel({
   threadId,
   onThreadChange,
   canUpload,
+  initialPrompt,
 }: {
   caseId: string;
   caseInfo: CaseChatInfo;
@@ -58,7 +59,9 @@ export function CaseJurisMindPanel({
   threadId: string | null;
   onThreadChange: (id: string | null) => void;
   canUpload: boolean;
+  initialPrompt?: string | null;
 }) {
+
   const qc = useQueryClient();
   const navigate = useNavigate();
   const listThreadsFn = useServerFn(listThreads);
