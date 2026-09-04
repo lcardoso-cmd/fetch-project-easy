@@ -922,7 +922,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
             </div>
           </header>
 
-          <header className="hidden h-14 items-center justify-between gap-4 border-b border-border bg-card px-6 lg:flex xl:px-10">
+          <header className="hidden h-14 items-center justify-between gap-4 border-b border-border bg-card pl-6 pr-[4.5rem] lg:flex xl:pl-10">
             <div className="flex min-w-0 items-center gap-3">
               <nav aria-label="Trilha de navegação" className="flex min-w-0 items-center gap-2">
                 <Link
