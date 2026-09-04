@@ -66,6 +66,7 @@ import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/s
 import { cn } from "@/lib/utils";
 import { NotificationBell } from "@/components/layout/notification-bell";
 import { ConversationsDrawer } from "@/components/chat/conversations-drawer";
+import { TeamChatDock } from "@/components/chat/team-chat-dock";
 
 /* ────────────────────────────────────────────────────────────────
    Modelo de navegação orientado a dados.
@@ -921,7 +922,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
             </div>
           </header>
 
-          <header className="hidden h-14 items-center justify-between gap-4 border-b border-border bg-card px-6 lg:flex xl:px-10">
+          <header className="hidden h-14 items-center justify-between gap-4 border-b border-border bg-card pl-6 pr-[4.5rem] lg:flex xl:pl-10">
             <div className="flex min-w-0 items-center gap-3">
               <nav aria-label="Trilha de navegação" className="flex min-w-0 items-center gap-2">
                 <Link
@@ -946,12 +947,13 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
             </div>
           </header>
 
-          <main className="flex-1 overflow-y-auto">
+          <main className="flex-1 overflow-y-auto lg:pr-14">
             <div className="mx-auto w-full max-w-[1600px] px-4 py-6 md:px-6 lg:px-10 lg:py-8">
               {children}
             </div>
           </main>
         </div>
+        <TeamChatDock />
       </div>
     </TooltipProvider>
   );

@@ -832,3 +832,104 @@ export const createTaskFromMessage = createServerFn({ method: "POST" })
 
     return taskIns.data;
   });
+
+// ------------------------------------------------ contatos da barra de chat
+
+/**
+ * Contatos para a barra lateral de chat (estilo Bitrix24): membros ativos da
+ * organização, com a conversa direta existente (quando houver) e a contagem
+ * de mensagens não lidas. Não exige permissão de gestão de equipe — qualquer
+ * membro ativo pode conversar com os colegas.
+ */
+export const listChatContacts = createServerFn({ method: "GET" })
+  .middleware([requireOrg])
+  .handler(async ({ context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const memberIds = (await activeMemberIds(supabaseAdmin, context.organizationId)).filter(
+      (id) => id !== context.userId,
+    );
+    if (memberIds.length === 0)
+      return [] as Array<{
+        user_id: string;
+        name: string;
+        conversation_id: string | null;
+        unread: number;
+        last_message_at: string | null;
+      }>;
+
+    const { data: profiles } = await context.supabase
+      .from("profiles")
+      .select("id, full_name")
+      .in("id", memberIds);
+    const nameById = new Map(
+      ((profiles ?? []) as Array<{ id: string; full_name: string | null }>).map(
+        (p) => [p.id, p.full_name?.trim() || "Usuário"] as const,
+      ),
+    );
+
+    // Conversas diretas existentes entre mim e cada colega.
+    const keys = memberIds.map((id) => dmKey(context.userId, id));
+    const { data: convs } = await context.supabase
+      .from("conversations")
+      .select("id, dm_key, last_message_at")
+      .eq("organization_id", context.organizationId)
+      .eq("kind", "dm")
+      .in("dm_key", keys);
+
+    const convByKey = new Map(
+      ((convs ?? []) as Array<{ id: string; dm_key: string | null; last_message_at: string | null }>)
+        .filter((c) => !!c.dm_key)
+        .map((c) => [c.dm_key as string, c] as const),
+    );
+
+    const convIds = Array.from(convByKey.values()).map((c) => c.id);
+    const lastReadByConv = new Map<string, string | null>();
+    if (convIds.length > 0) {
+      const { data: parts } = await context.supabase
+        .from("conversation_participants")
+        .select("conversation_id, last_read_at")
+        .eq("user_id", context.userId)
+        .in("conversation_id", convIds);
+      for (const p of (parts ?? []) as Array<{
+        conversation_id: string;
+        last_read_at: string | null;
+      }>) {
+        lastReadByConv.set(p.conversation_id, p.last_read_at);
+      }
+    }
+
+    const unreadByConv = new Map<string, number>();
+    await Promise.all(
+      convIds.map(async (id) => {
+        const lr = lastReadByConv.get(id);
+        let q = context.supabase
+          .from("messages")
+          .select("id", { count: "exact", head: true })
+          .eq("conversation_id", id)
+          .neq("author_id", context.userId)
+          .is("deleted_at", null);
+        if (lr) q = q.gt("created_at", lr);
+        const { count } = await q;
+        unreadByConv.set(id, count ?? 0);
+      }),
+    );
+
+    return memberIds
+      .map((id) => {
+        const conv = convByKey.get(dmKey(context.userId, id));
+        return {
+          user_id: id,
+          name: nameById.get(id) ?? "Usuário",
+          conversation_id: conv?.id ?? null,
+          unread: conv ? unreadByConv.get(conv.id) ?? 0 : 0,
+          last_message_at: conv?.last_message_at ?? null,
+        };
+      })
+      .sort((a, b) => {
+        if (b.unread !== a.unread) return b.unread - a.unread;
+        const at = a.last_message_at ?? "";
+        const bt = b.last_message_at ?? "";
+        if (at !== bt) return bt.localeCompare(at);
+        return a.name.localeCompare(b.name, "pt-BR");
+      });
+  });
