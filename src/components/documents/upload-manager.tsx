@@ -171,7 +171,9 @@ export function UploadManagerProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CaseUploadItem[]>([]);
   const [replacement, setReplacement] = useState<{
     existing: { id: string; filename: string };
-    file: File;
+    file: Blob;
+    filename: string;
+    fileType: string;
     itemId: string;
     caseId: string;
   } | null>(null);
@@ -180,17 +182,7 @@ export function UploadManagerProvider({ children }: { children: ReactNode }) {
   const abortersRef = useRef<Map<string, AbortController>>(new Map());
   const cancelledRef = useRef<Set<string>>(new Set());
   const runningRef = useRef(false);
-  const queueRef = useRef<
-    {
-      file: File | Blob;
-      filename: string;
-      itemId: string;
-      caseId: string;
-      hash?: string;
-      existing?: { id: string; filename: string }[];
-      partMeta?: Omit<PartMeta, "blob"> & { splitGroupId: string };
-    }[]
-  >([]);
+  const queueRef = useRef<QueueEntry[]>([]);
 
   const patchItem = useCallback(
     (id: string, patch: Partial<CaseUploadItem>) =>
@@ -199,13 +191,8 @@ export function UploadManagerProvider({ children }: { children: ReactNode }) {
   );
 
   const uploadOne = useCallback(
-    async (
-      file: File,
-      itemId: string,
-      caseId: string,
-      cachedHash?: string,
-      existingDocuments?: { id: string; filename: string }[],
-    ) => {
+    async (entry: QueueEntry) => {
+      const { itemId, caseId, filename, fileType, file, partMeta } = entry;
       const controller = new AbortController();
       abortersRef.current.set(itemId, controller);
       const { signal } = controller;
@@ -214,32 +201,47 @@ export function UploadManagerProvider({ children }: { children: ReactNode }) {
         signal.aborted || (e instanceof DOMException && e.name === "AbortError");
       try {
         patchItem(itemId, { phase: "hashing", pct: 0 });
-        const contentHash = cachedHash ?? (await hashFile(file));
+        const contentHash = entry.hash ?? (await hashBlob(file));
         if (signal.aborted) throw new DOMException("cancel", "AbortError");
 
         const { signedUrl, path } = await signFn({
           data: {
             case_id: caseId,
-            filename: file.name,
-            file_type: file.type || "application/octet-stream",
+            filename,
+            file_type: fileType || "application/octet-stream",
             file_size: file.size,
           },
         });
         if (signal.aborted) throw new DOMException("cancel", "AbortError");
 
         patchItem(itemId, { phase: "uploading", pct: 0 });
-        await putWithProgress(signedUrl, file, (pct) => patchItem(itemId, { pct }), signal);
+        await putWithProgress(
+          signedUrl,
+          file,
+          filename,
+          (pct: number) => patchItem(itemId, { pct }),
+          signal,
+        );
         uploadedPath = path;
 
         patchItem(itemId, { phase: "registering", pct: 100 });
         const res = await registerFn({
           data: {
             case_id: caseId,
-            filename: file.name,
-            file_type: file.type || "application/octet-stream",
+            filename,
+            file_type: fileType || "application/octet-stream",
             file_size: file.size,
             storage_path: path,
             content_hash: contentHash,
+            ...(partMeta
+              ? {
+                  split_group_id: partMeta.splitGroupId,
+                  part_index: partMeta.partIndex,
+                  part_count: partMeta.partCount,
+                  page_offset: partMeta.pageOffset,
+                  page_count: partMeta.pageCount,
+                }
+              : {}),
           },
         });
 
@@ -247,7 +249,7 @@ export function UploadManagerProvider({ children }: { children: ReactNode }) {
           uploadedPath = null;
           if (res.reason === "filename") {
             const existing =
-              existingDocuments?.find((d) => d.id === res.existing_id) ?? {
+              entry.existing?.find((d) => d.id === res.existing_id) ?? {
                 id: res.existing_id,
                 filename: res.existing_filename,
               };
@@ -255,7 +257,7 @@ export function UploadManagerProvider({ children }: { children: ReactNode }) {
               phase: "duplicate",
               message: "Já existe um arquivo com esse nome",
             });
-            setReplacement({ existing, file, itemId, caseId });
+            setReplacement({ existing, file, filename, fileType, itemId, caseId });
             return;
           }
           patchItem(itemId, {
@@ -304,6 +306,69 @@ export function UploadManagerProvider({ children }: { children: ReactNode }) {
     [discardFn, indexFn, patchItem, queryClient, registerFn, signFn],
   );
 
+  /**
+   * Divide PDFs grandes em partes reais antes do upload. Retorna as entradas
+   * que devem ir para a fila no lugar da entrada original.
+   */
+  const expandEntry = useCallback(
+    async (entry: QueueEntry): Promise<QueueEntry[]> => {
+      const limit = entry.maxPartPages ?? DEFAULT_MAX_PART_PAGES;
+      if (
+        entry.partMeta ||
+        limit <= 0 ||
+        !(entry.file instanceof File) ||
+        !shouldSplitPdf(entry.file)
+      ) {
+        return [entry];
+      }
+      try {
+        patchItem(entry.itemId, { phase: "splitting", pct: 0 });
+        const result = await splitPdf({ file: entry.file, maxPartPages: limit });
+        if (result.parts.length <= 1) return [{ ...entry, phaseHint: undefined } as QueueEntry];
+
+        const splitGroupId = crypto.randomUUID();
+        const entries: QueueEntry[] = result.parts.map((part) => ({
+          file: part.blob,
+          filename: part.filename,
+          fileType: "application/pdf",
+          itemId: `${entry.itemId}-p${part.partIndex}`,
+          caseId: entry.caseId,
+          existing: entry.existing,
+          partMeta: {
+            splitGroupId,
+            partIndex: part.partIndex,
+            partCount: part.partCount,
+            pageOffset: part.pageOffset,
+            pageCount: part.pageCount,
+          },
+        }));
+
+        setItems((prev) => [
+          ...prev.filter((x) => x.id !== entry.itemId),
+          ...entries.map((e) => ({
+            id: e.itemId,
+            caseId: e.caseId,
+            filename: e.filename,
+            size: e.file.size,
+            pct: 0,
+            phase: "queued" as const,
+            partIndex: e.partMeta?.partIndex,
+            partCount: e.partMeta?.partCount,
+          })),
+        ]);
+        toast.info(
+          `“${entry.filename}” foi dividido em ${result.parts.length} partes para processar com segurança.`,
+        );
+        return entries;
+      } catch (e) {
+        // Se a divisão falhar, envia o arquivo inteiro.
+        console.error("Falha ao dividir PDF:", e);
+        return [entry];
+      }
+    },
+    [patchItem],
+  );
+
   const drain = useCallback(async () => {
     if (runningRef.current) return;
     runningRef.current = true;
@@ -315,30 +380,41 @@ export function UploadManagerProvider({ children }: { children: ReactNode }) {
           patchItem(next.itemId, { phase: "cancelled", message: "Envio cancelado" });
           continue;
         }
-        await uploadOne(next.file, next.itemId, next.caseId, next.hash, next.existing);
+        const expanded = await expandEntry(next);
+        for (const item of expanded) {
+          if (cancelledRef.current.has(item.itemId)) {
+            cancelledRef.current.delete(item.itemId);
+            patchItem(item.itemId, { phase: "cancelled", message: "Envio cancelado" });
+            continue;
+          }
+          await uploadOne(item);
+        }
       }
     } finally {
       runningRef.current = false;
     }
-  }, [patchItem, uploadOne]);
+  }, [expandEntry, patchItem, uploadOne]);
 
   const enqueue = useCallback(
-    ({ caseId, files, hashes, existingDocuments }: EnqueueArgs) => {
+    ({ caseId, files, hashes, existingDocuments, maxPartPages }: EnqueueArgs) => {
       if (files.length === 0) return;
-      const created = files.map((file) => ({
+      const created: QueueEntry[] = files.map((file) => ({
         file,
+        filename: file.name,
+        fileType: file.type || "application/octet-stream",
         caseId,
         itemId: `${file.name}-${file.lastModified}-${Math.random().toString(36).slice(2, 8)}`,
         hash: hashes?.get(fileKey(file)),
         existing: existingDocuments,
+        maxPartPages,
       }));
       setItems((prev) => [
         ...prev,
-        ...created.map(({ file, itemId }) => ({
-          id: itemId,
+        ...created.map((e) => ({
+          id: e.itemId,
           caseId,
-          filename: file.name,
-          size: file.size,
+          filename: e.filename,
+          size: e.file.size,
           pct: 0,
           phase: "queued" as const,
         })),
@@ -348,6 +424,7 @@ export function UploadManagerProvider({ children }: { children: ReactNode }) {
     },
     [drain],
   );
+
 
   const cancelItem = useCallback(
     (id: string) => {
