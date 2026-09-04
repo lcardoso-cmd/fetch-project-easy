@@ -41,7 +41,7 @@ export const listIndexJobs = createServerFn({ method: "POST" })
     const { data: rows } = await context.supabase
       .from("document_index_jobs")
       .select(
-        "id, document_id, case_id, status, progress, attempt_count, max_attempts, last_error_message, heartbeat_at, created_at",
+        "id, document_id, case_id, status, progress, attempt_count, max_attempts, last_error_message, heartbeat_at, started_at, created_at",
       )
       .eq("organization_id", context.organizationId)
       .in("status", ["queued", "running", "error", "paused"])
