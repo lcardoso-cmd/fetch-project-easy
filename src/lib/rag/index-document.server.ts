@@ -232,11 +232,12 @@ export async function indexDocumentCore(
       metadata: { format, block_kind: c.source_kind },
     }));
 
-    const { data: inserted, error: insErr } = await supabase
-      .from("document_chunks")
-      .insert(rows)
-      .select("id");
-    if (insErr) throw insErr;
+    const inserted = await step("insert", async () => {
+      const { data, error } = await supabase.from("document_chunks").insert(rows).select("id");
+      if (error) throw error;
+      return data;
+    });
+
 
     const newIds = new Set(((inserted ?? []) as Array<{ id: string }>).map((r) => r.id));
     const { data: existing } = await supabase
