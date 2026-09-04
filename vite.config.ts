@@ -6,6 +6,14 @@
 // You can pass additional config via defineConfig({ vite: { ... }, etc... }) if needed.
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 import { mcpPlugin } from "@lovable.dev/mcp-js/stacks/tanstack/vite";
+import { createRequire } from "node:module";
+
+// pdf-lib depends on an old UMD build of tslib. Nitro's Cloudflare bundle can
+// wrap that module as a default ESM export which is undefined in workerd. Point
+// bare tslib imports at the native ESM build so the same bundle runs in both
+// Node (tests/build) and Cloudflare Workers (production).
+const require = createRequire(import.meta.url);
+const tslibEsmPath = require.resolve("tslib/tslib.es6.mjs");
 
 export default defineConfig({
   tanstackStart: {
@@ -15,5 +23,8 @@ export default defineConfig({
   },
   vite: {
     plugins: [mcpPlugin()],
+    resolve: {
+      alias: [{ find: /^tslib$/, replacement: tslibEsmPath }],
+    },
   },
 });
