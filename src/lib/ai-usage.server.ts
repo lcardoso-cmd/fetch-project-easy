@@ -8,6 +8,8 @@ import { estimateCostUsd } from "./ai-pricing";
 
 export interface UsageContext {
   userId?: string;
+  /** Organização ativa — os limites/orçamento de IA são por organização. */
+  organizationId?: string | null;
   caseId?: string | null;
   threadId?: string | null;
   feature?: string;
@@ -70,6 +72,7 @@ export async function logAiUsage(args: LogArgs): Promise<void> {
 
     const row: Record<string, unknown> = {
       user_id: ctx.userId,
+      organization_id: ctx.organizationId ?? null,
       feature,
       model: args.model,
       prompt_tokens: prompt,
@@ -95,7 +98,7 @@ export async function logAiUsage(args: LogArgs): Promise<void> {
     const { error } = await client.from("ai_usage_events").insert(row);
     if (error) console.warn("[ai-usage] insert falhou:", error.message);
     // Invalida cache para refletir o novo gasto na próxima checagem.
-    budgetCache.delete(ctx.userId);
+    if (ctx.organizationId) budgetCache.delete(ctx.organizationId);
   } catch (e) {
     console.warn("[ai-usage] erro:", e instanceof Error ? e.message : String(e));
   }
@@ -131,8 +134,8 @@ export class AiBudgetExceededError extends Error {
   }
 }
 
-async function loadBudget(userId: string): Promise<BudgetSnapshot> {
-  const cached = budgetCache.get(userId);
+async function loadBudget(organizationId: string): Promise<BudgetSnapshot> {
+  const cached = budgetCache.get(organizationId);
   if (cached && Date.now() - cached.fetchedAt < BUDGET_TTL_MS) return cached;
 
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -141,7 +144,7 @@ async function loadBudget(userId: string): Promise<BudgetSnapshot> {
   const { data: row } = await admin
     .from("ai_budgets")
     .select("monthly_limit_usd, warn_threshold_pct, max_tokens, max_context_chars, max_retries, force_fallback_on_retry")
-    .eq("user_id", userId)
+    .eq("organization_id", organizationId)
     .maybeSingle();
 
   const limit = Number(row?.monthly_limit_usd ?? 0);
@@ -153,8 +156,18 @@ async function loadBudget(userId: string): Promise<BudgetSnapshot> {
 
   let spent = 0;
   if (limit > 0) {
-    const { data } = await admin.rpc("ai_usage_current_month_cost", { _user_id: userId });
-    spent = Number(data ?? 0);
+    // Gasto do mês corrente da ORGANIZAÇÃO (o orçamento é organizacional).
+    const now = new Date();
+    const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString();
+    const { data } = await admin
+      .from("ai_usage_events")
+      .select("cost_usd")
+      .eq("organization_id", organizationId)
+      .gte("created_at", monthStart);
+    spent = ((data ?? []) as Array<{ cost_usd: number | string | null }>).reduce(
+      (sum, r) => sum + Number(r.cost_usd ?? 0),
+      0,
+    );
   }
 
   const snap: BudgetSnapshot = {
@@ -167,16 +180,15 @@ async function loadBudget(userId: string): Promise<BudgetSnapshot> {
     forceFallback,
     fetchedAt: Date.now(),
   };
-  budgetCache.set(userId, snap);
+  budgetCache.set(organizationId, snap);
   return snap;
-
 }
 
 /** Lança `AiBudgetExceededError` se o usuário já ultrapassou o limite mensal. */
 export async function assertAiBudget(): Promise<void> {
   const ctx = getUsageContext();
-  if (!ctx?.userId) return;
-  const b = await loadBudget(ctx.userId);
+  if (!ctx?.organizationId) return;
+  const b = await loadBudget(ctx.organizationId);
   if (b.limit > 0 && b.spent >= b.limit) {
     throw new AiBudgetExceededError(b.limit, b.spent);
   }
@@ -192,8 +204,9 @@ export interface AiLimits {
 /** Limites de chamada configurados pelo dono do contexto atual (ou defaults). */
 export async function getAiLimitsForCurrentUser(): Promise<AiLimits> {
   const ctx = getUsageContext();
-  if (!ctx?.userId) return { maxTokens: 0, maxContextChars: 0, maxRetries: 1, forceFallback: false };
-  const b = await loadBudget(ctx.userId);
+  if (!ctx?.organizationId)
+    return { maxTokens: 0, maxContextChars: 0, maxRetries: 1, forceFallback: false };
+  const b = await loadBudget(ctx.organizationId);
   return {
     maxTokens: b.maxTokens,
     maxContextChars: b.maxContextChars,
@@ -203,8 +216,8 @@ export async function getAiLimitsForCurrentUser(): Promise<AiLimits> {
 }
 
 /** Snapshot para exibição no cliente (sem cache-invalidação — leitura rápida). */
-export async function getAiBudgetSnapshot(userId: string) {
-  const b = await loadBudget(userId);
+export async function getAiBudgetSnapshot(organizationId: string) {
+  const b = await loadBudget(organizationId);
   return {
     limit_usd: b.limit,
     warn_threshold_pct: b.warnPct,
@@ -220,6 +233,6 @@ export async function getAiBudgetSnapshot(userId: string) {
 }
 
 
-export function invalidateBudgetCache(userId: string) {
-  budgetCache.delete(userId);
+export function invalidateBudgetCache(organizationId: string) {
+  budgetCache.delete(organizationId);
 }
