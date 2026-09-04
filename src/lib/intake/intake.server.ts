@@ -283,13 +283,15 @@ Documento: ${filename}
 
 ${context}`;
 
-  const raw = await chatComplete({
-    system,
-    messages: [{ role: "user", content: userMsg }],
-    feature: "case_intake_extraction",
-  });
+  const { content: raw } = await chatComplete(
+    [
+      { role: "system", content: system },
+      { role: "user", content: userMsg },
+    ],
+    { feature: "case_intake_extraction", temperature: 0.1 },
+  );
 
-  const parsed = parseModelJson<IntakeExtraction>(typeof raw === "string" ? raw : String(raw));
+  const parsed = parseModelJson<IntakeExtraction>(raw ?? "");
   const cnjFromText = context.match(CNJ_REGEX)?.[0] ?? null;
   const normalizedNumber =
     normalizeCaseNumber(cleanString(parsed.case_number, 60)) ?? normalizeCaseNumber(cnjFromText);

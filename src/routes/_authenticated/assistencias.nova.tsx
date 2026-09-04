@@ -43,13 +43,28 @@ import { PARTY_RELATIONS, representedRelationFor, guessRelation } from "@/lib/pa
 import {
   createCase,
   setCaseTeamAccess,
-  extractCaseDataFromDocument,
-  attachDocumentToCase,
   type ExtractedCaseData,
 } from "@/lib/cases.functions";
+import {
+  registerIntakeDocument,
+  getIntakeDocument,
+  reprocessIntakeDocument,
+  discardIntakeDocument,
+  convertIntakeToCaseDocument,
+} from "@/lib/intake.functions";
+import {
+  INTAKE_STATUS_LABEL,
+  INTAKE_STATUS_PROGRESS,
+  isIntakeActive,
+  type IntakeStatus,
+} from "@/lib/intake/intake-core";
+import {
+  MAX_DOCUMENT_SIZE_LABEL,
+  DOCUMENT_ACCEPT_ATTR,
+  validateDocumentUpload,
+} from "@/lib/documents-limits";
 import { buildCaseTitle } from "@/lib/case-title";
 import { listOrgMembers } from "@/lib/organization.functions";
-import { indexDocument } from "@/lib/rag.functions";
 import { createUploadSignedUrl } from "@/lib/documents.functions";
 import { Progress } from "@/components/ui/progress";
 import { useUnsavedChangesGuard } from "@/hooks/use-unsaved-changes-guard";
@@ -103,9 +118,11 @@ function NewCasePage() {
   const qc = useQueryClient();
 
   const createCaseFn = useServerFn(createCase);
-  const extractFn = useServerFn(extractCaseDataFromDocument);
-  const attachFn = useServerFn(attachDocumentToCase);
-  const indexFn = useServerFn(indexDocument);
+  const registerIntakeFn = useServerFn(registerIntakeDocument);
+  const getIntakeFn = useServerFn(getIntakeDocument);
+  const reprocessIntakeFn = useServerFn(reprocessIntakeDocument);
+  const discardIntakeFn = useServerFn(discardIntakeDocument);
+  const convertIntakeFn = useServerFn(convertIntakeToCaseDocument);
   const signUploadFn = useServerFn(createUploadSignedUrl);
   const listTeamFn = useServerFn(listOrgMembers);
   const setTeamAccessFn = useServerFn(setCaseTeamAccess);
@@ -146,6 +163,16 @@ function NewCasePage() {
     "idle" | "uploading" | "extracting" | "done"
   >("idle");
   const [uploadPct, setUploadPct] = useState(0);
+  // Registro persistente da leitura do documento (continua no servidor).
+  const [intakeId, setIntakeId] = useState<string | null>(null);
+  const [intakeStatus, setIntakeStatus] = useState<IntakeStatus | null>(null);
+  const [intakeError, setIntakeError] = useState<string | null>(null);
+  const [intakeInfo, setIntakeInfo] = useState<{
+    pages_total: number | null;
+    pages_analyzed: number | null;
+    failed_pages: number[];
+  } | null>(null);
+
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
@@ -221,11 +248,13 @@ function NewCasePage() {
       if (raw) {
         const s = JSON.parse(raw) as {
           uploaded?: UploadedDoc | null;
+          intakeId?: string | null;
           missingFields?: string[];
           extractionWarnings?: ExtractionWarning[];
           reviewConfirmed?: boolean;
         };
         if (s.uploaded) setUploaded(s.uploaded);
+        if (s.intakeId) setIntakeId(s.intakeId);
         if (Array.isArray(s.missingFields)) setMissingFields(s.missingFields);
         if (Array.isArray(s.extractionWarnings)) {
           // Filtra entradas em formato antigo (string)
@@ -255,13 +284,13 @@ function NewCasePage() {
       } else {
         localStorage.setItem(
           REVIEW_STORAGE_KEY,
-          JSON.stringify({ uploaded, missingFields, extractionWarnings, reviewConfirmed }),
+          JSON.stringify({ uploaded, intakeId, missingFields, extractionWarnings, reviewConfirmed }),
         );
       }
     } catch {
       // quota / indisponível — silencioso
     }
-  }, [REVIEW_STORAGE_KEY, hydratedReview, uploaded, missingFields, extractionWarnings, reviewConfirmed]);
+  }, [REVIEW_STORAGE_KEY, hydratedReview, uploaded, intakeId, missingFields, extractionWarnings, reviewConfirmed]);
 
   const applyExtracted = (e: ExtractedCaseData) => {
     // Título só é preenchido a partir do documento se o usuário ainda não
@@ -293,19 +322,39 @@ function NewCasePage() {
     }
   }, [titleAuto, matterKind, parties, title]);
 
+  // Aplica o resultado de uma análise concluída (ou parcial) na tela.
+  const applyIntakeResult = (row: {
+    status: string;
+    extracted_data: Record<string, unknown> | null;
+    missing_fields: string[];
+    warnings: Array<{ field: string | null; message: string }>;
+  }) => {
+    if (row.extracted_data) {
+      applyExtracted(row.extracted_data as unknown as ExtractedCaseData);
+    }
+    setMissingFields(row.missing_fields ?? []);
+    setExtractionWarnings(row.warnings ?? []);
+    setReviewConfirmed(false);
+  };
+
   const handleFile = async (file: File) => {
     if (!user) return;
-    if (file.size > 250 * 1024 * 1024) {
-      toast.error("Arquivo excede 250 MB");
+    const check = validateDocumentUpload({ filename: file.name, file_size: file.size });
+    if (!check.ok) {
+      toast.error(check.message);
       return;
     }
     setExtracting(true);
     setUploadPhase("uploading");
     setUploadPct(0);
     try {
-      // 1. Signed URL para upload direto (com progresso real)
+      // 1. Link de envio direto (com progresso real), já validado no servidor.
       const { signedUrl, path } = await signUploadFn({
-        data: { filename: file.name },
+        data: {
+          filename: file.name,
+          file_type: file.type || "application/octet-stream",
+          file_size: file.size,
+        },
       });
 
       // 2. PUT via XHR para exibir % em tempo real
@@ -336,28 +385,20 @@ function NewCasePage() {
       };
       setUploaded(meta);
 
-      // 3. Extração
+      // 3. Registra o documento e coloca a análise na fila. A leitura continua
+      //    no servidor mesmo se a página for fechada.
       setUploadPhase("extracting");
-      const res = await extractFn({ data: { ...meta, matter_kind: matterKind } });
-      applyExtracted(res.extracted);
-      const missingRaw = res.missing ?? [];
-      setMissingFields(missingRaw);
-      setExtractionWarnings(res.warnings ?? []);
-      setReviewConfirmed(false);
-      if (missingRaw.length) {
-        const missingLabels = missingRaw.map((f) => FIELD_LABELS[f] ?? f);
-        toast.warning("Alguns dados não foram identificados", {
-          description: `Preencha manualmente: ${missingLabels.join(", ")}.`,
-        });
-      } else {
-        toast.success("Dados extraídos do documento");
-      }
-      (res.warnings ?? []).forEach((w) =>
-        toast.warning(w.field ? FIELD_LABELS[w.field] ?? w.field : "Aviso", {
-          description: w.message,
-        }),
-      );
-      setUploadPhase("done");
+      const row = await registerIntakeFn({
+        data: {
+          storage_path: path,
+          filename: file.name,
+          file_type: file.type || "application/octet-stream",
+          file_size: file.size,
+        },
+      });
+      setIntakeId(row.id);
+      setIntakeStatus(row.status as IntakeStatus);
+      toast.info("Documento recebido. Estamos lendo o conteúdo.");
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       toast.error(`Falha: ${msg}`);
@@ -369,14 +410,96 @@ function NewCasePage() {
   };
 
   const removeUpload = async () => {
-    if (uploaded) {
+    if (intakeId) {
+      await discardIntakeFn({ data: { id: intakeId } }).catch(() => {});
+    } else if (uploaded) {
       await supabase.storage.from("documents").remove([uploaded.storage_path]).catch(() => {});
     }
     setUploaded(null);
+    setIntakeId(null);
+    setIntakeStatus(null);
+    setIntakeError(null);
+    setIntakeInfo(null);
     setMissingFields([]);
     setExtractionWarnings([]);
     setReviewConfirmed(false);
+    setUploadPhase("idle");
   };
+
+  // Nova tentativa de leitura: normal ou forçando reconhecimento de imagem.
+  const retryIntake = async (mode: "auto" | "ocr") => {
+    if (!intakeId) return;
+    try {
+      const row = await reprocessIntakeFn({ data: { id: intakeId, mode } });
+      setIntakeStatus(row.status as IntakeStatus);
+      setIntakeError(null);
+      setUploadPhase("extracting");
+      toast.info(
+        mode === "ocr"
+          ? "Relendo o documento como imagem."
+          : "Nova tentativa de leitura iniciada.",
+      );
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : String(e));
+    }
+  };
+
+
+  // Acompanha a leitura em andamento. O trabalho roda no servidor; aqui só
+  // consultamos o andamento e aplicamos o resultado quando ele fica pronto.
+  useEffect(() => {
+    if (!intakeId) return;
+    if (intakeStatus && !isIntakeActive(intakeStatus)) return;
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+
+    const tick = async () => {
+      try {
+        const row = await getIntakeFn({ data: { id: intakeId } });
+        if (cancelled || !row) return;
+        setIntakeStatus(row.status as IntakeStatus);
+        setIntakeInfo({
+          pages_total: row.pages_total,
+          pages_analyzed: row.pages_analyzed,
+          failed_pages: row.failed_pages ?? [],
+        });
+        if (row.status === "ready" || row.status === "partial") {
+          applyIntakeResult(row);
+          setIntakeError(null);
+          setUploadPhase("done");
+          const missing = row.missing_fields ?? [];
+          if (missing.length > 0) {
+            toast.warning("Alguns dados não foram identificados", {
+              description: `Preencha manualmente: ${missing
+                .map((f) => FIELD_LABELS[f] ?? f)
+                .join(", ")}.`,
+            });
+          } else {
+            toast.success("Dados extraídos do documento");
+          }
+          return;
+        }
+        if (row.status === "error") {
+          setIntakeError(
+            row.last_error_message ??
+              "Não conseguimos ler este documento. Você pode tentar de novo ou preencher os dados manualmente.",
+          );
+          setUploadPhase("done");
+          return;
+        }
+        timer = setTimeout(tick, 2500);
+      } catch {
+        if (!cancelled) timer = setTimeout(tick, 5000);
+      }
+    };
+
+    timer = setTimeout(tick, 800);
+    return () => {
+      cancelled = true;
+      if (timer) clearTimeout(timer);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [intakeId, intakeStatus]);
 
   const addParty = () => setParties([...parties, { role: "", name: "" }]);
   const updateParty = (i: number, patch: Partial<Party>) =>
@@ -496,15 +619,17 @@ function NewCasePage() {
         }
       }
 
-      if (uploaded) {
+      if (intakeId) {
         try {
-          const att = await attachFn({ data: { ...uploaded, case_id: newCase.id } });
-          indexFn({ data: { document_id: att.document_id } }).catch(() => {});
+          // Reaproveita o arquivo já enviado: nada é baixado ou reenviado.
+          // A leitura completa para consulta pela IA entra na fila do servidor.
+          await convertIntakeFn({ data: { id: intakeId, case_id: newCase.id } });
         } catch (err) {
           const msg = err instanceof Error ? err.message : String(err);
           toast.error(`Caso criado, mas falhou ao anexar documento: ${msg}`);
         }
       }
+
 
       await qc.invalidateQueries({ queryKey: ["cases"] });
       if (REVIEW_STORAGE_KEY) {
@@ -611,38 +736,98 @@ function NewCasePage() {
           </CardHeader>
           <CardContent>
             {uploaded ? (
-              <div className="flex items-center justify-between rounded-lg border bg-muted/30 p-3">
-                <button
-                  type="button"
-                  onClick={() => setPreviewOpen(true)}
-                  className="flex items-center gap-2 min-w-0 text-left hover:text-accent transition-colors"
-                  title="Clique para visualizar o documento"
-                >
-                  <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
-                  <span className="truncate text-sm font-medium underline-offset-2 hover:underline">
-                    {uploaded.filename}
-                  </span>
-                  {extracting ? (
-                    <Badge variant="secondary" className="ml-2 gap-1">
-                      <Loader2 className="h-3 w-3 animate-spin" /> Extraindo...
-                    </Badge>
-                  ) : (
-                    <Badge variant="secondary" className="ml-2 gap-1">
-                      <CheckCircle2 className="h-3 w-3" /> Anexado — clique para ver
-                    </Badge>
-                  )}
-                </button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  onClick={removeUpload}
-                  disabled={extracting}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
+              <div className="space-y-3 rounded-lg border bg-muted/30 p-3">
+                <div className="flex items-center justify-between gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setPreviewOpen(true)}
+                    className="flex items-center gap-2 min-w-0 text-left hover:text-accent transition-colors"
+                    title="Clique para visualizar o documento"
+                  >
+                    <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    <span className="truncate text-sm font-medium underline-offset-2 hover:underline">
+                      {uploaded.filename}
+                    </span>
+                  </button>
+                  <div className="flex items-center gap-1 shrink-0">
+                    {intakeStatus && isIntakeActive(intakeStatus) ? (
+                      <Badge variant="secondary" className="gap-1">
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                        {INTAKE_STATUS_LABEL[intakeStatus]}
+                      </Badge>
+                    ) : intakeStatus === "error" ? (
+                      <Badge variant="destructive" className="gap-1">
+                        <AlertTriangle className="h-3 w-3" /> Não foi possível ler
+                      </Badge>
+                    ) : (
+                      <Badge variant="secondary" className="gap-1">
+                        <CheckCircle2 className="h-3 w-3" /> Anexado
+                      </Badge>
+                    )}
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={removeUpload}
+                      disabled={extracting}
+                      title="Remover documento"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+
+                {intakeStatus && isIntakeActive(intakeStatus) && (
+                  <div className="space-y-1">
+                    <Progress
+                      value={INTAKE_STATUS_PROGRESS[intakeStatus]}
+                      className="h-2"
+                    />
+                    <p className="text-sm text-muted-foreground">
+                      A leitura continua no servidor — você pode continuar preenchendo
+                      o formulário enquanto isso.
+                    </p>
+                  </div>
+                )}
+
+                {intakeInfo?.pages_total ? (
+                  <p className="text-sm text-muted-foreground">
+                    {intakeInfo.pages_analyzed ?? 0} de {intakeInfo.pages_total} páginas
+                    analisadas para preencher o formulário. O arquivo completo fica
+                    anexado ao caso.
+                  </p>
+                ) : null}
+
+                {intakeError && (
+                  <p className="text-sm text-destructive flex items-start gap-1">
+                    <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+                    {intakeError}
+                  </p>
+                )}
+
+                {intakeId && intakeStatus && !isIntakeActive(intakeStatus) && (
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => retryIntake("auto")}
+                    >
+                      Tentar ler de novo
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => retryIntake("ocr")}
+                    >
+                      Ler como imagem (documento digitalizado)
+                    </Button>
+                  </div>
+                )}
               </div>
             ) : (
+
               <div
                 onDragOver={(e) => e.preventDefault()}
                 onDrop={(e) => {
@@ -677,7 +862,9 @@ function NewCasePage() {
                     <UploadCloud className="h-8 w-8 text-muted-foreground" />
                     <div>
                       <p className="font-medium">Arraste o documento aqui</p>
-                      <p className="text-xs text-muted-foreground">PDF, DOCX, TXT — até 250 MB</p>
+                      <p className="text-sm text-muted-foreground">
+                        PDF, DOCX, XLSX, CSV, TXT ou imagem — até {MAX_DOCUMENT_SIZE_LABEL}
+                      </p>
                     </div>
                     <Button
                       type="button"
@@ -691,7 +878,7 @@ function NewCasePage() {
                 <input
                   ref={fileInputRef}
                   type="file"
-                  accept=".pdf,.txt,.md,.docx,application/pdf,text/plain"
+                  accept={DOCUMENT_ACCEPT_ATTR}
                   className="hidden"
                   onChange={(e) => {
                     const f = e.target.files?.[0];
@@ -704,7 +891,7 @@ function NewCasePage() {
         </Card>
 
         {/* Etapa de revisão — aparece sempre que há um documento extraído */}
-        {uploaded && !extracting && (
+        {uploaded && !extracting && !(intakeStatus && isIntakeActive(intakeStatus)) && (
           <Card className="border-accent/40 bg-accent/5">
             <CardHeader>
               <CardTitle className="text-lg flex items-center gap-2 text-accent">

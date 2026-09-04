@@ -9,6 +9,10 @@ import {
   registerDocument,
 } from "@/lib/documents.functions";
 import { indexDocument } from "@/lib/rag.functions";
+import {
+  MAX_DOCUMENT_SIZE_BYTES,
+  MAX_DOCUMENT_SIZE_LABEL,
+} from "@/lib/documents-limits";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -62,7 +66,8 @@ const ACCEPT_STRING = [
   ".jpeg",
   ...ACCEPTED_TYPES,
 ].join(",");
-const MAX_SIZE = 250 * 1024 * 1024; // 250 MB
+// Limite único da aplicação (mesma regra validada no servidor).
+const MAX_SIZE = MAX_DOCUMENT_SIZE_BYTES;
 
 interface ExistingDoc {
   id: string;
@@ -184,7 +189,9 @@ export function UploadDialog({
       valid.push(f);
     }
     if (oversized.length)
-      toast.error(`Arquivos > 250 MB ignorados: ${oversized.join(", ")}`);
+      toast.error(
+        `Arquivos acima de ${MAX_DOCUMENT_SIZE_LABEL} ignorados: ${oversized.join(", ")}`,
+      );
     if (invalid.length)
       toast.error(`Tipo não suportado: ${invalid.join(", ")}`);
     setFiles((prev) => {
@@ -270,8 +277,10 @@ export function UploadDialog({
         const idx = await indexFn({ data: { document_id: doc.id } });
         patchItem(itemId, {
           phase: "done",
-          message: `Pronto — ${idx.chunks ?? 0} trechos indexados`,
-          chunks: idx.chunks,
+          message: idx.queued
+            ? "Enviado — a leitura continua no servidor"
+            : `Pronto — ${idx.chunks} trechos indexados`,
+          chunks: idx.queued ? undefined : idx.chunks,
         });
       } catch (e) {
         patchItem(itemId, {
@@ -447,7 +456,7 @@ export function UploadDialog({
             <DialogHeader>
               <DialogTitle>Carregar documentos</DialogTitle>
               <DialogDescription>
-                Arraste ou selecione PDF, DOCX, XLSX, CSV, TXT, PNG, JPG (até 250 MB cada).
+                Arraste ou selecione PDF, DOCX, XLSX, CSV, TXT, PNG, JPG (até {MAX_DOCUMENT_SIZE_LABEL} cada).
               </DialogDescription>
             </DialogHeader>
 

@@ -11,216 +11,79 @@ const IndexSchema = z.object({
 
 export const EMBEDDING_MODEL = "openai/text-embedding-3-small";
 
+/** Acima deste tamanho a leitura vai para a fila durável do servidor. */
+const INLINE_INDEX_MAX_BYTES = 25 * 1024 * 1024;
+
 /**
- * Indexação resiliente e idempotente de um documento.
+ * Indexação de um documento para consulta pela IA.
  *
- * Etapas com status próprio em `documents.processing_status`:
- * extracting → ocr_processing → chunking → embedding → ready | partial | error.
+ * Arquivos pequenos são processados na hora (resposta imediata na tela).
+ * Arquivos grandes entram na fila durável do servidor: a leitura continua
+ * mesmo que a página seja fechada e é retomada se for interrompida.
  *
- * Os novos chunks são gravados ANTES de remover os antigos: se qualquer etapa
- * falhar, a versão anterior do índice continua consultável.
+ * Em ambos os casos os novos trechos são gravados ANTES de remover os antigos,
+ * então uma falha no meio do caminho preserva o índice anterior.
  */
 export const indexDocument = createServerFn({ method: "POST" })
   .middleware([requireOrg])
   .inputValidator((i: unknown) => IndexSchema.parse(i))
   .handler(async ({ data, context }) => {
-    const { embedTexts } = await import("./ai.server");
-    const { parseDocument, detectFormat, UnsupportedFormatError, PARSER_VERSION } = await import(
-      "./rag/parsers.server"
-    );
-    const { ocrPdfPages, ocrImage } = await import("./rag/ocr.server");
-    const { structuredChunk, CHUNK_PROFILES, DEFAULT_CHUNK_PROFILE } = await import(
-      "./rag/chunking"
-    );
-
-    const setStatus = async (status: string) => {
-      await context.supabase
-        .from("documents")
-        .update({ processing_status: status })
-        .eq("id", data.document_id);
-    };
-
-    const { data: doc, error: docErr } = await context.supabase
+    const { data: doc } = await context.supabase
       .from("documents")
-      .select("id, case_id, storage_path, file_type, filename")
+      .select("id, case_id, file_size")
       .eq("id", data.document_id)
       .eq("organization_id", context.organizationId)
-      .single();
-    if (docErr || !doc) throw new Error("Documento não encontrado");
+      .maybeSingle();
+    if (!doc) throw new Error("Documento não encontrado");
 
-    const profile = data.chunk_profile
-      ? (CHUNK_PROFILES[data.chunk_profile] ?? DEFAULT_CHUNK_PROFILE)
-      : DEFAULT_CHUNK_PROFILE;
+    const size = (doc.file_size as number | null) ?? 0;
 
-    try {
-      // Formato: recusa explícita em vez de ler binário como texto.
-      let format: ReturnType<typeof detectFormat>;
-      try {
-        format = detectFormat(doc.filename, doc.file_type);
-      } catch (e) {
-        if (e instanceof UnsupportedFormatError) {
-          await setStatus(`error: ${e.detail.slice(0, 180)}`);
-          throw e;
-        }
-        throw e;
-      }
-
-      await setStatus("extracting");
-
-      const { data: blob, error: dlErr } = await context.supabase.storage
-        .from("documents")
-        .download(doc.storage_path);
-      if (dlErr || !blob) throw new Error("Falha ao baixar arquivo do storage");
-
-      const parsed = await parseDocument({
-        blob,
-        filename: doc.filename,
-        fileType: doc.file_type,
-      });
-
-      // OCR: imagens sempre; PDF apenas nas páginas fracas (ou tudo se forçado).
-      let visionBlocks: DocBlock[] = [];
-      let ocrFailedPages: number[] = [];
-      let ocrPagesRun = 0;
-
-      if (format === "image") {
-        await setStatus("ocr_processing");
-        visionBlocks = await ocrImage({
-          blob,
-          filename: doc.filename,
-          fileType: doc.file_type,
-        });
-        ocrPagesRun = 1;
-      } else if (format === "pdf") {
-        const pages = data.force_vision
-          ? Array.from({ length: parsed.pageCount }, (_, i) => i + 1)
-          : parsed.ocrPages;
-        if (pages.length > 0) {
-          await setStatus("ocr_processing");
-          const bytes = new Uint8Array(await blob.arrayBuffer());
-          const out = await ocrPdfPages({ bytes, filename: doc.filename, pages });
-          visionBlocks = out.blocks;
-          ocrFailedPages = out.failedPages;
-          ocrPagesRun = pages.length;
-        }
-      }
-
-      await setStatus("chunking");
-
-      // Blocos de visão substituem o texto extraído das MESMAS páginas
-      // (evita indexar duas vezes a mesma página).
-      const ocrPageSet = new Set(visionBlocks.map((b) => b.page).filter((p): p is number => p != null));
-      const textBlocks = parsed.blocks.filter((b) => b.page == null || !ocrPageSet.has(b.page));
-
-      const chunks = [
-        ...structuredChunk(textBlocks, profile),
-        ...structuredChunk(visionBlocks, profile),
-      ];
-
-      const plain = [parsed.plainText, visionBlocks.map((b) => b.content).join("\n\n")]
-        .filter((s) => s && s.trim().length > 0)
-        .join("\n\n[VISÃO]\n\n");
-
-      if (chunks.length === 0) {
-        await context.supabase
-          .from("documents")
-          .update({ processing_status: "empty", extracted_text: plain.slice(0, 200_000) })
-          .eq("id", doc.id);
-        return { ok: true, chunks: 0, vision_pages: ocrPagesRun, format };
-      }
-
-      await setStatus("embedding");
-
-      const BATCH = 32;
-      const embeddings: number[][] = [];
-      for (let i = 0; i < chunks.length; i += BATCH) {
-        const slice = chunks.slice(i, i + BATCH).map((c) => c.content);
-        embeddings.push(...(await embedTexts(slice)));
-      }
-      if (embeddings.length !== chunks.length) {
-        throw new Error("Embeddings incompletos — índice anterior preservado.");
-      }
-
-      // Idempotência: chunk_index começa após o máximo atual, os novos entram
-      // primeiro e só então os antigos são removidos.
-      const { data: maxRow } = await context.supabase
-        .from("document_chunks")
-        .select("chunk_index")
-        .eq("document_id", doc.id)
-        .order("chunk_index", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      const offset = ((maxRow?.chunk_index as number | undefined) ?? -1) + 1;
-
-      const rows = chunks.map((c, idx) => ({
-        document_id: doc.id,
-        case_id: doc.case_id,
-        organization_id: context.organizationId,
-        created_by_user_id: context.userId,
-        chunk_index: offset + idx,
-        content: c.content,
-        source_kind: c.source_kind === "table" ? "text" : c.source_kind,
-        embedding: embeddings[idx] as unknown as string,
-        page_start: c.page_start,
-        page_end: c.page_end,
-        section_title: c.section_title,
-        sheet_name: c.sheet_name,
-        row_start: c.row_start,
-        row_end: c.row_end,
-        parser_version: PARSER_VERSION,
-        chunking_version: c.chunking_version,
-        embedding_model: EMBEDDING_MODEL,
-        token_count: c.token_count,
-        content_hash: c.content_hash,
-        metadata: { format, block_kind: c.source_kind },
-      }));
-
-      const { data: inserted, error: insErr } = await context.supabase
-        .from("document_chunks")
-        .insert(rows)
-        .select("id");
-      if (insErr) throw insErr;
-
-      const newIds = new Set(((inserted ?? []) as Array<{ id: string }>).map((r) => r.id));
-      const { data: existing } = await context.supabase
-        .from("document_chunks")
+    if (size > INLINE_INDEX_MAX_BYTES) {
+      const { data: active } = await context.supabase
+        .from("document_index_jobs")
         .select("id")
-        .eq("document_id", doc.id);
-      const staleIds = ((existing ?? []) as Array<{ id: string }>)
-        .map((r) => r.id)
-        .filter((id) => !newIds.has(id));
-      if (staleIds.length > 0) {
-        await context.supabase.from("document_chunks").delete().in("id", staleIds);
+        .eq("document_id", data.document_id)
+        .in("status", ["queued", "running"])
+        .maybeSingle();
+
+      let jobId = active?.id as string | undefined;
+      if (!jobId) {
+        const { data: job, error } = await context.supabase
+          .from("document_index_jobs")
+          .insert({
+            organization_id: context.organizationId,
+            document_id: data.document_id,
+            case_id: doc.case_id,
+            requested_by_user_id: context.userId,
+            force_vision: data.force_vision ?? false,
+          })
+          .select("id")
+          .single();
+        if (error) throw error;
+        jobId = job.id as string;
       }
 
-      const partial = ocrFailedPages.length > 0;
       await context.supabase
         .from("documents")
-        .update({
-          processing_status: partial
-            ? `partial: OCR falhou nas páginas ${ocrFailedPages.slice(0, 20).join(", ")}`
-            : "ready",
-          extracted_text: plain.slice(0, 200_000),
-        })
-        .eq("id", doc.id);
+        .update({ processing_status: "queued" })
+        .eq("id", data.document_id);
 
-      return {
-        ok: true,
-        format,
-        chunks: chunks.length,
-        text_chunks: chunks.filter((c) => c.source_kind !== "vision").length,
-        vision_chunks: chunks.filter((c) => c.source_kind === "vision").length,
-        vision_pages: ocrPagesRun,
-        failed_pages: ocrFailedPages,
-        parser_version: PARSER_VERSION,
-        chunking_version: profile.name,
-        embedding_model: EMBEDDING_MODEL,
-      };
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      await setStatus(`error: ${msg.slice(0, 200)}`);
-      throw err;
+      const { kickDocumentWorker } = await import("@/lib/jobs/worker.server");
+      kickDocumentWorker();
+
+      return { ok: true as const, queued: true as const, job_id: jobId };
     }
+
+    const { indexDocumentCore } = await import("./rag/index-document.server");
+    const result = await indexDocumentCore({
+      supabase: context.supabase,
+      documentId: data.document_id,
+      organizationId: context.organizationId,
+      userId: context.userId,
+      forceVision: data.force_vision,
+      chunkProfile: data.chunk_profile,
+    });
+    return { ...result, queued: false as const };
   });
 
 /** Reindexa documentos de um caso cujo índice está em versão anterior. */

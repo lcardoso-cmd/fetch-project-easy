@@ -2,6 +2,8 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireOrg, requireOrgPermission } from "@/lib/org-middleware";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { sanitizeStorageFilename, validateDocumentUpload } from "@/lib/documents-limits";
+
 
 const UploadSchema = z.object({
   case_id: z.string().uuid(),
@@ -148,11 +150,20 @@ export const createUploadSignedUrl = createServerFn({ method: "POST" })
       .object({
         case_id: z.string().uuid().optional(),
         filename: z.string().min(1).max(300),
+        file_type: z.string().max(160).optional(),
+        file_size: z.number().int().nonnegative().optional(),
       })
       .parse(i),
   )
   .handler(async ({ data, context }) => {
-    const safeName = data.filename.replace(/[^\w.\-]+/g, "_");
+    // Limite e formatos são validados no servidor, não apenas na tela.
+    const check = validateDocumentUpload({
+      filename: data.filename,
+      file_size: data.file_size ?? 0,
+    });
+    if (!check.ok) throw new Error(check.message);
+
+    const safeName = sanitizeStorageFilename(data.filename);
     const folder = data.case_id ?? "_intake";
     const path = `${context.organizationId}/${folder}/${Date.now()}-${safeName}`;
     const { data: signed, error } = await context.supabase.storage
@@ -165,6 +176,7 @@ export const createUploadSignedUrl = createServerFn({ method: "POST" })
       signedUrl: signed.signedUrl,
     };
   });
+
 
 /**
  * Remove um objeto órfão do Storage — usado quando o cliente cancela o upload
