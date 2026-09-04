@@ -147,6 +147,8 @@ function StatusCell({
   const canRetry = isError || isEmpty;
   const detail = jobDetail(job);
   const canForce = status !== "ready" && !isEmpty;
+  const pct = readingPercent(status, job);
+
   const map: Record<
     string,
     { icon: typeof Clock; color: string; label: string; hint: string }
