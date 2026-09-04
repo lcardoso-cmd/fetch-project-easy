@@ -176,7 +176,19 @@ export function UploadDialog({
               </DialogDescription>
             </DialogHeader>
 
-            {items.length === 0 && (
+            <Input
+              ref={inputRef}
+              type="file"
+              multiple
+              accept={ACCEPT_STRING}
+              className="hidden"
+              onChange={(e) => {
+                if (e.target.files) addFiles(Array.from(e.target.files));
+                if (inputRef.current) inputRef.current.value = "";
+              }}
+            />
+
+            {files.length === 0 && (
               <div
                 className={cn(
                   "flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed p-8 text-center cursor-pointer transition-colors",
@@ -188,17 +200,6 @@ export function UploadDialog({
                 <p className="text-sm text-muted-foreground">
                   Arraste arquivos ou clique aqui
                 </p>
-                <Input
-                  ref={inputRef}
-                  type="file"
-                  multiple
-                  accept={ACCEPT_STRING}
-                  className="hidden"
-                  onChange={(e) => {
-                    if (e.target.files) addFiles(Array.from(e.target.files));
-                    if (inputRef.current) inputRef.current.value = "";
-                  }}
-                />
               </div>
             )}
 
