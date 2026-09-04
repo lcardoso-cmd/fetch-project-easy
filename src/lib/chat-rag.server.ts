@@ -488,7 +488,47 @@ export async function prepareRagRun(opts: {
         },
       },
     },
+    {
+      type: "function",
+      function: {
+        name: "search_jurisprudence",
+        description:
+          "Pesquisa jurisprudência em sites OFICIAIS de tribunais brasileiros (fonte EXTERNA aos autos). Use SOMENTE quando o usuário pedir jurisprudência, precedentes, súmulas ou pesquisa externa. Os resultados recebem referências [J1], [J2]... e nunca podem ser apresentados como prova dos autos.",
+        parameters: {
+          type: "object",
+          properties: {
+            query: {
+              type: "string",
+              description: "Tese ou termos jurídicos a pesquisar, em português.",
+            },
+            courts: {
+              type: "array",
+              description:
+                "Tribunais a consultar. Vazio = todos os suportados (STF, STJ, TST, TSE, TJSP, TJRJ, TJMG, TJRS, TJPR, TJDFT).",
+              items: {
+                type: "string",
+                enum: [
+                  "STF",
+                  "STJ",
+                  "TST",
+                  "TSE",
+                  "TJSP",
+                  "TJRJ",
+                  "TJMG",
+                  "TJRS",
+                  "TJPR",
+                  "TJDFT",
+                ],
+              },
+            },
+            limit: { type: "number", description: "Máximo de resultados (1 a 15, padrão 8)." },
+          },
+          required: ["query"],
+        },
+      },
+    },
   ];
+
 
   const parties = (caseRow.parties ?? []) as PartyRow[];
   const rep = caseRow.represented_party as PartyRow | null;
