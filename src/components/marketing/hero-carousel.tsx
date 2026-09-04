@@ -439,6 +439,7 @@ export function HeroCarousel({ children }: { children?: ReactNode }) {
                   "radial-gradient(circle at 18% 22%, oklch(0.86 0.16 195) 0, transparent 42%), radial-gradient(circle at 85% 72%, oklch(0.65 0.16 220) 0, transparent 45%)",
               }}
             />
+            {/* Visual do banner — à direita no desktop, esmaecido atrás da copy nas telas menores */}
             <div className="mx-auto flex h-full max-w-6xl items-start justify-end px-4 pt-16 sm:pt-20 lg:items-center lg:pt-0">
               <a
                 href={s.href}
@@ -453,15 +454,20 @@ export function HeroCarousel({ children }: { children?: ReactNode }) {
                 {s.visual}
               </a>
             </div>
+
+            {/* Véu de legibilidade do banner (transiciona junto com o slide) */}
+            <div
+              className="pointer-events-none absolute inset-0 bg-gradient-to-t from-brand-navy via-brand-navy/90 to-brand-navy/50 lg:bg-gradient-to-r lg:from-brand-navy lg:from-25% lg:via-brand-navy/90 lg:via-55% lg:to-brand-navy/30"
+              aria-hidden
+            />
+
+            {/* Copy do banner — canto inferior esquerdo */}
+            <div className="absolute inset-0 mx-auto flex w-full max-w-6xl flex-col justify-end px-4 pb-16 pt-24 lg:justify-center lg:pb-24">
+              {s.heroSlot ? children : <SlideCopy slide={s} active={i === index} />}
+            </div>
           </div>
         ))}
       </div>
-
-      {/* Véu de legibilidade para o texto sobreposto */}
-      <div
-        className="pointer-events-none absolute inset-0 bg-gradient-to-t from-brand-navy via-brand-navy/90 to-brand-navy/50 lg:bg-gradient-to-r lg:from-brand-navy lg:from-25% lg:via-brand-navy/90 lg:via-55% lg:to-brand-navy/30"
-        aria-hidden
-      />
 
       {/* Barra de progresso do slide atual */}
       <div className="absolute inset-x-0 top-0 h-1 bg-brand-navy-foreground/15">
