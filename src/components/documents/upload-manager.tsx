@@ -79,6 +79,7 @@ export function useUploadManager() {
 
 const ACTIVE_PHASES = [
   "queued",
+  "splitting",
   "hashing",
   "uploading",
   "registering",
