@@ -18,6 +18,7 @@ import { ThemeProvider } from "@/hooks/use-theme";
 import { Toaster } from "@/components/ui/sonner";
 import { ErrorFallback } from "@/components/errors/error-fallback";
 import { GlobalErrorBoundary } from "@/components/errors/global-error-boundary";
+import { UploadManagerProvider } from "@/components/documents/upload-manager";
 
 
 function NotFoundComponent() {
@@ -137,9 +138,11 @@ function RootComponent() {
       <QueryClientProvider client={queryClient}>
         <ThemeProvider>
           <AuthProvider>
-            {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
-            <Outlet />
-            <Toaster richColors position="top-right" />
+            <UploadManagerProvider>
+              {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
+              <Outlet />
+              <Toaster richColors position="top-right" />
+            </UploadManagerProvider>
           </AuthProvider>
         </ThemeProvider>
       </QueryClientProvider>
