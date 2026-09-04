@@ -67,16 +67,70 @@ function StatusCell({
   const canRetry = isError || isEmpty;
   const map: Record<
     string,
-    { icon: typeof Clock; color: string; label: string }
+    { icon: typeof Clock; color: string; label: string; hint: string }
   > = {
-    pending: { icon: Clock, color: "text-muted-foreground", label: "Na fila" },
-    processing: { icon: BrainCircuit, color: "text-primary animate-pulse", label: "Indexando" },
-    ready: { icon: CheckCircle, color: "text-emerald-500", label: "Pronto" },
-    empty: { icon: AlertTriangle, color: "text-amber-500", label: "Sem texto" },
+    queued: {
+      icon: Clock,
+      color: "text-muted-foreground",
+      label: "Na fila",
+      hint: "O documento foi recebido e está aguardando a vez de ser lido. Isso pode levar alguns minutos em arquivos grandes.",
+    },
+    pending: {
+      icon: Clock,
+      color: "text-muted-foreground",
+      label: "Na fila",
+      hint: "O documento foi recebido e está aguardando a vez de ser lido.",
+    },
+    extracting_text: {
+      icon: BrainCircuit,
+      color: "text-primary animate-pulse",
+      label: "Lendo o texto",
+      hint: "Estamos extraindo o texto das páginas do arquivo.",
+    },
+    ocr_processing: {
+      icon: BrainCircuit,
+      color: "text-primary animate-pulse",
+      label: "Lendo imagens (OCR)",
+      hint: "O arquivo é digitalizado; estamos reconhecendo o texto das imagens.",
+    },
+    analyzing: {
+      icon: BrainCircuit,
+      color: "text-primary animate-pulse",
+      label: "Analisando",
+      hint: "Organizando o conteúdo para consulta.",
+    },
+    processing: {
+      icon: BrainCircuit,
+      color: "text-primary animate-pulse",
+      label: "Processando",
+      hint: "O documento está sendo preparado para consulta.",
+    },
+    ready: {
+      icon: CheckCircle,
+      color: "text-emerald-500",
+      label: "Pronto",
+      hint: "Documento pronto para ser consultado pelo JurisMind.",
+    },
+    empty: {
+      icon: AlertTriangle,
+      color: "text-amber-500",
+      label: "Sem texto",
+      hint: 'Nenhum texto foi extraído. Tente reindexar ou use "Reprocessar com visão (OCR)".',
+    },
   };
   const info = isError
-    ? { icon: AlertCircle, color: "text-destructive", label: "Erro" }
-    : map[status] ?? { icon: Clock, color: "text-muted-foreground", label: status };
+    ? {
+        icon: AlertCircle,
+        color: "text-destructive",
+        label: "Erro",
+        hint: status.replace(/^error:\s*/, "") || "Falha ao processar o documento.",
+      }
+    : map[status] ?? {
+        icon: Clock,
+        color: "text-muted-foreground",
+        label: "Processando",
+        hint: "O documento está sendo preparado para consulta.",
+      };
   const Icon = info.icon;
   return (
     <div className="flex flex-col items-start gap-1.5">
@@ -88,21 +142,13 @@ function StatusCell({
               <span className="text-xs">{info.label}</span>
             </div>
           </TooltipTrigger>
-          {isError && (
-            <TooltipContent className="max-w-xs">
-              <p className="text-xs">{status.replace(/^error:\s*/, "")}</p>
-            </TooltipContent>
-          )}
-          {isEmpty && (
-            <TooltipContent className="max-w-xs">
-              <p className="text-xs">
-                Nenhum texto foi extraído. Tente reindexar ou use "Reprocessar
-                com visão (OCR)".
-              </p>
-            </TooltipContent>
-          )}
+          <TooltipContent className="max-w-xs">
+            <p className="text-xs">{info.hint}</p>
+          </TooltipContent>
         </Tooltip>
       </TooltipProvider>
+      <span className="text-[11px] leading-tight text-muted-foreground">{info.hint}</span>
+
       {canRetry && (
         <Button
           variant="outline"
