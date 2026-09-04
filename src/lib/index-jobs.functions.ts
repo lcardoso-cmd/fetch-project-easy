@@ -11,6 +11,8 @@ export interface IndexJobView {
   max_attempts: number;
   last_error_message: string | null;
   heartbeat_at: string | null;
+  /** Início real do processamento, usado para estimar o tempo restante. */
+  started_at: string | null;
   /** 1 = próximo a ser processado. Null quando não está na fila. */
   queue_position: number | null;
   /** Verdadeiro quando o processador parou de dar sinal de vida. */
@@ -39,7 +41,7 @@ export const listIndexJobs = createServerFn({ method: "POST" })
     const { data: rows } = await context.supabase
       .from("document_index_jobs")
       .select(
-        "id, document_id, case_id, status, progress, attempt_count, max_attempts, last_error_message, heartbeat_at, created_at",
+        "id, document_id, case_id, status, progress, attempt_count, max_attempts, last_error_message, heartbeat_at, started_at, created_at",
       )
       .eq("organization_id", context.organizationId)
       .in("status", ["queued", "running", "error", "paused"])
@@ -73,6 +75,7 @@ export const listIndexJobs = createServerFn({ method: "POST" })
           max_attempts: (r.max_attempts as number) ?? 3,
           last_error_message: (r.last_error_message as string | null) ?? null,
           heartbeat_at: (r.heartbeat_at as string | null) ?? null,
+          started_at: ((r as { started_at?: string | null }).started_at as string | null) ?? null,
           queue_position: position >= 0 ? position + 1 : null,
           stalled: r.status === "running" && beat > 0 && now - beat > STALE_MS,
           percent: typeof progress.percent === "number" ? progress.percent : null,
