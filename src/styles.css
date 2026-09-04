@@ -203,7 +203,7 @@
   --chart-3: oklch(0.68 0.120 205);
   --chart-4: oklch(0.58 0.115 268);
   --chart-5: oklch(0.86 0.060 220);
-  /* Barra lateral: navy institucional, distinto do canvas grafite. */
+  /* Barra lateral: navy puro #000038, um degrau abaixo do canvas navy. */
   --sidebar: var(--brand-navy);
   --sidebar-foreground: oklch(1 0 0);
   --sidebar-primary: var(--brand-cyan);
