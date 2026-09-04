@@ -3,7 +3,7 @@
  *
  * Consumido por:
  *  - `src/routes/index.tsx` (homepage pública)
- *  - `src/lib/marketing/deck-pdf.server.ts` (apresentação 16:9 em PDF)
+ *  - `src/assets/jurismind-apresentacao.pdf.asset.json` (apresentação 16:9 em PDF servida em `/api/public/deck`)
  *
  * Regra: qualquer texto comercial exibido na homepage deve morar aqui,
  * para que a apresentação enviada aos clientes nunca fique defasada.

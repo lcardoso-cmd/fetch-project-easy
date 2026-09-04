@@ -1,19 +1,19 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { buildPitchDeckPdf } from "@/lib/marketing/deck-pdf.server";
+import deckAsset from "@/assets/jurismind-apresentacao.pdf.asset.json";
 
 /**
- * Apresentação comercial (16:9) gerada a partir do mesmo conteúdo da homepage.
- * Endpoint público e sem dados de cliente — pensado para envio a prospects.
+ * Apresentação comercial (16:9) do JurisMind.
+ * Endpoint público e sem dados de cliente — redireciona para o PDF estático
+ * oficial, o mesmo arquivo servido pelo botão de download da homepage.
  */
 export const Route = createFileRoute("/api/public/deck")({
   server: {
     handlers: {
       GET: async () => {
-        const bytes = await buildPitchDeckPdf();
-        return new Response(bytes as unknown as BodyInit, {
+        return new Response(null, {
+          status: 302,
           headers: {
-            "Content-Type": "application/pdf",
-            "Content-Disposition": 'attachment; filename="JurisMind-Apresentacao.pdf"',
+            Location: deckAsset.url,
             "Cache-Control": "public, max-age=300",
           },
         });
