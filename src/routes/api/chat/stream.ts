@@ -116,6 +116,7 @@ export const Route = createFileRoute("/api/chat/stream")({
             return runWithUsageContext(
               {
                 userId: auth.userId,
+                organizationId: auth.organizationId,
                 caseId: body.case_id,
                 threadId: body.thread_id ?? null,
                 feature: "chat_stream",
