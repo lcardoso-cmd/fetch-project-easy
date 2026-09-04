@@ -70,9 +70,9 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "twitter:image", content: OG_IMAGE_URL },
     ],
     links: [
-      { rel: "icon", type: "image/png", href: brainSquareNavy.url },
-      { rel: "shortcut icon", type: "image/png", href: brainSquareNavy.url },
-      { rel: "apple-touch-icon", href: brainSquareNavy.url },
+      { rel: "icon", type: "image/png", href: "/favicon.png" },
+      { rel: "shortcut icon", type: "image/png", href: "/favicon.png" },
+      { rel: "apple-touch-icon", href: "/favicon.png" },
       { rel: "stylesheet", href: appCss },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
