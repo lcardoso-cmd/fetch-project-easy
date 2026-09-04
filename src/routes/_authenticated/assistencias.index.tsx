@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -5,7 +6,18 @@ import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/page-header";
 import { EmptyState } from "@/components/empty-state";
 import { getCases, deleteCase } from "@/lib/cases.functions";
-import { Plus, Trash2, Upload, Scale } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { toast } from "sonner";
+import { Plus, Trash2, Upload, Scale, Loader2 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/assistencias/")({
   component: CasesPage,
@@ -23,10 +35,22 @@ function CasesPage() {
 
   const filtered = cases;
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("Tem certeza que deseja excluir este caso?")) return;
-    await deleteCaseFn({ data: { id } });
-    await queryClient.invalidateQueries({ queryKey: ["cases"] });
+  const [pendingDelete, setPendingDelete] = useState<{ id: string; title: string } | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  const confirmDelete = async () => {
+    if (!pendingDelete) return;
+    setDeleting(true);
+    try {
+      await deleteCaseFn({ data: { id: pendingDelete.id } });
+      await queryClient.invalidateQueries({ queryKey: ["cases"] });
+      toast.success("Caso excluído", { description: pendingDelete.title });
+      setPendingDelete(null);
+    } catch {
+      toast.error("Não foi possível excluir o caso. Tente novamente.");
+    } finally {
+      setDeleting(false);
+    }
   };
 
   return (
@@ -86,7 +110,9 @@ function CasesPage() {
                   variant="ghost"
                   size="icon"
                   className="h-8 w-8 text-muted-foreground opacity-0 group-hover:opacity-100 hover:text-destructive"
-                  onClick={() => handleDelete(caseItem.id)}
+                  onClick={() =>
+                    setPendingDelete({ id: caseItem.id, title: caseItem.title })
+                  }
                   aria-label={`Excluir caso ${caseItem.title}`}
                 >
                   <Trash2 className="h-4 w-4" />
@@ -96,6 +122,39 @@ function CasesPage() {
           })}
         </ul>
       )}
+
+      <AlertDialog
+        open={pendingDelete !== null}
+        onOpenChange={(open) => {
+          if (!open && !deleting) setPendingDelete(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir este caso?</AlertDialogTitle>
+            <AlertDialogDescription>
+              O caso{" "}
+              <span className="font-medium text-foreground">{pendingDelete?.title}</span>{" "}
+              será removido junto com seus documentos, prazos e conversas. Essa ação
+              não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                void confirmDelete();
+              }}
+              disabled={deleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Excluir caso
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
