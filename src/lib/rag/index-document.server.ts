@@ -341,34 +341,41 @@ export async function indexDocumentCore(
           if (effectiveSize <= 0 || effectiveSize > OCR_MAX_FILE_BYTES) {
             ocrSkippedPages = targetOcr;
           } else {
-            await setStatus("ocr_processing");
-            await report("ocr_processing", { pages: targetOcr.length, percent: 85 });
-            const pages = targetOcr.slice(0, OCR_PAGE_LIMIT);
-            if (targetOcr.length > pages.length) {
-              ocrSkippedPages = targetOcr.slice(OCR_PAGE_LIMIT);
-            }
-            const bytes = await step("download", async () => {
-              const res = await fetch(signedUrl);
-              if (!res.ok) throw new Error("Falha ao baixar arquivo do storage");
-              const buf = new Uint8Array(await res.arrayBuffer());
-              if (buf.byteLength > OCR_MAX_FILE_BYTES) {
-                throw new FileTooLargeForMemoryError(
-                  "Arquivo grande demais para OCR completo nesta execução.",
-                );
+            try {
+              await setStatus("ocr_processing");
+              await report("ocr_processing", { pages: targetOcr.length, percent: 85 });
+              const pages = targetOcr.slice(0, OCR_PAGE_LIMIT);
+              if (targetOcr.length > pages.length) {
+                ocrSkippedPages = targetOcr.slice(OCR_PAGE_LIMIT);
               }
-              return buf;
-            });
+              const bytes = await step("download", async () => {
+                const res = await fetch(signedUrl);
+                if (!res.ok) throw new Error("Falha ao baixar arquivo do storage");
+                const buf = new Uint8Array(await res.arrayBuffer());
+                if (buf.byteLength > OCR_MAX_FILE_BYTES) {
+                  throw new FileTooLargeForMemoryError(
+                    "Arquivo grande demais para OCR completo nesta execução.",
+                  );
+                }
+                return buf;
+              });
 
-            const out = await step("ocr", () =>
-              ocrPdfPages({ bytes, filename: doc.filename as string, pages }),
-            );
-            ocrFailedPages = out.failedPages;
-            ocrPagesRun = pages.length;
-            if (out.blocks.length > 0) visionChunks += await embedAndInsert(out.blocks);
-            for (const p of out.pages) {
-              if (p.text.trim() && plainAccum.length < 200_000) plainAccum += `${p.text}\n\n`;
+              const out = await step("ocr", () =>
+                ocrPdfPages({ bytes, filename: doc.filename as string, pages }),
+              );
+              ocrFailedPages = out.failedPages;
+              ocrPagesRun = pages.length;
+              if (out.blocks.length > 0) visionChunks += await embedAndInsert(out.blocks);
+              for (const p of out.pages) {
+                if (p.text.trim() && plainAccum.length < 200_000) plainAccum += `${p.text}\n\n`;
+              }
+            } catch {
+              // O texto já indexado permanece: as páginas de imagem ficam
+              // marcadas como pendentes de OCR em vez de invalidar o documento.
+              ocrSkippedPages = targetOcr;
             }
           }
+
         }
       }
     } else {
