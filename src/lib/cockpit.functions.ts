@@ -129,12 +129,11 @@ export const getCockpit = createServerFn({ method: "POST" })
 
     const memberIds = (membersRes.data ?? []).map((m) => m.user_id as string);
     const { data: profiles } = memberIds.length
-      ? await supabase.from("profiles").select("id, full_name, email").in("id", memberIds)
-      : { data: [] as Array<{ id: string; full_name: string | null; email: string | null }> };
+      ? await supabase.from("profiles").select("id, full_name").in("id", memberIds)
+      : { data: [] as Array<{ id: string; full_name: string | null }> };
     const memberNames: Record<string, string> = {};
     for (const p of profiles ?? []) {
-      memberNames[p.id as string] =
-        (p.full_name as string | null) || (p.email as string | null) || "Integrante";
+      memberNames[p.id as string] = (p.full_name as string | null) || "Integrante";
     }
 
     const allCases = (casesRes.data ?? []) as CoreCase[];
