@@ -602,84 +602,12 @@ function ScopeSwitcher({
   );
 }
 
-/** “Ver como…” — controle do cabeçalho, visível apenas para a equipe B2B. */
-function ViewAsSwitcher() {
-  const { isPlatformUser, simulation, roleLabel, setSimulation } = useAccess();
-  if (!isPlatformUser) return null;
-  return (
-    <Popover>
-      <PopoverTrigger asChild>
-        <button
-          type="button"
-          className={cn(
-            "flex h-9 items-center gap-1.5 rounded-[6px] border px-2.5 text-[13px] font-medium transition",
-            simulation
-              ? "border-amber-400/60 bg-amber-400/15 text-foreground"
-              : "border-border text-muted-foreground hover:bg-accent hover:text-foreground",
-          )}
-        >
-          <Eye className="size-[15px] shrink-0" aria-hidden="true" />
-          <span className="hidden max-w-[170px] truncate sm:inline">
-            {simulation ? `Vendo como: ${roleLabel}` : "Ver como…"}
-          </span>
-        </button>
-      </PopoverTrigger>
-      <PopoverContent side="bottom" align="end" className="w-72 p-2">
-        <div className="mb-2 flex items-center gap-1.5 px-2 pt-1 text-[13px] text-muted-foreground">
-          <ShieldCheck className="size-3.5" />
-          <span>Simulação visual — o servidor mantém sua permissão real.</span>
-        </div>
-        <ul className="space-y-0.5">
-          <li>
-            <button
-              type="button"
-              onClick={() => setSimulation(null)}
-              className={cn(
-                "w-full rounded-[6px] px-2.5 py-2 text-left text-[14px] transition",
-                !simulation ? "bg-primary/10 text-foreground" : "hover:bg-muted",
-              )}
-            >
-              <div className="font-medium">Minha visão real</div>
-              <div className="text-[13px] text-muted-foreground">
-                Papéis reais da sua conta.
-              </div>
-            </button>
-          </li>
-          {VIEW_AS_ROLES.map((p) => (
-            <li key={p.role}>
-              <button
-                type="button"
-                onClick={() => setSimulation(p.role as OrgRole)}
-                className={cn(
-                  "w-full rounded-[6px] px-2.5 py-2 text-left text-[14px] transition",
-                  simulation === p.role ? "bg-primary/10 text-foreground" : "hover:bg-muted",
-                )}
-              >
-                <div className="font-medium">{p.label}</div>
-                <div className="text-[13px] text-muted-foreground">
-                  Permissões padrão do papel «{p.label}» na organização.
-                </div>
-              </button>
-            </li>
-          ))}
-        </ul>
-      </PopoverContent>
-    </Popover>
-  );
-}
-
 export function DashboardShell({ children }: { children: React.ReactNode }) {
   const { pathname } = useLocation();
   useAuth();
   useProfile();
-  const {
-    hasOrgPermission,
-    hasPlatformRole,
-    isSuperAdmin,
-    simulation,
-    roleLabel,
-    clearSimulation,
-  } = useAccess();
+  const { hasOrgPermission, hasPlatformRole } = useAccess();
+
   const can = useCallback(
     (l: NavLink) =>
       l.platformRole
