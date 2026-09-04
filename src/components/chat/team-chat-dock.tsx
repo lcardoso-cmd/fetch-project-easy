@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { useQuery, useRouterState } from "@tanstack/react-router";
+import { useRouterState } from "@tanstack/react-router";
 import { useQuery as useRQ, useQueryClient } from "@tanstack/react-query";
 import { Minus, X, Users, Hash, MessageSquare, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
