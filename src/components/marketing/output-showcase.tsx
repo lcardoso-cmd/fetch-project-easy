@@ -1,4 +1,7 @@
+import { useId, useState } from "react";
 import {
+  CalendarClock,
+  CheckCircle2,
   Download,
   FileSpreadsheet,
   FileText,
@@ -8,63 +11,76 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-type OutputId = "analise" | "peca" | "planilha" | "apresentacao";
+/**
+ * Demonstrador público do produto — DADOS FICTÍCIOS.
+ *
+ * Um único caso (Reclamação Trabalhista — Maria Silva) evolui por cinco etapas:
+ * localizar, organizar, produzir, apresentar e conduzir. O visitante escolhe a
+ * etapa; nada avança sozinho e nenhum botão dispara download real.
+ */
 
-const OUTPUTS: {
-  id: OutputId;
+type StageId = "analisar" | "planilha" | "peca" | "apresentacao" | "tarefa";
+
+const STAGES: {
+  id: StageId;
+  step: string;
   label: string;
-  description: string;
+  stage: string;
   icon: typeof FileText;
+  command: string;
+  format: string;
 }[] = [
   {
-    id: "analise",
-    label: "Análise",
-    description: "Resposta com citações aos trechos dos documentos do caso",
+    id: "analisar",
+    step: "01",
+    label: "Analisar",
+    stage: "Localizar",
     icon: Search,
-  },
-  {
-    id: "peca",
-    label: "Peça jurídica",
-    description: "Minuta editável em Word e PDF",
-    icon: FileText,
+    command: "Compare os cartões de ponto com os recibos e identifique as diferenças.",
+    format: "Análise com fontes",
   },
   {
     id: "planilha",
-    label: "Planilha",
-    description: "Dados organizados em Excel, com totais e formatação",
+    step: "02",
+    label: "Gerar Excel",
+    stage: "Organizar",
     icon: FileSpreadsheet,
+    command: "Transforme a apuração em uma planilha comparativa.",
+    format: "Planilha .xlsx",
+  },
+  {
+    id: "peca",
+    step: "03",
+    label: "Criar peça",
+    stage: "Produzir",
+    icon: FileText,
+    command: "Redija uma contestação considerando os documentos e a apuração.",
+    format: "Word .docx e PDF",
   },
   {
     id: "apresentacao",
-    label: "Apresentação",
-    description: "Slides executivos em PowerPoint",
+    step: "04",
+    label: "Criar apresentação",
+    stage: "Apresentar",
     icon: Presentation,
+    command: "Prepare uma apresentação executiva para a reunião com o cliente.",
+    format: "PowerPoint .pptx",
+  },
+  {
+    id: "tarefa",
+    step: "05",
+    label: "Criar tarefa",
+    stage: "Conduzir",
+    icon: CalendarClock,
+    command: "Crie uma tarefa para revisar a contestação até sexta-feira.",
+    format: "Tarefa vinculada ao caso",
   },
 ];
 
-const OUTPUT_LABEL: Record<OutputId, string> = {
-  analise: "Resposta com fontes",
-  peca: "Minuta editável",
-  planilha: "Planilha gerada",
-  apresentacao: "Apresentação editável",
-};
-
 const REFS = [
-  {
-    ref: "F1",
-    doc: "Cartões de ponto",
-    where: "Março/2024 · linhas 12–38",
-  },
-  {
-    ref: "F2",
-    doc: "Recibos de pagamento",
-    where: "p. 2 · verba 0031",
-  },
-  {
-    ref: "F3",
-    doc: "Contrato de trabalho",
-    where: "p. 1 · cláusula 4ª",
-  },
+  { ref: "F1", doc: "Cartões de ponto", where: "Março/2024 · linhas 12–38" },
+  { ref: "F2", doc: "Recibos de pagamento", where: "p. 2 · verba 0031" },
+  { ref: "F3", doc: "Contrato de trabalho", where: "p. 1 · cláusula 4ª" },
 ];
 
 const SHEET_ROWS = [
@@ -94,6 +110,7 @@ function RefChip({ ref: r, doc, where }: { ref: string; doc: string; where: stri
   );
 }
 
+/** Botão ilustrativo: mostra a ação real do produto, sem efeito na vitrine. */
 function DemoButton({
   children,
   icon: Icon,
@@ -104,56 +121,23 @@ function DemoButton({
   variant?: "outline" | "default";
 }) {
   return (
-    <Button size="sm" variant={variant} type="button" tabIndex={-1} aria-hidden className="pointer-events-none">
+    <Button
+      size="sm"
+      variant={variant}
+      type="button"
+      tabIndex={-1}
+      aria-hidden
+      className="pointer-events-none"
+    >
       <Icon className="mr-1.5 h-4 w-4" />
       {children}
     </Button>
   );
 }
 
-function OutputCard({
-  id,
-  label,
-  description,
-  icon: Icon,
-  actions,
-  children,
-}: {
-  id: OutputId;
-  label: string;
-  description: string;
-  icon: typeof FileText;
-  actions: React.ReactNode;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="group overflow-hidden rounded-2xl border bg-background shadow-sm transition hover:shadow-md">
-      <div className="flex flex-col gap-3 border-b bg-muted/40 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-start gap-3">
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-            <Icon className="h-5 w-5" aria-hidden />
-          </span>
-          <div>
-            <p className="font-heading text-lg font-bold text-foreground">{label}</p>
-            <p className="text-base text-muted-foreground">{description}</p>
-          </div>
-        </div>
-        <div className="flex flex-wrap gap-2">{actions}</div>
-      </div>
-      <div className="p-4 sm:p-5">{children}</div>
-    </div>
-  );
-}
-
 function AnalysisOutput() {
   return (
-    <OutputCard
-      id="analise"
-      label={OUTPUT_LABEL.analise}
-      description="Resposta com citações aos trechos dos documentos do caso"
-      icon={Search}
-      actions={<DemoButton icon={FileText}>Abrir documento citado</DemoButton>}
-    >
+    <>
       <div className="rounded-xl border bg-card p-4">
         <p className="text-base leading-relaxed text-foreground">
           Os cartões de ponto registram <strong>67h30</strong> de jornada extraordinária entre
@@ -178,33 +162,17 @@ function AnalysisOutput() {
       </div>
 
       <p className="mt-4 rounded-xl border border-dashed bg-muted/30 p-3 text-base text-muted-foreground">
-        <span className="font-semibold text-foreground">Ainda a confirmar: </span>
+        <span className="font-semibold text-foreground">Documentos que faltam: </span>
         os cartões de abril e maio não estão no acervo; o cálculo consolidado depende desses
         documentos.
       </p>
-    </OutputCard>
+    </>
   );
 }
 
 function SheetOutput() {
   return (
-    <OutputCard
-      id="planilha"
-      label={OUTPUT_LABEL.planilha}
-      description="Dados organizados em Excel, com totais e formatação"
-      icon={FileSpreadsheet}
-      actions={
-        <>
-          <span className="inline-flex items-center gap-1.5 rounded-md bg-muted px-2 py-1 text-sm font-medium text-muted-foreground">
-            <FileSpreadsheet className="h-4 w-4 text-accent-foreground/80 dark:text-accent" />
-            .xlsx
-          </span>
-          <DemoButton icon={Download} variant="default">
-            Baixar Excel
-          </DemoButton>
-        </>
-      }
-    >
+    <>
       <div className="-mx-1 overflow-x-auto px-1">
         <table className="w-full min-w-[520px] border-collapse text-base">
           <caption className="sr-only">
@@ -258,27 +226,13 @@ function SheetOutput() {
           <RefChip key={r.ref} ref={r.ref} doc={r.doc} where={r.where} />
         ))}
       </div>
-    </OutputCard>
+    </>
   );
 }
 
 function PetitionOutput() {
   return (
-    <OutputCard
-      id="peca"
-      label={OUTPUT_LABEL.peca}
-      description="Minuta editável em Word e PDF"
-      icon={FileText}
-      actions={
-        <>
-          <DemoButton icon={Pencil}>Abrir editor</DemoButton>
-          <DemoButton icon={Download}>Baixar PDF</DemoButton>
-          <DemoButton icon={Download} variant="default">
-            Baixar Word
-          </DemoButton>
-        </>
-      }
-    >
+    <>
       <div className="mx-auto max-w-[640px] rounded-lg border bg-background p-5 shadow-inner sm:p-8">
         <div className="border-b pb-3 text-center">
           <p className="font-heading text-base font-bold tracking-tight text-foreground">
@@ -299,14 +253,14 @@ function PetitionOutput() {
         <p className="mt-2 text-base leading-relaxed text-muted-foreground">
           Reclamação Trabalhista nº 0001234-56.2024.5.02.0012
           <br />
-          Reclamante: João da Silva · Reclamada: Comercial Aurora Ltda.
+          Reclamante: Maria Silva · Reclamada: Comercial Aurora Ltda.
         </p>
 
         <p className="mt-6 font-heading text-base font-bold text-foreground">
           I — Síntese dos fatos
         </p>
         <p className="mt-2 text-base leading-relaxed text-foreground">
-          O reclamante afirma ter prestado jornada superior à contratual sem a devida remuneração.
+          A reclamante afirma ter prestado jornada superior à contratual sem a devida remuneração.
           Os controles de ponto juntados aos autos indicam variações mensais de jornada, adiante
           confrontadas com os recibos de pagamento.{" "}
           <span className="text-muted-foreground">(cartões de ponto, jan–mar/2024)</span>
@@ -335,26 +289,19 @@ function PetitionOutput() {
           <span>1</span>
         </div>
       </div>
-    </OutputCard>
+
+      <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+        {REFS.map((r) => (
+          <RefChip key={r.ref} ref={r.ref} doc={r.doc} where={r.where} />
+        ))}
+      </div>
+    </>
   );
 }
 
 function PresentationOutput() {
   return (
-    <OutputCard
-      id="apresentacao"
-      label={OUTPUT_LABEL.apresentacao}
-      description="Slides executivos em PowerPoint"
-      icon={Presentation}
-      actions={
-        <>
-          <DemoButton icon={Pencil}>Abrir editor</DemoButton>
-          <DemoButton icon={Download} variant="default">
-            Baixar PowerPoint
-          </DemoButton>
-        </>
-      }
-    >
+    <>
       <div className="grid gap-4 lg:grid-cols-[1.6fr_1fr]">
         <div className="aspect-video overflow-hidden rounded-xl bg-primary p-5 text-primary-foreground sm:p-7">
           <div className="flex h-full flex-col justify-between">
@@ -379,7 +326,9 @@ function PresentationOutput() {
               key={s}
               className="flex aspect-video flex-col justify-between rounded-lg border border-primary/25 bg-primary/90 p-2.5 text-primary-foreground"
             >
-              <span className="text-sm font-semibold text-accent">{String(i + 2).padStart(2, "0")}</span>
+              <span className="text-sm font-semibold text-accent">
+                {String(i + 2).padStart(2, "0")}
+              </span>
               <span className="text-sm font-medium leading-snug">{s}</span>
             </li>
           ))}
@@ -396,17 +345,181 @@ function PresentationOutput() {
           </li>
         ))}
       </ul>
-    </OutputCard>
+    </>
   );
 }
 
-export function OutputShowcase() {
+function TaskOutput() {
   return (
-    <div className="space-y-8">
-      <AnalysisOutput />
-      <PetitionOutput />
-      <SheetOutput />
-      <PresentationOutput />
+    <div className="rounded-xl border bg-card p-4">
+      <div className="flex items-start gap-3">
+        <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-accent/15 text-accent-foreground dark:text-accent">
+          <CheckCircle2 className="h-4 w-4" aria-hidden />
+        </span>
+        <div>
+          <p className="font-heading text-lg font-bold text-foreground">
+            Revisar minuta de contestação
+          </p>
+          <p className="text-base text-muted-foreground">
+            Criada pelo chat, já vinculada ao caso — aparece nas tarefas e na agenda da equipe.
+          </p>
+        </div>
+      </div>
+
+      <dl className="mt-4 grid gap-3 sm:grid-cols-3">
+        {[
+          { t: "Responsável", d: "Dra. Helena Prado" },
+          { t: "Prazo", d: "Sexta-feira, 18h" },
+          { t: "Caso vinculado", d: "Reclamação Trabalhista — Maria Silva" },
+        ].map((i) => (
+          <div key={i.t} className="rounded-lg border bg-background p-3">
+            <dt className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+              {i.t}
+            </dt>
+            <dd className="mt-1 text-base font-medium text-foreground">{i.d}</dd>
+          </div>
+        ))}
+      </dl>
+    </div>
+  );
+}
+
+function StageActions({ id }: { id: StageId }) {
+  if (id === "analisar") return <DemoButton icon={FileText}>Abrir documento citado</DemoButton>;
+  if (id === "planilha")
+    return (
+      <DemoButton icon={Download} variant="default">
+        Baixar Excel
+      </DemoButton>
+    );
+  if (id === "peca")
+    return (
+      <>
+        <DemoButton icon={Pencil}>Abrir editor</DemoButton>
+        <DemoButton icon={Download}>Baixar PDF</DemoButton>
+        <DemoButton icon={Download} variant="default">
+          Baixar Word
+        </DemoButton>
+      </>
+    );
+  if (id === "apresentacao")
+    return (
+      <>
+        <DemoButton icon={Pencil}>Abrir editor</DemoButton>
+        <DemoButton icon={Download} variant="default">
+          Baixar PowerPoint
+        </DemoButton>
+      </>
+    );
+  return <DemoButton icon={CalendarClock}>Ver nas tarefas do caso</DemoButton>;
+}
+
+function StageResult({ id }: { id: StageId }) {
+  if (id === "analisar") return <AnalysisOutput />;
+  if (id === "planilha") return <SheetOutput />;
+  if (id === "peca") return <PetitionOutput />;
+  if (id === "apresentacao") return <PresentationOutput />;
+  return <TaskOutput />;
+}
+
+export function OutputShowcase() {
+  const [active, setActive] = useState<StageId>("analisar");
+  const baseId = useId();
+  const stage = STAGES.find((s) => s.id === active) ?? STAGES[0]!;
+
+  const onKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    const i = STAGES.findIndex((s) => s.id === active);
+    if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
+      e.preventDefault();
+      const next = e.key === "ArrowRight" ? (i + 1) % STAGES.length : (i - 1 + STAGES.length) % STAGES.length;
+      const target = STAGES[next]!;
+      setActive(target.id);
+      document.getElementById(`${baseId}-tab-${target.id}`)?.focus();
+    }
+  };
+
+  return (
+    <div className="rounded-3xl border bg-card p-4 shadow-sm sm:p-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="font-heading text-lg font-bold text-foreground">
+            Caso: Reclamação Trabalhista — Maria Silva
+          </p>
+          <p className="text-base text-muted-foreground">
+            5 documentos indexados · Demonstração com dados fictícios
+          </p>
+        </div>
+        <span className="inline-flex w-fit items-center gap-2 rounded-full border border-accent/50 bg-accent/10 px-3 py-1 text-sm font-semibold text-foreground">
+          <CheckCircle2 className="h-4 w-4 text-accent-foreground/90 dark:text-accent" aria-hidden />
+          Fontes prontas
+        </span>
+      </div>
+
+      <div
+        role="tablist"
+        aria-label="Etapas do mesmo caso"
+        onKeyDown={onKeyDown}
+        className="mt-5 grid gap-2 sm:grid-cols-3 lg:grid-cols-5"
+      >
+        {STAGES.map((s) => {
+          const selected = s.id === active;
+          return (
+            <button
+              key={s.id}
+              id={`${baseId}-tab-${s.id}`}
+              type="button"
+              role="tab"
+              aria-selected={selected}
+              aria-controls={`${baseId}-panel`}
+              tabIndex={selected ? 0 : -1}
+              onClick={() => setActive(s.id)}
+              className={`flex items-center gap-2 rounded-xl border px-3 py-2.5 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                selected
+                  ? "border-primary bg-primary text-primary-foreground shadow-sm"
+                  : "bg-background text-foreground hover:border-primary/40"
+              }`}
+            >
+              <s.icon className="h-4 w-4 shrink-0" aria-hidden />
+              <span className="min-w-0">
+                <span className="block text-sm font-semibold uppercase tracking-wide opacity-80">
+                  {s.step} · {s.stage}
+                </span>
+                <span className="block text-base font-semibold">{s.label}</span>
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      <div
+        id={`${baseId}-panel`}
+        role="tabpanel"
+        aria-labelledby={`${baseId}-tab-${stage.id}`}
+        tabIndex={0}
+        className="mt-5 overflow-hidden rounded-2xl border bg-background"
+      >
+        <div className="border-b bg-muted/40 px-4 py-4">
+          <p className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+            Comando do advogado
+          </p>
+          <p className="mt-1 text-lg font-medium text-foreground">“{stage.command}”</p>
+          <p className="mt-2 text-base text-muted-foreground">
+            O JurisMind consulta os documentos deste caso antes de produzir · Entrega:{" "}
+            <strong className="text-foreground">{stage.format}</strong>
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <StageActions id={stage.id} />
+          </div>
+        </div>
+        <div className="p-4 sm:p-5">
+          <StageResult id={stage.id} />
+        </div>
+      </div>
+
+      <p className="mt-4 text-base text-muted-foreground">
+        Uma mesma base documental pode se transformar em evidência, análise, peça, planilha,
+        apresentação e ação da equipe.
+      </p>
     </div>
   );
 }

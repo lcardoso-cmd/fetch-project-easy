@@ -47,6 +47,7 @@ import {
   Maximize2,
   Mic,
   RefreshCw,
+  Scale,
   Search,
   Send,
   Settings2,
@@ -115,6 +116,19 @@ interface Msg {
   audio_blob_url?: string; // local playback for freshly sent audio
 }
 
+/** Precedente localizado em fonte oficial externa aos autos. */
+interface JurisprudenceRef {
+  ref: string;
+  court: string;
+  panel?: string | null;
+  process_number?: string | null;
+  date?: string | null;
+  title: string;
+  snippet: string;
+  url: string;
+  consulted_at: string;
+}
+
 function parseToolResult(step: ToolStep): {
   kind?: string;
   titulo?: string;
@@ -123,6 +137,11 @@ function parseToolResult(step: ToolStep): {
   title?: string;
   subtitle?: string;
   slides?: Array<{ title?: string; content?: string[] }>;
+  ok?: boolean;
+  error?: string;
+  query?: string;
+  consulted_at?: string;
+  results?: JurisprudenceRef[];
 } | null {
   try {
     return JSON.parse(step.result_json) as {
@@ -133,11 +152,17 @@ function parseToolResult(step: ToolStep): {
       title?: string;
       subtitle?: string;
       slides?: Array<{ title?: string; content?: string[] }>;
+      ok?: boolean;
+      error?: string;
+      query?: string;
+      consulted_at?: string;
+      results?: JurisprudenceRef[];
     };
   } catch {
     return null;
   }
 }
+
 
 function getGeneratedDocumentKey(step: ToolStep): string | null {
   const result = parseToolResult(step);
@@ -1846,6 +1871,16 @@ export function JurisMindChat({
                               slides={r.slides ?? []}
                             />
                           );
+                        if (r.kind === "jurisprudence")
+                          return (
+                            <JurisprudenceCard
+                              key={idx}
+                              ok={r.ok !== false}
+                              query={r.query}
+                              error={r.error}
+                              results={r.results ?? []}
+                            />
+                          );
                       } catch {
                         // ignore
                       }
@@ -2271,6 +2306,86 @@ export function JurisMindChat({
   );
 }
 
+/**
+ * Jurisprudência localizada em fonte OFICIAL externa.
+ * Fica separada das citações [F] dos autos para não se confundir com prova.
+ */
+function JurisprudenceCard({
+  ok,
+  query,
+  error,
+  results,
+}: {
+  ok: boolean;
+  query?: string;
+  error?: string;
+  results: JurisprudenceRef[];
+}) {
+  return (
+    <div className="mt-3 rounded-xl border border-primary/30 bg-primary/5 p-3">
+      <div className="flex items-start gap-2">
+        <Scale className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden />
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-foreground">
+            Jurisprudência — fonte externa aos autos
+          </p>
+          {query && (
+            <p className="text-sm text-muted-foreground">Pesquisa: “{query}”</p>
+          )}
+        </div>
+      </div>
+
+      {!ok && (
+        <p className="mt-2 text-sm text-destructive">
+          Pesquisa jurisprudencial indisponível agora. {error ?? ""} Nenhum precedente foi
+          utilizado.
+        </p>
+      )}
+
+      {ok && results.length === 0 && (
+        <p className="mt-2 text-sm text-muted-foreground">
+          Nenhum resultado nas fontes oficiais consultadas.
+        </p>
+      )}
+
+      <ul className="mt-2 space-y-2">
+        {results.map((r) => (
+          <li key={r.url} className="rounded-lg border bg-background p-2.5">
+            <p className="flex flex-wrap items-center gap-x-2 text-sm font-semibold text-foreground">
+              <span className="rounded bg-primary/10 px-1.5 py-0.5 text-primary">[{r.ref}]</span>
+              {r.court}
+              {r.panel ? <span className="font-normal text-muted-foreground">· {r.panel}</span> : null}
+              {r.process_number ? (
+                <span className="font-normal text-muted-foreground">· {r.process_number}</span>
+              ) : null}
+              {r.date ? <span className="font-normal text-muted-foreground">· {r.date}</span> : null}
+            </p>
+            <p className="mt-1 text-sm font-medium text-foreground">{r.title}</p>
+            {r.snippet && (
+              <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{r.snippet}</p>
+            )}
+            <a
+              href={r.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-1 inline-block text-sm font-medium text-primary underline underline-offset-4"
+            >
+              Abrir no site oficial do tribunal
+            </a>
+          </li>
+        ))}
+      </ul>
+
+      {ok && results.length > 0 && (
+        <p className="mt-2 text-sm text-muted-foreground">
+          Trechos vindos de resultado de busca oficial — confira o inteiro teor no link antes de
+          citar. Jurisprudência não substitui a prova dos autos.
+        </p>
+      )}
+    </div>
+  );
+}
+
 const TOOL_LABELS: Record<string, string> = {
   create_petition: "Peça jurídica (Word)",
   create_pdf: "Documento (PDF)",
@@ -2280,6 +2395,7 @@ const TOOL_LABELS: Record<string, string> = {
   create_task: "Tarefa criada",
   list_case_events: "Consultou eventos do caso",
   list_case_tasks: "Consultou tarefas do caso",
+  search_jurisprudence: "Pesquisa de jurisprudência (fontes oficiais)",
 };
 
 function friendlyToolName(name: string) {
