@@ -257,7 +257,6 @@ function drawCardGrid(
     });
     page.drawRectangle({ x, y: yTop - cardH, width: 3.5, height: cardH, color: CYAN });
 
-    const padX = 16;
     let y = yTop - 26;
     if (item.label) {
       page.drawText(item.label, {
