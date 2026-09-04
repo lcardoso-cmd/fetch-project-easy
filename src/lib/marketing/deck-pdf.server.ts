@@ -224,13 +224,28 @@ function drawCardGrid(
   const rows = Math.ceil(items.length / cols);
   const cardW = (CONTENT_W - gap * (cols - 1)) / cols;
   const available = o.top - (o.bottom ?? 62);
-  const cardH = (available - gap * (rows - 1)) / rows;
+  const padX = 16;
+
+  // Altura pelo conteúdo mais alto (evita cartões esticados com vazio enorme).
+  const innerW = cardW - padX * 2;
+  let contentH = 0;
+  for (const item of items) {
+    let h = 26 + textHeight(item.title, f.bold, 14, innerW, 18);
+    if (item.label) h += 18;
+    if (item.body) h += 8 + textHeight(item.body, f.body, 11.5, innerW, 16);
+    contentH = Math.max(contentH, h + 18);
+  }
+  const maxH = (available - gap * (rows - 1)) / rows;
+  const cardH = Math.min(Math.max(contentH, 92), maxH);
+  const gridH = cardH * rows + gap * (rows - 1);
+  // Centraliza verticalmente a grade na área livre.
+  const gridTop = o.top - Math.max(0, (available - gridH) / 2);
 
   items.forEach((item, i) => {
     const col = i % cols;
     const row = Math.floor(i / cols);
     const x = MARGIN + col * (cardW + gap);
-    const yTop = o.top - row * (cardH + gap);
+    const yTop = gridTop - row * (cardH + gap);
     page.drawRectangle({
       x,
       y: yTop - cardH,
