@@ -1,54 +1,53 @@
-import { useState } from "react";
 import {
-  ArrowRight,
   Download,
   FileSpreadsheet,
   FileText,
-  MessageSquare,
   Pencil,
   Presentation,
   Search,
-  Sparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-type TabId = "analise" | "peca" | "planilha" | "apresentacao";
+type OutputId = "analise" | "peca" | "planilha" | "apresentacao";
 
-const TABS: { id: TabId; label: string; icon: typeof FileText }[] = [
-  { id: "analise", label: "Análise", icon: Search },
-  { id: "peca", label: "Peça jurídica", icon: FileText },
-  { id: "planilha", label: "Planilha", icon: FileSpreadsheet },
-  { id: "apresentacao", label: "Apresentação", icon: Presentation },
+const OUTPUTS: {
+  id: OutputId;
+  label: string;
+  description: string;
+  icon: typeof FileText;
+}[] = [
+  {
+    id: "analise",
+    label: "Análise",
+    description: "Resposta com citações aos trechos dos documentos do caso",
+    icon: Search,
+  },
+  {
+    id: "peca",
+    label: "Peça jurídica",
+    description: "Minuta editável em Word e PDF",
+    icon: FileText,
+  },
+  {
+    id: "planilha",
+    label: "Planilha",
+    description: "Dados organizados em Excel, com totais e formatação",
+    icon: FileSpreadsheet,
+  },
+  {
+    id: "apresentacao",
+    label: "Apresentação",
+    description: "Slides executivos em PowerPoint",
+    icon: Presentation,
+  },
 ];
 
-const COMMANDS: Record<TabId, string> = {
-  analise: "Compare os cartões de ponto com os recibos e identifique diferenças.",
-  peca: "Redija uma contestação com base nos documentos selecionados.",
-  planilha: "Organize os registros de jornada e pagamentos em uma planilha comparativa.",
-  apresentacao: "Prepare uma apresentação executiva deste caso para reunião com o cliente.",
-};
-
-const SOURCES: Record<TabId, string[]> = {
-  analise: ["Cartões de ponto (jan–mar/2024)", "Recibos de pagamento", "Contrato de trabalho"],
-  peca: ["Petição inicial", "Contrato de trabalho", "Recibos de pagamento"],
-  planilha: ["Cartões de ponto (jan–mar/2024)", "Recibos de pagamento"],
-  apresentacao: ["Petição inicial", "Cartões de ponto", "Recibos de pagamento", "Contestação"],
-};
-
-const OUTPUT_LABEL: Record<TabId, string> = {
+const OUTPUT_LABEL: Record<OutputId, string> = {
   analise: "Resposta com fontes",
   peca: "Minuta editável",
   planilha: "Planilha gerada",
   apresentacao: "Apresentação editável",
 };
-
-/** Passos exibidos entre o comando e o material produzido. */
-const STEPS = [
-  { icon: MessageSquare, label: "Comando do advogado" },
-  { icon: Search, label: "Consulta ao caso" },
-  { icon: Sparkles, label: "Fontes identificadas" },
-  { icon: Download, label: "Arquivo disponível" },
-];
 
 const REFS = [
   {
@@ -95,26 +94,6 @@ function RefChip({ ref: r, doc, where }: { ref: string; doc: string; where: stri
   );
 }
 
-function OutputFrame({
-  label,
-  actions,
-  children,
-}: {
-  label: string;
-  actions: React.ReactNode;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="overflow-hidden rounded-2xl border bg-background shadow-sm">
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b bg-muted/40 px-4 py-3">
-        <p className="font-heading text-base font-bold text-foreground">{label}</p>
-        <div className="flex flex-wrap gap-2">{actions}</div>
-      </div>
-      <div className="p-4 sm:p-5">{children}</div>
-    </div>
-  );
-}
-
 function DemoButton({
   children,
   icon: Icon,
@@ -132,10 +111,47 @@ function DemoButton({
   );
 }
 
+function OutputCard({
+  id,
+  label,
+  description,
+  icon: Icon,
+  actions,
+  children,
+}: {
+  id: OutputId;
+  label: string;
+  description: string;
+  icon: typeof FileText;
+  actions: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="group overflow-hidden rounded-2xl border bg-background shadow-sm transition hover:shadow-md">
+      <div className="flex flex-col gap-3 border-b bg-muted/40 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-start gap-3">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+            <Icon className="h-5 w-5" aria-hidden />
+          </span>
+          <div>
+            <p className="font-heading text-lg font-bold text-foreground">{label}</p>
+            <p className="text-base text-muted-foreground">{description}</p>
+          </div>
+        </div>
+        <div className="flex flex-wrap gap-2">{actions}</div>
+      </div>
+      <div className="p-4 sm:p-5">{children}</div>
+    </div>
+  );
+}
+
 function AnalysisOutput() {
   return (
-    <OutputFrame
+    <OutputCard
+      id="analise"
       label={OUTPUT_LABEL.analise}
+      description="Resposta com citações aos trechos dos documentos do caso"
+      icon={Search}
       actions={<DemoButton icon={FileText}>Abrir documento citado</DemoButton>}
     >
       <div className="rounded-xl border bg-card p-4">
@@ -166,14 +182,17 @@ function AnalysisOutput() {
         os cartões de abril e maio não estão no acervo; o cálculo consolidado depende desses
         documentos.
       </p>
-    </OutputFrame>
+    </OutputCard>
   );
 }
 
 function SheetOutput() {
   return (
-    <OutputFrame
+    <OutputCard
+      id="planilha"
       label={OUTPUT_LABEL.planilha}
+      description="Dados organizados em Excel, com totais e formatação"
+      icon={FileSpreadsheet}
       actions={
         <>
           <span className="inline-flex items-center gap-1.5 rounded-md bg-muted px-2 py-1 text-sm font-medium text-muted-foreground">
@@ -239,14 +258,17 @@ function SheetOutput() {
           <RefChip key={r.ref} ref={r.ref} doc={r.doc} where={r.where} />
         ))}
       </div>
-    </OutputFrame>
+    </OutputCard>
   );
 }
 
 function PetitionOutput() {
   return (
-    <OutputFrame
+    <OutputCard
+      id="peca"
       label={OUTPUT_LABEL.peca}
+      description="Minuta editável em Word e PDF"
+      icon={FileText}
       actions={
         <>
           <DemoButton icon={Pencil}>Abrir editor</DemoButton>
@@ -313,14 +335,17 @@ function PetitionOutput() {
           <span>1</span>
         </div>
       </div>
-    </OutputFrame>
+    </OutputCard>
   );
 }
 
 function PresentationOutput() {
   return (
-    <OutputFrame
+    <OutputCard
+      id="apresentacao"
       label={OUTPUT_LABEL.apresentacao}
+      description="Slides executivos em PowerPoint"
+      icon={Presentation}
       actions={
         <>
           <DemoButton icon={Pencil}>Abrir editor</DemoButton>
@@ -371,100 +396,17 @@ function PresentationOutput() {
           </li>
         ))}
       </ul>
-    </OutputFrame>
+    </OutputCard>
   );
 }
 
 export function OutputShowcase() {
-  const [active, setActive] = useState<TabId>("analise");
-
   return (
-    <div>
-      <div
-        role="tablist"
-        aria-label="Tipos de material produzido pelo JurisMind"
-        className="grid grid-cols-2 gap-2 sm:grid-cols-4"
-      >
-        {TABS.map((t) => {
-          const selected = active === t.id;
-          return (
-            <button
-              key={t.id}
-              type="button"
-              role="tab"
-              id={`showcase-tab-${t.id}`}
-              aria-selected={selected}
-              aria-controls={`showcase-panel-${t.id}`}
-              onClick={() => setActive(t.id)}
-              className={`flex items-center justify-center gap-2 rounded-xl border px-3 py-2.5 text-base font-semibold transition ${
-                selected
-                  ? "border-primary bg-primary text-primary-foreground shadow-sm"
-                  : "border-border bg-card text-muted-foreground hover:border-primary/40 hover:text-foreground"
-              }`}
-            >
-              <t.icon className="h-4 w-4 shrink-0" aria-hidden />
-              <span className="truncate">{t.label}</span>
-            </button>
-          );
-        })}
-      </div>
-
-      <div
-        role="tabpanel"
-        id={`showcase-panel-${active}`}
-        aria-labelledby={`showcase-tab-${active}`}
-        key={active}
-        className="mt-5 grid gap-5 motion-safe:animate-in motion-safe:fade-in motion-safe:duration-300 lg:grid-cols-[minmax(0,340px)_minmax(0,1fr)] lg:items-start"
-      >
-        {/* Comando do advogado */}
-        <div className="rounded-2xl border bg-card p-4 sm:p-5">
-          <p className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-            Comando do advogado
-          </p>
-          <div className="mt-3 rounded-xl rounded-br-sm bg-primary p-3.5 text-base leading-relaxed text-primary-foreground">
-            {COMMANDS[active]}
-          </div>
-
-          <p className="mt-5 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-            Documentos consultados
-          </p>
-          <ul className="mt-2 space-y-2">
-            {SOURCES[active].map((s) => (
-              <li
-                key={s}
-                className="flex items-center gap-2 rounded-md border bg-background px-2.5 py-2 text-base text-foreground"
-              >
-                <FileText className="h-4 w-4 shrink-0 text-accent-foreground/80 dark:text-accent" aria-hidden />
-                <span className="min-w-0 flex-1 truncate">{s}</span>
-              </li>
-            ))}
-          </ul>
-
-          <ol className="mt-5 space-y-2 border-t pt-4">
-            {STEPS.map((s, i) => (
-              <li key={s.label} className="flex items-center gap-2 text-sm text-muted-foreground">
-                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-accent/15 text-accent-foreground dark:text-accent">
-                  <s.icon className="h-3.5 w-3.5" aria-hidden />
-                </span>
-                <span className="font-medium text-foreground">{s.label}</span>
-                {i < STEPS.length - 1 && (
-                  <ArrowRight className="ml-auto h-3.5 w-3.5 opacity-50" aria-hidden />
-                )}
-              </li>
-            ))}
-          </ol>
-
-          <p className="mt-4 text-sm text-muted-foreground">Demonstração com dados fictícios.</p>
-        </div>
-
-        {/* Material produzido */}
-        <div className="min-w-0">
-          {active === "analise" && <AnalysisOutput />}
-          {active === "peca" && <PetitionOutput />}
-          {active === "planilha" && <SheetOutput />}
-          {active === "apresentacao" && <PresentationOutput />}
-        </div>
-      </div>
+    <div className="space-y-8">
+      <AnalysisOutput />
+      <PetitionOutput />
+      <SheetOutput />
+      <PresentationOutput />
     </div>
   );
 }
