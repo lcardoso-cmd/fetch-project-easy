@@ -94,7 +94,7 @@ function TaskCard({
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    opacity: isDragging ? 0.5 : 1,
+    opacity: isDragging ? 0.6 : 1,
   };
   const assignee = assignees.find((a) => a.id === task.assigned_to_user_id) ?? null;
   const caseInfo = cases.find((c) => c.id === task.case_id) ?? null;
@@ -102,7 +102,13 @@ function TaskCard({
 
   return (
     <div ref={setNodeRef} style={style} className="mb-3">
-      <Card className={cn("border-l-4", dueBorder(task.due_date, task.status))}>
+      <Card
+        className={cn(
+          "border border-border border-l-4 bg-card shadow-sm transition-colors hover:bg-surface-3",
+          isDragging && "shadow-2xl ring-2 ring-ring",
+          dueBorder(task.due_date, task.status),
+        )}
+      >
         <CardContent className="space-y-2 p-3">
           <div className="flex items-start gap-2">
             <button
@@ -114,7 +120,7 @@ function TaskCard({
             >
               <GripVertical className="h-4 w-4" />
             </button>
-            <p className="flex-1 text-sm font-semibold leading-tight">{task.title}</p>
+            <p className="flex-1 text-base font-semibold leading-snug">{task.title}</p>
             <div className="flex shrink-0 gap-0.5">
               <Button
                 variant="ghost"
@@ -138,7 +144,7 @@ function TaskCard({
           </div>
 
           {task.description ? (
-            <p className="line-clamp-2 text-[0.8125rem] text-muted-foreground">
+            <p className="line-clamp-2 text-sm text-muted-foreground">
               {task.description}
             </p>
           ) : null}
@@ -158,13 +164,13 @@ function TaskCard({
             <Link
               to="/assistencias/$caseId"
               params={{ caseId: caseInfo.id }}
-              className="block truncate text-[0.8125rem] text-primary hover:underline"
+              className="block truncate text-sm text-primary hover:underline"
             >
               {caseInfo.title}
             </Link>
           )}
 
-          <div className="space-y-1 text-[0.8125rem] text-muted-foreground">
+          <div className="space-y-1 text-sm text-muted-foreground">
             {task.due_date && (
               <div>
                 Prazo:{" "}
@@ -215,11 +221,13 @@ function Column({
         isOver && "ring-2 ring-ring",
       )}
     >
-      <h3 className="mb-3 text-center text-sm font-semibold">
-        {TASK_STATUS_LABEL[status]}{" "}
-        <span className="text-muted-foreground">({tasks.length})</span>
+      <h3 className="mb-2 flex items-center justify-between gap-2 border-b border-border px-2 pb-2 text-base font-semibold">
+        <span>{TASK_STATUS_LABEL[status]}</span>
+        <span className="rounded-full bg-surface-3 px-2 py-0.5 text-sm font-medium text-muted-foreground">
+          {tasks.length}
+        </span>
       </h3>
-      <div className="-mr-1 flex-1 overflow-y-auto pr-1">
+      <div className="-mr-1 flex-1 overflow-y-auto px-1 pr-1">
         <SortableContext
           items={tasks.map((t) => t.id)}
           strategy={verticalListSortingStrategy}
@@ -236,7 +244,7 @@ function Column({
               />
             ))}
             {tasks.length === 0 && (
-              <div className="flex h-20 items-center justify-center rounded-md border-2 border-dashed border-muted-foreground/20 px-2 text-center text-[0.8125rem] text-muted-foreground">
+              <div className="flex h-20 items-center justify-center rounded-md border-2 border-dashed border-border px-2 text-center text-sm text-muted-foreground">
                 Nenhuma tarefa aqui. Arraste um cartão para esta coluna.
               </div>
             )}
