@@ -15,7 +15,6 @@ import ogBrain from "@/assets/og-brain.jpg.asset.json";
 const OG_IMAGE_URL = `https://jurismind.b2bconsulting.com.br${ogBrain.url}`;
 import { AuthProvider } from "@/hooks/use-auth";
 import { ThemeProvider } from "@/hooks/use-theme";
-import { ThemeToggle } from "@/components/theme-toggle";
 import { Toaster } from "@/components/ui/sonner";
 import { ErrorFallback } from "@/components/errors/error-fallback";
 import { GlobalErrorBoundary } from "@/components/errors/global-error-boundary";
@@ -140,7 +139,6 @@ function RootComponent() {
           <AuthProvider>
             {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
             <Outlet />
-            <ThemeToggle floating />
             <Toaster richColors position="top-right" />
           </AuthProvider>
         </ThemeProvider>
