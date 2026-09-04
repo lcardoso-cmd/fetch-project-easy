@@ -189,7 +189,9 @@ export function CaseJurisMindPanel({
           <JurisMindChat
             fullscreen
             caseId={caseId}
+            initialPrompt={initialPrompt}
             threadId={effectiveThreadId}
+
             onThreadCreated={(id) => {
               onThreadChange(id);
               void qc.invalidateQueries({ queryKey: ["ai-threads", caseId] });
