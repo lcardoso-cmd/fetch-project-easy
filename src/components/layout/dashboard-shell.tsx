@@ -827,6 +827,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
               </Link>
             </div>
             <div className="flex shrink-0 items-center gap-1">
+              <ThemeToggle />
               <ConversationsDrawer />
               <NotificationBell />
               <UserMenu compact />
@@ -851,6 +852,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
               </nav>
             </div>
             <div className="flex shrink-0 items-center gap-2">
+              <ThemeToggle />
               <ConversationsDrawer />
               <NotificationBell />
               <UserMenu />
