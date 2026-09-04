@@ -418,7 +418,7 @@ export function HeroCarousel() {
         {label}
       </div>
 
-      <div className="relative mt-3 min-h-[430px] sm:min-h-[460px]">
+      <div className="relative mt-3 min-h-[520px] sm:min-h-[540px]">
         {SLIDES.map((s, i) => (
           <div
             key={s.id}
