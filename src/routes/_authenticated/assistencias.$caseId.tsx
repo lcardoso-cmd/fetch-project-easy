@@ -135,6 +135,12 @@ function CaseWorkspacePage() {
   const [aiOpen, setAiOpen] = useState(tab === "jurismind");
   // Thread persistida compartilhada entre o painel e a rota de tela inteira.
   const [aiThreadId, setAiThreadId] = useState<string | null>(null);
+  const [aiPrompt, setAiPrompt] = useState<string | null>(null);
+  const openAi = (prompt?: string) => {
+    setAiPrompt(prompt ? `${prompt} #${Date.now()}`.replace(/ #\d+$/, "") : null);
+    setAiOpen(true);
+  };
+
 
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({
