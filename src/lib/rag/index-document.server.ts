@@ -56,7 +56,7 @@ export async function indexDocumentCore(
 
   const { data: doc, error: docErr } = await supabase
     .from("documents")
-    .select("id, case_id, storage_path, file_type, filename")
+    .select("id, case_id, storage_path, file_type, filename, page_offset")
     .eq("id", documentId)
     .eq("organization_id", organizationId)
     .single();
@@ -156,6 +156,10 @@ export async function indexDocumentCore(
       .maybeSingle();
     const offset = ((maxRow?.chunk_index as number | undefined) ?? -1) + 1;
 
+    const pageOffset = Number((doc as { page_offset?: number | null }).page_offset ?? 0) || 0;
+    const shiftPage = (p: number | null | undefined) =>
+      typeof p === "number" ? p + pageOffset : p;
+
     const rows = chunks.map((c, idx) => ({
       document_id: documentId,
       case_id: doc.case_id,
@@ -165,8 +169,9 @@ export async function indexDocumentCore(
       content: c.content,
       source_kind: c.source_kind === "table" ? "text" : c.source_kind,
       embedding: embeddings[idx] as unknown as string,
-      page_start: c.page_start,
-      page_end: c.page_end,
+      page_start: shiftPage(c.page_start),
+      page_end: shiftPage(c.page_end),
+
       section_title: c.section_title,
       sheet_name: c.sheet_name,
       row_start: c.row_start,

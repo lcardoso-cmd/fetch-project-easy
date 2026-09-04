@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 export type UploadPhase =
   | "queued"
   | "splitting"
+  | "split_failed"
   | "hashing"
   | "uploading"
   | "registering"
@@ -35,6 +36,7 @@ export interface UploadItem {
 const PHASE_LABEL: Record<UploadPhase, string> = {
   queued: "Aguardando…",
   splitting: "Dividindo em partes…",
+  split_failed: "Não foi possível dividir este PDF",
   hashing: "Calculando hash…",
   uploading: "Enviando…",
   registering: "Registrando…",
@@ -44,6 +46,7 @@ const PHASE_LABEL: Record<UploadPhase, string> = {
   cancelled: "Cancelado",
   error: "Falhou",
 };
+
 
 function formatBytes(b: number) {
   if (!b) return "—";
@@ -58,7 +61,7 @@ function PhaseIcon({ phase }: { phase: UploadPhase }) {
     return <CheckCircle2 className="h-4 w-4 text-emerald-600" />;
   if (phase === "error")
     return <AlertCircle className="h-4 w-4 text-destructive" />;
-  if (phase === "duplicate")
+  if (phase === "duplicate" || phase === "split_failed")
     return <AlertCircle className="h-4 w-4 text-amber-600" />;
   if (phase === "cancelled")
     return <X className="h-4 w-4 text-muted-foreground" />;
@@ -70,20 +73,25 @@ export function UploadProgressList({
   onRetry,
   onRemove,
   onCancel,
+  onForce,
 }: {
   items: UploadItem[];
   onRetry?: (id: string) => void;
   onRemove?: (id: string) => void;
   onCancel?: (id: string) => void;
+  /** Enviar o PDF inteiro mesmo sem conseguir dividir. */
+  onForce?: (id: string) => void;
 }) {
   if (items.length === 0) return null;
+
   return (
     <ul className="space-y-2">
       {items.map((it) => {
         const isDone = it.phase === "done" || it.phase === "duplicate";
         const isError = it.phase === "error";
         const isCancelled = it.phase === "cancelled";
-        const isFinal = isDone || isError || isCancelled;
+        const isSplitFailed = it.phase === "split_failed";
+        const isFinal = isDone || isError || isCancelled || isSplitFailed;
         const canCancel = !isFinal && it.phase !== "registering" && it.phase !== "indexing";
         const displayPct = isDone ? 100 : it.pct;
         return (
@@ -92,10 +100,12 @@ export function UploadProgressList({
             className={cn(
               "rounded-lg border bg-card p-3",
               isError && "border-destructive/50 bg-destructive/5",
-              it.phase === "duplicate" && "border-amber-500/40 bg-amber-50/40",
+              (it.phase === "duplicate" || isSplitFailed) &&
+                "border-amber-500/40 bg-amber-50/40",
               isCancelled && "border-muted-foreground/30 bg-muted/30 opacity-80",
             )}
           >
+
             <div className="flex items-start gap-2">
               <FileText className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
               <div className="min-w-0 flex-1">
@@ -111,8 +121,11 @@ export function UploadProgressList({
                     className={cn(
                       "text-xs",
                       isError && "text-destructive",
-                      it.phase === "duplicate" && "text-amber-700",
-                      !isError && it.phase !== "duplicate" && "text-muted-foreground",
+                      (it.phase === "duplicate" || isSplitFailed) && "text-amber-700",
+                      !isError &&
+                        it.phase !== "duplicate" &&
+                        !isSplitFailed &&
+                        "text-muted-foreground",
                     )}
                   >
                     {it.message ?? PHASE_LABEL[it.phase]}
@@ -120,6 +133,7 @@ export function UploadProgressList({
                       ? ` (${it.chunks} trechos)`
                       : ""}
                   </span>
+
                   {!isFinal && (
                     <span className="ml-auto text-xs tabular-nums text-muted-foreground">
                       {Math.round(displayPct)}%
@@ -129,7 +143,25 @@ export function UploadProgressList({
                 {!isFinal && (
                   <Progress value={displayPct} className="mt-2 h-1.5" />
                 )}
+                {isSplitFailed && onForce && (
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="h-8 text-xs"
+                      onClick={() => onForce(it.id)}
+                    >
+                      Enviar mesmo assim
+                    </Button>
+                    <span className="text-xs text-muted-foreground">
+                      Arquivos muito longos sem divisão podem demorar ou falhar na
+                      leitura.
+                    </span>
+                  </div>
+                )}
               </div>
+
               <div className="flex shrink-0 items-center gap-1">
                 {canCancel && onCancel && (
                   <Button

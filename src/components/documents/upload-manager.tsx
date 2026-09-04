@@ -87,6 +87,8 @@ interface UploadManagerValue {
   cancelCase: (caseId: string) => void;
   removeItem: (id: string) => void;
   clearFinished: (caseId?: string) => void;
+  forceUpload: (id: string) => void;
+
 }
 
 const UploadManagerContext = createContext<UploadManagerValue | null>(null);
@@ -168,20 +170,24 @@ export function UploadManagerProvider({ children }: { children: ReactNode }) {
   const discardFn = useServerFn(discardUploadedObject);
 
   const [items, setItems] = useState<CaseUploadItem[]>([]);
-  const [replacement, setReplacement] = useState<{
-    existing: { id: string; filename: string };
-    file: Blob;
-    filename: string;
-    fileType: string;
-    itemId: string;
-    caseId: string;
-  } | null>(null);
+  const [replacement, setReplacement] = useState<
+    | ({
+        existing: { id: string; filename: string };
+      } & Pick<
+        QueueEntry,
+        "file" | "filename" | "fileType" | "itemId" | "caseId" | "maxPartPages" | "partMeta"
+      >)
+    | null
+  >(null);
   const [replacing, setReplacing] = useState(false);
+
 
   const abortersRef = useRef<Map<string, AbortController>>(new Map());
   const cancelledRef = useRef<Set<string>>(new Set());
   const runningRef = useRef(false);
   const queueRef = useRef<QueueEntry[]>([]);
+  const pendingForceRef = useRef<Map<string, QueueEntry>>(new Map());
+
 
   const patchItem = useCallback(
     (id: string, patch: Partial<CaseUploadItem>) =>
@@ -256,7 +262,17 @@ export function UploadManagerProvider({ children }: { children: ReactNode }) {
               phase: "duplicate",
               message: "Já existe um arquivo com esse nome",
             });
-            setReplacement({ existing, file, filename, fileType, itemId, caseId });
+            setReplacement({
+              existing,
+              file,
+              filename,
+              fileType,
+              itemId,
+              caseId,
+              maxPartPages: entry.maxPartPages,
+              partMeta,
+            });
+
             return;
           }
           patchItem(itemId, {
@@ -360,10 +376,18 @@ export function UploadManagerProvider({ children }: { children: ReactNode }) {
         );
         return entries;
       } catch (e) {
-        // Se a divisão falhar, envia o arquivo inteiro.
+        // Divisão falhou: não enviamos o arquivo inteiro silenciosamente.
         console.error("Falha ao dividir PDF:", e);
-        return [entry];
+        pendingForceRef.current.set(entry.itemId, { ...entry, maxPartPages: 0 });
+        patchItem(entry.itemId, {
+          phase: "split_failed",
+          message: `Não foi possível dividir “${entry.filename}”: ${
+            e instanceof Error ? e.message : String(e)
+          }`,
+        });
+        return [];
       }
+
     },
     [patchItem],
   );
@@ -474,7 +498,8 @@ export function UploadManagerProvider({ children }: { children: ReactNode }) {
   const confirmReplace = async () => {
     if (!replacement) return;
     setReplacing(true);
-    const { existing, file, filename, fileType, itemId, caseId } = replacement;
+    const { existing, file, filename, fileType, itemId, caseId, maxPartPages, partMeta } =
+      replacement;
     try {
       await deleteFn({ data: { id: existing.id } });
       const newId = `${filename}-retry-${Date.now()}`;
@@ -487,6 +512,8 @@ export function UploadManagerProvider({ children }: { children: ReactNode }) {
           size: file.size,
           pct: 0,
           phase: "queued" as const,
+          partIndex: partMeta?.partIndex,
+          partCount: partMeta?.partCount,
         },
       ]);
       setReplacement(null);
@@ -496,7 +523,8 @@ export function UploadManagerProvider({ children }: { children: ReactNode }) {
         fileType,
         itemId: newId,
         caseId,
-        maxPartPages: 0,
+        maxPartPages,
+        partMeta,
       });
       void drain();
     } catch (e) {
@@ -506,10 +534,43 @@ export function UploadManagerProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  /** Envia o PDF inteiro após uma falha de divisão, por escolha do usuário. */
+  const forceUpload = useCallback(
+    (id: string) => {
+      const entry = pendingForceRef.current.get(id);
+      if (!entry) return;
+      pendingForceRef.current.delete(id);
+      patchItem(id, { phase: "queued", message: undefined, pct: 0 });
+      queueRef.current.push(entry);
+      void drain();
+    },
+    [drain, patchItem],
+  );
+
+
 
   const value = useMemo<UploadManagerValue>(
-    () => ({ items, itemsForCase, enqueue, cancelItem, cancelCase, removeItem, clearFinished }),
-    [items, itemsForCase, enqueue, cancelItem, cancelCase, removeItem, clearFinished],
+    () => ({
+      items,
+      itemsForCase,
+      enqueue,
+      cancelItem,
+      cancelCase,
+      removeItem,
+      clearFinished,
+      forceUpload,
+    }),
+    [
+      items,
+      itemsForCase,
+      enqueue,
+      cancelItem,
+      cancelCase,
+      removeItem,
+      clearFinished,
+      forceUpload,
+    ],
+
   );
 
   return (
@@ -540,7 +601,7 @@ export function UploadManagerProvider({ children }: { children: ReactNode }) {
 
 /** Painel flutuante que mantém os envios visíveis mesmo com o diálogo fechado. */
 function UploadDock() {
-  const { items, cancelItem, removeItem, clearFinished } = useUploadManager();
+  const { items, cancelItem, removeItem, clearFinished, forceUpload } = useUploadManager();
   const [collapsed, setCollapsed] = useState(false);
 
   if (items.length === 0) return null;
@@ -579,7 +640,13 @@ function UploadDock() {
       </div>
       {!collapsed && (
         <div className="max-h-[45vh] space-y-2 overflow-auto p-3">
-          <UploadProgressList items={items} onCancel={cancelItem} onRemove={removeItem} />
+          <UploadProgressList
+            items={items}
+            onCancel={cancelItem}
+            onRemove={removeItem}
+            onForce={forceUpload}
+          />
+
           {active > 0 && (
             <p className="text-xs text-muted-foreground">
               Você pode navegar pelo sistema — os envios continuam aqui.
