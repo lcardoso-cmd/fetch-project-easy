@@ -88,21 +88,24 @@ function jobDetail(job: IndexJobView | undefined): string | null {
   if (job.status === "running") {
     const stage = job.stage ? STAGE_LABEL[job.stage] ?? job.stage : "processando";
     const pages = job.pages ? ` — ${job.pages} páginas` : "";
-    return job.stalled
-      ? `A leitura começou (${stage}) mas parou de responder. Use "Processar agora".`
-      : `Sendo lido agora: ${stage}${pages}.`;
+    if (job.stalled)
+      return `A leitura começou (${stage}) mas parou de responder. Use "Processar agora".`;
+    const warning = job.step_warning ? ` ${job.step_warning}` : "";
+    return `Sendo lido agora: ${stage}${pages}.${warning}`;
   }
   if (job.status === "queued") {
-    if (job.queue_position === 1) return "É o próximo da fila. A leitura começa em instantes.";
+    const warning = job.step_warning ? ` ${job.step_warning}` : "";
+    if (job.queue_position === 1)
+      return `É o próximo da fila. A leitura começa em instantes.${warning}`;
     if (job.queue_position && job.queue_position > 1)
-      return `Na fila: há ${job.queue_position - 1} documento(s) sendo lido(s) antes deste.`;
-    return "Na fila do servidor.";
+      return `Na fila: há ${job.queue_position - 1} documento(s) sendo lido(s) antes deste.${warning}`;
+    return `Na fila do servidor.${warning}`;
   }
   if (job.status === "paused")
     return "Leitura pausada por limite da IA. Verifique os créditos e tente de novo.";
   if (job.status === "error")
     return `Falhou após ${job.attempt_count} tentativa(s): ${
-      job.last_error_message ?? "erro no processamento"
+      job.last_error_message ?? job.step_warning ?? "erro no processamento"
     }`;
   return null;
 }
@@ -125,10 +128,13 @@ function readingPercent(status: string, job: IndexJobView | undefined): number |
   if (status === "ready") return 100;
   if (status.startsWith("error") || status === "empty") return null;
   if (job?.status === "error" || job?.status === "paused") return null;
+  // O servidor guarda o progresso, então recarregar a página mantém a barra.
+  if (typeof job?.percent === "number") return job.percent;
   if (job?.status === "queued" || status === "queued" || status === "pending") return 5;
   const stage = job?.stage ?? status;
   return STAGE_PCT[stage] ?? 30;
 }
+
 
 
 function StatusCell({
