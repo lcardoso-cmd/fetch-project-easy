@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   ArrowDown,
+  ArrowRight,
   ChevronLeft,
   ChevronRight,
   FileSpreadsheet,
@@ -28,6 +29,12 @@ interface Slide {
   title: string;
   href: string;
   visual: ReactNode;
+  /** Texto do banner (slides 2+); o slide 1 recebe o conteúdo institucional via children. */
+  subtitle?: string;
+  ctaLabel?: string;
+  ctaHref?: string;
+  /** Quando true, a área de copy do slide renderiza `children` (banner institucional). */
+  heroSlot?: boolean;
 }
 
 function Panel({ children, className }: { children: ReactNode; className?: string }) {
@@ -253,6 +260,7 @@ const SLIDES: Slide[] = [
     title: "Uma pergunta, uma resposta com fonte",
     href: "#entregas",
     visual: <CaseConsoleVisual />,
+    heroSlot: true,
   },
   {
     id: "fluxo",
@@ -260,6 +268,9 @@ const SLIDES: Slide[] = [
     title: "Localizar, organizar, produzir, apresentar, conduzir",
     href: "#fluxo",
     visual: <FlowVisual />,
+    subtitle: "Do documento ao prazo, tudo dentro do mesmo caso — sem pular de ferramenta em ferramenta.",
+    ctaLabel: "Ver o fluxo completo",
+    ctaHref: "#fluxo",
   },
   {
     id: "entregas",
@@ -267,6 +278,9 @@ const SLIDES: Slide[] = [
     title: "Análise, peça, planilha e apresentação",
     href: "#entregas",
     visual: <DeliverablesVisual />,
+    subtitle: "Entregáveis prontos em Word, Excel e slides 16:9 — gerados a partir dos documentos do próprio caso.",
+    ctaLabel: "Ver o que o JurisMind entrega",
+    ctaHref: "#entregas",
   },
   {
     id: "inteligencia",
@@ -274,6 +288,9 @@ const SLIDES: Slide[] = [
     title: "Respostas ancoradas nos seus documentos",
     href: "#inteligencia",
     visual: <IntelligenceVisual />,
+    subtitle: "Cada afirmação abre o trecho exato que a sustenta. Sem fonte, sem afirmação.",
+    ctaLabel: "Ver como a IA trabalha",
+    ctaHref: "#inteligencia",
   },
   {
     id: "jurisprudencia",
@@ -281,6 +298,9 @@ const SLIDES: Slide[] = [
     title: "Jurisprudência de tribunais, não de palpite",
     href: "#jurisprudencia",
     visual: <JurisprudenceVisual />,
+    subtitle: "Referências oficiais de STF, STJ e TST — sempre separadas dos documentos dos seus autos.",
+    ctaLabel: "Ver as fontes oficiais",
+    ctaHref: "#jurisprudencia",
   },
   {
     id: "governanca",
@@ -288,13 +308,47 @@ const SLIDES: Slide[] = [
     title: "Controle, custo e rastreabilidade",
     href: "#plataforma",
     visual: <GovernanceVisual />,
+    subtitle: "Acesso por caso, consumo de IA visível por usuário e trilha de auditoria de cada resposta.",
+    ctaLabel: "Conhecer a plataforma",
+    ctaHref: "#plataforma",
   },
 ];
 
+/** Copy do banner de cada slide (2+): eyebrow, título, subtítulo e CTA próprios. */
+function SlideCopy({ slide, active }: { slide: Slide; active: boolean }) {
+  return (
+    <div className="max-w-2xl lg:max-w-xl">
+      <span className="mb-4 inline-flex items-center gap-2 rounded-full bg-brand-cyan/15 px-3 py-1 text-sm font-semibold text-brand-cyan">
+        <JurisMindMark size={14} context={JURISMIND_CONTEXT.inlineDark} />
+        {slide.eyebrow}
+      </span>
+      <h2 className="font-heading text-3xl font-extrabold leading-[1.12] tracking-tight text-brand-on-navy md:text-4xl">
+        {slide.title}
+      </h2>
+      {slide.subtitle ? (
+        <p className="mt-4 text-base leading-relaxed text-brand-on-navy/90 md:text-lg">
+          {slide.subtitle}
+        </p>
+      ) : null}
+      {slide.ctaLabel && slide.ctaHref ? (
+        <a
+          href={slide.ctaHref}
+          tabIndex={active ? 0 : -1}
+          className="mt-7 inline-flex h-11 items-center gap-2 whitespace-nowrap rounded-md border border-brand-on-navy/35 px-5 text-sm font-semibold text-brand-on-navy transition-colors hover:bg-brand-on-navy/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+        >
+          {slide.ctaLabel}
+          <ArrowRight className="h-4 w-4" aria-hidden />
+        </a>
+      ) : null}
+    </div>
+  );
+}
+
 /**
- * Hero em tela cheia no esquema de carrossel: os visuais ocupam o fundo,
- * o texto institucional fica sobreposto no canto inferior esquerdo
- * (children), com pontos de navegação ao centro e controles no topo.
+ * Hero em tela cheia no esquema de carrossel: cada slide é um banner
+ * completo — visual do produto à direita e copy própria (título, texto e
+ * CTA) à esquerda — alternando automaticamente. O primeiro slide recebe o
+ * conteúdo institucional (children). Pontos ao centro, controles no topo.
  */
 export function HeroCarousel({ children }: { children?: ReactNode }) {
   const [index, setIndex] = useState(0);
@@ -385,6 +439,7 @@ export function HeroCarousel({ children }: { children?: ReactNode }) {
                   "radial-gradient(circle at 18% 22%, oklch(0.86 0.16 195) 0, transparent 42%), radial-gradient(circle at 85% 72%, oklch(0.65 0.16 220) 0, transparent 45%)",
               }}
             />
+            {/* Visual do banner — à direita no desktop, esmaecido atrás da copy nas telas menores */}
             <div className="mx-auto flex h-full max-w-6xl items-start justify-end px-4 pt-16 sm:pt-20 lg:items-center lg:pt-0">
               <a
                 href={s.href}
@@ -399,15 +454,24 @@ export function HeroCarousel({ children }: { children?: ReactNode }) {
                 {s.visual}
               </a>
             </div>
+
+            {/* Véu de legibilidade do banner (transiciona junto com o slide) */}
+            <div
+              className="pointer-events-none absolute inset-0 bg-gradient-to-t from-brand-navy via-brand-navy/90 to-brand-navy/50 lg:bg-gradient-to-r lg:from-brand-navy lg:from-25% lg:via-brand-navy/90 lg:via-55% lg:to-brand-navy/30"
+              aria-hidden
+            />
+
+            {/* Copy do banner — canto inferior esquerdo */}
+            <div className="absolute inset-0 mx-auto flex w-full max-w-6xl flex-col justify-end px-4 pb-16 pt-24 lg:justify-center lg:pb-24">
+              {s.heroSlot ? (
+                <div className="max-w-2xl lg:max-w-xl">{children}</div>
+              ) : (
+                <SlideCopy slide={s} active={i === index} />
+              )}
+            </div>
           </div>
         ))}
       </div>
-
-      {/* Véu de legibilidade para o texto sobreposto */}
-      <div
-        className="pointer-events-none absolute inset-0 bg-gradient-to-t from-brand-navy via-brand-navy/90 to-brand-navy/50 lg:bg-gradient-to-r lg:from-brand-navy lg:from-25% lg:via-brand-navy/90 lg:via-55% lg:to-brand-navy/30"
-        aria-hidden
-      />
 
       {/* Barra de progresso do slide atual */}
       <div className="absolute inset-x-0 top-0 h-1 bg-brand-navy-foreground/15">
@@ -458,11 +522,6 @@ export function HeroCarousel({ children }: { children?: ReactNode }) {
 
       <div aria-live="polite" className="sr-only">
         {label}
-      </div>
-
-      {/* Texto institucional sobreposto — canto inferior esquerdo */}
-      <div className="relative mx-auto flex min-h-[calc(100svh-4rem)] w-full max-w-6xl flex-col justify-end px-4 pb-16 pt-24 lg:pb-20">
-        <div className="max-w-2xl">{children}</div>
       </div>
 
       {/* Pontos de navegação ao centro, sobre a base do hero */}
