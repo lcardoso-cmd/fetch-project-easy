@@ -267,10 +267,17 @@ export async function indexDocumentCore(
         return data.signedUrl;
       });
 
-      const { openRemotePdf } = await import("./pdf-range.server");
+      const { openRemotePdf, remoteFileSize } = await import("./pdf-range.server");
+      // Tamanho real do arquivo: o cadastro pode estar zerado/desatualizado e é
+      // ele que decide se o OCR (que exige o arquivo em memória) é possível.
+      let effectiveSize = fileSize;
+      if (effectiveSize <= 0) {
+        effectiveSize = await remoteFileSize(signedUrl).catch(() => 0);
+      }
       const pdf = await step("parse", () =>
-        openRemotePdf(signedUrl, fileSize || undefined),
+        openRemotePdf(signedUrl, effectiveSize || undefined),
       );
+
       pageCount = pdf.numPages;
       const weakPages: number[] = [];
 
