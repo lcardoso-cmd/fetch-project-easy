@@ -431,6 +431,7 @@ export function JurisMindChat({
   fullscreen = false,
   threadId,
   onThreadCreated,
+  initialPrompt,
 }: {
   caseId: string;
   caseInfo: CaseSummary;
@@ -442,7 +443,10 @@ export function JurisMindChat({
   fullscreen?: boolean;
   threadId?: string | null;
   onThreadCreated?: (id: string) => void;
+  /** Pedido pré-preenchido no campo de mensagem (atalhos do caso). */
+  initialPrompt?: string | null;
 }) {
+
   // askFn removido: agora usamos SSE em /api/chat/stream (streaming token-a-token)
   const getMessagesFn = useServerFn(getThreadMessages);
   const getAudioUrlFn = useServerFn(getMessageAudioUrl);
