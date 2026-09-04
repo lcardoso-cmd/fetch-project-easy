@@ -250,7 +250,7 @@ function MyWorkPage() {
     items.length === 0 ? (
       <EmptyState icon={ClipboardCheck} title={empty} />
     ) : (
-      <ul className="divide-y divide-black/5 border-y border-black/5 dark:divide-white/10 dark:border-white/10">
+      <ul className="divide-y divide-border border-y border-border ">
         {items.map((t) => {
           const title = caseTitle(t.case_id);
           const overdue = t.due_date && new Date(t.due_date) < now && t.status !== "done";

@@ -65,7 +65,7 @@ export function AgendaPanel({
       {Array.from(groups.entries()).map(([day, list]) => (
         <section key={day}>
           <h3 className="mb-2 text-sm font-medium capitalize text-muted-foreground">{day}</h3>
-          <ul className="divide-y divide-black/5 border-y border-black/5 dark:divide-white/10 dark:border-white/10">
+          <ul className="divide-y divide-border border-y border-border ">
             {list.map((ev) => {
               const title = caseTitle(ev.case_id);
               return (
