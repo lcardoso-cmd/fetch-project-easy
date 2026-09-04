@@ -194,6 +194,7 @@ export const JURISMIND_CONTEXTS = [
   "auth",
   "chat",
   "chip-dark",
+  "inline",
   "inline-light",
   "inline-dark",
 ] as const;
@@ -214,6 +215,7 @@ export const JURISMIND_CONTEXT = {
   auth: "auth",
   chat: "chat",
   chipDark: "chip-dark",
+  inline: "inline",
   inlineLight: "inline-light",
   inlineDark: "inline-dark",
 } as const satisfies Record<string, JurisMindContext>;
@@ -307,6 +309,7 @@ const CONTEXT_TO_VARIANT: Record<JurisMindContext, JurisMindVariant> = {
   auth: "square-navy",
   chat: "square-navy",
   "chip-dark": "square-white",
+  inline: "glyph-white",
   "inline-light": "glyph-navy",
   "inline-dark": "glyph-white",
 };
@@ -315,13 +318,15 @@ const CONTEXT_TO_VARIANT: Record<JurisMindContext, JurisMindVariant> = {
  * Tipos de composição do mark quando derivado de `context`:
  * - `square-token`: wrapper com bg tokenizado (fixo por contexto);
  * - `square-token-theme-aware`: wrapper que troca navy↔branco via `.dark`;
- * - `glyph`: apenas o glyph transparente, sem quadrado.
+ * - `glyph`: apenas o glyph transparente, sem quadrado;
+ * - `glyph-theme-aware`: glyph que troca navy↔branco via `.dark`.
  * Sidebar/chip-dark são fixos porque seus fundos são fixos por design.
  */
 type ContextComposition =
   | { kind: "square-token"; tone: "navy" | "surface" }
   | { kind: "square-token-theme-aware" }
-  | { kind: "glyph"; tone: "navy" | "white" };
+  | { kind: "glyph"; tone: "navy" | "white" }
+  | { kind: "glyph-theme-aware" };
 
 const CONTEXT_COMPOSITION: Record<JurisMindContext, ContextComposition> = {
   sidebar: { kind: "square-token", tone: "surface" },      // sidebar navy fixa
@@ -330,6 +335,7 @@ const CONTEXT_COMPOSITION: Record<JurisMindContext, ContextComposition> = {
   auth: { kind: "square-token-theme-aware" },
   chat: { kind: "square-token-theme-aware" },
   "chip-dark": { kind: "square-token", tone: "surface" },  // chip sempre em bg escuro
+  inline: { kind: "glyph-theme-aware" },
   "inline-light": { kind: "glyph", tone: "navy" },
   "inline-dark": { kind: "glyph", tone: "white" },
 };
@@ -612,6 +618,46 @@ export function JurisMindMark({
         )}
         style={{ width: size, height: size }}
       />
+    );
+  }
+
+  if (composition.kind === "glyph-theme-aware") {
+    const shouldRound = rounded ?? false;
+    return (
+      <span
+        className={cn(
+          "inline-flex shrink-0 select-none align-middle",
+          shouldRound && JURISMIND_ROUND_CLASS,
+          interactive && INTERACTIVE_CLASS,
+          className,
+        )}
+        style={{ width: size, height: size }}
+      >
+        <span className="contents dark:hidden">
+          <img
+            src={SOURCES["glyph-navy"]}
+            alt="JurisMind AI"
+            width={size}
+            height={size}
+            loading="lazy"
+            draggable={false}
+            className="block object-contain select-none"
+            style={{ width: size, height: size }}
+          />
+        </span>
+        <span className="contents hidden dark:inline">
+          <img
+            src={SOURCES["glyph-white"]}
+            alt="JurisMind AI"
+            width={size}
+            height={size}
+            loading="lazy"
+            draggable={false}
+            className="block object-contain select-none"
+            style={{ width: size, height: size }}
+          />
+        </span>
+      </span>
     );
   }
 

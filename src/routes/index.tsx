@@ -215,7 +215,7 @@ function LandingPage() {
       <header className="sticky top-0 z-40 border-b bg-background/85 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3">
           <Link to="/" className="flex items-center gap-2">
-            <JurisMindMark size={28} context={JURISMIND_CONTEXT.inlineLight} />
+            <JurisMindMark size={28} context={JURISMIND_CONTEXT.inline} />
             <span className="font-heading text-lg font-bold tracking-tight text-foreground">
               JurisMind AI
             </span>
@@ -260,8 +260,8 @@ function LandingPage() {
                 "radial-gradient(circle at 15% 25%, oklch(0.86 0.16 195) 0, transparent 42%), radial-gradient(circle at 85% 75%, oklch(0.65 0.16 220) 0, transparent 45%)",
             }}
           />
-          <div className="relative mx-auto grid max-w-6xl gap-10 px-4 py-16 lg:grid-cols-[1.05fr_1fr] lg:items-center lg:py-20">
-            <div>
+          <div className="relative mx-auto flex max-w-6xl flex-col items-center gap-10 px-4 py-16 lg:py-20">
+            <div className="max-w-3xl text-center">
               <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-brand-cyan/15 px-3 py-1 text-sm font-semibold text-brand-cyan">
                 <JurisMindMark size={14} context={JURISMIND_CONTEXT.inlineDark} />
                 {PITCH.hero.eyebrow}
@@ -269,11 +269,11 @@ function LandingPage() {
               <h1 className="font-heading text-4xl font-extrabold leading-[1.08] tracking-tight md:text-5xl">
                 {PITCH.hero.title}
               </h1>
-              <p className="mt-5 max-w-xl text-lg text-brand-on-navy/90">
+              <p className="mx-auto mt-5 max-w-2xl text-lg text-brand-on-navy/90">
                 {PITCH.hero.subtitle}
               </p>
 
-              <div className="mt-8 flex flex-col gap-3 lg:flex-row lg:flex-nowrap [&>*]:w-full lg:[&>*]:w-auto">
+              <div className="mx-auto mt-8 flex max-w-2xl flex-col gap-3 lg:flex-row lg:justify-center lg:flex-nowrap [&>*]:w-full lg:[&>*]:w-auto">
                 {user ? (
                   <OpenDashboardButton className="bg-brand-cyan text-brand-navy hover:bg-brand-cyan/90" />
                 ) : (
@@ -288,7 +288,9 @@ function LandingPage() {
               </p>
             </div>
 
-            <HeroCarousel />
+            <div className="w-full">
+              <HeroCarousel />
+            </div>
           </div>
         </section>
 
