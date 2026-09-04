@@ -169,12 +169,13 @@
    * não o preenchimento de toda a tela. O conteúdo vive sobre grafite quase
    * preto, de cromaticidade baixa, com três níveis reais de superfície.
    * Ciano exclusivo para CTA, foco, seleção e marcador ativo. */
-  --surface-1: oklch(0.205 0.010 262);   /* seções, colunas, cabeçalho */
-  --surface-2: oklch(0.252 0.012 262);   /* cartões, campos, tabelas */
-  --surface-3: oklch(0.305 0.013 262);   /* hover, popovers, aba ativa */
+  --surface-1: oklch(0.258 0.011 262);   /* seções, colunas, cabeçalho */
+  --surface-2: oklch(0.305 0.012 262);   /* cartões, campos, tabelas */
+  --surface-3: oklch(0.365 0.013 262);   /* hover, popovers, aba ativa */
 
-  --background: oklch(0.158 0.008 262);  /* canvas grafite */
+  --background: oklch(0.212 0.009 262);  /* canvas grafite */
   --foreground: oklch(0.975 0.004 262);  /* texto principal quase branco */
+  --meta-foreground: oklch(0.720 0.010 262);  /* metadados — AA sobre s1/s2 */
   --header: var(--surface-1);
   --card: var(--surface-2);
   --card-foreground: var(--foreground);
