@@ -3,8 +3,8 @@ import { Download, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
-const DECK_URL = "/api/public/deck";
-const FILE_NAME = "JurisMind-Apresentacao.pdf";
+const DECK_URL = deckAsset.url;
+const FILE_NAME = "JurisMind-Apresentacao-Executiva.pdf";
 
 export function DeckDownloadButton({
   className,
