@@ -613,7 +613,7 @@ function governanceSlide(doc: PDFDocument, f: Fonts, index: number, total: numbe
   const gap = 16;
   const cardW = (CONTENT_W - gap * 3) / 4;
   const cardH = 96;
-  const yTop = top - 20;
+  const yTop = top - Math.max(0, (top - 62 - cardH) / 2);
   g.items.forEach((item, i) => {
     const x = MARGIN + i * (cardW + gap);
     page.drawRectangle({
