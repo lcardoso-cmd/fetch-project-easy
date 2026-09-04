@@ -79,7 +79,9 @@ export function UploadDialog({
     cancelCase,
     removeItem,
     clearFinished,
+    forceUpload,
   } = useUploadManager();
+
   const precomputedHashesRef = useRef<Map<string, string>>(new Map());
   const fileKey = (f: File) => `${f.name}|${f.size}|${f.lastModified}`;
 
@@ -313,7 +315,9 @@ export function UploadDialog({
                   onRemove={removeItem}
                   onRetry={retryItem}
                   onCancel={cancelItem}
+                  onForce={forceUpload}
                 />
+
               </div>
             )}
 
