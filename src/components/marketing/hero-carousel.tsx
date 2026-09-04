@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   ArrowDown,
+  ArrowRight,
   ChevronLeft,
   ChevronRight,
   FileSpreadsheet,
@@ -28,6 +29,12 @@ interface Slide {
   title: string;
   href: string;
   visual: ReactNode;
+  /** Texto do banner (slides 2+); o slide 1 recebe o conteúdo institucional via children. */
+  subtitle?: string;
+  ctaLabel?: string;
+  ctaHref?: string;
+  /** Quando true, a área de copy do slide renderiza `children` (banner institucional). */
+  heroSlot?: boolean;
 }
 
 function Panel({ children, className }: { children: ReactNode; className?: string }) {
