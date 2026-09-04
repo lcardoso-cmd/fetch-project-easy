@@ -26,7 +26,11 @@ export const Route = createFileRoute("/_authenticated/documentos")({
 
 /** Status de processamento em linguagem compreensível. */
 const STATUS_LABEL: Record<string, string> = {
-  pending: "Processando",
+  queued: "Na fila",
+  pending: "Na fila",
+  extracting_text: "Lendo o texto",
+  ocr_processing: "Lendo imagens (OCR)",
+  analyzing: "Analisando",
   processing: "Processando",
   ready: "Pronto para consulta",
   error: "Falha no processamento",
