@@ -677,6 +677,82 @@ export type Database = {
           },
         ]
       }
+      case_intake_document_parts: {
+        Row: {
+          created_at: string
+          created_by_user_id: string
+          document_id: string | null
+          file_size: number
+          file_type: string
+          filename: string
+          id: string
+          intake_document_id: string
+          organization_id: string
+          page_count: number
+          page_offset: number
+          part_count: number
+          part_index: number
+          split_group_id: string
+          storage_path: string
+        }
+        Insert: {
+          created_at?: string
+          created_by_user_id: string
+          document_id?: string | null
+          file_size: number
+          file_type?: string
+          filename: string
+          id?: string
+          intake_document_id: string
+          organization_id: string
+          page_count: number
+          page_offset?: number
+          part_count: number
+          part_index: number
+          split_group_id: string
+          storage_path: string
+        }
+        Update: {
+          created_at?: string
+          created_by_user_id?: string
+          document_id?: string | null
+          file_size?: number
+          file_type?: string
+          filename?: string
+          id?: string
+          intake_document_id?: string
+          organization_id?: string
+          page_count?: number
+          page_offset?: number
+          part_count?: number
+          part_index?: number
+          split_group_id?: string
+          storage_path?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "case_intake_document_parts_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "case_intake_document_parts_intake_document_id_fkey"
+            columns: ["intake_document_id"]
+            isOneToOne: false
+            referencedRelation: "case_intake_documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "case_intake_document_parts_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       case_intake_documents: {
         Row: {
           attempt_count: number
