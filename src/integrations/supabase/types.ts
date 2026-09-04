@@ -677,6 +677,127 @@ export type Database = {
           },
         ]
       }
+      case_intake_documents: {
+        Row: {
+          attempt_count: number
+          case_id: string | null
+          content_hash: string | null
+          created_at: string
+          created_by_user_id: string
+          document_id: string | null
+          extracted_data: Json | null
+          extraction_mode: string | null
+          failed_pages: number[]
+          file_size: number
+          file_type: string
+          filename: string
+          finished_at: string | null
+          heartbeat_at: string | null
+          id: string
+          last_error_code: string | null
+          last_error_message: string | null
+          locked_at: string | null
+          locked_by: string | null
+          max_attempts: number
+          missing_fields: string[]
+          ocr_pages: number[]
+          organization_id: string
+          pages_analyzed: number | null
+          pages_total: number | null
+          started_at: string | null
+          status: string
+          storage_path: string
+          updated_at: string
+          warnings: Json
+        }
+        Insert: {
+          attempt_count?: number
+          case_id?: string | null
+          content_hash?: string | null
+          created_at?: string
+          created_by_user_id: string
+          document_id?: string | null
+          extracted_data?: Json | null
+          extraction_mode?: string | null
+          failed_pages?: number[]
+          file_size?: number
+          file_type?: string
+          filename: string
+          finished_at?: string | null
+          heartbeat_at?: string | null
+          id?: string
+          last_error_code?: string | null
+          last_error_message?: string | null
+          locked_at?: string | null
+          locked_by?: string | null
+          max_attempts?: number
+          missing_fields?: string[]
+          ocr_pages?: number[]
+          organization_id: string
+          pages_analyzed?: number | null
+          pages_total?: number | null
+          started_at?: string | null
+          status?: string
+          storage_path: string
+          updated_at?: string
+          warnings?: Json
+        }
+        Update: {
+          attempt_count?: number
+          case_id?: string | null
+          content_hash?: string | null
+          created_at?: string
+          created_by_user_id?: string
+          document_id?: string | null
+          extracted_data?: Json | null
+          extraction_mode?: string | null
+          failed_pages?: number[]
+          file_size?: number
+          file_type?: string
+          filename?: string
+          finished_at?: string | null
+          heartbeat_at?: string | null
+          id?: string
+          last_error_code?: string | null
+          last_error_message?: string | null
+          locked_at?: string | null
+          locked_by?: string | null
+          max_attempts?: number
+          missing_fields?: string[]
+          ocr_pages?: number[]
+          organization_id?: string
+          pages_analyzed?: number | null
+          pages_total?: number | null
+          started_at?: string | null
+          status?: string
+          storage_path?: string
+          updated_at?: string
+          warnings?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "case_intake_documents_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "case_intake_documents_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "case_intake_documents_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       case_quesitos: {
         Row: {
           answer: string | null
@@ -1667,6 +1788,94 @@ export type Database = {
           },
           {
             foreignKeyName: "document_chunks_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      document_index_jobs: {
+        Row: {
+          attempt_count: number
+          case_id: string | null
+          created_at: string
+          document_id: string
+          finished_at: string | null
+          force_vision: boolean
+          heartbeat_at: string | null
+          id: string
+          last_error_code: string | null
+          last_error_message: string | null
+          locked_at: string | null
+          locked_by: string | null
+          max_attempts: number
+          organization_id: string
+          progress: Json
+          requested_by_user_id: string
+          started_at: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          attempt_count?: number
+          case_id?: string | null
+          created_at?: string
+          document_id: string
+          finished_at?: string | null
+          force_vision?: boolean
+          heartbeat_at?: string | null
+          id?: string
+          last_error_code?: string | null
+          last_error_message?: string | null
+          locked_at?: string | null
+          locked_by?: string | null
+          max_attempts?: number
+          organization_id: string
+          progress?: Json
+          requested_by_user_id: string
+          started_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          attempt_count?: number
+          case_id?: string | null
+          created_at?: string
+          document_id?: string
+          finished_at?: string | null
+          force_vision?: boolean
+          heartbeat_at?: string | null
+          id?: string
+          last_error_code?: string | null
+          last_error_message?: string | null
+          locked_at?: string | null
+          locked_by?: string | null
+          max_attempts?: number
+          organization_id?: string
+          progress?: Json
+          requested_by_user_id?: string
+          started_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_index_jobs_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_index_jobs_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_index_jobs_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
@@ -4176,6 +4385,77 @@ export type Database = {
       }
       can_view_all_ai_usage: { Args: { _user_id: string }; Returns: boolean }
       case_organization: { Args: { _case_id: string }; Returns: string }
+      claim_index_jobs: {
+        Args: { _limit?: number; _stale_seconds?: number; _worker: string }
+        Returns: {
+          attempt_count: number
+          case_id: string | null
+          created_at: string
+          document_id: string
+          finished_at: string | null
+          force_vision: boolean
+          heartbeat_at: string | null
+          id: string
+          last_error_code: string | null
+          last_error_message: string | null
+          locked_at: string | null
+          locked_by: string | null
+          max_attempts: number
+          organization_id: string
+          progress: Json
+          requested_by_user_id: string
+          started_at: string | null
+          status: string
+          updated_at: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "document_index_jobs"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      claim_intake_jobs: {
+        Args: { _limit?: number; _stale_seconds?: number; _worker: string }
+        Returns: {
+          attempt_count: number
+          case_id: string | null
+          content_hash: string | null
+          created_at: string
+          created_by_user_id: string
+          document_id: string | null
+          extracted_data: Json | null
+          extraction_mode: string | null
+          failed_pages: number[]
+          file_size: number
+          file_type: string
+          filename: string
+          finished_at: string | null
+          heartbeat_at: string | null
+          id: string
+          last_error_code: string | null
+          last_error_message: string | null
+          locked_at: string | null
+          locked_by: string | null
+          max_attempts: number
+          missing_fields: string[]
+          ocr_pages: number[]
+          organization_id: string
+          pages_analyzed: number | null
+          pages_total: number | null
+          started_at: string | null
+          status: string
+          storage_path: string
+          updated_at: string
+          warnings: Json
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "case_intake_documents"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       crm_can_view_all: {
         Args: { _organization_id: string; _user_id: string }
         Returns: boolean
