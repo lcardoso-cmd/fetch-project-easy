@@ -555,6 +555,8 @@ function CaseWorkspacePage() {
           threadId={aiThreadId}
           onThreadChange={setAiThreadId}
           canUpload={canUpload}
+          initialPrompt={aiPrompt}
+
           caseInfo={{
             title: caseData.title,
             client_name: caseData.client_name,
