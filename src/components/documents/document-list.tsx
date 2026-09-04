@@ -437,9 +437,20 @@ export function DocumentList({
                       <TableCell className="font-medium">
                         <div className="flex items-center gap-2">
                           <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
-                          <span className="truncate">{d.filename}</span>
+                          <div className="min-w-0">
+                            <span className="block truncate">{d.filename}</span>
+                            {d.part_index && d.part_count ? (
+                              <span className="block text-xs font-normal text-muted-foreground">
+                                Parte {d.part_index} de {d.part_count}
+                                {d.page_count
+                                  ? ` · páginas ${(d.page_offset ?? 0) + 1}–${(d.page_offset ?? 0) + d.page_count}`
+                                  : ""}
+                              </span>
+                            ) : null}
+                          </div>
                         </div>
                       </TableCell>
+
                       <TableCell className="hidden md:table-cell text-xs text-muted-foreground">
                         {formatBytes(d.file_size)}
                       </TableCell>
