@@ -3,6 +3,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { deleteDocument } from "@/lib/documents.functions";
 import {
+  cancelIndexJob,
   forceIndexNow,
   listIndexJobs,
   type IndexJobView,
@@ -39,6 +40,7 @@ import {
   Loader2,
   Play,
   RefreshCw,
+  XCircle,
   Trash2,
 } from "lucide-react";
 import { UploadDialog } from "./upload-dialog";
@@ -136,6 +138,8 @@ function StatusCell({
   retrying,
   onForce,
   forcing,
+  onCancel,
+  cancelling,
 }: {
   status: string;
   job?: IndexJobView;
@@ -143,12 +147,20 @@ function StatusCell({
   retrying: boolean;
   onForce: () => void;
   forcing: boolean;
+  onCancel: () => void;
+  cancelling: boolean;
 }) {
   const isError = status.startsWith("error") || job?.status === "error" || job?.status === "paused";
   const isEmpty = status === "empty";
   const canRetry = isError || isEmpty;
   const detail = jobDetail(job);
-  const canForce = status !== "ready" && !isEmpty;
+  const canForce = status !== "ready" && !isEmpty && status !== "cancelled";
+  const inProgress =
+    status !== "ready" &&
+    status !== "cancelled" &&
+    !isEmpty &&
+    !status.startsWith("error") &&
+    job?.status !== "error";
   const pct = readingPercent(status, job);
 
   const map: Record<
@@ -190,6 +202,12 @@ function StatusCell({
       color: "text-primary animate-pulse",
       label: "Processando",
       hint: "O documento está sendo preparado para consulta.",
+    },
+    cancelled: {
+      icon: XCircle,
+      color: "text-muted-foreground",
+      label: "Cancelado",
+      hint: 'A leitura deste documento foi cancelada. Use "Processar agora" para retomar quando quiser.',
     },
     ready: {
       icon: CheckCircle,
@@ -233,7 +251,7 @@ function StatusCell({
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
-      {status !== "ready" && pct !== null && (
+      {status !== "ready" && status !== "cancelled" && pct !== null && (
         <div className="w-full max-w-[240px]">
           <Progress
             value={pct}
@@ -250,21 +268,43 @@ function StatusCell({
       )}
 
 
-      {canForce && (
+      {inProgress && (
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-7 text-xs text-muted-foreground hover:text-destructive"
+          onClick={onCancel}
+          disabled={cancelling}
+          aria-label="Cancelar a leitura deste documento"
+        >
+          {cancelling ? (
+            <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+          ) : (
+            <XCircle className="mr-1 h-3 w-3" />
+          )}
+          Cancelar leitura
+        </Button>
+      )}
+
+      {(canForce || status === "cancelled") && (
         <Button
           variant="outline"
           size="sm"
           className="h-7 text-xs"
           onClick={onForce}
           disabled={forcing}
-          aria-label="Processar este documento agora"
+          aria-label={
+            status === "cancelled"
+              ? "Retomar a leitura deste documento"
+              : "Processar este documento agora"
+          }
         >
           {forcing ? (
             <Loader2 className="mr-1 h-3 w-3 animate-spin" />
           ) : (
             <Play className="mr-1 h-3 w-3" />
           )}
-          Processar agora
+          {status === "cancelled" ? "Retomar leitura" : "Processar agora"}
         </Button>
       )}
 
@@ -309,11 +349,15 @@ export function DocumentList({
   const indexFn = useServerFn(indexDocument);
   const jobsFn = useServerFn(listIndexJobs);
   const forceFn = useServerFn(forceIndexNow);
+  const cancelFn = useServerFn(cancelIndexJob);
   const [retryingId, setRetryingId] = useState<string | null>(null);
   const [visionId, setVisionId] = useState<string | null>(null);
   const [forcingId, setForcingId] = useState<string | null>(null);
+  const [cancellingId, setCancellingId] = useState<string | null>(null);
 
-  const pending = documents.some((d) => d.processing_status !== "ready");
+  const pending = documents.some(
+    (d) => d.processing_status !== "ready" && d.processing_status !== "cancelled",
+  );
   const jobsQuery = useQuery({
     queryKey: ["index-jobs", caseId],
     queryFn: () => jobsFn({ data: { case_id: caseId } }),
@@ -342,6 +386,22 @@ export function DocumentList({
       toast.error(e instanceof Error ? e.message : String(e));
     } finally {
       setForcingId(null);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["documents", caseId] }),
+        queryClient.invalidateQueries({ queryKey: ["index-jobs", caseId] }),
+      ]);
+    }
+  };
+
+  const onCancel = async (id: string) => {
+    setCancellingId(id);
+    try {
+      await cancelFn({ data: { document_id: id } });
+      toast.success("Leitura cancelada. Os outros documentos seguem normalmente.");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : String(e));
+    } finally {
+      setCancellingId(null);
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["documents", caseId] }),
         queryClient.invalidateQueries({ queryKey: ["index-jobs", caseId] }),
@@ -506,6 +566,8 @@ export function DocumentList({
                           retrying={retryingId === d.id}
                           onForce={() => onForce(d.id)}
                           forcing={forcingId === d.id}
+                          onCancel={() => onCancel(d.id)}
+                          cancelling={cancellingId === d.id}
                         />
                       </TableCell>
                       <TableCell>

@@ -35,6 +35,7 @@ const STATUS_LABEL: Record<string, string> = {
   ready: "Pronto para consulta",
   error: "Falha no processamento",
   failed: "Falha no processamento",
+  cancelled: "Leitura cancelada",
   empty: "Sem conteúdo",
   no_content: "Sem conteúdo",
 };
@@ -50,7 +51,7 @@ const STATUS_FILTERS = [
 function statusGroup(raw: string): "processing" | "ready" | "error" | "empty" {
   if (raw === "ready") return "ready";
   if (raw === "error" || raw === "failed") return "error";
-  if (raw === "empty" || raw === "no_content") return "empty";
+  if (raw === "empty" || raw === "no_content" || raw === "cancelled") return "empty";
   return "processing";
 }
 

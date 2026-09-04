@@ -15,6 +15,8 @@
 import { getWorkerExecutionContext } from "@/lib/request-context.server";
 
 const WORKER_MAX_JOBS = 4;
+/** Sinal interno de que o usuário cancelou a leitura deste documento. */
+const CANCELLED_MARKER = "__job_cancelled__";
 const WORKER_TIME_BUDGET_MS = 50_000;
 
 export interface WorkerRunResult {
@@ -104,6 +106,14 @@ export async function runDocumentQueues(
             userId: job.requested_by_user_id,
             forceVision: job.force_vision,
             onProgress: async (stage, detail) => {
+              // Cancelamento cooperativo: o usuário pode parar a leitura de um
+              // documento sem afetar os demais da fila.
+              const { data: current } = await supabaseAdmin
+                .from("document_index_jobs")
+                .select("status")
+                .eq("id", job.id)
+                .maybeSingle();
+              if (current?.status === "cancelled") throw new Error(CANCELLED_MARKER);
               await supabaseAdmin
                 .from("document_index_jobs")
                 .update({
@@ -123,9 +133,17 @@ export async function runDocumentQueues(
           heartbeat_at: new Date().toISOString(),
           locked_by: null,
         })
-        .eq("id", job.id);
+        .eq("id", job.id)
+        .neq("status", "cancelled");
       indexDone++;
     } catch (err) {
+      if (err instanceof Error && err.message === CANCELLED_MARKER) {
+        await supabaseAdmin
+          .from("document_index_jobs")
+          .update({ locked_by: null, locked_at: null, heartbeat_at: new Date().toISOString() })
+          .eq("id", job.id);
+        continue;
+      }
       const blocked = isAiBlocked(err);
       const msg = err instanceof Error ? err.message : String(err);
       const exhausted = blocked || job.attempt_count >= job.max_attempts;
@@ -139,7 +157,8 @@ export async function runDocumentQueues(
           locked_by: null,
           finished_at: exhausted ? new Date().toISOString() : null,
         })
-        .eq("id", job.id);
+        .eq("id", job.id)
+        .neq("status", "cancelled");
       indexDone++;
       if (blocked) halted = "ai_blocked";
       console.error("[jobs] indexação falhou", {
