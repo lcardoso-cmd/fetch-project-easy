@@ -23,12 +23,17 @@ import { JurisMindChat } from "@/components/chat/jurismind-chat";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
+const searchSchema = z.object({ thread: z.string().uuid().optional() });
+
 export const Route = createFileRoute("/_authenticated/assistencias/$caseId/chat")({
+  validateSearch: (s) => searchSchema.parse(s),
   component: CaseChatFullPage,
 });
 
 function CaseChatFullPage() {
   const { caseId } = Route.useParams();
+  const { thread: threadFromUrl } = Route.useSearch();
+
   const qc = useQueryClient();
   const getCaseFn = useServerFn(getCase);
   const listDocsFn = useServerFn(listDocuments);
