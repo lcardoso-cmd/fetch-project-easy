@@ -46,6 +46,23 @@ export interface IntakeExtraction {
   description: string;
 }
 
+const QUICK_PAGE_LIMIT = 4;
+
+export function mergeIntakeExtraction(
+  initial: IntakeExtraction,
+  complement: IntakeExtraction,
+): IntakeExtraction {
+  return {
+    title: complement.title || initial.title,
+    client_name: complement.client_name ?? initial.client_name,
+    case_number: complement.case_number ?? initial.case_number,
+    jurisdiction: complement.jurisdiction ?? initial.jurisdiction,
+    case_type: complement.case_type ?? initial.case_type,
+    parties: complement.parties.length > 0 ? complement.parties : initial.parties,
+    description: complement.description || initial.description,
+  };
+}
+
 const CNJ_REGEX = /\b\d{7}-?\d{2}\.?\d{4}\.?\d\.?\d{2}\.?\d{4}\b/;
 
 export const CASE_TYPES = [
@@ -93,7 +110,8 @@ async function touch(
   await admin
     .from("case_intake_documents")
     .update({ heartbeat_at: new Date().toISOString(), ...patch })
-    .eq("id", id);
+    .eq("id", id)
+    .not("status", "in", "(cancelled,converted)");
 }
 
 interface ExtractedText {
@@ -122,7 +140,7 @@ async function signedUrlFor(
 async function extractText(
   admin: SupabaseClient,
   row: IntakeRow,
-  opts: { forceOcr: boolean },
+  opts: { forceOcr: boolean; pageLimit?: number },
 ): Promise<ExtractedText> {
   const isPdf =
     row.file_type === "application/pdf" || row.filename.toLowerCase().endsWith(".pdf");
@@ -171,7 +189,7 @@ async function extractText(
   try {
     read = await readRemotePdfPages({
       url,
-      pageLimit: INTAKE_TEXT_PAGE_LIMIT,
+      pageLimit: Math.min(opts.pageLimit ?? INTAKE_TEXT_PAGE_LIMIT, INTAKE_TEXT_PAGE_LIMIT),
       knownLength: row.file_size || undefined,
       onPage: async (page, total) => {
         if (page % 5 === 0 || page === total) {
@@ -351,7 +369,40 @@ export async function processIntakeDocument(
 ): Promise<IntakeOutcome> {
   try {
     await touch(admin, row.id, { status: "extracting_text" });
-    const text = await extractText(admin, row, { forceOcr: opts.forceOcr === true });
+    const quickText = await extractText(admin, row, {
+      forceOcr: opts.forceOcr === true,
+      pageLimit: QUICK_PAGE_LIMIT,
+    });
+
+    const quickContext = buildAnalysisContext(
+      quickText.pageTexts,
+      Math.min(INTAKE_MODEL_CHAR_BUDGET, 18_000),
+    );
+    const quick = await analyze(quickContext.text, row.filename);
+    const quickMissing = missingFieldsFrom(quick.extracted);
+
+    // Publica os dados das primeiras páginas imediatamente. O formulário pode
+    // preenchê-los enquanto a leitura complementar continua no servidor.
+    await touch(admin, row.id, {
+      status: "analyzing",
+      extracted_data: quick.extracted as unknown as Record<string, unknown>,
+      missing_fields: quickMissing,
+      warnings: quick.warnings as unknown as Record<string, unknown>[],
+      pages_total: quickText.pageCount,
+      pages_analyzed: quickText.pagesRead,
+      extraction_mode: quickText.mode,
+      ocr_pages: quickText.ocrPages,
+      failed_pages: quickText.failedPages,
+    });
+
+    const needsComplement =
+      quickText.pageCount > quickText.pagesRead && quickText.pagesRead < INTAKE_TEXT_PAGE_LIMIT;
+    const text = needsComplement
+      ? await extractText(admin, row, {
+          forceOcr: opts.forceOcr === true,
+          pageLimit: INTAKE_TEXT_PAGE_LIMIT,
+        })
+      : quickText;
 
     await touch(admin, row.id, {
       status: "analyzing",
@@ -366,7 +417,15 @@ export async function processIntakeDocument(
       text.pageTexts,
       INTAKE_MODEL_CHAR_BUDGET,
     );
-    const { extracted, warnings } = await analyze(contextText, row.filename);
+    const full = needsComplement ? await analyze(contextText, row.filename) : quick;
+    const extracted = mergeIntakeExtraction(quick.extracted, full.extracted);
+    const warnings = [...quick.warnings, ...full.warnings].filter(
+      (warning, index, all) =>
+        all.findIndex(
+          (candidate) =>
+            candidate.field === warning.field && candidate.message === warning.message,
+        ) === index,
+    );
 
     const missing = missingFieldsFrom(extracted);
     const allWarnings = [...warnings];
@@ -416,7 +475,8 @@ export async function processIntakeDocument(
         last_error_code: null,
         last_error_message: null,
       })
-      .eq("id", row.id);
+      .eq("id", row.id)
+      .not("status", "in", "(cancelled,converted)");
 
     return { status, extracted, missing, warnings: allWarnings };
   } catch (err) {
@@ -434,7 +494,8 @@ export async function processIntakeDocument(
         // Erro definitivo não deve consumir novas tentativas automáticas.
         attempt_count: classified.retryable ? row.attempt_count : row.max_attempts,
       })
-      .eq("id", row.id);
+      .eq("id", row.id)
+      .not("status", "in", "(cancelled,converted)");
     console.error("[intake] falha", {
       intake_id: row.id,
       organization_id: row.organization_id,

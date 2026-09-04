@@ -12,7 +12,7 @@
  *  - para tudo quando a IA responde falta de créditos ou bloqueio da conta.
  */
 
-import { getRequest } from "@tanstack/react-start/server";
+import { getWorkerExecutionContext } from "@/lib/request-context.server";
 
 const WORKER_MAX_JOBS = 4;
 const WORKER_TIME_BUDGET_MS = 50_000;
@@ -170,30 +170,21 @@ export async function hasPendingWork(): Promise<boolean> {
   return (a ?? 0) > 0 || (b ?? 0) > 0;
 }
 
-function siteOrigin(): string | null {
-  try {
-    const req = getRequest();
-    if (req?.url) return new URL(req.url).origin;
-  } catch {
-    // fora de um request
-  }
-  const fromEnv = process.env["SITE_URL"] ?? process.env["VITE_SITE_URL"];
-  return fromEnv ? fromEnv.replace(/\/$/, "") : null;
-}
-
 /**
- * Acorda o processador em uma requisição separada, para que o trabalho continue
- * mesmo que o usuário feche a página. Nunca lança e nunca bloqueia o chamador.
+ * Acorda um lote limitado no contexto da requisição. Em produção, waitUntil
+ * mantém o trabalho vivo mesmo depois de a resposta chegar ao usuário.
  */
-export function kickDocumentWorker(): void {
-  const origin = siteOrigin();
-  const token = process.env["JOBS_WORKER_SECRET"];
-  if (!origin || !token) return;
-  void fetch(`${origin}/api/public/jobs/run`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "x-jobs-token": token },
-    body: JSON.stringify({ source: "enqueue" }),
-  }).catch(() => {
-    // O trabalho continua na fila e é retomado no próximo pedido de status.
+export async function kickDocumentWorker(): Promise<void> {
+  const task = runDocumentQueues({ maxJobs: 2, timeBudgetMs: 20_000 }).catch((error) => {
+    console.error("[jobs] falha ao acordar processador", error);
   });
+  const executionContext = getWorkerExecutionContext();
+  if (executionContext) {
+    executionContext.waitUntil(task);
+    return;
+  }
+
+  // Desenvolvimento e runtimes sem waitUntil mantêm a requisição viva até o
+  // lote limitado terminar. Assim o trabalho nunca depende de um fetch solto.
+  await task;
 }

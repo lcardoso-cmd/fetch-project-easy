@@ -67,6 +67,7 @@ import { cn } from "@/lib/utils";
 import { NotificationBell } from "@/components/layout/notification-bell";
 import { ConversationsDrawer } from "@/components/chat/conversations-drawer";
 import { TeamChatDock } from "@/components/chat/team-chat-dock";
+import { IntakeStatusDock } from "@/components/layout/intake-status-dock";
 
 /* ────────────────────────────────────────────────────────────────
    Modelo de navegação orientado a dados.
@@ -865,6 +866,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
             </div>
           </main>
         </div>
+        <IntakeStatusDock />
         <TeamChatDock />
       </div>
     </TooltipProvider>

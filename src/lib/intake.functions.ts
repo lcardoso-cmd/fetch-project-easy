@@ -110,7 +110,7 @@ export const registerIntakeDocument = createServerFn({ method: "POST" })
     if (error) throw error;
 
     const { kickDocumentWorker } = await import("@/lib/jobs/worker.server");
-    kickDocumentWorker();
+    await kickDocumentWorker();
 
     return row as unknown as IntakeDocumentView;
   });
@@ -139,7 +139,7 @@ export const getIntakeDocument = createServerFn({ method: "POST" })
         view.status === "queued";
       if (stale) {
         const { kickDocumentWorker } = await import("@/lib/jobs/worker.server");
-        kickDocumentWorker();
+        await kickDocumentWorker();
       }
     }
     return view;
@@ -158,7 +158,12 @@ export const listPendingIntakeDocuments = createServerFn({ method: "GET" })
       .order("created_at", { ascending: false })
       .limit(10);
     if (error) throw error;
-    return (data ?? []) as unknown as IntakeDocumentView[];
+    const rows = (data ?? []) as unknown as IntakeDocumentView[];
+    if (rows.some((row) => row.status === "queued")) {
+      const { kickDocumentWorker } = await import("@/lib/jobs/worker.server");
+      await kickDocumentWorker();
+    }
+    return rows;
   });
 
 /** Reprocessa a análise: nova tentativa normal ou forçando leitura por imagem. */
@@ -190,7 +195,7 @@ export const reprocessIntakeDocument = createServerFn({ method: "POST" })
     if (error) throw error;
 
     const { kickDocumentWorker } = await import("@/lib/jobs/worker.server");
-    kickDocumentWorker();
+    await kickDocumentWorker();
     return row as unknown as IntakeDocumentView;
   });
 
@@ -294,7 +299,7 @@ export const convertIntakeToCaseDocument = createServerFn({ method: "POST" })
     });
 
     const { kickDocumentWorker } = await import("@/lib/jobs/worker.server");
-    kickDocumentWorker();
+    await kickDocumentWorker();
 
     return { document_id: doc.id as string, already: false as const };
   });
@@ -325,7 +330,7 @@ export const enqueueDocumentIndexing = createServerFn({ method: "POST" })
 
     if (active) {
       const { kickDocumentWorker } = await import("@/lib/jobs/worker.server");
-      kickDocumentWorker();
+      await kickDocumentWorker();
       return { job_id: active.id as string, already: true as const };
     }
 
@@ -348,7 +353,7 @@ export const enqueueDocumentIndexing = createServerFn({ method: "POST" })
       .eq("id", data.document_id);
 
     const { kickDocumentWorker } = await import("@/lib/jobs/worker.server");
-    kickDocumentWorker();
+    await kickDocumentWorker();
     return { job_id: job.id as string, already: false as const };
   });
 

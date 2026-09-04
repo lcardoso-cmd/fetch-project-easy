@@ -73,3 +73,11 @@ Fonte da verdade: organização é o cliente do SaaS. Sem migração gradual, se
 - Fila durável de leitura completa (`document_index_jobs`) acionada na criação do trabalho, sem verificação periódica do banco; processador em `/api/public/jobs/run` protegido por chave interna.
 - Conversão do documento em documento do caso reaproveita o mesmo arquivo (sem novo envio ou download).
 - Verificado de ponta a ponta em ambiente real: fila → leitura → extração dos dados do processo → indexação (status "pronto").
+
+## Correção incremental — intake de documentos grandes
+- [x] Acionamento confiável do processador após upload e retomada de itens parados.
+- [x] Extração rápida inicial + complementação de até 20 páginas com resultado parcial persistido.
+- [x] Preenchimento progressivo sem sobrescrever edições manuais.
+- [x] Indicador global minimizado com retomada do cadastro.
+- [x] Cancelamento real com descarte do arquivo e limpeza do rascunho.
+- [ ] Validação real do PDF grande atualmente em fila.
