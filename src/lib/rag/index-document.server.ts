@@ -380,18 +380,33 @@ export async function indexDocumentCore(
       }
     } else {
       // ---------- Formatos leves: leitura direta, com teto de tamanho ----------
-      if (fileSize > DIRECT_DOWNLOAD_MAX_BYTES) {
+      const { remoteFileSize } = await import("./pdf-range.server");
+      const lightUrl = await step("download", async () => {
+        const { data, error } = await supabase.storage
+          .from("documents")
+          .createSignedUrl(doc.storage_path as string, 3600);
+        if (error || !data?.signedUrl) throw new Error("Falha ao acessar o arquivo no storage");
+        return data.signedUrl;
+      });
+      // Tamanho real, mesmo quando o cadastro está zerado.
+      const lightSize = fileSize > 0 ? fileSize : await remoteFileSize(lightUrl).catch(() => 0);
+      if (lightSize > DIRECT_DOWNLOAD_MAX_BYTES) {
         throw new FileTooLargeForMemoryError(
-          `Arquivo grande demais para leitura direta (${Math.round(fileSize / 1024 / 1024)} MB). Converta para PDF ou divida o arquivo.`,
+          `Arquivo grande demais para leitura direta (${Math.round(lightSize / 1024 / 1024)} MB). Converta para PDF ou divida o arquivo.`,
         );
       }
       const blob = await step("download", async () => {
-        const { data, error } = await supabase.storage
-          .from("documents")
-          .download(doc.storage_path as string);
-        if (error || !data) throw new Error("Falha ao baixar arquivo do storage");
-        return data;
+        const res = await fetch(lightUrl);
+        if (!res.ok) throw new Error("Falha ao baixar arquivo do storage");
+        const buf = await res.arrayBuffer();
+        if (buf.byteLength > DIRECT_DOWNLOAD_MAX_BYTES) {
+          throw new FileTooLargeForMemoryError(
+            "Arquivo grande demais para leitura direta. Converta para PDF ou divida o arquivo.",
+          );
+        }
+        return new Blob([buf], { type: (doc.file_type as string) || "application/octet-stream" });
       });
+
 
       await report("parse");
       const parsed = await step("parse", () =>
