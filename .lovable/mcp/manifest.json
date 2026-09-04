@@ -379,7 +379,7 @@
       {
         "name": "search_jurisprudence",
         "title": "Buscar jurisprudência",
-        "description": "Pesquisa decisões judiciais em tribunais brasileiros (STF, STJ, TST, TSE, TJs). Retorna URL, tribunal, data e trechos relevantes. Requer capacidade 'cases' do usuário autenticado.",
+        "description": "Pesquisa decisões judiciais em tribunais brasileiros (STF, STJ, TST, TSE, TJs). Retorna URL oficial, tribunal, órgão julgador, número, data e trechos. Requer capacidade 'cases' do usuário autenticado.",
         "annotations": {
           "readOnlyHint": true,
           "idempotentHint": true,
