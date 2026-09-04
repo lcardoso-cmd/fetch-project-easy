@@ -29,7 +29,12 @@ import {
   registerDocument,
 } from "@/lib/documents.functions";
 import { indexDocument } from "@/lib/rag.functions";
-import { splitPdf, shouldSplitPdf } from "@/lib/documents/pdf-splitter";
+import {
+  splitPdf,
+  shouldSplitPdf,
+  DEFAULT_MAX_PART_PAGES,
+} from "@/lib/documents/pdf-splitter";
+
 import {
   UploadProgressList,
   type UploadItem,
@@ -475,23 +480,30 @@ export function UploadManagerProvider({ children }: { children: ReactNode }) {
   const confirmReplace = async () => {
     if (!replacement) return;
     setReplacing(true);
-    const { existing, file, itemId, caseId } = replacement;
+    const { existing, file, filename, fileType, itemId, caseId } = replacement;
     try {
       await deleteFn({ data: { id: existing.id } });
-      const newId = `${file.name}-retry-${Date.now()}`;
+      const newId = `${filename}-retry-${Date.now()}`;
       setItems((prev) => [
         ...prev.filter((x) => x.id !== itemId),
         {
           id: newId,
           caseId,
-          filename: file.name,
+          filename,
           size: file.size,
           pct: 0,
           phase: "queued" as const,
         },
       ]);
       setReplacement(null);
-      queueRef.current.push({ file, itemId: newId, caseId });
+      queueRef.current.push({
+        file,
+        filename,
+        fileType,
+        itemId: newId,
+        caseId,
+        maxPartPages: 0,
+      });
       void drain();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : String(e));
@@ -499,6 +511,7 @@ export function UploadManagerProvider({ children }: { children: ReactNode }) {
       setReplacing(false);
     }
   };
+
 
   const value = useMemo<UploadManagerValue>(
     () => ({ items, itemsForCase, enqueue, cancelItem, cancelCase, removeItem, clearFinished }),
@@ -515,7 +528,7 @@ export function UploadManagerProvider({ children }: { children: ReactNode }) {
             <AlertDialogTitle>Substituir arquivo?</AlertDialogTitle>
             <AlertDialogDescription>
               Já existe um arquivo chamado{" "}
-              <span className="font-bold">{replacement?.file.name}</span> neste caso.
+              <span className="font-bold">{replacement?.filename}</span> neste caso.
               Substituir vai excluir o anterior e todos os dados indexados.
             </AlertDialogDescription>
           </AlertDialogHeader>
