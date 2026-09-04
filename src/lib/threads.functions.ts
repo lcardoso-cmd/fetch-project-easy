@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { requireOrg } from "@/lib/org-middleware";
+import { requireOrg, requireOrgPermission } from "@/lib/org-middleware";
 
 export interface AiThread {
   id: string;
@@ -35,7 +35,7 @@ export interface AiMessage {
 }
 
 export const listThreads = createServerFn({ method: "GET" })
-  .middleware([requireOrg])
+  .middleware([requireOrgPermission("ai.use")])
   .inputValidator((i: unknown) =>
     z.object({ case_id: z.string().uuid() }).parse(i),
   )
@@ -51,7 +51,7 @@ export const listThreads = createServerFn({ method: "GET" })
   });
 
 export const createThread = createServerFn({ method: "POST" })
-  .middleware([requireOrg])
+  .middleware([requireOrgPermission("ai.use")])
   .inputValidator((i: unknown) =>
     z
       .object({
@@ -76,7 +76,7 @@ export const createThread = createServerFn({ method: "POST" })
   });
 
 export const renameThread = createServerFn({ method: "POST" })
-  .middleware([requireOrg])
+  .middleware([requireOrgPermission("ai.use")])
   .inputValidator((i: unknown) =>
     z
       .object({ id: z.string().uuid(), title: z.string().min(1).max(200) })
@@ -93,7 +93,7 @@ export const renameThread = createServerFn({ method: "POST" })
   });
 
 export const deleteThread = createServerFn({ method: "POST" })
-  .middleware([requireOrg])
+  .middleware([requireOrgPermission("ai.use")])
   .inputValidator((i: unknown) => z.object({ id: z.string().uuid() }).parse(i))
   .handler(async ({ data, context }) => {
     const { error } = await context.supabase
@@ -106,7 +106,7 @@ export const deleteThread = createServerFn({ method: "POST" })
   });
 
 export const getThreadMessages = createServerFn({ method: "GET" })
-  .middleware([requireOrg])
+  .middleware([requireOrgPermission("ai.use")])
   .inputValidator((i: unknown) =>
     z.object({ thread_id: z.string().uuid() }).parse(i),
   )
@@ -124,7 +124,7 @@ export const getThreadMessages = createServerFn({ method: "GET" })
   });
 
 export const getMessageAudioUrl = createServerFn({ method: "POST" })
-  .middleware([requireOrg])
+  .middleware([requireOrgPermission("ai.use")])
   .inputValidator((i: unknown) =>
     z.object({ message_id: z.string().uuid() }).parse(i),
   )
