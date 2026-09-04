@@ -180,7 +180,7 @@ export async function prepareRagRun(opts: {
 
     const { withStepRetry } = await import("./rag/step-retry");
     const hits = await withStepRetry("search", async () => {
-      const { data, error } = await supabase.rpc("hybrid_search_chunks_v2", {
+      const { data: rpcData, error } = await supabase.rpc("hybrid_search_chunks_v2", {
         query_embedding: emb as unknown as string,
         query_text: q,
         filter_organization_id: organizationId,
@@ -190,8 +190,9 @@ export async function prepareRagRun(opts: {
         match_count: perQueryLimit,
       });
       if (error) throw new Error(error.message);
-      return data;
+      return rpcData;
     });
+
 
     lists.push(((hits ?? []) as Candidate[]).map((r) => ({ ...r })));
 
