@@ -805,7 +805,7 @@ function NewCasePage() {
                   </p>
                 )}
 
-                {intakeId && intakeStatus && !isIntakeActive(intakeStatus) && (
+                {intakeId && !(intakeStatus && isIntakeActive(intakeStatus)) && (
                   <div className="flex flex-wrap gap-2">
                     <Button
                       type="button"
