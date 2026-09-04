@@ -47,14 +47,8 @@ export interface CaseUploadItem extends UploadItem {
   partCount?: number;
 }
 
-interface PartMeta {
-  blob: Blob;
-  filename: string;
-  pageCount: number;
-  partIndex: number;
-  partCount: number;
-  pageOffset: number;
-}
+
+
 
 interface EnqueueArgs {
   caseId: string;
@@ -329,7 +323,7 @@ export function UploadManagerProvider({ children }: { children: ReactNode }) {
       try {
         patchItem(entry.itemId, { phase: "splitting", pct: 0 });
         const result = await splitPdf({ file: entry.file, maxPartPages: limit });
-        if (result.parts.length <= 1) return [{ ...entry, phaseHint: undefined } as QueueEntry];
+        if (result.parts.length <= 1) return [entry];
 
         const splitGroupId = crypto.randomUUID();
         const entries: QueueEntry[] = result.parts.map((part) => ({
