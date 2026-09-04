@@ -194,6 +194,7 @@ export const JURISMIND_CONTEXTS = [
   "auth",
   "chat",
   "chip-dark",
+  "inline",
   "inline-light",
   "inline-dark",
 ] as const;
@@ -214,6 +215,7 @@ export const JURISMIND_CONTEXT = {
   auth: "auth",
   chat: "chat",
   chipDark: "chip-dark",
+  inline: "inline",
   inlineLight: "inline-light",
   inlineDark: "inline-dark",
 } as const satisfies Record<string, JurisMindContext>;
