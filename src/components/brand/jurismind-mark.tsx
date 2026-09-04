@@ -621,6 +621,46 @@ export function JurisMindMark({
     );
   }
 
+  if (composition.kind === "glyph-theme-aware") {
+    const shouldRound = rounded ?? false;
+    return (
+      <span
+        className={cn(
+          "inline-flex shrink-0 select-none align-middle",
+          shouldRound && JURISMIND_ROUND_CLASS,
+          interactive && INTERACTIVE_CLASS,
+          className,
+        )}
+        style={{ width: size, height: size }}
+      >
+        <span className="contents dark:hidden">
+          <img
+            src={SOURCES["glyph-navy"]}
+            alt="JurisMind AI"
+            width={size}
+            height={size}
+            loading="lazy"
+            draggable={false}
+            className="block object-contain select-none"
+            style={{ width: size, height: size }}
+          />
+        </span>
+        <span className="contents hidden dark:inline">
+          <img
+            src={SOURCES["glyph-white"]}
+            alt="JurisMind AI"
+            width={size}
+            height={size}
+            loading="lazy"
+            draggable={false}
+            className="block object-contain select-none"
+            style={{ width: size, height: size }}
+          />
+        </span>
+      </span>
+    );
+  }
+
   return (
     <BrandSquare
       size={size}
