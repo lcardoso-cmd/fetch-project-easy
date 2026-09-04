@@ -704,30 +704,13 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   return (
     <TooltipProvider delayDuration={200}>
       <div className="flex h-dvh w-full overflow-hidden bg-background">
-        {simulation && (
-          <div className="fixed inset-x-0 top-0 z-50 flex items-center justify-center gap-3 bg-secondary py-1.5 text-center text-[13px] font-medium text-secondary-foreground shadow">
-            <Eye className="size-3.5" />
-            <span>
-              Você está vendo o sistema como <strong>{roleLabel}</strong>. As
-              autorizações do servidor continuam usando sua conta real.
-            </span>
-            <button
-              type="button"
-              className="rounded-[6px] border border-border bg-card px-2.5 py-1 text-[13px] font-medium hover:bg-secondary"
-              onClick={clearSimulation}
-            >
-              Sair da simulação
-            </button>
-          </div>
-        )}
-
         {/* Sidebar desktop */}
         <aside
           style={{ width: collapsed ? SIDEBAR_W_COLLAPSED : SIDEBAR_W }}
           className={cn(
             "relative hidden min-h-0 shrink-0 flex-col border-r border-white/[0.12] bg-sidebar text-sidebar-foreground transition-[width] duration-200 ease-out lg:flex",
-            simulation && "mt-6",
           )}
+        
         >
           {/* Cabeçalho da sidebar: 56px */}
           <div
