@@ -220,8 +220,14 @@ export function UploadDialog({
 
       // 2. URL assinada
       const { signedUrl, path } = await signFn({
-        data: { case_id: caseId, filename: file.name },
+        data: {
+          case_id: caseId,
+          filename: file.name,
+          file_type: file.type || "application/octet-stream",
+          file_size: file.size,
+        },
       });
+
       if (signal.aborted) throw new DOMException("cancel", "AbortError");
 
       // 3. Upload com progresso (abortável)
