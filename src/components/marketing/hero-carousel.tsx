@@ -26,7 +26,6 @@ interface Slide {
   id: string;
   eyebrow: string;
   title: string;
-  description: string;
   href: string;
   visual: ReactNode;
 }
@@ -252,7 +251,6 @@ const SLIDES: Slide[] = [
     id: "console",
     eyebrow: "Console do caso",
     title: "Uma pergunta, uma resposta com fonte",
-    description: "Os documentos do caso respondem — com o trecho exato que sustenta a afirmação.",
     href: "#entregas",
     visual: <CaseConsoleVisual />,
   },
@@ -260,7 +258,6 @@ const SLIDES: Slide[] = [
     id: "fluxo",
     eyebrow: "Fluxo único",
     title: "Localizar, organizar, produzir, apresentar, conduzir",
-    description: "Todo o trabalho do caso em uma sequência só, sem recomeçar a conversa.",
     href: "#fluxo",
     visual: <FlowVisual />,
   },
@@ -268,7 +265,6 @@ const SLIDES: Slide[] = [
     id: "entregas",
     eyebrow: "Entregas reais",
     title: "Análise, peça, planilha e apresentação",
-    description: "Arquivos prontos para baixar em Word, Excel e PowerPoint.",
     href: "#entregas",
     visual: <DeliverablesVisual />,
   },
@@ -276,7 +272,6 @@ const SLIDES: Slide[] = [
     id: "inteligencia",
     eyebrow: "Inteligência sobre os autos",
     title: "Respostas ancoradas nos seus documentos",
-    description: "Cada afirmação aponta o documento e a página de origem.",
     href: "#inteligencia",
     visual: <IntelligenceVisual />,
   },
@@ -284,7 +279,6 @@ const SLIDES: Slide[] = [
     id: "jurisprudencia",
     eyebrow: "Fontes oficiais",
     title: "Jurisprudência de tribunais, não de palpite",
-    description: "Consulta em domínios oficiais, com referência sempre identificada.",
     href: "#jurisprudencia",
     visual: <JurisprudenceVisual />,
   },
@@ -292,13 +286,17 @@ const SLIDES: Slide[] = [
     id: "governanca",
     eyebrow: "Governança",
     title: "Controle, custo e rastreabilidade",
-    description: "O escritório enxerga quem usou, para quê e quanto custou.",
     href: "#plataforma",
     visual: <GovernanceVisual />,
   },
 ];
 
-export function HeroCarousel() {
+/**
+ * Hero em tela cheia no esquema de carrossel: os visuais ocupam o fundo,
+ * o texto institucional fica sobreposto no canto inferior esquerdo
+ * (children), com pontos de navegação ao centro e controles no topo.
+ */
+export function HeroCarousel({ children }: { children?: ReactNode }) {
   const [index, setIndex] = useState(0);
   const [playing, setPlaying] = useState(true);
   const [progress, setProgress] = useState(0);
@@ -347,7 +345,7 @@ export function HeroCarousel() {
     <section
       aria-roledescription="carrossel"
       aria-label="Destaques do JurisMind"
-      className="relative rounded-3xl border border-brand-navy-foreground/25 bg-brand-navy/40 p-4 shadow-2xl backdrop-blur sm:p-5"
+      className="relative min-h-[calc(100svh-4rem)] overflow-hidden bg-brand-navy text-brand-on-navy"
       onMouseEnter={() => setPlaying(false)}
       onMouseLeave={() => setPlaying(true)}
       onFocusCapture={() => setPlaying(false)}
@@ -363,62 +361,8 @@ export function HeroCarousel() {
       }}
       tabIndex={-1}
     >
-      <div className="flex items-center justify-between gap-3">
-        <span className="inline-flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-brand-cyan">
-          <JurisMindMark size={16} context={JURISMIND_CONTEXT.inlineDark} />
-          {current.eyebrow}
-        </span>
-        <div className="flex items-center gap-1">
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            aria-label="Destaque anterior"
-            onClick={prev}
-            className="h-9 w-9 text-brand-on-navy hover:bg-brand-navy-foreground/10"
-          >
-            <ChevronLeft className="h-4 w-4" aria-hidden />
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            aria-label={playing ? "Pausar carrossel" : "Retomar carrossel"}
-            aria-pressed={!playing}
-            onClick={() => setPlaying((p) => !p)}
-            className="h-9 w-9 text-brand-on-navy hover:bg-brand-navy-foreground/10"
-          >
-            {playing ? (
-              <Pause className="h-4 w-4" aria-hidden />
-            ) : (
-              <Play className="h-4 w-4" aria-hidden />
-            )}
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            aria-label="Próximo destaque"
-            onClick={next}
-            className="h-9 w-9 text-brand-on-navy hover:bg-brand-navy-foreground/10"
-          >
-            <ChevronRight className="h-4 w-4" aria-hidden />
-          </Button>
-        </div>
-      </div>
-
-      <div className="mt-1 h-1 w-full overflow-hidden rounded-full bg-brand-navy-foreground/15">
-        <div
-          className="h-full rounded-full bg-brand-cyan transition-[width] duration-100 ease-linear"
-          style={{ width: `${Math.round(progress * 100)}%` }}
-        />
-      </div>
-
-      <div aria-live="polite" className="sr-only">
-        {label}
-      </div>
-
-      <div className="relative mt-3 min-h-[600px] sm:min-h-[620px]">
+      {/* Slides em tela cheia — visual como fundo */}
+      <div className="absolute inset-0">
         {SLIDES.map((s, i) => (
           <div
             key={s.id}
@@ -427,28 +371,102 @@ export function HeroCarousel() {
             aria-label={`${i + 1} de ${SLIDES.length}: ${s.title}`}
             aria-hidden={i !== index}
             className={cn(
-              "absolute inset-0 transition-all duration-500 ease-out",
+              "absolute inset-0 transition-all duration-700 ease-out",
               i === index
                 ? "translate-x-0 opacity-100"
-                : "pointer-events-none translate-x-2 opacity-0",
+                : "pointer-events-none translate-x-4 opacity-0",
             )}
           >
-            <a
-              href={s.href}
-              className="block rounded-2xl outline-none focus-visible:ring-2 focus-visible:ring-accent"
-              tabIndex={i === index ? 0 : -1}
-            >
-              <h2 className="font-heading text-xl font-bold leading-tight text-brand-on-navy">
-                {s.title}
-              </h2>
-              <p className="mt-1 text-base text-brand-on-navy/85">{s.description}</p>
-            </a>
-            <div className="mt-3">{s.visual}</div>
+            {/* Brilho de marca atrás do visual */}
+            <div
+              className="absolute inset-0 opacity-25"
+              style={{
+                backgroundImage:
+                  "radial-gradient(circle at 18% 22%, oklch(0.86 0.16 195) 0, transparent 42%), radial-gradient(circle at 85% 72%, oklch(0.65 0.16 220) 0, transparent 45%)",
+              }}
+            />
+            <div className="mx-auto flex h-full max-w-6xl items-start justify-end px-4 pt-16 sm:pt-20 lg:items-center lg:pt-0">
+              <a
+                href={s.href}
+                tabIndex={i === index ? 0 : -1}
+                aria-label={s.title}
+                className="pointer-events-none block w-full max-w-xl opacity-35 outline-none transition-opacity hover:opacity-90 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-accent sm:opacity-50 lg:pointer-events-auto lg:opacity-100"
+              >
+                <span className="mb-3 inline-flex items-center gap-2 rounded-full bg-brand-cyan/15 px-3 py-1 text-sm font-semibold uppercase tracking-wide text-brand-cyan">
+                  <JurisMindMark size={14} context={JURISMIND_CONTEXT.inlineDark} />
+                  {s.eyebrow}
+                </span>
+                {s.visual}
+              </a>
+            </div>
           </div>
         ))}
       </div>
 
-      <div className="mt-4 flex items-center justify-center gap-2">
+      {/* Véu de legibilidade para o texto sobreposto */}
+      <div
+        className="pointer-events-none absolute inset-0 bg-gradient-to-t from-brand-navy via-brand-navy/90 to-brand-navy/50 lg:bg-gradient-to-r lg:from-brand-navy lg:from-25% lg:via-brand-navy/90 lg:via-55% lg:to-brand-navy/30"
+        aria-hidden
+      />
+
+      {/* Barra de progresso do slide atual */}
+      <div className="absolute inset-x-0 top-0 h-1 bg-brand-navy-foreground/15">
+        <div
+          className="h-full bg-brand-cyan transition-[width] duration-100 ease-linear"
+          style={{ width: `${Math.round(progress * 100)}%` }}
+        />
+      </div>
+
+      {/* Controles */}
+      <div className="absolute right-4 top-4 flex items-center gap-1">
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          aria-label="Destaque anterior"
+          onClick={prev}
+          className="h-9 w-9 text-brand-on-navy hover:bg-brand-navy-foreground/10"
+        >
+          <ChevronLeft className="h-4 w-4" aria-hidden />
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          aria-label={playing ? "Pausar carrossel" : "Retomar carrossel"}
+          aria-pressed={!playing}
+          onClick={() => setPlaying((p) => !p)}
+          className="h-9 w-9 text-brand-on-navy hover:bg-brand-navy-foreground/10"
+        >
+          {playing ? (
+            <Pause className="h-4 w-4" aria-hidden />
+          ) : (
+            <Play className="h-4 w-4" aria-hidden />
+          )}
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          aria-label="Próximo destaque"
+          onClick={next}
+          className="h-9 w-9 text-brand-on-navy hover:bg-brand-navy-foreground/10"
+        >
+          <ChevronRight className="h-4 w-4" aria-hidden />
+        </Button>
+      </div>
+
+      <div aria-live="polite" className="sr-only">
+        {label}
+      </div>
+
+      {/* Texto institucional sobreposto — canto inferior esquerdo */}
+      <div className="relative mx-auto flex min-h-[calc(100svh-4rem)] w-full max-w-6xl flex-col justify-end px-4 pb-16 pt-24 lg:pb-20">
+        <div className="max-w-2xl">{children}</div>
+      </div>
+
+      {/* Pontos de navegação ao centro, sobre a base do hero */}
+      <div className="absolute inset-x-0 bottom-4 flex items-center justify-center gap-2">
         {SLIDES.map((s, i) => (
           <button
             key={s.id}
