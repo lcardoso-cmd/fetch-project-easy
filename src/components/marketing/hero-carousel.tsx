@@ -405,7 +405,7 @@ export function HeroCarousel({ children }: { children?: ReactNode }) {
 
       {/* Véu de legibilidade para o texto sobreposto */}
       <div
-        className="pointer-events-none absolute inset-0 bg-gradient-to-t from-brand-navy via-brand-navy/85 to-brand-navy/40 lg:bg-gradient-to-r lg:from-brand-navy lg:from-30% lg:via-brand-navy/85 lg:via-60% lg:to-brand-navy/25"
+        className="pointer-events-none absolute inset-0 bg-gradient-to-t from-brand-navy via-brand-navy/85 to-brand-navy/40 lg:bg-gradient-to-r lg:from-brand-navy lg:from-25% lg:via-brand-navy/90 lg:via-55% lg:to-brand-navy/30"
         aria-hidden
       />
 
