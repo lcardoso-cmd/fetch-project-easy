@@ -392,7 +392,7 @@ function LandingPage() {
               </p>
             </div>
 
-            <CaseConsole />
+            <HeroCarousel />
           </div>
         </section>
 
