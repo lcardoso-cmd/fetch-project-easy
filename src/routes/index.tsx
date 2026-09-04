@@ -656,26 +656,22 @@ function LandingPage() {
           </div>
         </section>
 
-        {/* 5 · BENEFÍCIOS */}
-        <section id="beneficios" className="mx-auto max-w-6xl px-4 py-16">
-          <h2 className="text-center font-heading text-3xl font-bold tracking-tight text-foreground md:text-4xl">
-            O que muda na rotina do escritório?
-          </h2>
-          <div className="mt-10 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            {BENEFITS.map((b) => (
-              <div
-                key={b.t}
-                className="rounded-2xl border-2 border-primary/15 bg-card p-6 shadow-sm"
-              >
-                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent/15 text-accent">
-                  <b.icon className="h-5 w-5" />
-                </span>
-                <h3 className="mt-4 font-heading text-lg font-bold text-foreground">{b.t}</h3>
-                <p className="mt-2 text-base leading-relaxed text-muted-foreground">{b.d}</p>
-              </div>
-            ))}
+        {/* 5 · MATERIAIS PRODUZIDOS (demonstração visual) */}
+        <section id="materiais" className="mx-auto max-w-6xl px-4 py-16">
+          <div className="mx-auto max-w-2xl text-center">
+            <h2 className="font-heading text-3xl font-bold tracking-tight text-foreground md:text-4xl">
+              Veja o que o JurisMind entrega.
+            </h2>
+            <p className="mt-3 text-lg text-muted-foreground">
+              Análises com fontes, minutas editáveis, planilhas e apresentações — prontas para
+              revisar e baixar.
+            </p>
+          </div>
+          <div className="mt-8">
+            <OutputShowcase />
           </div>
         </section>
+
 
         {/* 6 · PLATAFORMA */}
         <section id="plataforma" className="border-y bg-card">
