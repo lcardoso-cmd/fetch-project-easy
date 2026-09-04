@@ -46,13 +46,44 @@ export async function indexDocumentCore(
   const { ocrPdfPages, ocrImage } = await import("./ocr.server");
   const { structuredChunk, CHUNK_PROFILES, DEFAULT_CHUNK_PROFILE } = await import("./chunking");
 
-  const report = async (stage: string, detail?: Record<string, unknown>) => {
-    await params.onProgress?.(stage, detail);
+  const { withStepRetry, describeStepFailure } = await import("./step-retry");
+
+  const STAGE_PCT: Record<string, number> = {
+    download: 10,
+    parse: 20,
+    extracting_text: 35,
+    ocr_processing: 55,
+    chunking: 75,
+    embedding: 88,
+    done: 100,
   };
+
+  let currentStage = "extracting";
+  const report = async (stage: string, detail?: Record<string, unknown>) => {
+    currentStage = stage;
+    await params.onProgress?.(stage, { percent: STAGE_PCT[stage] ?? null, ...(detail ?? {}) });
+  };
+
+  /** Repete a etapa em falhas transitórias e registra o motivo para o usuário. */
+  const step = <T,>(name: string, fn: () => Promise<T>, attempts = 3) =>
+    withStepRetry(name, fn, {
+      attempts,
+      onAttemptFailed: async (info) => {
+        await params.onProgress?.(currentStage, {
+          percent: STAGE_PCT[currentStage] ?? null,
+          step: info.step,
+          step_attempt: info.attempt,
+          step_attempts: info.attempts,
+          step_will_retry: info.willRetry,
+          step_warning: describeStepFailure(info),
+        });
+      },
+    });
 
   const setStatus = async (status: string) => {
     await supabase.from("documents").update({ processing_status: status }).eq("id", documentId);
   };
+
 
   const { data: doc, error: docErr } = await supabase
     .from("documents")
@@ -78,18 +109,24 @@ export async function indexDocumentCore(
     }
 
     await setStatus("extracting");
-    await report("extracting");
+    await report("download");
 
-    const { data: blob, error: dlErr } = await supabase.storage
-      .from("documents")
-      .download(doc.storage_path as string);
-    if (dlErr || !blob) throw new Error("Falha ao baixar arquivo do storage");
-
-    const parsed = await parseDocument({
-      blob,
-      filename: doc.filename as string,
-      fileType: doc.file_type as string,
+    const blob = await step("download", async () => {
+      const { data, error } = await supabase.storage
+        .from("documents")
+        .download(doc.storage_path as string);
+      if (error || !data) throw new Error("Falha ao baixar arquivo do storage");
+      return data;
     });
+
+    await report("parse");
+    const parsed = await step("parse", () =>
+      parseDocument({
+        blob,
+        filename: doc.filename as string,
+        fileType: doc.file_type as string,
+      }),
+    );
 
     let visionBlocks: DocBlock[] = [];
     let ocrFailedPages: number[] = [];
@@ -98,11 +135,13 @@ export async function indexDocumentCore(
     if (format === "image") {
       await setStatus("ocr_processing");
       await report("ocr_processing", { pages: 1 });
-      visionBlocks = await ocrImage({
-        blob,
-        filename: doc.filename as string,
-        fileType: doc.file_type as string,
-      });
+      visionBlocks = await step("ocr", () =>
+        ocrImage({
+          blob,
+          filename: doc.filename as string,
+          fileType: doc.file_type as string,
+        }),
+      );
       ocrPagesRun = 1;
     } else if (format === "pdf") {
       const pages = params.forceVision
@@ -112,11 +151,13 @@ export async function indexDocumentCore(
         await setStatus("ocr_processing");
         await report("ocr_processing", { pages: pages.length });
         const bytes = new Uint8Array(await blob.arrayBuffer());
-        const out = await ocrPdfPages({
-          bytes,
-          filename: doc.filename as string,
-          pages,
-        });
+        const out = await step("ocr", () =>
+          ocrPdfPages({
+            bytes,
+            filename: doc.filename as string,
+            pages,
+          }),
+        );
         visionBlocks = out.blocks;
         ocrFailedPages = out.failedPages;
         ocrPagesRun = pages.length;
@@ -129,8 +170,11 @@ export async function indexDocumentCore(
     const visionPages = new Set(visionBlocks.map((b) => b.page).filter(Boolean) as number[]);
     const textBlocks = parsed.blocks.filter((b) => !b.page || !visionPages.has(b.page));
     const blocks = [...textBlocks, ...visionBlocks];
-    const chunks = structuredChunk(blocks, profile);
-    if (chunks.length === 0) throw new Error("Nenhum conteúdo indexável encontrado no documento.");
+    const chunks = await step("chunking", async () => {
+      const out = structuredChunk(blocks, profile);
+      if (out.length === 0) throw new Error("Nenhum conteúdo indexável encontrado no documento.");
+      return out;
+    });
 
     const plain =
       parsed.plainText ||
@@ -142,10 +186,14 @@ export async function indexDocumentCore(
     await setStatus("embedding");
     await report("embedding", { chunks: chunks.length });
 
-    const embeddings = await embedTexts(chunks.map((c) => c.content));
-    if (embeddings.length !== chunks.length) {
-      throw new Error("Embeddings incompletos — índice anterior preservado.");
-    }
+    const embeddings = await step("embedding", async () => {
+      const out = await embedTexts(chunks.map((c) => c.content));
+      if (out.length !== chunks.length) {
+        throw new Error("Embeddings incompletos — índice anterior preservado.");
+      }
+      return out;
+    });
+
 
     const { data: maxRow } = await supabase
       .from("document_chunks")
@@ -184,11 +232,12 @@ export async function indexDocumentCore(
       metadata: { format, block_kind: c.source_kind },
     }));
 
-    const { data: inserted, error: insErr } = await supabase
-      .from("document_chunks")
-      .insert(rows)
-      .select("id");
-    if (insErr) throw insErr;
+    const inserted = await step("insert", async () => {
+      const { data, error } = await supabase.from("document_chunks").insert(rows).select("id");
+      if (error) throw error;
+      return data;
+    });
+
 
     const newIds = new Set(((inserted ?? []) as Array<{ id: string }>).map((r) => r.id));
     const { data: existing } = await supabase

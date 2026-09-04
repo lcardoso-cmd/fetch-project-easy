@@ -15,7 +15,14 @@ export interface IndexJobView {
   queue_position: number | null;
   /** Verdadeiro quando o processador parou de dar sinal de vida. */
   stalled: boolean;
+  /** Progresso salvo no servidor (sobrevive a recarregar a página). */
+  percent: number | null;
+  /** Motivo da última falha de etapa, já em linguagem do usuário. */
+  step_warning: string | null;
+  step_attempt: number | null;
+  step_attempts: number | null;
 }
+
 
 const STALE_MS = 5 * 60 * 1000;
 
@@ -47,7 +54,14 @@ export const listIndexJobs = createServerFn({ method: "POST" })
     const jobs: IndexJobView[] = all
       .filter((r) => r.case_id === data.case_id)
       .map((r) => {
-        const progress = (r.progress ?? {}) as { stage?: string; pages?: number };
+        const progress = (r.progress ?? {}) as {
+          stage?: string;
+          pages?: number;
+          percent?: number | null;
+          step_warning?: string;
+          step_attempt?: number;
+          step_attempts?: number;
+        };
         const beat = r.heartbeat_at ? new Date(r.heartbeat_at as string).getTime() : 0;
         const position = queuedOrder.indexOf(r.document_id as string);
         return {
@@ -61,7 +75,12 @@ export const listIndexJobs = createServerFn({ method: "POST" })
           heartbeat_at: (r.heartbeat_at as string | null) ?? null,
           queue_position: position >= 0 ? position + 1 : null,
           stalled: r.status === "running" && beat > 0 && now - beat > STALE_MS,
+          percent: typeof progress.percent === "number" ? progress.percent : null,
+          step_warning: progress.step_warning ?? null,
+          step_attempt: progress.step_attempt ?? null,
+          step_attempts: progress.step_attempts ?? null,
         };
+
       });
 
     // Se há trabalho parado na fila e nada rodando, acorda o processador.

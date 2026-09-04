@@ -178,18 +178,24 @@ export async function prepareRagRun(opts: {
     if (!emb) continue;
     const perQueryLimit = useAdvancedRetrieval ? 20 : 24;
 
-    const { data: hits, error: hErr } = await supabase.rpc("hybrid_search_chunks_v2", {
-      query_embedding: emb as unknown as string,
-      query_text: q,
-      filter_organization_id: organizationId,
-      filter_case_id: data.case_id,
-      keyword_text: keywordText,
-      filter_doc_ids: docFilter,
-      match_count: perQueryLimit,
+    const { withStepRetry } = await import("./rag/step-retry");
+    const hits = await withStepRetry("search", async () => {
+      const { data: rpcData, error } = await supabase.rpc("hybrid_search_chunks_v2", {
+        query_embedding: emb as unknown as string,
+        query_text: q,
+        filter_organization_id: organizationId,
+        filter_case_id: data.case_id,
+        keyword_text: keywordText,
+        filter_doc_ids: docFilter,
+        match_count: perQueryLimit,
+      });
+      if (error) throw new Error(error.message);
+      return rpcData;
     });
 
-    if (hErr) throw new Error(hErr.message);
+
     lists.push(((hits ?? []) as Candidate[]).map((r) => ({ ...r })));
+
   }
 
   const fused = rrfFuse(lists);
