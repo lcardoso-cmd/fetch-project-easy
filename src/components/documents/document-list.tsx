@@ -103,6 +103,30 @@ function jobDetail(job: IndexJobView | undefined): string | null {
   return null;
 }
 
+/** Percentual aproximado da leitura, por etapa conhecida. */
+const STAGE_PCT: Record<string, number> = {
+  download: 10,
+  parse: 20,
+  extracting_text: 35,
+  text_extraction: 35,
+  ocr_processing: 55,
+  ocr: 55,
+  chunking: 75,
+  embedding: 88,
+  analyzing: 92,
+  done: 100,
+};
+
+function readingPercent(status: string, job: IndexJobView | undefined): number | null {
+  if (status === "ready") return 100;
+  if (status.startsWith("error") || status === "empty") return null;
+  if (job?.status === "error" || job?.status === "paused") return null;
+  if (job?.status === "queued" || status === "queued" || status === "pending") return 5;
+  const stage = job?.stage ?? status;
+  return STAGE_PCT[stage] ?? 30;
+}
+
+
 function StatusCell({
   status,
   job,
