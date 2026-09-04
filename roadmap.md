@@ -81,3 +81,7 @@ Fonte da verdade: organização é o cliente do SaaS. Sem migração gradual, se
 - [x] Indicador global minimizado com retomada do cadastro.
 - [x] Cancelamento real com descarte do arquivo e limpeza do rascunho.
 - [ ] Validação real do PDF grande atualmente em fila.
+
+## Ajustes homepage (em andamento)
+- [ ] Logo no header deve ter cérebro branco no modo escuro (contraste com fundo navy).
+- [ ] HeroCarousel deve ser o hero integral da página, não um painel lateral ao lado do texto "Do documento à entrega".
