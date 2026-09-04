@@ -44,6 +44,7 @@ import {
   XCircle,
   Trash2,
 } from "lucide-react";
+import { ConfirmActionButton } from "./confirm-action-button";
 import { UploadDialog } from "./upload-dialog";
 import { DocumentAuditDialog } from "./document-audit-dialog";
 
