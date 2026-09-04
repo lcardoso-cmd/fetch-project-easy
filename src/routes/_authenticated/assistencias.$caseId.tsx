@@ -137,9 +137,10 @@ function CaseWorkspacePage() {
   const [aiThreadId, setAiThreadId] = useState<string | null>(null);
   const [aiPrompt, setAiPrompt] = useState<string | null>(null);
   const openAi = (prompt?: string) => {
-    setAiPrompt(prompt ? `${prompt} #${Date.now()}`.replace(/ #\d+$/, "") : null);
+    setAiPrompt(prompt ?? null);
     setAiOpen(true);
   };
+
 
 
   const [editing, setEditing] = useState(false);
