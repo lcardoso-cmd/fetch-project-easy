@@ -109,18 +109,24 @@ export async function indexDocumentCore(
     }
 
     await setStatus("extracting");
-    await report("extracting");
+    await report("download");
 
-    const { data: blob, error: dlErr } = await supabase.storage
-      .from("documents")
-      .download(doc.storage_path as string);
-    if (dlErr || !blob) throw new Error("Falha ao baixar arquivo do storage");
-
-    const parsed = await parseDocument({
-      blob,
-      filename: doc.filename as string,
-      fileType: doc.file_type as string,
+    const blob = await step("download", async () => {
+      const { data, error } = await supabase.storage
+        .from("documents")
+        .download(doc.storage_path as string);
+      if (error || !data) throw new Error("Falha ao baixar arquivo do storage");
+      return data;
     });
+
+    await report("parse");
+    const parsed = await step("parse", () =>
+      parseDocument({
+        blob,
+        filename: doc.filename as string,
+        fileType: doc.file_type as string,
+      }),
+    );
 
     let visionBlocks: DocBlock[] = [];
     let ocrFailedPages: number[] = [];
@@ -129,11 +135,13 @@ export async function indexDocumentCore(
     if (format === "image") {
       await setStatus("ocr_processing");
       await report("ocr_processing", { pages: 1 });
-      visionBlocks = await ocrImage({
-        blob,
-        filename: doc.filename as string,
-        fileType: doc.file_type as string,
-      });
+      visionBlocks = await step("ocr", () =>
+        ocrImage({
+          blob,
+          filename: doc.filename as string,
+          fileType: doc.file_type as string,
+        }),
+      );
       ocrPagesRun = 1;
     } else if (format === "pdf") {
       const pages = params.forceVision
@@ -143,11 +151,13 @@ export async function indexDocumentCore(
         await setStatus("ocr_processing");
         await report("ocr_processing", { pages: pages.length });
         const bytes = new Uint8Array(await blob.arrayBuffer());
-        const out = await ocrPdfPages({
-          bytes,
-          filename: doc.filename as string,
-          pages,
-        });
+        const out = await step("ocr", () =>
+          ocrPdfPages({
+            bytes,
+            filename: doc.filename as string,
+            pages,
+          }),
+        );
         visionBlocks = out.blocks;
         ocrFailedPages = out.failedPages;
         ocrPagesRun = pages.length;
@@ -160,8 +170,11 @@ export async function indexDocumentCore(
     const visionPages = new Set(visionBlocks.map((b) => b.page).filter(Boolean) as number[]);
     const textBlocks = parsed.blocks.filter((b) => !b.page || !visionPages.has(b.page));
     const blocks = [...textBlocks, ...visionBlocks];
-    const chunks = structuredChunk(blocks, profile);
-    if (chunks.length === 0) throw new Error("Nenhum conteúdo indexável encontrado no documento.");
+    const chunks = await step("chunking", async () => {
+      const out = structuredChunk(blocks, profile);
+      if (out.length === 0) throw new Error("Nenhum conteúdo indexável encontrado no documento.");
+      return out;
+    });
 
     const plain =
       parsed.plainText ||
@@ -173,10 +186,14 @@ export async function indexDocumentCore(
     await setStatus("embedding");
     await report("embedding", { chunks: chunks.length });
 
-    const embeddings = await embedTexts(chunks.map((c) => c.content));
-    if (embeddings.length !== chunks.length) {
-      throw new Error("Embeddings incompletos — índice anterior preservado.");
-    }
+    const embeddings = await step("embedding", async () => {
+      const out = await embedTexts(chunks.map((c) => c.content));
+      if (out.length !== chunks.length) {
+        throw new Error("Embeddings incompletos — índice anterior preservado.");
+      }
+      return out;
+    });
+
 
     const { data: maxRow } = await supabase
       .from("document_chunks")
