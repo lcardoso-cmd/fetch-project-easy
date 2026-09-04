@@ -418,8 +418,8 @@ function LandingPage() {
             <a href="#como-funciona" className="hover:text-foreground">
               Como funciona
             </a>
-            <a href="#beneficios" className="hover:text-foreground">
-              Benefícios
+            <a href="#materiais" className="hover:text-foreground">
+              Materiais gerados
             </a>
             <a href="#plataforma" className="hover:text-foreground">
               Plataforma
