@@ -4,8 +4,8 @@ import { JurisMindMark, JURISMIND_CONTEXT } from "@/components/brand/jurismind-m
 import { useAuth } from "@/hooks/use-auth";
 import { UserMenu } from "@/components/layout/user-menu";
 import { useProfile } from "@/hooks/use-profile";
-import { useAccess, VIEW_AS_ROLES } from "@/hooks/use-access";
-import type { OrgPermission, OrgRole, PlatformRole } from "@/lib/org-permissions";
+import { useAccess } from "@/hooks/use-access";
+import type { OrgPermission, PlatformRole } from "@/lib/org-permissions";
 import {
   NAV_ENTRIES,
   NAV_SECTIONS,
@@ -52,7 +52,6 @@ import {
   Building2,
   KeyRound,
   ScrollText,
-  Eye,
   ShieldCheck,
   Wallet,
   Cog,
@@ -602,84 +601,12 @@ function ScopeSwitcher({
   );
 }
 
-/** “Ver como…” — controle do cabeçalho, visível apenas para a equipe B2B. */
-function ViewAsSwitcher() {
-  const { isPlatformUser, simulation, roleLabel, setSimulation } = useAccess();
-  if (!isPlatformUser) return null;
-  return (
-    <Popover>
-      <PopoverTrigger asChild>
-        <button
-          type="button"
-          className={cn(
-            "flex h-9 items-center gap-1.5 rounded-[6px] border px-2.5 text-[13px] font-medium transition",
-            simulation
-              ? "border-amber-400/60 bg-amber-400/15 text-foreground"
-              : "border-border text-muted-foreground hover:bg-accent hover:text-foreground",
-          )}
-        >
-          <Eye className="size-[15px] shrink-0" aria-hidden="true" />
-          <span className="hidden max-w-[170px] truncate sm:inline">
-            {simulation ? `Vendo como: ${roleLabel}` : "Ver como…"}
-          </span>
-        </button>
-      </PopoverTrigger>
-      <PopoverContent side="bottom" align="end" className="w-72 p-2">
-        <div className="mb-2 flex items-center gap-1.5 px-2 pt-1 text-[13px] text-muted-foreground">
-          <ShieldCheck className="size-3.5" />
-          <span>Simulação visual — o servidor mantém sua permissão real.</span>
-        </div>
-        <ul className="space-y-0.5">
-          <li>
-            <button
-              type="button"
-              onClick={() => setSimulation(null)}
-              className={cn(
-                "w-full rounded-[6px] px-2.5 py-2 text-left text-[14px] transition",
-                !simulation ? "bg-primary/10 text-foreground" : "hover:bg-muted",
-              )}
-            >
-              <div className="font-medium">Minha visão real</div>
-              <div className="text-[13px] text-muted-foreground">
-                Papéis reais da sua conta.
-              </div>
-            </button>
-          </li>
-          {VIEW_AS_ROLES.map((p) => (
-            <li key={p.role}>
-              <button
-                type="button"
-                onClick={() => setSimulation(p.role as OrgRole)}
-                className={cn(
-                  "w-full rounded-[6px] px-2.5 py-2 text-left text-[14px] transition",
-                  simulation === p.role ? "bg-primary/10 text-foreground" : "hover:bg-muted",
-                )}
-              >
-                <div className="font-medium">{p.label}</div>
-                <div className="text-[13px] text-muted-foreground">
-                  Permissões padrão do papel «{p.label}» na organização.
-                </div>
-              </button>
-            </li>
-          ))}
-        </ul>
-      </PopoverContent>
-    </Popover>
-  );
-}
-
 export function DashboardShell({ children }: { children: React.ReactNode }) {
   const { pathname } = useLocation();
   useAuth();
   useProfile();
-  const {
-    hasOrgPermission,
-    hasPlatformRole,
-    isSuperAdmin,
-    simulation,
-    roleLabel,
-    clearSimulation,
-  } = useAccess();
+  const { hasOrgPermission, hasPlatformRole } = useAccess();
+
   const can = useCallback(
     (l: NavLink) =>
       l.platformRole
@@ -776,30 +703,13 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   return (
     <TooltipProvider delayDuration={200}>
       <div className="flex h-dvh w-full overflow-hidden bg-background">
-        {simulation && (
-          <div className="fixed inset-x-0 top-0 z-50 flex items-center justify-center gap-3 bg-secondary py-1.5 text-center text-[13px] font-medium text-secondary-foreground shadow">
-            <Eye className="size-3.5" />
-            <span>
-              Você está vendo o sistema como <strong>{roleLabel}</strong>. As
-              autorizações do servidor continuam usando sua conta real.
-            </span>
-            <button
-              type="button"
-              className="rounded-[6px] border border-border bg-card px-2.5 py-1 text-[13px] font-medium hover:bg-secondary"
-              onClick={clearSimulation}
-            >
-              Sair da simulação
-            </button>
-          </div>
-        )}
-
         {/* Sidebar desktop */}
         <aside
           style={{ width: collapsed ? SIDEBAR_W_COLLAPSED : SIDEBAR_W }}
           className={cn(
             "relative hidden min-h-0 shrink-0 flex-col border-r border-white/[0.12] bg-sidebar text-sidebar-foreground transition-[width] duration-200 ease-out lg:flex",
-            simulation && "mt-6",
           )}
+        
         >
           {/* Cabeçalho da sidebar: 56px */}
           <div
@@ -862,7 +772,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
         </aside>
 
         {/* Main column */}
-        <div className={cn("flex flex-1 flex-col min-w-0", simulation && "mt-6")}>
+        <div className="flex flex-1 flex-col min-w-0">
           <header className="flex h-14 items-center justify-between gap-3 border-b bg-card/95 px-3 lg:hidden">
             <div className="flex min-w-0 flex-1 items-center gap-2">
               <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
@@ -940,7 +850,6 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
               </nav>
             </div>
             <div className="flex shrink-0 items-center gap-2">
-              {isSuperAdmin && <ViewAsSwitcher />}
               <ConversationsDrawer />
               <NotificationBell />
               <UserMenu />
