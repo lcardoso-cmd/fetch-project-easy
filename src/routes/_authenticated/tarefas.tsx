@@ -442,6 +442,12 @@ function MyWorkPage() {
               emptyTitle="Nenhum compromisso hoje"
             />
           </section>
+          {overdueTasks.length > 0 && (
+            <section className="space-y-3">
+              <h2 className="font-heading text-base font-medium text-destructive">Tarefas atrasadas</h2>
+              <TaskRows items={overdueTasks} empty="Nenhuma tarefa atrasada" />
+            </section>
+          )}
           <section className="space-y-3">
             <h2 className="font-heading text-base font-medium">Tarefas de hoje</h2>
             <TaskRows items={todayTasks} empty="Nenhuma tarefa com prazo para hoje" />
