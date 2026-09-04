@@ -49,7 +49,13 @@ export interface DocItem {
   file_size: number | null;
   processing_status: string;
   created_at: string | null;
+  split_group_id?: string | null;
+  part_index?: number | null;
+  part_count?: number | null;
+  page_offset?: number | null;
+  page_count?: number | null;
 }
+
 
 function formatBytes(b: number | null) {
   if (!b) return "—";
