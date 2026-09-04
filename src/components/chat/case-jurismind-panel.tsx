@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { AlertCircle, CheckCircle2, Loader2, Maximize2, MessageSquarePlus, X } from "lucide-react";
+import { AlertCircle, CheckCircle2, Loader2, Maximize2, MessageSquarePlus } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -100,11 +100,10 @@ export function CaseJurisMindPanel({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="right"
-        showClose={false}
         className="flex h-svh w-full max-w-none flex-col gap-0 p-0 sm:w-[80vw] sm:max-w-[1100px] lg:min-w-[720px]"
       >
         {/* ── Cabeçalho fixo ── */}
-        <header className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-2 border-b bg-background px-4 py-3">
+        <header className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-2 border-b bg-background px-4 py-3 pr-14">
           <JurisMindMark size={32} context={JURISMIND_CONTEXT.chat} className="shrink-0" />
           <div className="min-w-0 flex-1">
             <SheetTitle className="truncate font-heading text-base font-medium">
@@ -147,14 +146,6 @@ export function CaseJurisMindPanel({
                 <Maximize2 className="mr-1 h-4 w-4" />
                 <span className="hidden sm:inline">Abrir em tela inteira</span>
               </Link>
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => onOpenChange(false)}
-              aria-label="Fechar painel do JurisMind"
-            >
-              <X className="h-4 w-4" />
             </Button>
           </div>
         </header>
