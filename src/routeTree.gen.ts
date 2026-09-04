@@ -108,6 +108,7 @@ import { Route as ApiPublicProposalShareTokenRouteImport } from './routes/api/pu
 import { Route as ApiPublicProposalResponseTokenRouteImport } from './routes/api/public/proposal-response.$token'
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
 import { Route as ApiPublicOutlookCallbackRouteImport } from './routes/api/public/outlook/callback'
+import { Route as ApiPublicJobsRunRouteImport } from './routes/api/public/jobs/run'
 import { Route as ApiPublicHooksFetchPublicationsRouteImport } from './routes/api/public/hooks/fetch-publications'
 import { Route as ApiPublicGoogleCallbackRouteImport } from './routes/api/public/google/callback'
 import { Route as AuthenticatedPlatformCustomersIdRouteImport } from './routes/_authenticated/platform.customers.$id'
@@ -661,6 +662,11 @@ const ApiPublicOutlookCallbackRoute =
     path: '/api/public/outlook/callback',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicJobsRunRoute = ApiPublicJobsRunRouteImport.update({
+  id: '/api/public/jobs/run',
+  path: '/api/public/jobs/run',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicHooksFetchPublicationsRoute =
   ApiPublicHooksFetchPublicationsRouteImport.update({
     id: '/api/public/hooks/fetch-publications',
@@ -783,6 +789,7 @@ export interface FileRoutesByFullPath {
   '/platform/customers/$id': typeof AuthenticatedPlatformCustomersIdRoute
   '/api/public/google/callback': typeof ApiPublicGoogleCallbackRoute
   '/api/public/hooks/fetch-publications': typeof ApiPublicHooksFetchPublicationsRoute
+  '/api/public/jobs/run': typeof ApiPublicJobsRunRoute
   '/api/public/outlook/callback': typeof ApiPublicOutlookCallbackRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/api/public/proposal-response/$token': typeof ApiPublicProposalResponseTokenRoute
@@ -887,6 +894,7 @@ export interface FileRoutesByTo {
   '/platform/customers/$id': typeof AuthenticatedPlatformCustomersIdRoute
   '/api/public/google/callback': typeof ApiPublicGoogleCallbackRoute
   '/api/public/hooks/fetch-publications': typeof ApiPublicHooksFetchPublicationsRoute
+  '/api/public/jobs/run': typeof ApiPublicJobsRunRoute
   '/api/public/outlook/callback': typeof ApiPublicOutlookCallbackRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/api/public/proposal-response/$token': typeof ApiPublicProposalResponseTokenRoute
@@ -995,6 +1003,7 @@ export interface FileRoutesById {
   '/_authenticated/platform/customers/$id': typeof AuthenticatedPlatformCustomersIdRoute
   '/api/public/google/callback': typeof ApiPublicGoogleCallbackRoute
   '/api/public/hooks/fetch-publications': typeof ApiPublicHooksFetchPublicationsRoute
+  '/api/public/jobs/run': typeof ApiPublicJobsRunRoute
   '/api/public/outlook/callback': typeof ApiPublicOutlookCallbackRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/api/public/proposal-response/$token': typeof ApiPublicProposalResponseTokenRoute
@@ -1103,6 +1112,7 @@ export interface FileRouteTypes {
     | '/platform/customers/$id'
     | '/api/public/google/callback'
     | '/api/public/hooks/fetch-publications'
+    | '/api/public/jobs/run'
     | '/api/public/outlook/callback'
     | '/api/public/payments/webhook'
     | '/api/public/proposal-response/$token'
@@ -1207,6 +1217,7 @@ export interface FileRouteTypes {
     | '/platform/customers/$id'
     | '/api/public/google/callback'
     | '/api/public/hooks/fetch-publications'
+    | '/api/public/jobs/run'
     | '/api/public/outlook/callback'
     | '/api/public/payments/webhook'
     | '/api/public/proposal-response/$token'
@@ -1314,6 +1325,7 @@ export interface FileRouteTypes {
     | '/_authenticated/platform/customers/$id'
     | '/api/public/google/callback'
     | '/api/public/hooks/fetch-publications'
+    | '/api/public/jobs/run'
     | '/api/public/outlook/callback'
     | '/api/public/payments/webhook'
     | '/api/public/proposal-response/$token'
@@ -1363,6 +1375,7 @@ export interface RootRouteChildren {
   ApiToolsTranscribeStreamRoute: typeof ApiToolsTranscribeStreamRoute
   ApiPublicGoogleCallbackRoute: typeof ApiPublicGoogleCallbackRoute
   ApiPublicHooksFetchPublicationsRoute: typeof ApiPublicHooksFetchPublicationsRoute
+  ApiPublicJobsRunRoute: typeof ApiPublicJobsRunRoute
   ApiPublicOutlookCallbackRoute: typeof ApiPublicOutlookCallbackRoute
   ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
   ApiPublicProposalResponseTokenRoute: typeof ApiPublicProposalResponseTokenRoute
@@ -2064,6 +2077,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicOutlookCallbackRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/jobs/run': {
+      id: '/api/public/jobs/run'
+      path: '/api/public/jobs/run'
+      fullPath: '/api/public/jobs/run'
+      preLoaderRoute: typeof ApiPublicJobsRunRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/fetch-publications': {
       id: '/api/public/hooks/fetch-publications'
       path: '/api/public/hooks/fetch-publications'
@@ -2399,6 +2419,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiToolsTranscribeStreamRoute: ApiToolsTranscribeStreamRoute,
   ApiPublicGoogleCallbackRoute: ApiPublicGoogleCallbackRoute,
   ApiPublicHooksFetchPublicationsRoute: ApiPublicHooksFetchPublicationsRoute,
+  ApiPublicJobsRunRoute: ApiPublicJobsRunRoute,
   ApiPublicOutlookCallbackRoute: ApiPublicOutlookCallbackRoute,
   ApiPublicPaymentsWebhookRoute: ApiPublicPaymentsWebhookRoute,
   ApiPublicProposalResponseTokenRoute: ApiPublicProposalResponseTokenRoute,

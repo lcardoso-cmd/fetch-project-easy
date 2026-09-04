@@ -149,7 +149,11 @@ export function DocumentList({
     setRetryingId(id);
     try {
       const res = await indexFn({ data: { document_id: id } });
-      toast.success(`Reprocessado: ${res.chunks ?? 0} trechos`);
+      toast.success(
+        res.queued
+          ? "Documento grande: a leitura continua no servidor e o status é atualizado aqui."
+          : `Reprocessado: ${res.chunks} trechos`,
+      );
     } catch (e) {
       toast.error(e instanceof Error ? e.message : String(e));
     } finally {
@@ -169,7 +173,9 @@ export function DocumentList({
     try {
       const res = await indexFn({ data: { document_id: id, force_vision: true } });
       toast.success(
-        `Visão concluída: ${res.chunks ?? 0} trechos (${res.vision_chunks ?? 0} de visão)`,
+        res.queued
+          ? "Documento grande: a leitura por imagem continua no servidor."
+          : `Leitura por imagem concluída: ${res.chunks} trechos (${res.vision_chunks} de imagem)`,
       );
     } catch (e) {
       toast.error(e instanceof Error ? e.message : String(e));
