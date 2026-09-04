@@ -46,13 +46,44 @@ export async function indexDocumentCore(
   const { ocrPdfPages, ocrImage } = await import("./ocr.server");
   const { structuredChunk, CHUNK_PROFILES, DEFAULT_CHUNK_PROFILE } = await import("./chunking");
 
-  const report = async (stage: string, detail?: Record<string, unknown>) => {
-    await params.onProgress?.(stage, detail);
+  const { withStepRetry, describeStepFailure } = await import("./step-retry");
+
+  const STAGE_PCT: Record<string, number> = {
+    download: 10,
+    parse: 20,
+    extracting_text: 35,
+    ocr_processing: 55,
+    chunking: 75,
+    embedding: 88,
+    done: 100,
   };
+
+  let currentStage = "extracting";
+  const report = async (stage: string, detail?: Record<string, unknown>) => {
+    currentStage = stage;
+    await params.onProgress?.(stage, { percent: STAGE_PCT[stage] ?? null, ...(detail ?? {}) });
+  };
+
+  /** Repete a etapa em falhas transitórias e registra o motivo para o usuário. */
+  const step = <T,>(name: string, fn: () => Promise<T>, attempts = 3) =>
+    withStepRetry(name, fn, {
+      attempts,
+      onAttemptFailed: async (info) => {
+        await params.onProgress?.(currentStage, {
+          percent: STAGE_PCT[currentStage] ?? null,
+          step: info.step,
+          step_attempt: info.attempt,
+          step_attempts: info.attempts,
+          step_will_retry: info.willRetry,
+          step_warning: describeStepFailure(info),
+        });
+      },
+    });
 
   const setStatus = async (status: string) => {
     await supabase.from("documents").update({ processing_status: status }).eq("id", documentId);
   };
+
 
   const { data: doc, error: docErr } = await supabase
     .from("documents")
