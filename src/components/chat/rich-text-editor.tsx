@@ -212,7 +212,7 @@ export function RichTextEditor({ html, onChange, minHeight = 360, contentClassNa
       </div>
       {/* Folha "papel" sempre clara para garantir legibilidade em ambos os temas
           e casar visualmente com o .docx exportado. */}
-      <div className="bg-white p-2 dark:bg-slate-200">
+      <div className="bg-white p-2">
         <div
           ref={setEditorRef}
           contentEditable

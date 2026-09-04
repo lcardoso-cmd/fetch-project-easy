@@ -35,7 +35,7 @@ function Panel({ children, className }: { children: ReactNode; className?: strin
   return (
     <div
       className={cn(
-        "rounded-2xl border border-primary-foreground/20 bg-primary/60 p-4",
+        "rounded-2xl border border-brand-navy-foreground/20 bg-brand-navy/60 p-4",
         className,
       )}
     >
@@ -49,10 +49,10 @@ function CaseConsoleVisual() {
   return (
     <div className="space-y-2">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="font-heading text-base font-bold text-primary-foreground">
+        <p className="font-heading text-base font-bold text-brand-on-navy">
           Reclamação Trabalhista — Maria Silva
         </p>
-        <span className="inline-flex items-center gap-1.5 rounded-full border border-accent/50 bg-accent/15 px-2.5 py-1 text-sm font-semibold text-accent">
+        <span className="inline-flex items-center gap-1.5 rounded-full border border-brand-cyan/50 bg-brand-cyan/15 px-2.5 py-1 text-sm font-semibold text-brand-cyan">
           <CheckCircle2 className="h-3.5 w-3.5" aria-hidden />
           Fontes prontas
         </span>
@@ -61,29 +61,29 @@ function CaseConsoleVisual() {
         {["Cartões de ponto", "Recibos de pagamento", "Contrato de trabalho"].map((d) => (
           <li
             key={d}
-            className="flex items-center gap-2 rounded-md border border-primary-foreground/25 bg-primary/55 px-2.5 py-1.5 text-base text-primary-foreground/90"
+            className="flex items-center gap-2 rounded-md border border-brand-navy-foreground/25 bg-brand-navy/55 px-2.5 py-1.5 text-base text-brand-on-navy/90"
           >
-            <FileText className="h-3.5 w-3.5 shrink-0 text-accent" aria-hidden />
+            <FileText className="h-3.5 w-3.5 shrink-0 text-brand-cyan" aria-hidden />
             <span className="min-w-0 flex-1 truncate">{d}</span>
           </li>
         ))}
       </ul>
       <div className="flex justify-center">
-        <ArrowDown className="h-4 w-4 text-accent" aria-hidden />
+        <ArrowDown className="h-4 w-4 text-brand-cyan" aria-hidden />
       </div>
-      <Panel className="border-accent/50 bg-accent/15">
-        <p className="text-sm font-semibold uppercase tracking-wide text-accent">
+      <Panel className="border-brand-cyan/50 bg-brand-cyan/15">
+        <p className="text-sm font-semibold uppercase tracking-wide text-brand-cyan">
           Comando do advogado
         </p>
-        <p className="mt-1 text-base font-medium text-primary-foreground">
+        <p className="mt-1 text-base font-medium text-brand-on-navy">
           “Compare os cartões de ponto com os recibos e mostre a diferença.”
         </p>
       </Panel>
-      <Panel className="bg-primary/70">
-        <p className="text-sm font-semibold uppercase tracking-wide text-accent">
+      <Panel className="bg-brand-navy/70">
+        <p className="text-sm font-semibold uppercase tracking-wide text-brand-cyan">
           Resposta do JurisMind
         </p>
-        <p className="mt-2 text-base leading-relaxed text-primary-foreground">
+        <p className="mt-2 text-base leading-relaxed text-brand-on-navy">
           Os cartões registram <strong>67h30</strong> de jornada extraordinária entre janeiro e
           março [F1]; os recibos remuneram <strong>20h00</strong> [F2]. Diferença aparente de{" "}
           <strong>47h30</strong>.
@@ -93,10 +93,10 @@ function CaseConsoleVisual() {
             { r: "F1", d: "Cartões de ponto · Março/2024, linhas 12–38" },
             { r: "F2", d: "Recibos de pagamento · p. 2, verba 0031" },
           ].map((e) => (
-            <p key={e.r} className="flex items-start gap-2 text-sm text-primary-foreground/85">
-              <Quote className="mt-0.5 h-3.5 w-3.5 shrink-0 text-accent" aria-hidden />
+            <p key={e.r} className="flex items-start gap-2 text-sm text-brand-on-navy/85">
+              <Quote className="mt-0.5 h-3.5 w-3.5 shrink-0 text-brand-cyan" aria-hidden />
               <span>
-                <span className="font-semibold text-accent">[{e.r}]</span> {e.d}
+                <span className="font-semibold text-brand-cyan">[{e.r}]</span> {e.d}
               </span>
             </p>
           ))}
@@ -119,16 +119,16 @@ function FlowVisual() {
       {steps.map((s, i) => (
         <li
           key={s.t}
-          className="flex items-center gap-3 rounded-xl border border-primary-foreground/20 bg-primary/60 px-3 py-2.5"
+          className="flex items-center gap-3 rounded-xl border border-brand-navy-foreground/20 bg-brand-navy/60 px-3 py-2.5"
         >
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-accent/50 bg-accent/15 text-sm font-bold text-accent">
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-brand-cyan/50 bg-brand-cyan/15 text-sm font-bold text-brand-cyan">
             {i + 1}
           </span>
           <span className="min-w-0">
-            <span className="block font-heading text-base font-semibold text-primary-foreground">
+            <span className="block font-heading text-base font-semibold text-brand-on-navy">
               {s.t}
             </span>
-            <span className="block text-sm text-primary-foreground/80">{s.d}</span>
+            <span className="block text-sm text-brand-on-navy/80">{s.d}</span>
           </span>
         </li>
       ))}
@@ -148,13 +148,13 @@ function DeliverablesVisual() {
       {items.map((it) => (
         <div
           key={it.t}
-          className="rounded-xl border border-primary-foreground/20 bg-primary/60 p-3.5"
+          className="rounded-xl border border-brand-navy-foreground/20 bg-brand-navy/60 p-3.5"
         >
-          <it.icon className="h-5 w-5 text-accent" aria-hidden />
-          <p className="mt-2 font-heading text-base font-semibold text-primary-foreground">
+          <it.icon className="h-5 w-5 text-brand-cyan" aria-hidden />
+          <p className="mt-2 font-heading text-base font-semibold text-brand-on-navy">
             {it.t}
           </p>
-          <p className="text-sm text-primary-foreground/80">{it.d}</p>
+          <p className="text-sm text-brand-on-navy/80">{it.d}</p>
         </div>
       ))}
     </div>
@@ -165,24 +165,24 @@ function IntelligenceVisual() {
   return (
     <div className="space-y-2.5">
       <Panel>
-        <p className="text-sm font-semibold uppercase tracking-wide text-accent">Pergunta</p>
-        <p className="mt-1 text-base text-primary-foreground">
+        <p className="text-sm font-semibold uppercase tracking-wide text-brand-cyan">Pergunta</p>
+        <p className="mt-1 text-base text-brand-on-navy">
           “Existe cláusula de exclusividade no contrato?”
         </p>
       </Panel>
-      <Panel className="bg-primary/70">
-        <p className="text-base leading-relaxed text-primary-foreground">
+      <Panel className="bg-brand-navy/70">
+        <p className="text-base leading-relaxed text-brand-on-navy">
           Sim. A cláusula 8.2 veda a prestação de serviços a concorrentes durante a vigência [F1].
         </p>
-        <p className="mt-3 flex items-start gap-2 border-t border-primary-foreground/20 pt-2 text-sm text-primary-foreground/85">
-          <Quote className="mt-0.5 h-3.5 w-3.5 shrink-0 text-accent" aria-hidden />
+        <p className="mt-3 flex items-start gap-2 border-t border-brand-navy-foreground/20 pt-2 text-sm text-brand-on-navy/85">
+          <Quote className="mt-0.5 h-3.5 w-3.5 shrink-0 text-brand-cyan" aria-hidden />
           <span>
-            <span className="font-semibold text-accent">[F1]</span> Contrato de prestação de
+            <span className="font-semibold text-brand-cyan">[F1]</span> Contrato de prestação de
             serviços · p. 7, cláusula 8.2
           </span>
         </p>
       </Panel>
-      <p className="text-sm text-primary-foreground/80">
+      <p className="text-sm text-brand-on-navy/80">
         Cada resposta abre o documento na página citada. Sem fonte, sem afirmação.
       </p>
     </div>
@@ -193,12 +193,12 @@ function JurisprudenceVisual() {
   const sources = ["stj.jus.br", "tst.jus.br", "stf.jus.br"];
   return (
     <div className="space-y-2.5">
-      <Panel className="bg-primary/70">
-        <p className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-accent">
+      <Panel className="bg-brand-navy/70">
+        <p className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-brand-cyan">
           <Scale className="h-4 w-4" aria-hidden />
           Jurisprudência oficial
         </p>
-        <p className="mt-2 text-base leading-relaxed text-primary-foreground">
+        <p className="mt-2 text-base leading-relaxed text-brand-on-navy">
           Entendimento consolidado sobre horas extras e cartões de ponto britânicos [J1], aplicado
           ao contexto dos autos.
         </p>
@@ -207,15 +207,15 @@ function JurisprudenceVisual() {
         {sources.map((s) => (
           <span
             key={s}
-            className="rounded-full border border-accent/50 bg-accent/15 px-3 py-1 text-sm font-semibold text-accent"
+            className="rounded-full border border-brand-cyan/50 bg-brand-cyan/15 px-3 py-1 text-sm font-semibold text-brand-cyan"
           >
             {s}
           </span>
         ))}
       </div>
-      <p className="text-sm text-primary-foreground/80">
-        Referências dos autos <span className="font-semibold text-accent">[F]</span> e de tribunais{" "}
-        <span className="font-semibold text-accent">[J]</span> sempre separadas.
+      <p className="text-sm text-brand-on-navy/80">
+        Referências dos autos <span className="font-semibold text-brand-cyan">[F]</span> e de tribunais{" "}
+        <span className="font-semibold text-brand-cyan">[J]</span> sempre separadas.
       </p>
     </div>
   );
@@ -232,14 +232,14 @@ function GovernanceVisual() {
       {items.map((it) => (
         <li
           key={it.t}
-          className="flex items-start gap-3 rounded-xl border border-primary-foreground/20 bg-primary/60 p-3.5"
+          className="flex items-start gap-3 rounded-xl border border-brand-navy-foreground/20 bg-brand-navy/60 p-3.5"
         >
-          <it.icon className="mt-0.5 h-5 w-5 shrink-0 text-accent" aria-hidden />
+          <it.icon className="mt-0.5 h-5 w-5 shrink-0 text-brand-cyan" aria-hidden />
           <span>
-            <span className="block font-heading text-base font-semibold text-primary-foreground">
+            <span className="block font-heading text-base font-semibold text-brand-on-navy">
               {it.t}
             </span>
-            <span className="block text-sm text-primary-foreground/80">{it.d}</span>
+            <span className="block text-sm text-brand-on-navy/80">{it.d}</span>
           </span>
         </li>
       ))}
@@ -347,7 +347,7 @@ export function HeroCarousel() {
     <section
       aria-roledescription="carrossel"
       aria-label="Destaques do JurisMind"
-      className="relative rounded-3xl border border-primary-foreground/25 bg-primary/40 p-4 shadow-2xl backdrop-blur sm:p-5"
+      className="relative rounded-3xl border border-brand-navy-foreground/25 bg-brand-navy/40 p-4 shadow-2xl backdrop-blur sm:p-5"
       onMouseEnter={() => setPlaying(false)}
       onMouseLeave={() => setPlaying(true)}
       onFocusCapture={() => setPlaying(false)}
@@ -364,7 +364,7 @@ export function HeroCarousel() {
       tabIndex={-1}
     >
       <div className="flex items-center justify-between gap-3">
-        <span className="inline-flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-accent">
+        <span className="inline-flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-brand-cyan">
           <JurisMindMark size={16} context={JURISMIND_CONTEXT.inlineDark} />
           {current.eyebrow}
         </span>
@@ -375,7 +375,7 @@ export function HeroCarousel() {
             size="icon"
             aria-label="Destaque anterior"
             onClick={prev}
-            className="h-9 w-9 text-primary-foreground hover:bg-primary-foreground/10"
+            className="h-9 w-9 text-brand-on-navy hover:bg-brand-navy-foreground/10"
           >
             <ChevronLeft className="h-4 w-4" aria-hidden />
           </Button>
@@ -386,7 +386,7 @@ export function HeroCarousel() {
             aria-label={playing ? "Pausar carrossel" : "Retomar carrossel"}
             aria-pressed={!playing}
             onClick={() => setPlaying((p) => !p)}
-            className="h-9 w-9 text-primary-foreground hover:bg-primary-foreground/10"
+            className="h-9 w-9 text-brand-on-navy hover:bg-brand-navy-foreground/10"
           >
             {playing ? (
               <Pause className="h-4 w-4" aria-hidden />
@@ -400,16 +400,16 @@ export function HeroCarousel() {
             size="icon"
             aria-label="Próximo destaque"
             onClick={next}
-            className="h-9 w-9 text-primary-foreground hover:bg-primary-foreground/10"
+            className="h-9 w-9 text-brand-on-navy hover:bg-brand-navy-foreground/10"
           >
             <ChevronRight className="h-4 w-4" aria-hidden />
           </Button>
         </div>
       </div>
 
-      <div className="mt-1 h-1 w-full overflow-hidden rounded-full bg-primary-foreground/15">
+      <div className="mt-1 h-1 w-full overflow-hidden rounded-full bg-brand-navy-foreground/15">
         <div
-          className="h-full rounded-full bg-accent transition-[width] duration-100 ease-linear"
+          className="h-full rounded-full bg-brand-cyan transition-[width] duration-100 ease-linear"
           style={{ width: `${Math.round(progress * 100)}%` }}
         />
       </div>
@@ -438,10 +438,10 @@ export function HeroCarousel() {
               className="block rounded-2xl outline-none focus-visible:ring-2 focus-visible:ring-accent"
               tabIndex={i === index ? 0 : -1}
             >
-              <h2 className="font-heading text-xl font-bold leading-tight text-primary-foreground">
+              <h2 className="font-heading text-xl font-bold leading-tight text-brand-on-navy">
                 {s.title}
               </h2>
-              <p className="mt-1 text-base text-primary-foreground/85">{s.description}</p>
+              <p className="mt-1 text-base text-brand-on-navy/85">{s.description}</p>
             </a>
             <div className="mt-3">{s.visual}</div>
           </div>
@@ -458,7 +458,7 @@ export function HeroCarousel() {
             aria-current={i === index}
             className={cn(
               "h-2.5 rounded-full transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent",
-              i === index ? "w-6 bg-accent" : "w-2.5 bg-primary-foreground/35",
+              i === index ? "w-6 bg-brand-cyan" : "w-2.5 bg-brand-navy-foreground/35",
             )}
           />
         ))}

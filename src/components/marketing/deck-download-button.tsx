@@ -45,7 +45,7 @@ export function DeckDownloadButton({
       type="button"
       size={size}
       variant={variant}
-      className={className}
+      className={`whitespace-nowrap ${className ?? ""}`}
       onClick={handleDownload}
       disabled={loading}
       aria-busy={loading}
