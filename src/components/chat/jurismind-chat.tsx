@@ -1880,7 +1880,10 @@ export function JurisMindChat({
             <div ref={endRef} />
           </div>
 
+          <MaterialsSection messages={messages} />
+
           <div className="shrink-0 border-t p-3">
+
             {messages.length === 0 && (
               <div className="mb-3">
                 <p className="mb-2 text-2xs font-medium uppercase tracking-wide text-muted-foreground">
