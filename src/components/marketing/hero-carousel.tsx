@@ -317,7 +317,7 @@ const SLIDES: Slide[] = [
 /** Copy do banner de cada slide (2+): eyebrow, título, subtítulo e CTA próprios. */
 function SlideCopy({ slide, active }: { slide: Slide; active: boolean }) {
   return (
-    <div className="max-w-2xl">
+    <div className="max-w-2xl lg:max-w-xl">
       <span className="mb-4 inline-flex items-center gap-2 rounded-full bg-brand-cyan/15 px-3 py-1 text-sm font-semibold text-brand-cyan">
         <JurisMindMark size={14} context={JURISMIND_CONTEXT.inlineDark} />
         {slide.eyebrow}
