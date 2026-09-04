@@ -225,6 +225,7 @@ function NewCasePage() {
   const [extractionWarnings, setExtractionWarnings] = useState<ExtractionWarning[]>([]);
   const [reviewConfirmed, setReviewConfirmed] = useState(false);
   const [hydratedReview, setHydratedReview] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
 
   // Bloqueia saída se o usuário já preencheu algo relevante e ainda não enviou.
   const novaDirty =
@@ -296,14 +297,13 @@ function NewCasePage() {
     // Título só é preenchido a partir do documento se o usuário ainda não
     // customizou nada — caso contrário respeitamos a edição manual.
     // A auto-geração final baseada nas partes é feita pelo useEffect abaixo.
-    setTitle(e.title);
-    setTitleAuto(true);
-    setClientName(e.client_name ?? "");
-    setCaseNumber(e.case_number ?? "");
-    setJurisdiction(e.jurisdiction ?? "");
-    setCaseType(e.case_type ?? "");
-    setDescription(e.description ?? "");
-    setParties(
+    if (titleAuto && e.title) setTitle(e.title);
+    setClientName((current) => current || e.client_name || "");
+    setCaseNumber((current) => current || e.case_number || "");
+    setJurisdiction((current) => current || e.jurisdiction || "");
+    setCaseType((current) => current || e.case_type || "");
+    setDescription((current) => current || e.description || "");
+    setParties((current) => current.length > 0 ? current :
       (e.parties ?? []).map((p) => {
         const withRel = p as Party;
         return { ...withRel, relation: withRel.relation ?? guessRelation(p, matterKind) };
@@ -456,15 +456,23 @@ function NewCasePage() {
     const tick = async () => {
       try {
         const row = await getIntakeFn({ data: { id: intakeId } });
-        if (cancelled || !row) return;
+        if (cancelled) return;
+        if (!row) {
+          setUploaded(null);
+          setIntakeId(null);
+          setIntakeStatus(null);
+          setUploadPhase("idle");
+          if (REVIEW_STORAGE_KEY) localStorage.removeItem(REVIEW_STORAGE_KEY);
+          return;
+        }
         setIntakeStatus(row.status as IntakeStatus);
         setIntakeInfo({
           pages_total: row.pages_total,
           pages_analyzed: row.pages_analyzed,
           failed_pages: row.failed_pages ?? [],
         });
+        if (row.extracted_data) applyIntakeResult(row);
         if (row.status === "ready" || row.status === "partial") {
-          applyIntakeResult(row);
           setIntakeError(null);
           setUploadPhase("done");
           const missing = row.missing_fields ?? [];
@@ -500,6 +508,26 @@ function NewCasePage() {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [intakeId, intakeStatus]);
+
+  const handleCancel = async () => {
+    if (cancelling) return;
+    setCancelling(true);
+    setSubmitted(true);
+    try {
+      if (intakeId) {
+        await discardIntakeFn({ data: { id: intakeId } });
+      } else if (uploaded) {
+        await supabase.storage.from("documents").remove([uploaded.storage_path]);
+      }
+      if (REVIEW_STORAGE_KEY) localStorage.removeItem(REVIEW_STORAGE_KEY);
+      await qc.invalidateQueries({ queryKey: ["pending-intake-documents"] });
+      navigate({ to: "/assistencias" });
+    } catch (error) {
+      setSubmitted(false);
+      setCancelling(false);
+      toast.error(error instanceof Error ? error.message : "Não foi possível cancelar o cadastro.");
+    }
+  };
 
   const addParty = () => setParties([...parties, { role: "", name: "" }]);
   const updateParty = (i: number, patch: Partial<Party>) =>
@@ -1244,8 +1272,9 @@ function NewCasePage() {
             </p>
           )}
           <div className="flex justify-end gap-2">
-            <Button type="button" variant="ghost" asChild>
-              <Link to="/assistencias">Cancelar</Link>
+            <Button type="button" variant="ghost" onClick={handleCancel} disabled={cancelling || submitting}>
+              {cancelling && <Loader2 className="h-4 w-4 animate-spin" />}
+              Cancelar
             </Button>
             <Button
               type="submit"
