@@ -66,6 +66,7 @@ import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/s
 import { cn } from "@/lib/utils";
 import { NotificationBell } from "@/components/layout/notification-bell";
 import { ConversationsDrawer } from "@/components/chat/conversations-drawer";
+import { TeamChatDock } from "@/components/chat/team-chat-dock";
 
 /* ────────────────────────────────────────────────────────────────
    Modelo de navegação orientado a dados.
