@@ -398,6 +398,7 @@ function NewCasePage() {
       });
       setIntakeId(row.id);
       setIntakeStatus(row.status as IntakeStatus);
+      await qc.invalidateQueries({ queryKey: ["pending-intake-documents"] });
       toast.info("Documento recebido. Estamos lendo o conteúdo.");
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
@@ -424,6 +425,7 @@ function NewCasePage() {
     setExtractionWarnings([]);
     setReviewConfirmed(false);
     setUploadPhase("idle");
+    await qc.invalidateQueries({ queryKey: ["pending-intake-documents"] });
   };
 
   // Nova tentativa de leitura: normal ou forçando reconhecimento de imagem.
@@ -434,6 +436,7 @@ function NewCasePage() {
       setIntakeStatus(row.status as IntakeStatus);
       setIntakeError(null);
       setUploadPhase("extracting");
+      await qc.invalidateQueries({ queryKey: ["pending-intake-documents"] });
       toast.info(
         mode === "ocr"
           ? "Relendo o documento como imagem."

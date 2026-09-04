@@ -110,7 +110,8 @@ async function touch(
   await admin
     .from("case_intake_documents")
     .update({ heartbeat_at: new Date().toISOString(), ...patch })
-    .eq("id", id);
+    .eq("id", id)
+    .not("status", "in", "(cancelled,converted)");
 }
 
 interface ExtractedText {
@@ -474,7 +475,8 @@ export async function processIntakeDocument(
         last_error_code: null,
         last_error_message: null,
       })
-      .eq("id", row.id);
+      .eq("id", row.id)
+      .not("status", "in", "(cancelled,converted)");
 
     return { status, extracted, missing, warnings: allWarnings };
   } catch (err) {
@@ -492,7 +494,8 @@ export async function processIntakeDocument(
         // Erro definitivo não deve consumir novas tentativas automáticas.
         attempt_count: classified.retryable ? row.attempt_count : row.max_attempts,
       })
-      .eq("id", row.id);
+      .eq("id", row.id)
+      .not("status", "in", "(cancelled,converted)");
     console.error("[intake] falha", {
       intake_id: row.id,
       organization_id: row.organization_id,
