@@ -42,6 +42,12 @@ const PERMANENT_PATTERNS = [
   "cancelled",
   "402",
   "403",
+  // Limite de memória do servidor: repetir consome tempo e falha igual.
+  "memory limit",
+  "exceeded before eof",
+  "grande demais",
+  "too large",
+  "ocr_file_too_large",
 ];
 
 export function errorReason(error: unknown): string {

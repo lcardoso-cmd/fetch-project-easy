@@ -36,6 +36,20 @@ function isAiBlocked(err: unknown): boolean {
   return m.includes("402") || m.includes("403") || m.includes("créditos");
 }
 
+/** Traduz falhas técnicas de leitura para linguagem do usuário. */
+export function friendlyIndexError(raw: string): string {
+  const m = raw.toLowerCase();
+  if (m.includes("memory limit") || m.includes("exceeded before eof")) {
+    return "O arquivo é grande demais para ser lido de uma vez. Divida-o em partes menores e envie novamente.";
+  }
+  if (m.includes("grande demais") || m.includes("too large")) return raw;
+  if (m.includes("file_missing")) return "O arquivo não foi encontrado no armazenamento.";
+  if (m.includes("nenhum conteúdo indexável")) {
+    return "Não foi encontrado texto legível neste documento.";
+  }
+  return raw;
+}
+
 /** Executa um lote limitado das duas filas. Nunca lança. */
 export async function runDocumentQueues(
   opts: { maxJobs?: number; timeBudgetMs?: number } = {},
@@ -105,6 +119,9 @@ export async function runDocumentQueues(
             organizationId: job.organization_id,
             userId: job.requested_by_user_id,
             forceVision: job.force_vision,
+            // Um documento pesado não consome o orçamento inteiro do lote:
+            // devolve o progresso e volta para a fila para continuar depois.
+            deadlineAt: Math.min(deadline, Date.now() + 40_000),
             onProgress: async (stage, detail) => {
               // Cancelamento cooperativo: o usuário pode parar a leitura de um
               // documento sem afetar os demais da fila.
@@ -124,11 +141,44 @@ export async function runDocumentQueues(
             },
           }),
       );
+      if (result.incomplete) {
+        // Progresso real gravado: volta para a fila para continuar da próxima
+        // página, sem gastar tentativas.
+        await supabaseAdmin
+          .from("document_index_jobs")
+          .update({
+            status: "queued",
+            attempt_count: 0,
+            progress: {
+              stage: "extracting_text",
+              pages_done: result.pages_done ?? null,
+              pages_total: result.pages_total ?? null,
+              percent:
+                result.pages_total && result.pages_done
+                  ? 30 + Math.round((result.pages_done / result.pages_total) * 50)
+                  : null,
+            },
+            heartbeat_at: new Date().toISOString(),
+            locked_by: null,
+            locked_at: null,
+            finished_at: null,
+          })
+          .eq("id", job.id)
+          .neq("status", "cancelled");
+        indexDone++;
+        continue;
+      }
       await supabaseAdmin
         .from("document_index_jobs")
         .update({
           status: "done",
-          progress: { stage: "done", chunks: result.chunks, failed_pages: result.failed_pages },
+          progress: {
+            stage: "done",
+            chunks: result.chunks,
+            failed_pages: result.failed_pages,
+            ocr_skipped_pages: result.ocr_skipped_pages ?? [],
+            percent: 100,
+          },
           finished_at: new Date().toISOString(),
           heartbeat_at: new Date().toISOString(),
           locked_by: null,
@@ -145,13 +195,15 @@ export async function runDocumentQueues(
         continue;
       }
       const blocked = isAiBlocked(err);
-      const msg = err instanceof Error ? err.message : String(err);
-      const exhausted = blocked || job.attempt_count >= job.max_attempts;
+      const raw = err instanceof Error ? err.message : String(err);
+      const msg = friendlyIndexError(raw);
+      const memory = /memory limit|exceeded before eof|grande demais|too large/i.test(raw);
+      const exhausted = blocked || memory || job.attempt_count >= job.max_attempts;
       await supabaseAdmin
         .from("document_index_jobs")
         .update({
           status: blocked ? "paused" : exhausted ? "error" : "queued",
-          last_error_code: blocked ? "ai_blocked" : "index_failed",
+          last_error_code: blocked ? "ai_blocked" : memory ? "file_too_large" : "index_failed",
           last_error_message: msg.slice(0, 400),
           heartbeat_at: new Date().toISOString(),
           locked_by: null,

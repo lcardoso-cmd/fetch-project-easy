@@ -23,6 +23,10 @@ export interface IndexJobView {
   step_warning: string | null;
   step_attempt: number | null;
   step_attempts: number | null;
+  /** Páginas já lidas e total, quando o arquivo é lido em partes. */
+  pages_done: number | null;
+  pages_total: number | null;
+
 }
 
 
@@ -63,6 +67,8 @@ export const listIndexJobs = createServerFn({ method: "POST" })
           step_warning?: string;
           step_attempt?: number;
           step_attempts?: number;
+          pages_done?: number | null;
+          pages_total?: number | null;
         };
         const beat = r.heartbeat_at ? new Date(r.heartbeat_at as string).getTime() : 0;
         const position = queuedOrder.indexOf(r.document_id as string);
@@ -82,6 +88,8 @@ export const listIndexJobs = createServerFn({ method: "POST" })
           step_warning: progress.step_warning ?? null,
           step_attempt: progress.step_attempt ?? null,
           step_attempts: progress.step_attempts ?? null,
+          pages_done: progress.pages_done ?? null,
+          pages_total: progress.pages_total ?? null,
         };
 
       });

@@ -14,6 +14,14 @@ export interface ReadingJobLike {
   step_attempt?: number | null;
   step_attempts?: number | null;
   step_warning?: string | null;
+  /** Leitura em partes: páginas já lidas e total do arquivo. */
+  pages_done?: number | null;
+  pages_total?: number | null;
+}
+
+/** Verdadeiro quando o arquivo já teve parte lida e vai continuar de onde parou. */
+export function isResuming(job: ReadingJobLike | undefined): boolean {
+  return Boolean(job && job.status === "queued" && (job.pages_done ?? 0) > 0);
 }
 
 /** As cinco etapas visíveis ao usuário, na ordem em que acontecem. */
@@ -60,7 +68,9 @@ const STAGE_TO_STEP: Record<string, ReadingStepKey> = {
 
 export function stepKeyFor(job: ReadingJobLike | undefined, status: string): ReadingStepKey | null {
   if (!job) return STAGE_TO_STEP[status] ?? null;
-  if (job.status === "queued") return "fila";
+  // Arquivos grandes são lidos em partes: quando volta para a fila com páginas
+  // já lidas, continua sendo a etapa de leitura, não "fila".
+  if (job.status === "queued") return isResuming(job) ? "leitura" : "fila";
   return STAGE_TO_STEP[job.stage ?? status] ?? null;
 }
 
@@ -117,9 +127,14 @@ export function describeReadingStage(
   if (!key) return null;
   const index = READING_STEPS.findIndex((s) => s.key === key);
   const step = READING_STEPS[index]!;
-  const parts: string[] = [step.description];
+  const resuming = isResuming(job);
+  const parts: string[] = resuming
+    ? [
+        `${job!.pages_done} de ${job!.pages_total ?? "?"} página(s) já lidas. A leitura continua automaticamente de onde parou.`,
+      ]
+    : [step.description];
 
-  if (job?.status === "queued") {
+  if (job?.status === "queued" && !resuming) {
     if (job.queue_position && job.queue_position > 1) {
       parts.push(`Há ${job.queue_position - 1} documento(s) na frente deste.`);
     } else {
