@@ -1,18 +1,28 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
 import { PageHeader } from "@/components/page-header";
-import { EmptyState } from "@/components/empty-state";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import {
   AlertTriangle,
   BrainCircuit,
+  CalendarClock,
   CalendarPlus,
+  CheckCircle2,
   ClipboardCheck,
+  ClipboardList,
   FileText,
   FolderKanban,
   Loader2,
@@ -22,46 +32,72 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { getCases } from "@/lib/cases.functions";
-import { listAllDocuments } from "@/lib/documents.functions";
-import { listEvents } from "@/lib/events.functions";
-import { createTask, listTasks, toggleTask } from "@/lib/tasks.functions";
+import { createTask, toggleTask } from "@/lib/tasks.functions";
 import { listOrgMembers } from "@/lib/organization.functions";
+import { forceIndexNow } from "@/lib/index-jobs.functions";
+import { getCockpit, type CockpitData } from "@/lib/cockpit.functions";
+import { normalizeTitle, type PriorityItem } from "@/lib/cockpit/cockpit-core";
 import { AddTaskDialog } from "@/components/tasks/add-task-dialog";
 import { AddEventDialog } from "@/components/work/add-event-dialog";
-import { AgendaPanel, type UnifiedEvent } from "@/components/work/agenda-panel";
 import { useAccess } from "@/hooks/use-access";
 import { routeRuleFor } from "@/lib/route-permissions";
+import { cn } from "@/lib/utils";
 
 const RETURN_STORAGE_KEY = "jm.accessReturn";
 
 export const Route = createFileRoute("/_authenticated/painel")({
-  validateSearch: (s) => z.object({ next: z.string().optional() }).parse(s),
+  validateSearch: (s) =>
+    z
+      .object({
+        next: z.string().optional(),
+        escopo: z.enum(["meu", "escritorio"]).optional(),
+        foco: z.enum(["tudo", "prazos", "tarefas", "documentos"]).optional(),
+      })
+      .parse(s),
   component: HomePage,
 });
 
-type Task = {
-  id: string;
-  title: string;
-  status: string;
-  due_date: string | null;
-  case_id: string | null;
+function dateLabel(iso: string | null, withTime = true) {
+  if (!iso) return null;
+  const d = new Date(iso);
+  const today = new Date();
+  const sameDay = d.toDateString() === today.toDateString();
+  const tomorrow = new Date(today.getTime() + 86400000);
+  const isTomorrow = d.toDateString() === tomorrow.toDateString();
+  const time = withTime
+    ? d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })
+    : "";
+  if (sameDay) return time ? `Hoje, ${time}` : "Hoje";
+  if (isTomorrow) return time ? `Amanhã, ${time}` : "Amanhã";
+  const date = d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
+  return time ? `${date}, ${time}` : date;
+}
+
+const KIND_LABEL: Record<PriorityItem["kind"], string> = {
+  task: "Tarefa",
+  event: "Prazo",
+  document: "Documento",
 };
 
-function startOfToday() {
-  const d = new Date();
-  d.setHours(0, 0, 0, 0);
-  return d;
-}
-function endOfToday() {
-  const d = new Date();
-  d.setHours(23, 59, 59, 999);
-  return d;
-}
+const KIND_ICON = {
+  task: ClipboardList,
+  event: CalendarClock,
+  document: FileText,
+} as const;
+
+const STATE_TEXT: Record<PriorityItem["state"], string> = {
+  overdue: "Atrasado",
+  today: "Hoje",
+  failed: "Falha na leitura",
+  upcoming: "Próximo",
+  processing: "Em leitura",
+  open: "Aberto",
+};
 
 function HomePage() {
   const navigate = useNavigate();
   const qc = useQueryClient();
-  const { next } = Route.useSearch();
+  const { next, escopo, foco } = Route.useSearch();
   const { hasOrgPermission, hasPlatformRole, isLoading: accessLoading } = useAccess();
 
   const pendingReturn =
@@ -88,128 +124,85 @@ function HomePage() {
     navigate({ to: pendingReturn, replace: true });
   }, [pendingReturn, pendingRule, allowsPending, accessLoading, navigate]);
 
+  const scope = escopo === "escritorio" ? "org" : "mine";
+  const filter = foco ?? "tudo";
+
+  const cockpitFn = useServerFn(getCockpit);
   const getCasesFn = useServerFn(getCases);
-  const listDocsFn = useServerFn(listAllDocuments);
-  const listEventsFn = useServerFn(listEvents);
-  const listTasksFn = useServerFn(listTasks);
+  const teamFn = useServerFn(listOrgMembers);
   const toggleTaskFn = useServerFn(toggleTask);
   const createTaskFn = useServerFn(createTask);
-  const teamFn = useServerFn(listOrgMembers);
+  const reprocessFn = useServerFn(forceIndexNow);
+
+  const cockpitQuery = useQuery<CockpitData>({
+    queryKey: ["cockpit", scope],
+    queryFn: () => cockpitFn({ data: { scope } }),
+    refetchInterval: 30_000,
+  });
+  const data = cockpitQuery.data;
 
   const { data: cases = [] } = useQuery({ queryKey: ["cases"], queryFn: () => getCasesFn() });
-  const { data: docs = [] } = useQuery({
-    queryKey: ["documents-all"],
-    queryFn: () => listDocsFn(),
-    refetchInterval: 15000,
-  });
-  const { data: events = [] } = useQuery({
-    queryKey: ["events", "all"],
-    queryFn: () => listEventsFn({ data: {} }),
-  });
-  const { data: rawTasks = [] } = useQuery({
-    queryKey: ["tasks", "all"],
-    queryFn: () => listTasksFn({ data: { status: "all" } }),
-  });
-  const { data: team = [] } = useQuery({
-    queryKey: ["org-members"],
-    queryFn: () => teamFn(),
-  });
+  const { data: team = [] } = useQuery({ queryKey: ["org-members"], queryFn: () => teamFn() });
 
-  const tasks = rawTasks as unknown as Task[];
-  const assignees = team.map((m) => ({ id: m.id, name: m.name }));
-  const caseOptions = cases.map((c) => ({ id: c.id, title: c.title }));
-  const caseTitle = (id: string | null | undefined) =>
-    id ? (cases.find((c) => c.id === id)?.title ?? null) : null;
-
-  const now = new Date();
-  const todayStart = startOfToday();
-  const todayEnd = endOfToday();
-
-  const unified: UnifiedEvent[] = useMemo(
-    () =>
-      events.map((e) => ({
-        id: `local-${e.id}`,
-        localId: e.id,
-        title: e.title,
-        description: e.description ?? null,
-        starts_at: e.starts_at,
-        event_type: e.event_type,
-        case_id: e.case_id,
-        source: "local" as const,
-      })),
-    [events],
+  const assignees = useMemo(() => team.map((m) => ({ id: m.id, name: m.name })), [team]);
+  const caseOptions = useMemo(
+    () => cases.map((c) => ({ id: c.id, title: c.title })),
+    [cases],
   );
 
-  const todayEvents = unified.filter((e) => {
-    const d = new Date(e.starts_at);
-    return d >= todayStart && d <= todayEnd;
+  const refresh = () => {
+    void qc.invalidateQueries({ queryKey: ["cockpit"] });
+    void qc.invalidateQueries({ queryKey: ["tasks"] });
+  };
+
+  const setScope = (value: "mine" | "org") =>
+    navigate({
+      to: "/painel",
+      search: (prev) => ({ ...prev, escopo: value === "org" ? "escritorio" : "meu" }),
+      replace: true,
+    });
+
+  const setFilter = (value: "tudo" | "prazos" | "tarefas" | "documentos") =>
+    navigate({ to: "/painel", search: (prev) => ({ ...prev, foco: value }), replace: true });
+
+  // Visão do escritório só existe quando o servidor confirma a permissão.
+  const canViewOrg = data?.canViewOrganization ?? false;
+  useEffect(() => {
+    if (data && escopo === "escritorio" && !data.canViewOrganization) {
+      navigate({ to: "/painel", search: (prev) => ({ ...prev, escopo: "meu" }), replace: true });
+    }
+  }, [data, escopo, navigate]);
+
+  const priorities = (data?.priorities ?? []).filter((p) => {
+    if (filter === "tudo") return true;
+    if (filter === "prazos") return p.kind === "event";
+    if (filter === "tarefas") return p.kind === "task";
+    return p.kind === "document";
   });
-  const upcomingEvents = unified
-    .filter((e) => new Date(e.starts_at) > todayEnd)
-    .slice(0, 6);
 
-  const openTasks = tasks.filter((t) => t.status !== "done");
-  const overdueTasks = openTasks.filter((t) => t.due_date && new Date(t.due_date) < now);
-  const pendingTasks = openTasks
-    .filter((t) => !t.due_date || new Date(t.due_date) >= now)
-    .slice(0, 6);
+  const completeTask = async (item: PriorityItem) => {
+    const id = item.id.replace(/^task-/, "");
+    try {
+      await toggleTaskFn({ data: { id, done: true } });
+      refresh();
+      toast.success("Tarefa concluída");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Não foi possível concluir");
+    }
+  };
 
-  const processingDocs = docs.filter(
-    (d) => d.processing_status !== "ready" && d.processing_status !== "error",
-  );
-  const failedDocs = docs.filter((d) => d.processing_status === "error");
-  const recentCases = cases.slice(0, 5);
-  const recentDocs = docs.slice(0, 5);
-
-  const TaskRows = ({ items, empty }: { items: Task[]; empty: string }) =>
-    items.length === 0 ? (
-      <p className="py-3 text-sm text-muted-foreground">{empty}</p>
-    ) : (
-      <ul className="divide-y divide-black/5 border-y border-black/5 dark:divide-white/10 dark:border-white/10">
-        {items.map((t) => {
-          const title = caseTitle(t.case_id);
-          const overdue = t.due_date && new Date(t.due_date) < now;
-          return (
-            <li key={t.id} className="flex items-start gap-3 py-3">
-              <Checkbox
-                className="mt-0.5 shrink-0"
-                checked={false}
-                aria-label={`Concluir ${t.title}`}
-                onCheckedChange={async () => {
-                  await toggleTaskFn({ data: { id: t.id, done: true } });
-                  await qc.invalidateQueries({ queryKey: ["tasks"] });
-                }}
-              />
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium break-words">{t.title}</p>
-                <div className="mt-0.5 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-                  {t.due_date && (
-                    <span className={overdue ? "text-destructive" : undefined}>
-                      {new Date(t.due_date).toLocaleDateString("pt-BR")}
-                    </span>
-                  )}
-                  {t.case_id && title && (
-                    <>
-                      <span aria-hidden>·</span>
-                      <Link
-                        to="/assistencias/$caseId"
-                        params={{ caseId: t.case_id }}
-                        className="underline"
-                      >
-                        {title}
-                      </Link>
-                    </>
-                  )}
-                </div>
-              </div>
-            </li>
-          );
-        })}
-      </ul>
-    );
+  const reprocess = async (documentId: string) => {
+    try {
+      await reprocessFn({ data: { document_id: documentId } });
+      toast.success("Documento recolocado na fila de leitura");
+      refresh();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Não foi possível reprocessar");
+    }
+  };
 
   return (
-    <div className="space-y-8">
+    <div className="mx-auto w-full max-w-[1440px] space-y-6">
       {pendingReturn && !canReturn ? (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-amber-500/40 bg-amber-500/10 p-4 text-sm">
           <div>
@@ -228,9 +221,9 @@ function HomePage() {
 
       <PageHeader
         title="Início"
-        subtitle="O que precisa da sua atenção hoje."
+        subtitle="Prioridades, prazos e andamento do seu trabalho."
         actions={
-          <Button size="sm" asChild>
+          <Button asChild className="min-h-10">
             <Link to="/assistente">
               <BrainCircuit className="mr-2 h-4 w-4" /> Perguntar à JurisMind
             </Link>
@@ -238,18 +231,14 @@ function HomePage() {
         }
       />
 
-      {/* Ações rápidas */}
-      <div className="flex flex-wrap gap-2">
-        <Button variant="outline" size="sm" asChild>
+      {/* Ações secundárias + escopo */}
+      <div className="flex flex-wrap items-center gap-2">
+        <Button variant="outline" size="sm" className="min-h-10" asChild>
           <Link to="/assistencias/nova">
             <Plus className="mr-2 h-4 w-4" /> Novo caso
           </Link>
         </Button>
-        <Button variant="outline" size="sm" asChild>
-          <Link to="/assistencias">
-            <Upload className="mr-2 h-4 w-4" /> Enviar documentos
-          </Link>
-        </Button>
+        <UploadCasePicker cases={caseOptions} />
         <AddTaskDialog
           assignees={assignees}
           cases={caseOptions}
@@ -265,189 +254,566 @@ function HomePage() {
                   priority: "medium",
                 },
               });
-              await qc.invalidateQueries({ queryKey: ["tasks"] });
+              refresh();
               toast.success("Tarefa criada");
             } catch (e) {
               toast.error(e instanceof Error ? e.message : "Erro ao criar tarefa");
             }
           }}
         >
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" className="min-h-10">
             <ClipboardCheck className="mr-2 h-4 w-4" /> Criar tarefa
           </Button>
         </AddTaskDialog>
-        <AddEventDialog cases={caseOptions}>
-          <Button variant="outline" size="sm">
+        <AddEventDialog cases={caseOptions} onCreated={refresh}>
+          <Button variant="outline" size="sm" className="min-h-10">
             <CalendarPlus className="mr-2 h-4 w-4" /> Criar evento
           </Button>
         </AddEventDialog>
+
+        {canViewOrg ? (
+          <div
+            role="group"
+            aria-label="Escopo do painel"
+            className="ml-auto flex rounded-md border border-border p-0.5"
+          >
+            <button
+              type="button"
+              onClick={() => setScope("mine")}
+              aria-pressed={scope === "mine"}
+              className={cn(
+                "min-h-9 rounded-[5px] px-3 text-sm font-medium",
+                scope === "mine" ? "bg-primary text-primary-foreground" : "text-muted-foreground",
+              )}
+            >
+              Meu trabalho
+            </button>
+            <button
+              type="button"
+              onClick={() => setScope("org")}
+              aria-pressed={scope === "org"}
+              className={cn(
+                "min-h-9 rounded-[5px] px-3 text-sm font-medium",
+                scope === "org" ? "bg-primary text-primary-foreground" : "text-muted-foreground",
+              )}
+            >
+              Escritório
+            </button>
+          </div>
+        ) : null}
       </div>
 
-      <div className="grid gap-8 lg:grid-cols-2">
-        <section className="space-y-3">
-          <div className="flex items-center justify-between gap-2">
-            <h2 className="font-heading text-base font-medium">Prazos de hoje</h2>
-            <Button variant="ghost" size="sm" asChild>
-              <Link to="/tarefas" search={{ tab: "hoje" }}>
-                Ver meu trabalho
-              </Link>
-            </Button>
-          </div>
-          <AgendaPanel
-            events={todayEvents}
-            caseTitle={caseTitle}
-            emptyTitle="Nenhum prazo para hoje"
+      {cockpitQuery.isError ? (
+        <div className="rounded-lg border border-destructive/40 bg-destructive/5 p-4 text-sm">
+          <p className="font-medium">Não foi possível carregar o painel.</p>
+          <Button size="sm" variant="outline" className="mt-3" onClick={() => cockpitQuery.refetch()}>
+            Tentar novamente
+          </Button>
+        </div>
+      ) : null}
+
+      {/* Indicadores */}
+      {cockpitQuery.isLoading || !data ? (
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {[0, 1, 2, 3].map((i) => (
+            <Skeleton key={i} className="h-[76px] w-full rounded-lg" />
+          ))}
+        </div>
+      ) : (
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <Indicator
+            label="Prazos de hoje"
+            value={data.indicators.deadlinesToday}
+            icon={CalendarClock}
+            tone={data.indicators.deadlinesToday > 0 ? "attention" : "neutral"}
+            onClick={() => setFilter("prazos")}
           />
-        </section>
-
-        <section className="space-y-3">
-          <div className="flex items-center justify-between gap-2">
-            <h2 className="font-heading text-base font-medium">Próximos prazos</h2>
-            <Button variant="ghost" size="sm" asChild>
-              <Link to="/tarefas" search={{ tab: "prazos" }}>
-                Ver prazos
-              </Link>
-            </Button>
-          </div>
-          <AgendaPanel
-            events={upcomingEvents}
-            caseTitle={caseTitle}
-            emptyTitle="Nenhum prazo futuro registrado"
+          <Indicator
+            label="Tarefas atrasadas"
+            value={data.indicators.overdueTasks}
+            icon={AlertTriangle}
+            tone={data.indicators.overdueTasks > 0 ? "danger" : "neutral"}
+            onClick={() => setFilter("tarefas")}
           />
-        </section>
+          <Indicator
+            label="Tarefas abertas"
+            value={data.indicators.openTasks}
+            icon={ClipboardList}
+            tone="neutral"
+            to="/tarefas"
+            search={{ tab: "tarefas" as const }}
+          />
+          <Indicator
+            label="Documentos com falha"
+            value={data.indicators.failedDocuments}
+            icon={FileText}
+            tone={data.indicators.failedDocuments > 0 ? "danger" : "neutral"}
+            onClick={() => setFilter("documentos")}
+          />
+        </div>
+      )}
 
-        <section className="space-y-3">
-          <div className="flex items-center justify-between gap-2">
-            <h2 className="font-heading text-base font-medium">Tarefas pendentes</h2>
-            <Button variant="ghost" size="sm" asChild>
-              <Link to="/tarefas" search={{ tab: "tarefas" }}>
-                Ver tarefas
-              </Link>
-            </Button>
+      {/* Prioridades + Agenda */}
+      <div className="grid gap-6 lg:grid-cols-12">
+        <section className="space-y-3 lg:col-span-8">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h2 className="font-heading text-section-title">Prioridades</h2>
+            <div role="group" aria-label="Filtrar prioridades" className="flex flex-wrap gap-1">
+              {(["tudo", "prazos", "tarefas", "documentos"] as const).map((f) => (
+                <button
+                  key={f}
+                  type="button"
+                  onClick={() => setFilter(f)}
+                  aria-pressed={filter === f}
+                  className={cn(
+                    "min-h-9 rounded-md border px-3 text-sm font-medium capitalize",
+                    filter === f
+                      ? "border-primary bg-primary/10 text-foreground"
+                      : "border-border text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  {f}
+                </button>
+              ))}
+            </div>
           </div>
-          <TaskRows items={pendingTasks} empty="Nenhuma tarefa pendente." />
-        </section>
 
-        <section className="space-y-3">
-          <div className="flex items-center justify-between gap-2">
-            <h2 className="font-heading text-base font-medium">
-              Tarefas atrasadas
-              {overdueTasks.length > 0 && (
-                <Badge variant="destructive" className="ml-2 text-xs">
-                  {overdueTasks.length}
-                </Badge>
-              )}
-            </h2>
-            <Button variant="ghost" size="sm" asChild>
-              <Link to="/tarefas" search={{ tab: "atrasados" }}>
-                Ver atrasados
-              </Link>
-            </Button>
-          </div>
-          <TaskRows items={overdueTasks.slice(0, 6)} empty="Nada atrasado. Bom trabalho." />
-        </section>
-
-        <section className="space-y-3">
-          <div className="flex items-center justify-between gap-2">
-            <h2 className="font-heading text-base font-medium">Casos recentes</h2>
-            <Button variant="ghost" size="sm" asChild>
-              <Link to="/assistencias">Ver todos</Link>
-            </Button>
-          </div>
-          {recentCases.length === 0 ? (
-            <EmptyState
-              icon={FolderKanban}
-              title="Nenhum caso ainda"
-              description="Comece criando seu primeiro caso."
-              action={
-                <Button size="sm" asChild>
-                  <Link to="/assistencias/nova">Criar caso</Link>
-                </Button>
-              }
-            />
+          {cockpitQuery.isLoading || !data ? (
+            <div className="space-y-2">
+              {[0, 1, 2, 3, 4].map((i) => (
+                <Skeleton key={i} className="h-16 w-full rounded-lg" />
+              ))}
+            </div>
+          ) : priorities.length === 0 ? (
+            <p className="rounded-lg border border-border bg-card px-4 py-3 text-base text-muted-foreground">
+              Nenhuma pendência urgente no momento.
+            </p>
           ) : (
-            <ul className="divide-y divide-black/5 border-y border-black/5 dark:divide-white/10 dark:border-white/10">
-              {recentCases.map((c) => (
-                <li key={c.id} className="flex items-center justify-between gap-3 py-3">
-                  <div className="min-w-0">
+            <ul className="divide-y divide-border rounded-lg border border-border bg-card">
+              {priorities.map((item) => {
+                const Icon = KIND_ICON[item.kind];
+                const danger = item.state === "overdue" || item.state === "failed";
+                return (
+                  <li key={item.id} className="flex flex-wrap items-start gap-3 p-4">
+                    <Icon
+                      className={cn(
+                        "mt-0.5 h-4 w-4 shrink-0",
+                        danger ? "text-destructive" : "text-muted-foreground",
+                      )}
+                      aria-hidden
+                    />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-base font-medium [overflow-wrap:anywhere]">
+                        {item.title}
+                      </p>
+                      <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
+                        <span>{KIND_LABEL[item.kind]}</span>
+                        <span
+                          className={cn("font-medium", danger ? "text-destructive" : undefined)}
+                        >
+                          · {STATE_TEXT[item.state]}
+                        </span>
+                        {item.at ? <span>· {dateLabel(item.at, item.kind !== "task")}</span> : null}
+                        {item.caseId && item.caseTitle ? (
+                          <>
+                            <span aria-hidden>·</span>
+                            <Link
+                              to="/assistencias/$caseId"
+                              params={{ caseId: item.caseId }}
+                              className="underline underline-offset-2"
+                            >
+                              {normalizeTitle(item.caseTitle)}
+                            </Link>
+                          </>
+                        ) : null}
+                        {item.clientName ? <span>· {item.clientName}</span> : null}
+                        {scope === "org" && item.ownerName ? (
+                          <span>· {item.ownerName}</span>
+                        ) : null}
+                      </div>
+                      {item.reason ? (
+                        <p className="mt-1 text-sm text-destructive [overflow-wrap:anywhere]">
+                          {item.reason}
+                        </p>
+                      ) : null}
+                    </div>
+                    <div className="flex shrink-0 flex-wrap gap-2">
+                      {item.kind === "task" ? (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="min-h-10"
+                          onClick={() => void completeTask(item)}
+                        >
+                          Concluir
+                        </Button>
+                      ) : null}
+                      {item.kind === "document" && item.state === "failed" ? (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="min-h-10"
+                          onClick={() => void reprocess(item.id.replace(/^document-/, ""))}
+                        >
+                          Reprocessar
+                        </Button>
+                      ) : null}
+                      {item.kind === "event" ? (
+                        <Button size="sm" variant="outline" className="min-h-10" asChild>
+                          <Link to="/tarefas" search={{ tab: "agenda" }}>
+                            Ver compromisso
+                          </Link>
+                        </Button>
+                      ) : null}
+                      {item.caseId ? (
+                        <Button size="sm" variant="ghost" className="min-h-10" asChild>
+                          <Link to="/assistencias/$caseId" params={{ caseId: item.caseId }}>
+                            Abrir caso
+                          </Link>
+                        </Button>
+                      ) : null}
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </section>
+
+        <section className="space-y-3 lg:col-span-4">
+          <div className="flex items-center justify-between gap-2">
+            <h2 className="font-heading text-section-title">Próximos 7 dias</h2>
+            <Button variant="ghost" size="sm" className="min-h-10" asChild>
+              <Link to="/tarefas" search={{ tab: "agenda" }}>
+                Ver agenda completa
+              </Link>
+            </Button>
+          </div>
+          {cockpitQuery.isLoading || !data ? (
+            <Skeleton className="h-40 w-full rounded-lg" />
+          ) : data.agenda.length === 0 ? (
+            <p className="rounded-lg border border-border bg-card px-4 py-3 text-base text-muted-foreground">
+              Nenhum compromisso nos próximos 7 dias.
+            </p>
+          ) : (
+            <ul className="divide-y divide-border rounded-lg border border-border bg-card">
+              {data.agenda.slice(0, 12).map((a) => (
+                <li key={a.id} className="p-3">
+                  <p className="text-sm font-medium text-muted-foreground">
+                    {dateLabel(a.at, !a.allDayish)}
+                  </p>
+                  <p className="mt-0.5 text-base font-medium [overflow-wrap:anywhere]">
+                    {a.title}
+                  </p>
+                  {a.caseId && a.caseTitle ? (
                     <Link
                       to="/assistencias/$caseId"
-                      params={{ caseId: c.id }}
-                      className="block truncate text-sm font-medium hover:underline"
+                      params={{ caseId: a.caseId }}
+                      className="mt-0.5 block text-sm text-muted-foreground underline underline-offset-2"
                     >
-                      {c.title}
+                      {normalizeTitle(a.caseTitle)}
                     </Link>
-                    {c.client_name && (
-                      <p className="truncate text-sm text-muted-foreground">{c.client_name}</p>
-                    )}
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      </div>
+
+      {/* Processamento — só aparece quando há trabalho ou falha */}
+      {data && (data.processing.failed.length > 0 ||
+        data.processing.running > 0 ||
+        data.processing.queued > 0) ? (
+        <section className="space-y-3">
+          <h2 className="font-heading text-section-title">Processamento</h2>
+          {data.processing.failed.length > 0 ? (
+            <ul className="divide-y divide-destructive/20 rounded-lg border border-destructive/40 bg-destructive/5">
+              {data.processing.failed.map((f) => (
+                <li key={f.documentId} className="flex flex-wrap items-center gap-3 p-4">
+                  <AlertTriangle className="h-4 w-4 shrink-0 text-destructive" aria-hidden />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-base font-medium [overflow-wrap:anywhere]">{f.filename}</p>
+                    <p className="text-sm text-muted-foreground [overflow-wrap:anywhere]">
+                      {f.caseTitle ? normalizeTitle(f.caseTitle) : "Sem caso vinculado"}
+                      {f.reason ? ` · ${f.reason}` : ""}
+                    </p>
                   </div>
-                  <Button variant="ghost" size="sm" asChild>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="min-h-10"
+                    onClick={() => void reprocess(f.documentId)}
+                  >
+                    Reprocessar
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-3 text-base text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+              {data.processing.running} em leitura · {data.processing.queued} na fila
+            </p>
+          )}
+        </section>
+      ) : null}
+
+      {/* Casos em andamento */}
+      <section className="space-y-3">
+        <div className="flex items-center justify-between gap-2">
+          <h2 className="font-heading text-section-title">Casos em andamento</h2>
+          <Button variant="ghost" size="sm" className="min-h-10" asChild>
+            <Link to="/assistencias">Ver todos os casos</Link>
+          </Button>
+        </div>
+        {cockpitQuery.isLoading || !data ? (
+          <Skeleton className="h-40 w-full rounded-lg" />
+        ) : data.cases.length === 0 ? (
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-card px-4 py-3">
+            <p className="text-base text-muted-foreground">
+              Nenhum caso ativo {scope === "mine" ? "atribuído a você" : "no escritório"}.
+            </p>
+            <Button size="sm" className="min-h-10" asChild>
+              <Link to="/assistencias/nova">
+                <FolderKanban className="mr-2 h-4 w-4" /> Criar caso
+              </Link>
+            </Button>
+          </div>
+        ) : (
+          <ul className="divide-y divide-border rounded-lg border border-border bg-card">
+            {data.cases.map((c) => (
+              <li key={c.id} className="flex flex-wrap items-start gap-3 p-4">
+                <div className="min-w-0 flex-1">
+                  <Link
+                    to="/assistencias/$caseId"
+                    params={{ caseId: c.id }}
+                    className="text-base font-medium underline-offset-2 hover:underline [overflow-wrap:anywhere]"
+                  >
+                    {normalizeTitle(c.title)}
+                  </Link>
+                  <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
+                    {c.clientName ? <span>{c.clientName}</span> : null}
+                    {scope === "org" && c.ownerName ? <span>· {c.ownerName}</span> : null}
+                    {c.nextDeadlineAt ? <span>· Próximo prazo {dateLabel(c.nextDeadlineAt)}</span> : null}
+                    {c.openTasks > 0 ? <span>· {c.openTasks} pendência(s)</span> : null}
+                    {c.lastActivityAt ? (
+                      <span>· Atividade {dateLabel(c.lastActivityAt, false)}</span>
+                    ) : null}
+                  </div>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {c.overdueTasks > 0 ? (
+                      <Badge variant="destructive" className="text-xs">
+                        {c.overdueTasks} atrasada(s)
+                      </Badge>
+                    ) : null}
+                    {c.failedDocuments > 0 ? (
+                      <Badge variant="destructive" className="text-xs">
+                        {c.failedDocuments} documento(s) com falha
+                      </Badge>
+                    ) : null}
+                    {c.processingDocuments > 0 ? (
+                      <Badge variant="secondary" className="text-xs">
+                        {c.processingDocuments} em leitura
+                      </Badge>
+                    ) : null}
+                  </div>
+                </div>
+                <div className="flex shrink-0 flex-wrap gap-2">
+                  <Button size="sm" variant="outline" className="min-h-10" asChild>
+                    <Link to="/assistencias/$caseId" params={{ caseId: c.id }}>
+                      Abrir caso
+                    </Link>
+                  </Button>
+                  <Button size="sm" variant="ghost" className="min-h-10" asChild>
                     <Link
                       to="/assistencias/$caseId"
                       params={{ caseId: c.id }}
                       search={{ tab: "jurismind" }}
                     >
-                      <BrainCircuit className="mr-1 h-4 w-4" /> Analisar
+                      <BrainCircuit className="mr-2 h-4 w-4" /> Analisar
                     </Link>
                   </Button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
 
+      {/* Documentos recentes (não é um feed de auditoria) */}
+      {data && data.recentDocuments.length > 0 ? (
         <section className="space-y-3">
           <div className="flex items-center justify-between gap-2">
-            <h2 className="font-heading text-base font-medium">Documentos</h2>
-            <Button variant="ghost" size="sm" asChild>
-              <Link to="/documentos">Ver biblioteca</Link>
+            <h2 className="font-heading text-section-title">Documentos recentes</h2>
+            <Button variant="ghost" size="sm" className="min-h-10" asChild>
+              <Link to="/biblioteca">Ver biblioteca</Link>
             </Button>
           </div>
-          <ul className="divide-y divide-black/5 border-y border-black/5 dark:divide-white/10 dark:border-white/10">
-            <li className="flex items-center gap-3 py-3 text-sm">
-              <Loader2 className="h-4 w-4 shrink-0 text-muted-foreground" />
-              <span className="flex-1">Em processamento</span>
-              <span className="font-medium tabular-nums">{processingDocs.length}</span>
-            </li>
-            <li className="flex items-center gap-3 py-3 text-sm">
-              <AlertTriangle className="h-4 w-4 shrink-0 text-destructive" />
-              <span className="flex-1">Com falha no processamento</span>
-              <span className="font-medium tabular-nums">{failedDocs.length}</span>
-            </li>
+          <ul className="divide-y divide-border rounded-lg border border-border bg-card">
+            {data.recentDocuments.map((d) => (
+              <li key={d.id} className="flex flex-wrap items-center gap-3 p-4">
+                {d.status === "ready" ? (
+                  <CheckCircle2 className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+                ) : (
+                  <FileText className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+                )}
+                <div className="min-w-0 flex-1">
+                  <p className="text-base font-medium [overflow-wrap:anywhere]">{d.filename}</p>
+                  <p className="text-sm text-muted-foreground [overflow-wrap:anywhere]">
+                    {d.authorName ? `${d.authorName} · ` : ""}
+                    {d.caseTitle ? `${normalizeTitle(d.caseTitle)} · ` : ""}
+                    {dateLabel(d.createdAt)}
+                  </p>
+                </div>
+                {d.caseId ? (
+                  <Button size="sm" variant="ghost" className="min-h-10" asChild>
+                    <Link
+                      to="/assistencias/$caseId"
+                      params={{ caseId: d.caseId }}
+                      search={{ tab: "documentos" }}
+                    >
+                      Abrir
+                    </Link>
+                  </Button>
+                ) : null}
+              </li>
+            ))}
           </ul>
-          {failedDocs.length > 0 && (
-            <p className="text-sm text-muted-foreground">
-              Abra o caso do documento para reprocessar os arquivos com falha.
-            </p>
-          )}
         </section>
-
-        <section className="space-y-3 lg:col-span-2">
-          <h2 className="font-heading text-base font-medium">Atividades recentes</h2>
-          {recentDocs.length === 0 ? (
-            <p className="py-3 text-sm text-muted-foreground">
-              Nenhuma atividade registrada ainda.
-            </p>
-          ) : (
-            <ul className="divide-y divide-black/5 border-y border-black/5 dark:divide-white/10 dark:border-white/10">
-              {recentDocs.map((d) => (
-                <li key={d.id} className="flex flex-wrap items-center gap-3 py-3 text-sm">
-                  <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
-                  <span className="min-w-0 flex-1 break-words">
-                    {d.filename}
-                    {caseTitle(d.case_id) ? (
-                      <span className="text-muted-foreground"> — {caseTitle(d.case_id)}</span>
-                    ) : null}
-                  </span>
-                  <span className="text-muted-foreground">
-                    {new Date(d.created_at).toLocaleDateString("pt-BR")}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
-      </div>
+      ) : null}
     </div>
+  );
+}
+
+function Indicator({
+  label,
+  value,
+  icon: Icon,
+  tone,
+  onClick,
+  to,
+  search,
+}: {
+  label: string;
+  value: number;
+  icon: typeof CalendarClock;
+  tone: "neutral" | "attention" | "danger";
+  onClick?: () => void;
+  to?: "/tarefas";
+  search?: { tab: "tarefas" };
+}) {
+  const content = (
+    <>
+      <span className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+        <Icon className="h-4 w-4" aria-hidden />
+        {label}
+      </span>
+      <span
+        className={cn(
+          "font-heading text-2xl leading-none",
+          tone === "danger" ? "text-destructive" : "text-foreground",
+        )}
+      >
+        {value}
+      </span>
+    </>
+  );
+  const classes = cn(
+    "flex min-h-[76px] w-full flex-col items-start justify-between gap-2 rounded-lg border p-4 text-left transition-colors",
+    tone === "danger"
+      ? "border-destructive/40 bg-destructive/5"
+      : tone === "attention"
+        ? "border-primary/40 bg-primary/5"
+        : "border-border bg-card hover:bg-muted/50",
+  );
+
+  if (to) {
+    return (
+      <Link to={to} search={search} className={classes} aria-label={`${label}: ${value}`}>
+        {content}
+      </Link>
+    );
+  }
+  return (
+    <button type="button" onClick={onClick} className={classes} aria-label={`${label}: ${value}`}>
+      {content}
+    </button>
+  );
+}
+
+/**
+ * "Enviar documentos" precisa saber para qual caso o arquivo vai.
+ * Aqui o usuário escolhe o caso e segue para a aba real de documentos dele.
+ */
+function UploadCasePicker({ cases }: { cases: Array<{ id: string; title: string }> }) {
+  const [open, setOpen] = useState(false);
+  const [term, setTerm] = useState("");
+  const filtered = cases.filter((c) =>
+    c.title.toLocaleLowerCase("pt-BR").includes(term.toLocaleLowerCase("pt-BR")),
+  );
+
+  return (
+    <>
+      <Button variant="outline" size="sm" className="min-h-10" onClick={() => setOpen(true)}>
+        <Upload className="mr-2 h-4 w-4" /> Enviar documentos
+      </Button>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Enviar documentos</DialogTitle>
+            <DialogDescription>
+              Escolha o caso que vai receber os arquivos. Você segue direto para o envio.
+            </DialogDescription>
+          </DialogHeader>
+          {cases.length === 0 ? (
+            <div className="space-y-3">
+              <p className="text-base text-muted-foreground">
+                Você ainda não tem casos. Crie um caso para enviar documentos.
+              </p>
+              <Button className="min-h-10" asChild onClick={() => setOpen(false)}>
+                <Link to="/assistencias/nova">
+                  <Plus className="mr-2 h-4 w-4" /> Criar novo caso
+                </Link>
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <Input
+                value={term}
+                onChange={(e) => setTerm(e.target.value)}
+                placeholder="Buscar caso pelo nome"
+                aria-label="Buscar caso"
+              />
+              <ul className="max-h-72 divide-y divide-border overflow-y-auto rounded-md border border-border">
+                {filtered.slice(0, 40).map((c) => (
+                  <li key={c.id}>
+                    <Link
+                      to="/assistencias/$caseId"
+                      params={{ caseId: c.id }}
+                      search={{ tab: "documentos" }}
+                      onClick={() => setOpen(false)}
+                      className="block min-h-11 px-3 py-3 text-base hover:bg-muted"
+                    >
+                      {normalizeTitle(c.title)}
+                    </Link>
+                  </li>
+                ))}
+                {filtered.length === 0 ? (
+                  <li className="px-3 py-3 text-base text-muted-foreground">
+                    Nenhum caso encontrado.
+                  </li>
+                ) : null}
+              </ul>
+              <Button variant="outline" className="min-h-10 w-full" asChild onClick={() => setOpen(false)}>
+                <Link to="/assistencias/nova">
+                  <Plus className="mr-2 h-4 w-4" /> Criar novo caso
+                </Link>
+              </Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
