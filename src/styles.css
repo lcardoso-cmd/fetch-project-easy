@@ -98,6 +98,12 @@
   --color-surface-2: var(--surface-2);
   --color-surface-3: var(--surface-3);
 
+  /* Cabeçalho do app: nível de superfície próprio, entre canvas e cartão. */
+  --color-header: var(--header);
+
+  /* Terceiro nível de texto: metadados legíveis, sem competir com títulos. */
+  --color-meta-foreground: var(--meta-foreground);
+
 }
 
 
@@ -115,6 +121,8 @@
   --surface-1: oklch(1 0 0);                   /* #FFFFFF */
   --surface-2: oklch(0.961 0.007 268.5);       /* #F0F2F7 */
   --surface-3: oklch(0.932 0.010 268.5);       /* #E7EAF2 */
+  --header: oklch(1 0 0);                      /* cabeçalho branco no claro */
+  --meta-foreground: oklch(0.545 0.026 257.8); /* metadados no claro */
 
 
 
@@ -161,45 +169,49 @@
 
 
 .dark {
-  /* Dark mode institucional — sistema cromático único:
-   * base = navy da marca #000038; profundidade criada apenas com
-   * transparências neutras de branco (nunca novos azuis);
-   * ciano exclusivo para CTA, item ativo, foco e seleção. */
-  --surface-1: color-mix(in oklab, #ffffff 4%, var(--brand-navy));   /* blocos */
-  --surface-2: color-mix(in oklab, #ffffff 6%, var(--brand-navy));   /* elevado */
-  --surface-3: color-mix(in oklab, #ffffff 10%, var(--brand-navy));  /* hover */
+  /* Dark mode institucional — o navy #000038 é a cor da marca (barra lateral),
+   * não o preenchimento de toda a tela. O conteúdo vive sobre grafite quase
+   * preto, de cromaticidade baixa, com três níveis reais de superfície.
+   * Ciano exclusivo para CTA, foco, seleção e marcador ativo. */
+  --surface-1: oklch(0.258 0.011 262);   /* seções, colunas, cabeçalho */
+  --surface-2: oklch(0.305 0.012 262);   /* cartões, campos, tabelas */
+  --surface-3: oklch(0.365 0.013 262);   /* hover, popovers, aba ativa */
 
-  --background: var(--brand-navy);                    /* #000038 */
-  --foreground: #ffffff;
-  --card: var(--surface-1);
-  --card-foreground: #ffffff;
-  --popover: var(--surface-2);
-  --popover-foreground: #ffffff;
+  --background: oklch(0.212 0.009 262);  /* canvas grafite */
+  --foreground: oklch(0.975 0.004 262);  /* texto principal quase branco */
+  --meta-foreground: oklch(0.720 0.010 262);  /* metadados — AA sobre s1/s2 */
+  --header: var(--surface-1);
+  --card: var(--surface-2);
+  --card-foreground: var(--foreground);
+  --popover: var(--surface-3);
+  --popover-foreground: var(--foreground);
   --primary: var(--brand-cyan);
   --primary-foreground: var(--brand-navy);
   --secondary: var(--surface-2);
-  --secondary-foreground: #ffffff;
+  --secondary-foreground: var(--foreground);
   --muted: var(--surface-1);
-  --muted-foreground: oklch(1 0 0 / 78%);             /* AA sobre navy */
+  --muted-foreground: oklch(0.775 0.010 262);   /* AA sobre surface-1/2 */
   --accent: var(--surface-3);
-  --accent-foreground: #ffffff;
-  --destructive: oklch(0.66 0.19 25);
-  --destructive-foreground: #ffffff;
-  --border: oklch(1 0 0 / 14%);
-  --input: oklch(1 0 0 / 16%);
+  --accent-foreground: var(--foreground);
+  /* Vermelho legível como texto sobre grafite (AA) e como fundo com texto escuro. */
+  --destructive: oklch(0.72 0.160 25);
+  --destructive-foreground: oklch(0.18 0.010 262);
+  --border: oklch(0.440 0.013 262);      /* borda visível, não fantasma */
+  --input: oklch(0.500 0.015 262);       /* campos parecem campos */
   --ring: var(--brand-cyan);
   --chart-1: var(--brand-cyan);
-  --chart-2: oklch(1 0 0 / 72%);
-  --chart-3: oklch(0.80 0.10 200);
-  --chart-4: oklch(1 0 0 / 45%);
-  --chart-5: oklch(0.70 0.12 210);
+  --chart-2: oklch(0.80 0.008 262);
+  --chart-3: oklch(0.72 0.09 205);
+  --chart-4: oklch(0.55 0.010 262);
+  --chart-5: oklch(0.62 0.07 210);
+  /* Barra lateral: navy institucional, distinto do canvas grafite. */
   --sidebar: var(--brand-navy);
-  --sidebar-foreground: #ffffff;
+  --sidebar-foreground: oklch(1 0 0);
   --sidebar-primary: var(--brand-cyan);
   --sidebar-primary-foreground: var(--brand-navy);
-  --sidebar-accent: var(--surface-3);
-  --sidebar-accent-foreground: #ffffff;
-  --sidebar-border: oklch(1 0 0 / 14%);
+  --sidebar-accent: color-mix(in oklab, #ffffff 14%, var(--brand-navy));
+  --sidebar-accent-foreground: oklch(1 0 0);
+  --sidebar-border: oklch(1 0 0 / 18%);
   --sidebar-ring: var(--brand-cyan);
 
 }

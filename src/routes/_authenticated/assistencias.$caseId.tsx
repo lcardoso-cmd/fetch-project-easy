@@ -404,7 +404,7 @@ function CaseWorkspacePage() {
           <div className="grid gap-6 lg:grid-cols-2">
             <section className="space-y-2">
               <h2 className="font-heading text-base font-medium">Dados do caso</h2>
-              <ul className="space-y-1.5 border-y border-black/5 py-3 dark:border-white/10">
+              <ul className="space-y-1.5 border-y border-border py-3 ">
                 {caseData.client_name && (
                   <CaseDataRow label="Cliente" value={caseData.client_name} />
                 )}
@@ -428,7 +428,7 @@ function CaseWorkspacePage() {
 
             <section className="space-y-2">
               <h2 className="font-heading text-base font-medium">Partes envolvidas</h2>
-              <ul className="space-y-1.5 border-y border-black/5 py-3 dark:border-white/10">
+              <ul className="space-y-1.5 border-y border-border py-3 ">
                 {parties.length === 0 ? (
                   <li className="text-sm text-muted-foreground">Nenhuma parte cadastrada.</li>
                 ) : (
@@ -505,7 +505,7 @@ function CaseWorkspacePage() {
             {tasks.length === 0 ? (
               <EmptyState icon={ClipboardCheck} title="Nenhuma tarefa para este caso" />
             ) : (
-              <ul className="divide-y divide-black/5 border-y border-black/5 dark:divide-white/10 dark:border-white/10">
+              <ul className="divide-y divide-border border-y border-border ">
                 {tasks.map((t) => (
                   <li key={t.id} className="flex items-start gap-3 py-3">
                     <Checkbox

@@ -87,7 +87,7 @@ function CasesPage() {
           }
         />
       ) : (
-        <ul className="divide-y divide-black/5 dark:divide-white/10 border-y border-black/5 dark:border-white/10">
+        <ul className="divide-y divide-border border-y border-border">
           {filtered.map((caseItem) => {
             return (
               <li key={caseItem.id} className="group flex items-center gap-3 py-3">

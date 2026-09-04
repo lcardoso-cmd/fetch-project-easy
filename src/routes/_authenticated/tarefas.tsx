@@ -250,7 +250,7 @@ function MyWorkPage() {
     items.length === 0 ? (
       <EmptyState icon={ClipboardCheck} title={empty} />
     ) : (
-      <ul className="divide-y divide-black/5 border-y border-black/5 dark:divide-white/10 dark:border-white/10">
+      <ul className="divide-y divide-border border-y border-border ">
         {items.map((t) => {
           const title = caseTitle(t.case_id);
           const overdue = t.due_date && new Date(t.due_date) < now && t.status !== "done";
@@ -348,7 +348,7 @@ function MyWorkPage() {
         <div className="space-y-1.5">
           <Label className="text-sm">Caso</Label>
           <Select value={caseFilter} onValueChange={setCaseFilter}>
-            <SelectTrigger>
+            <SelectTrigger aria-label="Filtrar por caso">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -364,7 +364,7 @@ function MyWorkPage() {
         <div className="space-y-1.5">
           <Label className="text-sm">Responsável</Label>
           <Select value={assigneeFilter} onValueChange={setAssigneeFilter}>
-            <SelectTrigger>
+            <SelectTrigger aria-label="Filtrar por responsável">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -380,7 +380,7 @@ function MyWorkPage() {
         <div className="space-y-1.5">
           <Label className="text-sm">Período</Label>
           <Select value={period} onValueChange={(v) => setPeriod(v as typeof period)}>
-            <SelectTrigger>
+            <SelectTrigger aria-label="Filtrar por período">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -398,7 +398,7 @@ function MyWorkPage() {
             value={statusFilter}
             onValueChange={(v) => setStatusFilter(v as typeof statusFilter)}
           >
-            <SelectTrigger>
+            <SelectTrigger aria-label="Filtrar por status da tarefa">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>

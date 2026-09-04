@@ -136,7 +136,7 @@ function LibraryPage() {
         <div className="space-y-1.5">
           <Label className="text-sm">Caso</Label>
           <Select value={caseFilter} onValueChange={setCaseFilter}>
-            <SelectTrigger>
+            <SelectTrigger aria-label="Filtrar por caso">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -152,7 +152,7 @@ function LibraryPage() {
         <div className="space-y-1.5">
           <Label className="text-sm">Status</Label>
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger>
+            <SelectTrigger aria-label="Filtrar por status">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -179,7 +179,7 @@ function LibraryPage() {
           }
         />
       ) : (
-        <ul className="divide-y divide-black/5 border-y border-black/5 dark:divide-white/10 dark:border-white/10">
+        <ul className="divide-y divide-border border-y border-border ">
           {filtered.map((d) => {
             const c = caseOf(d.case_id);
             const group = statusGroup(d.processing_status);

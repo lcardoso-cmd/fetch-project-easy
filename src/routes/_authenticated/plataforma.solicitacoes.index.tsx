@@ -39,9 +39,9 @@ export const Route = createFileRoute("/_authenticated/plataforma/solicitacoes/")
 });
 
 const STATUS_COLOR: Record<B2bRequestStatus, string> = {
-  novo: "bg-blue-500/15 text-blue-700 dark:text-blue-300",
+  novo: "bg-surface-3 text-foreground",
   em_analise: "bg-amber-500/15 text-amber-700 dark:text-amber-300",
-  proposta_enviada: "bg-violet-500/15 text-violet-700 dark:text-violet-300",
+  proposta_enviada: "bg-surface-3 text-foreground",
   aceita: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300",
   recusada: "bg-rose-500/15 text-rose-700 dark:text-rose-300",
   cancelada: "bg-muted text-muted-foreground",
