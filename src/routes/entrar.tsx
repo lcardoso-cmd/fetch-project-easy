@@ -485,14 +485,17 @@ function AuthPage() {
     setError(null);
     setIsGoogleLoading(true);
     // Persiste destino para após o retorno do OAuth (roundtrip perde ?redirect=).
-    const target = safeInternalPath(search.redirect);
-    if (target && typeof window !== "undefined") {
+    const target = safeInternalPath(search.redirect) ?? "/painel";
+    if (typeof window !== "undefined") {
       sessionStorage.setItem(OAUTH_REDIRECT_KEY, target);
     }
     try {
       const result = await lovable.auth.signInWithOAuth("google", {
-        redirect_uri: window.location.origin,
+        // Volta para a própria página de login (rota pública): o efeito de
+        // sessão leva o usuário ao painel em vez de deixá-lo na homepage.
+        redirect_uri: `${window.location.origin}/entrar`,
       });
+
       if (result.error) {
         const { title, description } = describeGoogleError(result.error);
         setError(description);
