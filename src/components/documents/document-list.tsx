@@ -315,45 +315,50 @@ function StatusCell({
       )}
 
 
-      {inProgress && (
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-7 text-xs text-muted-foreground hover:text-destructive"
-          onClick={onCancel}
-          disabled={cancelling}
-          aria-label="Cancelar a leitura deste documento"
-        >
-          {cancelling ? (
-            <Loader2 className="mr-1 h-3 w-3 animate-spin" />
-          ) : (
-            <XCircle className="mr-1 h-3 w-3" />
+      {(inProgress || canForce || status === "cancelled") && (
+        <div className="flex flex-wrap items-center gap-2">
+          {inProgress && (
+            <ConfirmActionButton
+              variant="ghost"
+              className="h-7 text-xs text-muted-foreground hover:text-destructive"
+              icon={<XCircle className="mr-1 h-3 w-3" />}
+              label="Cancelar leitura"
+              ariaLabel="Cancelar a leitura deste documento"
+              loading={cancelling}
+              onConfirm={onCancel}
+              title="Cancelar a leitura deste documento?"
+              description="A leitura em andamento será interrompida. Os outros documentos continuam sendo lidos normalmente e você pode retomar este depois."
+              confirmLabel="Cancelar leitura"
+            />
           )}
-          Cancelar leitura
-        </Button>
+
+          {(canForce || status === "cancelled") && (
+            <ConfirmActionButton
+              variant="outline"
+              className="h-7 text-xs"
+              icon={<Play className="mr-1 h-3 w-3" />}
+              label={status === "cancelled" ? "Retomar leitura" : "Processar agora"}
+              ariaLabel={
+                status === "cancelled"
+                  ? "Retomar a leitura deste documento"
+                  : "Processar este documento agora"
+              }
+              loading={forcing}
+              disabled={isRunningNow}
+              disabledHint="Este documento já está sendo lido agora."
+              onConfirm={onForce}
+              title={
+                status === "cancelled"
+                  ? "Retomar a leitura deste documento?"
+                  : "Processar este documento agora?"
+              }
+              description="A leitura deste documento passa à frente na fila e começa imediatamente. Isso pode deixar os outros documentos um pouco mais lentos."
+              confirmLabel={status === "cancelled" ? "Retomar leitura" : "Processar agora"}
+            />
+          )}
+        </div>
       )}
 
-      {(canForce || status === "cancelled") && (
-        <Button
-          variant="outline"
-          size="sm"
-          className="h-7 text-xs"
-          onClick={onForce}
-          disabled={forcing}
-          aria-label={
-            status === "cancelled"
-              ? "Retomar a leitura deste documento"
-              : "Processar este documento agora"
-          }
-        >
-          {forcing ? (
-            <Loader2 className="mr-1 h-3 w-3 animate-spin" />
-          ) : (
-            <Play className="mr-1 h-3 w-3" />
-          )}
-          {status === "cancelled" ? "Retomar leitura" : "Processar agora"}
-        </Button>
-      )}
 
       {canRetry && (
         <Button
