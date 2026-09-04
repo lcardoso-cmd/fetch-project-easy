@@ -1,7 +1,12 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { deleteDocument } from "@/lib/documents.functions";
+import {
+  forceIndexNow,
+  listIndexJobs,
+  type IndexJobView,
+} from "@/lib/index-jobs.functions";
 import { indexDocument } from "@/lib/rag.functions";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -30,6 +35,7 @@ import {
   Eye,
   FileText,
   Loader2,
+  Play,
   RefreshCw,
   Trash2,
 } from "lucide-react";
@@ -53,18 +59,64 @@ function formatBytes(b: number | null) {
   return `${(b / Math.pow(k, i)).toFixed(1)} ${sizes[i]}`;
 }
 
+const STAGE_LABEL: Record<string, string> = {
+  download: "baixando o arquivo",
+  parse: "abrindo o arquivo",
+  extracting_text: "lendo o texto",
+  text_extraction: "lendo o texto",
+  ocr_processing: "lendo imagens (OCR)",
+  ocr: "lendo imagens (OCR)",
+  chunking: "dividindo em trechos",
+  embedding: "preparando para busca",
+  analyzing: "analisando",
+  done: "concluído",
+};
+
+/** Explica em português o que está de fato acontecendo com o documento. */
+function jobDetail(job: IndexJobView | undefined): string | null {
+  if (!job) return null;
+  if (job.status === "running") {
+    const stage = job.stage ? STAGE_LABEL[job.stage] ?? job.stage : "processando";
+    const pages = job.pages ? ` — ${job.pages} páginas` : "";
+    return job.stalled
+      ? `A leitura começou (${stage}) mas parou de responder. Use "Processar agora".`
+      : `Sendo lido agora: ${stage}${pages}.`;
+  }
+  if (job.status === "queued") {
+    if (job.queue_position === 1) return "É o próximo da fila. A leitura começa em instantes.";
+    if (job.queue_position && job.queue_position > 1)
+      return `Na fila: há ${job.queue_position - 1} documento(s) sendo lido(s) antes deste.`;
+    return "Na fila do servidor.";
+  }
+  if (job.status === "paused")
+    return "Leitura pausada por limite da IA. Verifique os créditos e tente de novo.";
+  if (job.status === "error")
+    return `Falhou após ${job.attempt_count} tentativa(s): ${
+      job.last_error_message ?? "erro no processamento"
+    }`;
+  return null;
+}
+
 function StatusCell({
   status,
+  job,
   onRetry,
   retrying,
+  onForce,
+  forcing,
 }: {
   status: string;
+  job?: IndexJobView;
   onRetry: () => void;
   retrying: boolean;
+  onForce: () => void;
+  forcing: boolean;
 }) {
-  const isError = status.startsWith("error");
+  const isError = status.startsWith("error") || job?.status === "error" || job?.status === "paused";
   const isEmpty = status === "empty";
   const canRetry = isError || isEmpty;
+  const detail = jobDetail(job);
+  const canForce = status !== "ready" && !isEmpty;
   const map: Record<
     string,
     { icon: typeof Clock; color: string; label: string; hint: string }
@@ -148,9 +200,27 @@ function StatusCell({
         </Tooltip>
       </TooltipProvider>
       {status !== "ready" && (
-        <span className="max-w-[220px] text-[11px] leading-tight text-muted-foreground">
-          {info.hint}
+        <span className="max-w-[240px] text-xs leading-snug text-muted-foreground">
+          {detail ?? info.hint}
         </span>
+      )}
+
+      {canForce && (
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-7 text-xs"
+          onClick={onForce}
+          disabled={forcing}
+          aria-label="Processar este documento agora"
+        >
+          {forcing ? (
+            <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+          ) : (
+            <Play className="mr-1 h-3 w-3" />
+          )}
+          Processar agora
+        </Button>
       )}
 
       {canRetry && (
@@ -192,8 +262,47 @@ export function DocumentList({
   const queryClient = useQueryClient();
   const deleteFn = useServerFn(deleteDocument);
   const indexFn = useServerFn(indexDocument);
+  const jobsFn = useServerFn(listIndexJobs);
+  const forceFn = useServerFn(forceIndexNow);
   const [retryingId, setRetryingId] = useState<string | null>(null);
   const [visionId, setVisionId] = useState<string | null>(null);
+  const [forcingId, setForcingId] = useState<string | null>(null);
+
+  const pending = documents.some((d) => d.processing_status !== "ready");
+  const jobsQuery = useQuery({
+    queryKey: ["index-jobs", caseId],
+    queryFn: () => jobsFn({ data: { case_id: caseId } }),
+    enabled: documents.length > 0,
+    refetchInterval: pending ? 6_000 : false,
+  });
+  const jobs = new Map(
+    (jobsQuery.data?.jobs ?? []).map((j) => [j.document_id, j] as const),
+  );
+
+  // Cada leitura do andamento também atualiza a lista de documentos.
+  const jobsSignature = (jobsQuery.data?.jobs ?? [])
+    .map((j) => `${j.document_id}:${j.status}:${j.stage ?? ""}`)
+    .join("|");
+  useEffect(() => {
+    if (!jobsSignature) return;
+    void queryClient.invalidateQueries({ queryKey: ["documents", caseId] });
+  }, [jobsSignature, caseId, queryClient]);
+
+  const onForce = async (id: string) => {
+    setForcingId(id);
+    try {
+      await forceFn({ data: { document_id: id } });
+      toast.success("Leitura reiniciada agora — o andamento aparece aqui.");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : String(e));
+    } finally {
+      setForcingId(null);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["documents", caseId] }),
+        queryClient.invalidateQueries({ queryKey: ["index-jobs", caseId] }),
+      ]);
+    }
+  };
 
   const onRetry = async (id: string) => {
     setRetryingId(id);
@@ -336,8 +445,11 @@ export function DocumentList({
                       <TableCell>
                         <StatusCell
                           status={d.processing_status}
+                          job={jobs.get(d.id)}
                           onRetry={() => onRetry(d.id)}
                           retrying={retryingId === d.id}
+                          onForce={() => onForce(d.id)}
+                          forcing={forcingId === d.id}
                         />
                       </TableCell>
                       <TableCell>
