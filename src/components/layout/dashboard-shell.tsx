@@ -946,12 +946,13 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
             </div>
           </header>
 
-          <main className="flex-1 overflow-y-auto">
+          <main className="flex-1 overflow-y-auto lg:pr-14">
             <div className="mx-auto w-full max-w-[1600px] px-4 py-6 md:px-6 lg:px-10 lg:py-8">
               {children}
             </div>
           </main>
         </div>
+        <TeamChatDock />
       </div>
     </TooltipProvider>
   );
