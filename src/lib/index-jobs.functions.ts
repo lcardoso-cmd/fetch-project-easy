@@ -149,3 +149,46 @@ export const forceIndexNow = createServerFn({ method: "POST" })
 
     return { ok: true as const };
   });
+
+/**
+ * Cancela a leitura de UM documento, sem tocar nos outros da fila.
+ *
+ * Marca o trabalho como cancelado; o processador respeita esse sinal na
+ * próxima etapa e para apenas esse documento. O arquivo continua no caso e
+ * pode ser reprocessado depois com "Processar agora".
+ */
+export const cancelIndexJob = createServerFn({ method: "POST" })
+  .middleware([requireOrg])
+  .inputValidator((i: unknown) => z.object({ document_id: z.string().uuid() }).parse(i))
+  .handler(async ({ data, context }) => {
+    const { data: doc } = await context.supabase
+      .from("documents")
+      .select("id")
+      .eq("id", data.document_id)
+      .eq("organization_id", context.organizationId)
+      .maybeSingle();
+    if (!doc) throw new Error("Documento não encontrado");
+
+    await context.supabase
+      .from("document_index_jobs")
+      .update({
+        status: "cancelled",
+        locked_by: null,
+        locked_at: null,
+        finished_at: new Date().toISOString(),
+        last_error_code: "cancelled_by_user",
+        last_error_message: "Leitura cancelada pelo usuário.",
+      })
+      .eq("document_id", data.document_id)
+      .eq("organization_id", context.organizationId)
+      .in("status", ["queued", "running", "error", "paused"]);
+
+    await context.supabase
+      .from("documents")
+      .update({ processing_status: "cancelled" })
+      .eq("id", data.document_id)
+      .eq("organization_id", context.organizationId)
+      .neq("processing_status", "ready");
+
+    return { ok: true as const };
+  });
