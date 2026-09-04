@@ -136,7 +136,7 @@ function LibraryPage() {
         <div className="space-y-1.5">
           <Label className="text-sm">Caso</Label>
           <Select value={caseFilter} onValueChange={setCaseFilter}>
-            <SelectTrigger>
+            <SelectTrigger aria-label="Filtrar por caso">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -152,7 +152,7 @@ function LibraryPage() {
         <div className="space-y-1.5">
           <Label className="text-sm">Status</Label>
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger>
+            <SelectTrigger aria-label="Filtrar por status">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
