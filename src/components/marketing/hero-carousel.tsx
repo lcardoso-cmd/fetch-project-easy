@@ -260,6 +260,7 @@ const SLIDES: Slide[] = [
     title: "Uma pergunta, uma resposta com fonte",
     href: "#entregas",
     visual: <CaseConsoleVisual />,
+    heroSlot: true,
   },
   {
     id: "fluxo",
@@ -267,6 +268,9 @@ const SLIDES: Slide[] = [
     title: "Localizar, organizar, produzir, apresentar, conduzir",
     href: "#fluxo",
     visual: <FlowVisual />,
+    subtitle: "Do documento ao prazo, tudo dentro do mesmo caso — sem pular de ferramenta em ferramenta.",
+    ctaLabel: "Ver o fluxo completo",
+    ctaHref: "#fluxo",
   },
   {
     id: "entregas",
@@ -274,6 +278,9 @@ const SLIDES: Slide[] = [
     title: "Análise, peça, planilha e apresentação",
     href: "#entregas",
     visual: <DeliverablesVisual />,
+    subtitle: "Entregáveis prontos em Word, Excel e slides 16:9 — gerados a partir dos documentos do próprio caso.",
+    ctaLabel: "Ver o que o JurisMind entrega",
+    ctaHref: "#entregas",
   },
   {
     id: "inteligencia",
@@ -281,6 +288,9 @@ const SLIDES: Slide[] = [
     title: "Respostas ancoradas nos seus documentos",
     href: "#inteligencia",
     visual: <IntelligenceVisual />,
+    subtitle: "Cada afirmação abre o trecho exato que a sustenta. Sem fonte, sem afirmação.",
+    ctaLabel: "Ver como a IA trabalha",
+    ctaHref: "#inteligencia",
   },
   {
     id: "jurisprudencia",
@@ -288,6 +298,9 @@ const SLIDES: Slide[] = [
     title: "Jurisprudência de tribunais, não de palpite",
     href: "#jurisprudencia",
     visual: <JurisprudenceVisual />,
+    subtitle: "Referências oficiais de STF, STJ e TST — sempre separadas dos documentos dos seus autos.",
+    ctaLabel: "Ver as fontes oficiais",
+    ctaHref: "#jurisprudencia",
   },
   {
     id: "governanca",
@@ -295,6 +308,9 @@ const SLIDES: Slide[] = [
     title: "Controle, custo e rastreabilidade",
     href: "#plataforma",
     visual: <GovernanceVisual />,
+    subtitle: "Acesso por caso, consumo de IA visível por usuário e trilha de auditoria de cada resposta.",
+    ctaLabel: "Conhecer a plataforma",
+    ctaHref: "#plataforma",
   },
 ];
 
