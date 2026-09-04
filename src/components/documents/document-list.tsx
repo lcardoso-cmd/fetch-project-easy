@@ -168,6 +168,7 @@ function StatusCell({
     !status.startsWith("error") &&
     job?.status !== "error";
   const pct = readingPercent(status, job);
+  const stageInfo = describeReadingStage(job, status);
 
   const map: Record<
     string,
