@@ -56,7 +56,7 @@ export function DeckDownloadButton({
       ) : (
         <Download className="mr-2 h-4 w-4" aria-hidden />
       )}
-      {loading ? "Gerando apresentação…" : label}
+      {loading ? "Baixando apresentação…" : label}
     </Button>
   );
 }
