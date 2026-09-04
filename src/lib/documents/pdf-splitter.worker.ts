@@ -58,10 +58,13 @@ self.onmessage = async (event: MessageEvent<SplitterWorkerInput>) => {
       originalPageCount,
       parts: parts.map((p) => ({ ...p, bytes: toArrayBuffer(p.bytes) })),
     };
-    self.postMessage(
+    (self as unknown as {
+      postMessage: (msg: unknown, transfer: Transferable[]) => void;
+    }).postMessage(
       payload,
       payload.parts.map((p) => p.bytes),
     );
+
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     self.postMessage({ ok: false, message } satisfies SplitterWorkerError);
