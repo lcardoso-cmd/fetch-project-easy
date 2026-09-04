@@ -463,7 +463,11 @@ export function HeroCarousel({ children }: { children?: ReactNode }) {
 
             {/* Copy do banner — canto inferior esquerdo */}
             <div className="absolute inset-0 mx-auto flex w-full max-w-6xl flex-col justify-end px-4 pb-16 pt-24 lg:justify-center lg:pb-24">
-              {s.heroSlot ? children : <SlideCopy slide={s} active={i === index} />}
+              {s.heroSlot ? (
+                <div className="max-w-2xl lg:max-w-xl">{children}</div>
+              ) : (
+                <SlideCopy slide={s} active={i === index} />
+              )}
             </div>
           </div>
         ))}
