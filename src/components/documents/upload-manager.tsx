@@ -157,7 +157,15 @@ export function UploadManagerProvider({ children }: { children: ReactNode }) {
   const cancelledRef = useRef<Set<string>>(new Set());
   const runningRef = useRef(false);
   const queueRef = useRef<
-    { file: File; itemId: string; caseId: string; hash?: string; existing?: { id: string; filename: string }[] }[]
+    {
+      file: File | Blob;
+      filename: string;
+      itemId: string;
+      caseId: string;
+      hash?: string;
+      existing?: { id: string; filename: string }[];
+      partMeta?: Omit<PartMeta, "blob"> & { splitGroupId: string };
+    }[]
   >([]);
 
   const patchItem = useCallback(
