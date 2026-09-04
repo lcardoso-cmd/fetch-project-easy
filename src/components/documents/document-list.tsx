@@ -70,6 +70,11 @@ function formatBytes(b: number | null) {
   return `${(b / Math.pow(k, i)).toFixed(1)} ${sizes[i]}`;
 }
 
+/** Documento já consultável pelo JurisMind (inclui leitura parcial). */
+function isDocUsable(status: string | null | undefined): boolean {
+  return status === "ready" || Boolean(status?.startsWith("partial"));
+}
+
 const STAGE_LABEL: Record<string, string> = {
   download: "baixando o arquivo",
   parse: "abrindo o arquivo",
@@ -398,7 +403,7 @@ export function DocumentList({
   const [cancellingId, setCancellingId] = useState<string | null>(null);
 
   const pending = documents.some(
-    (d) => d.processing_status !== "ready" && d.processing_status !== "cancelled",
+    (d) => !isDocUsable(d.processing_status) && d.processing_status !== "cancelled",
   );
   const jobsQuery = useQuery({
     queryKey: ["index-jobs", caseId],
@@ -503,7 +508,7 @@ export function DocumentList({
     }
   };
 
-  const readyCount = documents.filter((d) => d.processing_status === "ready").length;
+  const readyCount = documents.filter((d) => isDocUsable(d.processing_status)).length;
 
   return (
     <Card>
@@ -565,7 +570,7 @@ export function DocumentList({
               </TableHeader>
               <TableBody>
                 {documents.map((d) => {
-                  const ready = d.processing_status === "ready";
+                  const ready = isDocUsable(d.processing_status);
                   return (
                     <TableRow key={d.id}>
                       <TableCell>
