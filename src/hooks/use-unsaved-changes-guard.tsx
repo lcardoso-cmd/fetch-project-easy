@@ -20,6 +20,7 @@ type Options = {
   message?: string;
   /** Rótulo do botão que confirma sair perdendo as alterações. */
   confirmLabel?: string;
+  onConfirm?: () => void;
   /** Rótulo do botão que permanece na página. */
   cancelLabel?: string;
 };
@@ -43,6 +44,7 @@ export function useUnsavedChangesGuard({
   message = DEFAULT_MESSAGE,
   confirmLabel = DEFAULT_CONFIRM,
   cancelLabel = DEFAULT_CANCEL,
+  onConfirm,
 }: Options): { dialog: ReactNode } {
   // Fechar aba / recarregar página / navegar para outra origem — só o nativo funciona.
   useEffect(() => {
@@ -87,6 +89,7 @@ export function useUnsavedChangesGuard({
           </AlertDialogCancel>
           <AlertDialogAction
             onClick={() => {
+              onConfirm?.();
               if (blocker.status === "blocked") blocker.proceed();
             }}
           >
