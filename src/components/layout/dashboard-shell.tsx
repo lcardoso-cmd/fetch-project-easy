@@ -4,7 +4,7 @@ import { JurisMindMark, JURISMIND_CONTEXT } from "@/components/brand/jurismind-m
 import { useAuth } from "@/hooks/use-auth";
 import { UserMenu } from "@/components/layout/user-menu";
 import { useProfile } from "@/hooks/use-profile";
-import { useAccess, VIEW_AS_ROLES } from "@/hooks/use-access";
+import { useAccess } from "@/hooks/use-access";
 import type { OrgPermission, OrgRole, PlatformRole } from "@/lib/org-permissions";
 import {
   NAV_ENTRIES,
@@ -773,7 +773,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
         </aside>
 
         {/* Main column */}
-        <div className={cn("flex flex-1 flex-col min-w-0", simulation && "mt-6")}>
+        <div className="flex flex-1 flex-col min-w-0">
           <header className="flex h-14 items-center justify-between gap-3 border-b bg-card/95 px-3 lg:hidden">
             <div className="flex min-w-0 flex-1 items-center gap-2">
               <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
@@ -851,7 +851,6 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
               </nav>
             </div>
             <div className="flex shrink-0 items-center gap-2">
-              {isSuperAdmin && <ViewAsSwitcher />}
               <ConversationsDrawer />
               <NotificationBell />
               <UserMenu />
