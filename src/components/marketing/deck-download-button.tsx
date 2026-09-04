@@ -2,9 +2,10 @@ import { useState } from "react";
 import { Download, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import deckAsset from "@/assets/jurismind-apresentacao.pdf.asset.json";
 
-const DECK_URL = "/api/public/deck";
-const FILE_NAME = "JurisMind-Apresentacao.pdf";
+const DECK_URL = deckAsset.url;
+const FILE_NAME = "JurisMind-Apresentacao-Executiva.pdf";
 
 export function DeckDownloadButton({
   className,
@@ -55,7 +56,7 @@ export function DeckDownloadButton({
       ) : (
         <Download className="mr-2 h-4 w-4" aria-hidden />
       )}
-      {loading ? "Gerando apresentação…" : label}
+      {loading ? "Baixando apresentação…" : label}
     </Button>
   );
 }
