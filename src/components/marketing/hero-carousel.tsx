@@ -390,7 +390,7 @@ export function HeroCarousel({ children }: { children?: ReactNode }) {
                 href={s.href}
                 tabIndex={i === index ? 0 : -1}
                 aria-label={s.title}
-                className="pointer-events-none block w-full max-w-xl opacity-70 outline-none transition-opacity hover:opacity-90 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-accent sm:opacity-80 lg:pointer-events-auto lg:opacity-100"
+                className="pointer-events-none block w-full max-w-xl opacity-40 outline-none transition-opacity hover:opacity-90 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-accent sm:opacity-70 lg:pointer-events-auto lg:opacity-100"
               >
                 <span className="mb-3 inline-flex items-center gap-2 rounded-full bg-brand-cyan/15 px-3 py-1 text-sm font-semibold uppercase tracking-wide text-brand-cyan">
                   <JurisMindMark size={14} context={JURISMIND_CONTEXT.inlineDark} />
@@ -405,7 +405,7 @@ export function HeroCarousel({ children }: { children?: ReactNode }) {
 
       {/* Véu de legibilidade para o texto sobreposto */}
       <div
-        className="pointer-events-none absolute inset-0 bg-gradient-to-t from-brand-navy via-brand-navy/60 to-brand-navy/20 lg:bg-gradient-to-r lg:from-brand-navy lg:via-brand-navy/75 lg:to-brand-navy/10"
+        className="pointer-events-none absolute inset-0 bg-gradient-to-t from-brand-navy via-brand-navy/85 to-brand-navy/40 lg:bg-gradient-to-r lg:from-brand-navy lg:from-30% lg:via-brand-navy/85 lg:via-60% lg:to-brand-navy/25"
         aria-hidden
       />
 
