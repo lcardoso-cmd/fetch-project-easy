@@ -98,6 +98,9 @@
   --color-surface-2: var(--surface-2);
   --color-surface-3: var(--surface-3);
 
+  /* Cabeçalho do app: nível de superfície próprio, entre canvas e cartão. */
+  --color-header: var(--header);
+
 }
 
 
