@@ -115,6 +115,19 @@ interface Msg {
   audio_blob_url?: string; // local playback for freshly sent audio
 }
 
+/** Precedente localizado em fonte oficial externa aos autos. */
+interface JurisprudenceRef {
+  ref: string;
+  court: string;
+  panel?: string | null;
+  process_number?: string | null;
+  date?: string | null;
+  title: string;
+  snippet: string;
+  url: string;
+  consulted_at: string;
+}
+
 function parseToolResult(step: ToolStep): {
   kind?: string;
   titulo?: string;
@@ -123,6 +136,11 @@ function parseToolResult(step: ToolStep): {
   title?: string;
   subtitle?: string;
   slides?: Array<{ title?: string; content?: string[] }>;
+  ok?: boolean;
+  error?: string;
+  query?: string;
+  consulted_at?: string;
+  results?: JurisprudenceRef[];
 } | null {
   try {
     return JSON.parse(step.result_json) as {
@@ -133,11 +151,17 @@ function parseToolResult(step: ToolStep): {
       title?: string;
       subtitle?: string;
       slides?: Array<{ title?: string; content?: string[] }>;
+      ok?: boolean;
+      error?: string;
+      query?: string;
+      consulted_at?: string;
+      results?: JurisprudenceRef[];
     };
   } catch {
     return null;
   }
 }
+
 
 function getGeneratedDocumentKey(step: ToolStep): string | null {
   const result = parseToolResult(step);
