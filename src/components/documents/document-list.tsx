@@ -12,6 +12,8 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Progress } from "@/components/ui/progress";
+
 import {
   Table,
   TableBody,
@@ -103,6 +105,30 @@ function jobDetail(job: IndexJobView | undefined): string | null {
   return null;
 }
 
+/** Percentual aproximado da leitura, por etapa conhecida. */
+const STAGE_PCT: Record<string, number> = {
+  download: 10,
+  parse: 20,
+  extracting_text: 35,
+  text_extraction: 35,
+  ocr_processing: 55,
+  ocr: 55,
+  chunking: 75,
+  embedding: 88,
+  analyzing: 92,
+  done: 100,
+};
+
+function readingPercent(status: string, job: IndexJobView | undefined): number | null {
+  if (status === "ready") return 100;
+  if (status.startsWith("error") || status === "empty") return null;
+  if (job?.status === "error" || job?.status === "paused") return null;
+  if (job?.status === "queued" || status === "queued" || status === "pending") return 5;
+  const stage = job?.stage ?? status;
+  return STAGE_PCT[stage] ?? 30;
+}
+
+
 function StatusCell({
   status,
   job,
@@ -123,6 +149,8 @@ function StatusCell({
   const canRetry = isError || isEmpty;
   const detail = jobDetail(job);
   const canForce = status !== "ready" && !isEmpty;
+  const pct = readingPercent(status, job);
+
   const map: Record<
     string,
     { icon: typeof Clock; color: string; label: string; hint: string }
@@ -205,11 +233,22 @@ function StatusCell({
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
+      {status !== "ready" && pct !== null && (
+        <div className="w-full max-w-[240px]">
+          <Progress
+            value={pct}
+            className="h-1.5"
+            aria-label={`Progresso da leitura: ${pct}%`}
+          />
+          <span className="mt-1 block text-[11px] text-muted-foreground">{pct}%</span>
+        </div>
+      )}
       {status !== "ready" && (
         <span className="max-w-[240px] text-xs leading-snug text-muted-foreground">
           {detail ?? info.hint}
         </span>
       )}
+
 
       {canForce && (
         <Button
