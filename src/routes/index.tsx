@@ -237,13 +237,13 @@ function LandingPage() {
               Plataforma
             </a>
           </nav>
-          <div className="flex items-center gap-2">
+          <div className="flex shrink-0 items-center gap-2">
             {user ? (
               <OpenDashboardButton size="default" label="Abrir meu painel" />
             ) : (
               <>
                 <LoginButton />
-                <TrialSignupButton size="default" />
+                <TrialSignupButton size="default" className="hidden sm:inline-flex" />
               </>
             )}
           </div>
