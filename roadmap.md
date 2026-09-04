@@ -75,9 +75,9 @@ Fonte da verdade: organização é o cliente do SaaS. Sem migração gradual, se
 - Verificado de ponta a ponta em ambiente real: fila → leitura → extração dos dados do processo → indexação (status "pronto").
 
 ## Correção incremental — intake de documentos grandes
-- [ ] Acionamento confiável do processador após upload e retomada de itens parados.
-- [ ] Extração rápida inicial + complementação de até 20 páginas com resultado parcial persistido.
-- [ ] Preenchimento progressivo sem sobrescrever edições manuais.
-- [ ] Indicador global minimizado com retomada do cadastro.
-- [ ] Cancelamento real com descarte do arquivo e limpeza do rascunho.
+- [x] Acionamento confiável do processador após upload e retomada de itens parados.
+- [x] Extração rápida inicial + complementação de até 20 páginas com resultado parcial persistido.
+- [x] Preenchimento progressivo sem sobrescrever edições manuais.
+- [x] Indicador global minimizado com retomada do cadastro.
+- [x] Cancelamento real com descarte do arquivo e limpeza do rascunho.
 - [ ] Validação real do PDF grande atualmente em fila.
