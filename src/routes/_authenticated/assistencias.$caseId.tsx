@@ -27,7 +27,8 @@ import { listTasks, toggleTask } from "@/lib/tasks.functions";
 import { getOrCreateCaseConversation } from "@/lib/conversations.functions";
 import { DocumentList } from "@/components/documents/document-list";
 import { CaseSummaryCard } from "@/components/cases/case-summary-card";
-import { JurisMindChat } from "@/components/chat/jurismind-chat";
+import { CaseJurisMindPanel } from "@/components/chat/case-jurismind-panel";
+import { useAccess } from "@/hooks/use-access";
 import { CaseTasksDialog } from "@/components/tasks/case-tasks-dialog";
 import { ConversationView } from "@/components/chat/conversation-view";
 import { QuesitosCard } from "@/components/cases/quesitos-card";
@@ -39,9 +40,11 @@ import { ClipboardCheck } from "lucide-react";
 import type { MatterKind } from "@/lib/practice-labels";
 import { useUnsavedChangesGuard } from "@/hooks/use-unsaved-changes-guard";
 
-const TABS = ["visao-geral", "documentos", "jurismind", "producao", "prazos", "atividade"] as const;
+const TABS = ["visao-geral", "documentos", "producao", "prazos", "atividade"] as const;
+// "jurismind" permanece aceito apenas para links antigos: abre o painel lateral.
+const LEGACY_TABS = [...TABS, "jurismind"] as const;
 
-const searchSchema = z.object({ tab: z.enum(TABS).optional() });
+const searchSchema = z.object({ tab: z.enum(LEGACY_TABS).optional() });
 
 function capitalize(str: string): string {
   return str.charAt(0).toUpperCase() + str.slice(1);
@@ -212,22 +215,38 @@ function CaseWorkspacePage() {
               </p>
             )}
           </div>
-          <Button variant="outline" size="sm" onClick={openEdit}>
-            Editar dados
-          </Button>
+          <div className="flex shrink-0 items-center gap-2">
+            {canUseAi && (
+              <Button
+                size="sm"
+                onClick={() => setAiOpen(true)}
+                className="h-10 gap-2 px-4 font-medium"
+                aria-haspopup="dialog"
+                aria-expanded={aiOpen}
+              >
+                <JurisMindMark
+                  size={20}
+                  context={JURISMIND_CONTEXT["chip-dark"]}
+                  className="shrink-0"
+                />
+                <span className="hidden sm:inline">Perguntar ao JurisMind</span>
+                <span className="sm:hidden">JurisMind</span>
+              </Button>
+            )}
+            <Button variant="outline" size="sm" onClick={openEdit} className="h-10">
+              Editar dados
+            </Button>
+          </div>
         </div>
       </header>
 
-      <Tabs defaultValue={tab ?? "visao-geral"} className="space-y-4">
+      <Tabs defaultValue={tab && tab !== "jurismind" ? tab : "visao-geral"} className="space-y-4">
         <TabsList className="flex-wrap">
           <TabsTrigger value="visao-geral" className="text-sm">
             Visão geral
           </TabsTrigger>
           <TabsTrigger value="documentos" className="text-sm">
             Documentos
-          </TabsTrigger>
-          <TabsTrigger value="jurismind" className="text-sm">
-            JurisMind AI
           </TabsTrigger>
           <TabsTrigger value="producao" className="text-sm">
             Produção
@@ -373,33 +392,6 @@ function CaseWorkspacePage() {
             onSelectAll={selectAll}
             onDeselectAll={deselectAll}
           />
-        </TabsContent>
-
-        {/* ─────────── JurisMind AI ─────────── */}
-        <TabsContent value="jurismind">
-          <div className="h-[calc(100svh-18rem)] min-h-[32rem] overflow-hidden rounded-lg border">
-            <JurisMindChat
-              caseId={caseId}
-              caseInfo={{
-                title: caseData.title,
-                client_name: caseData.client_name,
-                status: caseData.status,
-                case_number: caseData.case_number,
-                case_type: caseData.case_type,
-                jurisdiction: caseData.jurisdiction,
-                parties,
-                represented_party: (caseData.represented_party ?? null) as {
-                  role: string;
-                  name: string;
-                } | null,
-              }}
-              documents={docs}
-              selectedDocIds={selectedDocIds}
-              onToggleSelect={toggleSelect}
-              onSelectAll={selectAll}
-              onDeselectAll={deselectAll}
-            />
-          </div>
         </TabsContent>
 
         {/* ─────────── Produção ─────────── */}
