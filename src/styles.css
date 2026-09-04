@@ -118,6 +118,7 @@
   --surface-1: oklch(1 0 0);                   /* #FFFFFF */
   --surface-2: oklch(0.961 0.007 268.5);       /* #F0F2F7 */
   --surface-3: oklch(0.932 0.010 268.5);       /* #E7EAF2 */
+  --header: oklch(1 0 0);                      /* cabeçalho branco no claro */
 
 
 
