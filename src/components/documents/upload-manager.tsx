@@ -56,7 +56,29 @@ interface EnqueueArgs {
   files: File[];
   hashes?: Map<string, string>;
   existingDocuments?: { id: string; filename: string }[];
+  /** Páginas por parte ao dividir PDFs grandes. 0 desativa a divisão. */
+  maxPartPages?: number;
 }
+
+interface QueueEntry {
+  file: Blob;
+  filename: string;
+  fileType: string;
+  itemId: string;
+  caseId: string;
+  hash?: string;
+  existing?: { id: string; filename: string }[];
+  maxPartPages?: number;
+  /** Já é uma parte pronta (não tentar dividir de novo). */
+  partMeta?: {
+    splitGroupId: string;
+    partIndex: number;
+    partCount: number;
+    pageOffset: number;
+    pageCount: number;
+  };
+}
+
 
 interface UploadManagerValue {
   items: CaseUploadItem[];
@@ -92,13 +114,14 @@ export function isUploadActive(phase: UploadItem["phase"]) {
 
 const fileKey = (f: File) => `${f.name}|${f.size}|${f.lastModified}`;
 
-async function hashFile(file: File): Promise<string> {
-  const buf = await file.arrayBuffer();
+async function hashBlob(blob: Blob): Promise<string> {
+  const buf = await blob.arrayBuffer();
   const digest = await crypto.subtle.digest("SHA-256", buf);
   return Array.from(new Uint8Array(digest))
     .map((b) => b.toString(16).padStart(2, "0"))
     .join("");
 }
+
 
 function putWithProgress(
   signedUrl: string,
