@@ -258,13 +258,26 @@ function StatusCell({
         </Tooltip>
       </TooltipProvider>
       {status !== "ready" && status !== "cancelled" && pct !== null && (
-        <div className="w-full max-w-[240px]">
+        <div className="w-full max-w-[260px]">
           <Progress
             value={pct}
             className="h-1.5"
             aria-label={`Progresso da leitura: ${pct}%`}
           />
-          <span className="mt-1 block text-[11px] text-muted-foreground">{pct}%</span>
+          <div className="mt-1 flex items-baseline justify-between gap-2">
+            <span className="text-xs font-medium text-foreground">
+              {stageInfo?.title ?? "Processando"}
+            </span>
+            <span className="text-xs text-muted-foreground">{pct}%</span>
+          </div>
+          {stageInfo && (
+            <p className="mt-0.5 text-xs leading-snug text-muted-foreground">
+              {stageInfo.description}
+            </p>
+          )}
+          <p className="mt-0.5 text-xs text-muted-foreground" aria-live="polite">
+            {stageInfo?.eta ?? "Tempo restante ainda sendo calculado"}
+          </p>
         </div>
       )}
       {status !== "ready" && (
