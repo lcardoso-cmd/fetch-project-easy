@@ -431,6 +431,7 @@ export function JurisMindChat({
   fullscreen = false,
   threadId,
   onThreadCreated,
+  initialPrompt,
 }: {
   caseId: string;
   caseInfo: CaseSummary;
@@ -442,7 +443,10 @@ export function JurisMindChat({
   fullscreen?: boolean;
   threadId?: string | null;
   onThreadCreated?: (id: string) => void;
+  /** Pedido pré-preenchido no campo de mensagem (atalhos do caso). */
+  initialPrompt?: string | null;
 }) {
+
   // askFn removido: agora usamos SSE em /api/chat/stream (streaming token-a-token)
   const getMessagesFn = useServerFn(getThreadMessages);
   const getAudioUrlFn = useServerFn(getMessageAudioUrl);
@@ -483,6 +487,13 @@ export function JurisMindChat({
   const liveSupportedRef = useRef<boolean>(true);
   const [retryInfo, setRetryInfo] = useState<{ attempt: number; max: number } | null>(null);
   const consecutiveSegmentFailuresRef = useRef<number>(0);
+
+  // Atalho do caso: pré-preenche o pedido no campo de mensagem.
+  useEffect(() => {
+    if (initialPrompt) setInput(initialPrompt);
+  }, [initialPrompt]);
+
+
 
 
   // Seletor de microfone
@@ -1869,7 +1880,10 @@ export function JurisMindChat({
             <div ref={endRef} />
           </div>
 
+          <MaterialsSection messages={messages} />
+
           <div className="shrink-0 border-t p-3">
+
             {messages.length === 0 && (
               <div className="mb-3">
                 <p className="mb-2 text-2xs font-medium uppercase tracking-wide text-muted-foreground">
@@ -2272,6 +2286,80 @@ function friendlyToolName(name: string) {
   return TOOL_LABELS[name] ?? name.replace(/_/g, " ");
 }
 
+/**
+ * Materiais gerados na conversa, agrupados em um só lugar para o advogado não
+ * precisar rolar todo o histórico para reencontrar um arquivo.
+ */
+function MaterialsSection({ messages }: { messages: Msg[] }) {
+  const [open, setOpen] = useState(false);
+
+  const artifacts = useMemo(() => {
+    const out: Array<
+      NonNullable<ReturnType<typeof parseToolResult>> & { key: string }
+    > = [];
+    messages.forEach((m, mi) => {
+      dedupeGeneratedDocumentSteps(m.steps ?? []).forEach((s, si) => {
+        try {
+          const r = parseToolResult(s);
+          if (r) out.push({ ...r, key: `${mi}-${si}` });
+        } catch {
+          // ignora passo inválido
+        }
+      });
+    });
+    return out;
+  }, [messages]);
+
+  if (artifacts.length === 0) return null;
+
+  return (
+    <div className="shrink-0 border-t bg-muted/30">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        className="flex w-full items-center justify-between gap-2 px-4 py-2.5 text-left text-sm font-semibold text-foreground hover:bg-muted"
+      >
+        <span>
+          Materiais deste caso ({artifacts.length}{" "}
+          {artifacts.length === 1 ? "arquivo" : "arquivos"})
+        </span>
+        <span aria-hidden>{open ? "−" : "+"}</span>
+      </button>
+      {open && (
+        <div className="max-h-[45vh] overflow-auto px-4 pb-4">
+          {artifacts.map((r) => {
+            if (r.kind === "petition")
+              return (
+                <PetitionCard
+                  key={r.key}
+                  titulo={r.titulo ?? "Peça jurídica"}
+                  conteudo={r.conteudo ?? ""}
+                />
+              );
+            if (r.kind === "pdf")
+              return (
+                <PDFCard key={r.key} titulo={r.titulo ?? "Documento"} conteudo={r.conteudo ?? ""} />
+              );
+            if (r.kind === "table")
+              return <TableCard key={r.key} titulo={r.titulo ?? "Tabela"} rows={r.rows ?? []} />;
+            if (r.kind === "presentation")
+              return (
+                <PresentationCard
+                  key={r.key}
+                  title={r.title ?? "Apresentação"}
+                  subtitle={r.subtitle}
+                  slides={r.slides ?? []}
+                />
+              );
+            return null;
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function SourcesBlock({ citations }: { citations: Citation[] }) {
   const [open, setOpen] = useState(false);
   const evidence = citations.filter((c) => !c.is_context);
@@ -2280,10 +2368,30 @@ function SourcesBlock({ citations }: { citations: Citation[] }) {
 
   return (
     <div className="mt-3 border-t border-border/40 pt-2">
+      {/* Referências em destaque, com aparência clicável */}
+      <div className="flex flex-wrap items-center gap-1.5">
+        {citations
+          .filter((c) => c.ref)
+          .map((c, idx) => (
+            <button
+              key={c.chunk_id ?? `ref-${idx}`}
+              type="button"
+              onClick={() => setOpen(true)}
+              title={`${c.filename}${c.location ? ` · ${c.location}` : ""}`}
+              className="inline-flex items-center gap-1 rounded-md border border-primary/40 bg-primary/10 px-2 py-1 text-[13px] font-semibold text-primary transition hover:bg-primary/20"
+            >
+              [{c.ref}]
+              <span className="max-w-[12rem] truncate font-normal text-foreground/75">
+                {c.filename}
+              </span>
+            </button>
+          ))}
+      </div>
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center justify-between text-sm font-semibold text-foreground/80 hover:text-foreground"
+        aria-expanded={open}
+        className="mt-2 flex w-full items-center justify-between text-sm font-semibold text-foreground/80 hover:text-foreground"
       >
         <span>
           Fontes ({documents.length} documento{documents.length === 1 ? "" : "s"} ·{" "}
@@ -2308,4 +2416,5 @@ function SourcesBlock({ citations }: { citations: Citation[] }) {
       )}
     </div>
   );
+
 }
