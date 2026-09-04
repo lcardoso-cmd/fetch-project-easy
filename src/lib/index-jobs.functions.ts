@@ -11,6 +11,8 @@ export interface IndexJobView {
   max_attempts: number;
   last_error_message: string | null;
   heartbeat_at: string | null;
+  /** Início real do processamento, usado para estimar o tempo restante. */
+  started_at: string | null;
   /** 1 = próximo a ser processado. Null quando não está na fila. */
   queue_position: number | null;
   /** Verdadeiro quando o processador parou de dar sinal de vida. */
