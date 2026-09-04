@@ -127,28 +127,6 @@ const TECH = [
   },
 ];
 
-const BENEFITS = [
-  {
-    icon: Search,
-    t: "Encontre mais rápido",
-    d: "Localize informações relevantes sem pesquisar manualmente documento por documento.",
-  },
-  {
-    icon: FileText,
-    t: "Analise com mais contexto",
-    d: "Utilize o conteúdo do próprio caso na preparação de análises e minutas.",
-  },
-  {
-    icon: Library,
-    t: "Preserve o conhecimento",
-    d: "Mantenha documentos e informações organizados para continuidade do trabalho da equipe.",
-  },
-  {
-    icon: Gauge,
-    t: "Adote IA com controle",
-    d: "Acompanhe usuários, modelos, consumo e custos estimados.",
-  },
-];
 
 const LAYERS = [
   {
