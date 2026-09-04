@@ -314,10 +314,41 @@ const SLIDES: Slide[] = [
   },
 ];
 
+/** Copy do banner de cada slide (2+): eyebrow, título, subtítulo e CTA próprios. */
+function SlideCopy({ slide, active }: { slide: Slide; active: boolean }) {
+  return (
+    <div className="max-w-2xl">
+      <span className="mb-4 inline-flex items-center gap-2 rounded-full bg-brand-cyan/15 px-3 py-1 text-sm font-semibold text-brand-cyan">
+        <JurisMindMark size={14} context={JURISMIND_CONTEXT.inlineDark} />
+        {slide.eyebrow}
+      </span>
+      <h2 className="font-heading text-3xl font-extrabold leading-[1.12] tracking-tight text-brand-on-navy md:text-4xl">
+        {slide.title}
+      </h2>
+      {slide.subtitle ? (
+        <p className="mt-4 text-base leading-relaxed text-brand-on-navy/90 md:text-lg">
+          {slide.subtitle}
+        </p>
+      ) : null}
+      {slide.ctaLabel && slide.ctaHref ? (
+        <a
+          href={slide.ctaHref}
+          tabIndex={active ? 0 : -1}
+          className="mt-7 inline-flex h-11 items-center gap-2 whitespace-nowrap rounded-md border border-brand-on-navy/35 px-5 text-sm font-semibold text-brand-on-navy transition-colors hover:bg-brand-on-navy/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+        >
+          {slide.ctaLabel}
+          <ArrowRight className="h-4 w-4" aria-hidden />
+        </a>
+      ) : null}
+    </div>
+  );
+}
+
 /**
- * Hero em tela cheia no esquema de carrossel: os visuais ocupam o fundo,
- * o texto institucional fica sobreposto no canto inferior esquerdo
- * (children), com pontos de navegação ao centro e controles no topo.
+ * Hero em tela cheia no esquema de carrossel: cada slide é um banner
+ * completo — visual do produto à direita e copy própria (título, texto e
+ * CTA) à esquerda — alternando automaticamente. O primeiro slide recebe o
+ * conteúdo institucional (children). Pontos ao centro, controles no topo.
  */
 export function HeroCarousel({ children }: { children?: ReactNode }) {
   const [index, setIndex] = useState(0);
