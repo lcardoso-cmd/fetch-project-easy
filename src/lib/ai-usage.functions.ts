@@ -7,6 +7,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireOrg } from "@/lib/org-middleware";
 
 const InputSchema = z.object({
   year: z.number().int().min(2020).max(2100),
@@ -212,10 +213,10 @@ export interface AiBudgetStatus {
 }
 
 export const getAiBudgetStatus = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireOrg])
   .handler(async ({ context }): Promise<AiBudgetStatus> => {
     const { getAiBudgetSnapshot } = await import("./ai-usage.server");
-    return getAiBudgetSnapshot(context.userId);
+    return getAiBudgetSnapshot(context.organizationId);
   });
 
 import {
@@ -225,7 +226,7 @@ import {
 } from "./ai-budget-schema";
 
 export const updateAiBudget = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireOrg])
   .validator((raw: unknown) => {
     const parsed = AiBudgetPayloadSchema.safeParse(raw);
     if (!parsed.success) {
@@ -238,7 +239,7 @@ export const updateAiBudget = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const admin = supabaseAdmin as unknown as { from: (t: string) => any };
     const row: Record<string, unknown> = {
-      user_id: context.userId,
+      organization_id: context.organizationId,
       monthly_limit_usd: data.monthly_limit_usd,
       warn_threshold_pct: data.warn_threshold_pct,
       updated_at: new Date().toISOString(),
@@ -250,11 +251,11 @@ export const updateAiBudget = createServerFn({ method: "POST" })
       row.force_fallback_on_retry = data.force_fallback_on_retry;
     const { error } = await admin
       .from("ai_budgets")
-      .upsert(row, { onConflict: "user_id" });
+      .upsert(row, { onConflict: "organization_id" });
     if (error) throw new Error(error.message);
     const { invalidateBudgetCache, getAiBudgetSnapshot } = await import("./ai-usage.server");
-    invalidateBudgetCache(context.userId);
-    return getAiBudgetSnapshot(context.userId);
+    invalidateBudgetCache(context.organizationId);
+    return getAiBudgetSnapshot(context.organizationId);
   });
 
 
