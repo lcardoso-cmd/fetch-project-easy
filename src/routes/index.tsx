@@ -31,6 +31,8 @@ import {
 import { JurisMindMark, JURISMIND_CONTEXT } from "@/components/brand/jurismind-mark";
 import { OutputShowcase } from "@/components/marketing/output-showcase";
 import { HeroCarousel } from "@/components/marketing/hero-carousel";
+import { DeckDownloadButton } from "@/components/marketing/deck-download-button";
+import { PITCH } from "@/lib/marketing/pitch-content";
 import { useAuth } from "@/hooks/use-auth";
 
 const TRIAL_SEARCH = { modo: "cadastro", origem: "trial30" } as const;
@@ -77,90 +79,58 @@ export const Route = createFileRoute("/")({
   }),
 });
 
-/** Fluxo único do trabalho no caso — cada etapa existe no produto. */
-const FLOW = [
-  {
-    icon: Search,
-    n: "01",
-    t: "Localizar",
-    d: "O JurisMind lê os documentos do caso e aponta o trecho exato, com página e origem.",
-  },
-  {
-    icon: Layers,
-    n: "02",
-    t: "Organizar",
-    d: "Datas, valores e obrigações viram apuração comparável em planilha.",
-  },
-  {
-    icon: FileText,
-    n: "03",
-    t: "Produzir",
-    d: "Peças e documentos são redigidos com base nos autos e abertos no editor.",
-  },
-  {
-    icon: Presentation,
-    n: "04",
-    t: "Apresentar",
-    d: "O caso é resumido em apresentação executiva para cliente e sócios.",
-  },
-  {
-    icon: CalendarClock,
-    n: "05",
-    t: "Conduzir",
-    d: "Tarefas, prazos e agenda ficam vinculados ao mesmo caso e à equipe.",
-  },
-];
+/**
+ * Ícones por chave. Todo o texto vem de `PITCH` — fonte única compartilhada
+ * com a apresentação em PDF (src/lib/marketing/deck-pdf.server.ts).
+ */
+const FLOW_ICONS: Record<string, typeof Search> = {
+  localizar: Search,
+  organizar: Layers,
+  produzir: FileText,
+  apresentar: Presentation,
+  conduzir: CalendarClock,
+};
 
-const TECH = [
-  {
-    icon: Sparkles,
-    t: "Busca por significado",
-    d: "Encontra conteúdos relacionados à ideia da pergunta, mesmo quando usam palavras diferentes.",
-  },
-  {
-    icon: BookOpen,
-    t: "Busca textual em português",
-    d: "Identifica termos, nomes, valores, expressões e referências específicas.",
-  },
-  {
-    icon: Layers,
-    t: "Combinação dos resultados",
-    d: "Reúne os resultados das duas buscas e prioriza os trechos mais relacionados.",
-  },
-  {
-    icon: Workflow,
-    t: "Reavaliação do contexto",
-    d: "Nos modos avançados, a pergunta e os trechos podem ser refinados antes da resposta.",
-  },
-];
+const TECH_ICONS: Record<string, typeof Search> = {
+  significado: Sparkles,
+  textual: BookOpen,
+  fusao: Layers,
+  rerank: Workflow,
+};
 
-const LAYERS = [
-  {
-    icon: Sparkles,
-    t: "Inteligência",
-    d: "Consulta documental por caso, análise, produção jurídica e pesquisa de jurisprudência.",
-  },
-  {
-    icon: Workflow,
-    t: "Operação",
-    d: "Casos, documentos, tarefas, agenda, propostas, comunicação interna e publicações.",
-  },
-  {
-    icon: ShieldCheck,
-    t: "Governança",
-    d: "Usuários, permissões, modelos, histórico de uso, consumo e custos estimados.",
-  },
-];
+const LAYER_ICONS: Record<string, typeof Search> = {
+  inteligencia: Sparkles,
+  operacao: Workflow,
+  governanca: ShieldCheck,
+};
 
-/** Entregáveis reais do produto — cada um existe hoje. */
-const DELIVERABLES = [
-  { icon: FileSearch, t: "Análise com fontes", d: "Resposta ligada ao trecho de origem no documento." },
-  { icon: FileText, t: "Peça jurídica", d: "Minuta editável, exportável em Word e PDF." },
-  { icon: FileSpreadsheet, t: "Planilha", d: "Apuração comparativa exportável em Excel." },
-  { icon: Presentation, t: "Apresentação", d: "Deck executivo do caso exportável em PowerPoint." },
-  { icon: CalendarClock, t: "Tarefa e prazo", d: "Ação vinculada ao caso, à agenda e ao responsável." },
-  { icon: Scale, t: "Jurisprudência", d: "Precedentes de sites oficiais de tribunais, com link." },
-];
+const DELIVERABLE_ICONS: Record<string, typeof Search> = {
+  analise: FileSearch,
+  peca: FileText,
+  planilha: FileSpreadsheet,
+  apresentacao: Presentation,
+  tarefa: CalendarClock,
+  jurisprudencia: Scale,
+};
+
+const GOVERNANCE_ICONS: Record<string, typeof Search> = {
+  usuarios: Users,
+  historico: FileSearch,
+  tokens: Gauge,
+  orcamento: ShieldCheck,
+};
+
+const FLOW = PITCH.flow.items.map((i) => ({ ...i, icon: FLOW_ICONS[i.key] ?? Search }));
+const TECH = PITCH.intelligence.items.map((i) => ({ ...i, icon: TECH_ICONS[i.key] ?? Sparkles }));
+const LAYERS = PITCH.platform.items.map((i) => ({ ...i, icon: LAYER_ICONS[i.key] ?? Layers }));
+const DELIVERABLES = PITCH.deliverables.items.map((i) => ({
+  ...i,
+  icon: DELIVERABLE_ICONS[i.key] ?? FileText,
+}));
+const GOVERNANCE = PITCH.governance.items.map((i) => ({
+  ...i,
+  icon: GOVERNANCE_ICONS[i.key] ?? ShieldCheck,
+}));
 
 function LoginButton({
   size = "default",
@@ -283,16 +253,14 @@ function LandingPage() {
           <div className="relative mx-auto grid max-w-6xl gap-10 px-4 py-16 lg:grid-cols-[1.05fr_1fr] lg:items-center lg:py-20">
             <div>
               <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-accent/20 px-3 py-1 text-sm font-semibold text-accent">
-                <JurisMindMark size={14} context={JURISMIND_CONTEXT.inlineDark} />A inteligência
-                operacional de cada caso
+                <JurisMindMark size={14} context={JURISMIND_CONTEXT.inlineDark} />
+                {PITCH.hero.eyebrow}
               </div>
               <h1 className="font-heading text-4xl font-extrabold leading-[1.08] tracking-tight md:text-5xl">
-                Do documento à entrega: um só caso, um só fluxo de trabalho.
+                {PITCH.hero.title}
               </h1>
               <p className="mt-5 max-w-xl text-lg text-primary-foreground/90">
-                O JurisMind lê os documentos do caso, mostra o trecho exato que sustenta cada
-                afirmação e transforma isso em peça, planilha, apresentação e tarefa da equipe — sem
-                recomeçar a conversa a cada pedido.
+                {PITCH.hero.subtitle}
               </p>
 
               <div className="mt-8 flex flex-wrap gap-3">
@@ -302,10 +270,11 @@ function LandingPage() {
                   <TrialSignupButton className="bg-accent text-accent-foreground hover:bg-accent/90" />
                 )}
                 <LearnMoreButton className="border-primary-foreground/30 bg-transparent text-primary-foreground hover:bg-primary-foreground/10" />
+                <DeckDownloadButton className="border-primary-foreground/30 bg-transparent text-primary-foreground hover:bg-primary-foreground/10" />
               </div>
 
               <p className="mt-6 text-base font-medium text-accent">
-                Mais contexto para a IA. Mais controle para o advogado.
+                {PITCH.hero.highlight}
               </p>
             </div>
 
@@ -318,11 +287,10 @@ function LandingPage() {
           <div className="mx-auto max-w-6xl px-4 py-16">
             <div className="mx-auto max-w-2xl text-center">
               <h2 className="font-heading text-3xl font-bold tracking-tight text-foreground md:text-4xl">
-                O mesmo caso atravessa cinco etapas, sem trocar de ferramenta.
+                {PITCH.flow.title}
               </h2>
               <p className="mt-3 text-lg text-muted-foreground">
-                Localizar, organizar, produzir, apresentar e conduzir acontecem sobre a mesma base
-                documental, dentro do caso.
+                {PITCH.flow.subtitle}
               </p>
             </div>
 
@@ -349,11 +317,10 @@ function LandingPage() {
         <section id="entregas" className="mx-auto max-w-6xl px-4 py-16">
           <div className="mx-auto max-w-2xl text-center">
             <h2 className="font-heading text-3xl font-bold tracking-tight text-foreground md:text-4xl">
-              Escolha uma etapa e veja o resultado.
+              {PITCH.deliverables.title}
             </h2>
             <p className="mt-3 text-lg text-muted-foreground">
-              Um único caso, cinco entregas. Análise com fontes, planilha, peça, apresentação e a
-              tarefa que mantém o trabalho andando.
+              {PITCH.deliverables.subtitle}
             </p>
           </div>
           <div className="mt-8">
@@ -378,11 +345,10 @@ function LandingPage() {
           <div className="mx-auto max-w-6xl px-4 py-16">
             <div className="mx-auto max-w-2xl text-center">
               <h2 className="font-heading text-3xl font-bold tracking-tight text-foreground md:text-4xl">
-                Por que a resposta vem com página e origem.
+                {PITCH.intelligence.title}
               </h2>
               <p className="mt-3 text-lg text-muted-foreground">
-                Antes de escrever, o JurisMind procura nos documentos do caso os trechos que
-                respondem ao pedido — e devolve a referência junto com a resposta.
+                {PITCH.intelligence.subtitle}
               </p>
             </div>
 
@@ -400,15 +366,13 @@ function LandingPage() {
 
             <div className="mt-10 rounded-2xl border border-accent/40 bg-accent/5 p-6 md:p-8">
               <p className="font-heading text-xl font-bold text-foreground">
-                O nome dessa tecnologia é RAG.
+                {PITCH.intelligence.ragTitle}
               </p>
               <p className="mt-3 max-w-3xl text-base leading-relaxed text-muted-foreground">
-                RAG permite que a inteligência artificial consulte uma base documental antes de
-                responder. No JurisMind, essa base é formada pelos documentos selecionados para cada
-                caso — inclusive arquivos longos, digitalizados ou com texto em imagem.
+                {PITCH.intelligence.ragBody}
               </p>
               <p className="mt-3 text-base font-medium text-foreground">
-                É como permitir que a IA abra e consulte os autos antes de responder ao advogado.
+                {PITCH.intelligence.ragNote}
               </p>
             </div>
 
@@ -418,18 +382,11 @@ function LandingPage() {
                   Termos técnicos utilizados nessa etapa
                 </AccordionTrigger>
                 <AccordionContent className="space-y-2 text-base leading-relaxed text-muted-foreground">
-                  <p>
-                    <strong className="text-foreground">Busca híbrida:</strong> uso combinado da
-                    busca por significado com a busca textual em português.
-                  </p>
-                  <p>
-                    <strong className="text-foreground">Fusão:</strong> união dos resultados das
-                    diferentes buscas em uma única lista priorizada.
-                  </p>
-                  <p>
-                    <strong className="text-foreground">Reranqueamento:</strong> nova classificação
-                    dos trechos encontrados antes de a resposta ser gerada.
-                  </p>
+                  {PITCH.intelligence.glossary.map((g) => (
+                    <p key={g.key}>
+                      <strong className="text-foreground">{g.t}:</strong> {g.d}
+                    </p>
+                  ))}
                 </AccordionContent>
               </AccordionItem>
             </Accordion>
@@ -442,22 +399,16 @@ function LandingPage() {
             <div>
               <span className="inline-flex items-center gap-2 rounded-full border border-accent/50 bg-accent/10 px-3 py-1 text-sm font-semibold text-foreground">
                 <Scale className="h-4 w-4 text-accent-foreground/90 dark:text-accent" aria-hidden />
-                Pesquisa em fontes oficiais
+                {PITCH.jurisprudence.badge}
               </span>
               <h2 className="mt-4 font-heading text-3xl font-bold tracking-tight text-foreground md:text-4xl">
-                Jurisprudência com link do tribunal, separada da prova dos autos.
+                {PITCH.jurisprudence.title}
               </h2>
               <p className="mt-4 text-lg text-muted-foreground">
-                No chat do caso, o advogado pode pedir precedentes. A pesquisa consulta apenas sites
-                oficiais de tribunais (STF, STJ, TST, TSE e tribunais estaduais) e devolve tribunal,
-                órgão julgador, data e link para o inteiro teor.
+                {PITCH.jurisprudence.subtitle}
               </p>
               <ul className="mt-5 space-y-3 text-base text-foreground">
-                {[
-                  "Referências [F] são os documentos do caso; [J] são precedentes externos — nunca se misturam.",
-                  "Resultados fora dos domínios oficiais são descartados.",
-                  "Se a pesquisa estiver indisponível, o sistema informa em vez de inventar julgados.",
-                ].map((i) => (
+                {PITCH.jurisprudence.bullets.map((i) => (
                   <li key={i} className="flex items-start gap-3">
                     <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-accent/15 text-accent-foreground dark:text-accent">
                       <Check className="h-3 w-3" aria-hidden />
@@ -470,25 +421,10 @@ function LandingPage() {
 
             <div className="rounded-2xl border bg-card p-5">
               <p className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                Exemplo de retorno (fictício)
+                {PITCH.jurisprudence.exampleLabel}
               </p>
               <div className="mt-3 space-y-3">
-                {[
-                  {
-                    ref: "J1",
-                    court: "STJ",
-                    panel: "Terceira Turma",
-                    date: "12/03/2024",
-                    title: "Responsabilidade objetiva do transportador",
-                  },
-                  {
-                    ref: "J2",
-                    court: "TST",
-                    panel: "Segunda Turma",
-                    date: "20/05/2024",
-                    title: "Validade do controle de ponto por exceção",
-                  },
-                ].map((j) => (
+                {PITCH.jurisprudence.examples.map((j) => (
                   <div key={j.ref} className="rounded-xl border bg-background p-3">
                     <p className="flex flex-wrap items-center gap-x-2 text-base font-semibold text-foreground">
                       <span className="rounded bg-primary/10 px-1.5 py-0.5 text-primary">
@@ -507,8 +443,7 @@ function LandingPage() {
                 ))}
               </div>
               <p className="mt-3 text-sm text-muted-foreground">
-                Jurisprudência é apoio argumentativo e deve ser conferida no inteiro teor. Ela não
-                substitui a prova dos autos.
+                {PITCH.jurisprudence.disclaimer}
               </p>
             </div>
           </div>
@@ -519,26 +454,20 @@ function LandingPage() {
           <div className="mx-auto max-w-6xl px-4 py-16">
             <div className="mx-auto max-w-3xl text-center">
               <h2 className="font-heading text-3xl font-bold tracking-tight text-foreground md:text-4xl">
-                A diferença não é o modelo. É a estrutura em volta dele.
+                {PITCH.differentiation.title}
               </h2>
               <p className="mt-3 text-lg text-muted-foreground">
-                GPT e Gemini fornecem os modelos. O JurisMind define sobre quais documentos eles
-                trabalham, o que produzem e como isso volta para a operação do escritório.
+                {PITCH.differentiation.subtitle}
               </p>
             </div>
 
             <div className="mt-10 grid gap-6 md:grid-cols-2">
               <div className="rounded-2xl border bg-background p-6">
                 <h3 className="font-heading text-lg font-bold text-foreground">
-                  Chat genérico usado isoladamente
+                  {PITCH.differentiation.genericTitle}
                 </h3>
                 <ul className="mt-5 space-y-3 text-base text-muted-foreground">
-                  {[
-                    "Contexto colado manualmente a cada conversa.",
-                    "Documentos soltos, fora da gestão do caso.",
-                    "Resposta sem indicação da página de origem.",
-                    "Resultado que não se transforma em tarefa, prazo ou entrega do escritório.",
-                  ].map((i) => (
+                  {PITCH.differentiation.generic.map((i) => (
                     <li key={i} className="flex items-start gap-3">
                       <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
                         <X className="h-3 w-3" aria-hidden />
@@ -550,14 +479,11 @@ function LandingPage() {
               </div>
 
               <div className="rounded-2xl border border-accent/40 bg-accent/5 p-6 shadow-sm">
-                <h3 className="font-heading text-lg font-bold text-foreground">JurisMind</h3>
+                <h3 className="font-heading text-lg font-bold text-foreground">
+                  {PITCH.differentiation.jurismindTitle}
+                </h3>
                 <ul className="mt-5 space-y-3 text-base text-foreground">
-                  {[
-                    "Base documental organizada e indexada por caso.",
-                    "Busca automática dos trechos relevantes antes da resposta.",
-                    "Referência ao documento e à página que sustentam cada afirmação.",
-                    "Peça, planilha, apresentação, tarefa e prazo gerados no mesmo lugar.",
-                  ].map((i) => (
+                  {PITCH.differentiation.jurismind.map((i) => (
                     <li key={i} className="flex items-start gap-3">
                       <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-accent/15 text-accent-foreground dark:text-accent">
                         <Check className="h-3 w-3" aria-hidden />
@@ -574,7 +500,7 @@ function LandingPage() {
         {/* 7 · PLATAFORMA */}
         <section id="plataforma" className="mx-auto max-w-6xl px-4 py-16">
           <h2 className="text-center font-heading text-3xl font-bold tracking-tight text-foreground md:text-4xl">
-            Inteligência documental conectada à operação do escritório.
+            {PITCH.platform.title}
           </h2>
           <div className="mt-10 grid gap-5 md:grid-cols-3">
             {LAYERS.map((l) => (
@@ -595,21 +521,14 @@ function LandingPage() {
             <div className="grid gap-8 lg:grid-cols-[1fr_1fr] lg:items-center">
               <div>
                 <h2 className="font-heading text-3xl font-bold tracking-tight text-foreground md:text-4xl">
-                  Controle profissional do uso da IA.
+                  {PITCH.governance.title}
                 </h2>
                 <p className="mt-4 text-lg text-muted-foreground">
-                  O escritório acompanha quem utiliza os recursos de inteligência artificial, os
-                  modelos acionados, o consumo registrado e os custos estimados, com orçamento
-                  mensal por organização.
+                  {PITCH.governance.subtitle}
                 </p>
               </div>
               <div className="grid gap-3 sm:grid-cols-2">
-                {[
-                  { icon: Users, t: "Usuários e permissões" },
-                  { icon: FileSearch, t: "Histórico de utilização da IA" },
-                  { icon: Gauge, t: "Tokens e custos estimados" },
-                  { icon: ShieldCheck, t: "Orçamento mensal" },
-                ].map((i) => (
+                {GOVERNANCE.map((i) => (
                   <div
                     key={i.t}
                     className="flex items-center gap-3 rounded-xl border bg-background p-4 text-base font-medium text-foreground"
@@ -632,29 +551,30 @@ function LandingPage() {
             {user ? (
               <>
                 <h2 className="font-heading text-3xl font-bold tracking-tight md:text-4xl">
-                  Continue seu trabalho no JurisMind.
+                  {PITCH.cta.authenticatedTitle}
                 </h2>
                 <p className="mx-auto mt-4 max-w-2xl text-primary-foreground/85">
-                  Acesse seus casos, documentos e recursos de inteligência jurídica.
+                  {PITCH.cta.authenticatedSubtitle}
                 </p>
-                <div className="mt-8 flex justify-center">
+                <div className="mt-8 flex flex-wrap justify-center gap-3">
                   <OpenDashboardButton className="bg-accent text-accent-foreground hover:bg-accent/90" />
+                  <DeckDownloadButton className="border-primary-foreground/30 bg-transparent text-primary-foreground hover:bg-primary-foreground/10" />
                 </div>
               </>
             ) : (
               <>
                 <h2 className="font-heading text-3xl font-bold tracking-tight md:text-4xl">
-                  Experimente em um caso real do seu escritório.
+                  {PITCH.cta.title}
                 </h2>
                 <p className="mx-auto mt-4 max-w-2xl text-primary-foreground/85">
-                  Crie sua conta, organize um caso, inclua os documentos e veja em 30 dias a
-                  diferença entre conversar com uma IA e conduzir o caso com ela.
+                  {PITCH.cta.subtitle}
                 </p>
-                <div className="mt-8 flex justify-center">
+                <div className="mt-8 flex flex-wrap justify-center gap-3">
                   <TrialSignupButton
                     className="bg-accent text-accent-foreground hover:bg-accent/90"
-                    label="Começar meu teste gratuito"
+                    label={PITCH.cta.button}
                   />
+                  <DeckDownloadButton className="border-primary-foreground/30 bg-transparent text-primary-foreground hover:bg-primary-foreground/10" />
                 </div>
                 <p className="mt-4 text-base text-primary-foreground/85">
                   Já possui uma conta?{" "}
@@ -663,7 +583,7 @@ function LandingPage() {
                   </Link>
                 </p>
                 <p className="mt-5 text-base text-primary-foreground/85">
-                  Teste gratuito por 30 dias.
+                  {PITCH.cta.note}
                 </p>
               </>
             )}
@@ -679,9 +599,9 @@ function LandingPage() {
               <span className="font-heading text-base font-bold text-foreground">JurisMind AI</span>
             </div>
             <p className="mt-3 text-base text-muted-foreground">
-              A inteligência operacional de cada caso, construída sobre os documentos do escritório.
+              {PITCH.footer.about}
             </p>
-            <p className="mt-3 text-base text-muted-foreground">Uma solução B2B Consulting.</p>
+            <p className="mt-3 text-base text-muted-foreground">{PITCH.footer.company}</p>
           </div>
 
           <nav className="text-base">

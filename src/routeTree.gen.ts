@@ -69,6 +69,7 @@ import { Route as ApiToolsTableRouteImport } from './routes/api/tools/table'
 import { Route as ApiToolsPresentationRouteImport } from './routes/api/tools/presentation'
 import { Route as ApiToolsPetitionRouteImport } from './routes/api/tools/petition'
 import { Route as ApiToolsPdfRouteImport } from './routes/api/tools/pdf'
+import { Route as ApiPublicDeckRouteImport } from './routes/api/public/deck'
 import { Route as ApiChatStreamRouteImport } from './routes/api/chat/stream'
 import { Route as AuthenticatedSettingsOauthRouteImport } from './routes/_authenticated/settings.oauth'
 import { Route as AuthenticatedSettingsFirmRouteImport } from './routes/_authenticated/settings.firm'
@@ -432,6 +433,11 @@ const ApiToolsPdfRoute = ApiToolsPdfRouteImport.update({
   path: '/api/tools/pdf',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicDeckRoute = ApiPublicDeckRouteImport.update({
+  id: '/api/public/deck',
+  path: '/api/public/deck',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiChatStreamRoute = ApiChatStreamRouteImport.update({
   id: '/api/chat/stream',
   path: '/api/chat/stream',
@@ -772,6 +778,7 @@ export interface FileRoutesByFullPath {
   '/settings/firm': typeof AuthenticatedSettingsFirmRoute
   '/settings/oauth': typeof AuthenticatedSettingsOauthRoute
   '/api/chat/stream': typeof ApiChatStreamRoute
+  '/api/public/deck': typeof ApiPublicDeckRoute
   '/api/tools/pdf': typeof ApiToolsPdfRoute
   '/api/tools/petition': typeof ApiToolsPetitionRoute
   '/api/tools/presentation': typeof ApiToolsPresentationRoute
@@ -877,6 +884,7 @@ export interface FileRoutesByTo {
   '/settings/firm': typeof AuthenticatedSettingsFirmRoute
   '/settings/oauth': typeof AuthenticatedSettingsOauthRoute
   '/api/chat/stream': typeof ApiChatStreamRoute
+  '/api/public/deck': typeof ApiPublicDeckRoute
   '/api/tools/pdf': typeof ApiToolsPdfRoute
   '/api/tools/petition': typeof ApiToolsPetitionRoute
   '/api/tools/presentation': typeof ApiToolsPresentationRoute
@@ -986,6 +994,7 @@ export interface FileRoutesById {
   '/_authenticated/settings/firm': typeof AuthenticatedSettingsFirmRoute
   '/_authenticated/settings/oauth': typeof AuthenticatedSettingsOauthRoute
   '/api/chat/stream': typeof ApiChatStreamRoute
+  '/api/public/deck': typeof ApiPublicDeckRoute
   '/api/tools/pdf': typeof ApiToolsPdfRoute
   '/api/tools/petition': typeof ApiToolsPetitionRoute
   '/api/tools/presentation': typeof ApiToolsPresentationRoute
@@ -1095,6 +1104,7 @@ export interface FileRouteTypes {
     | '/settings/firm'
     | '/settings/oauth'
     | '/api/chat/stream'
+    | '/api/public/deck'
     | '/api/tools/pdf'
     | '/api/tools/petition'
     | '/api/tools/presentation'
@@ -1200,6 +1210,7 @@ export interface FileRouteTypes {
     | '/settings/firm'
     | '/settings/oauth'
     | '/api/chat/stream'
+    | '/api/public/deck'
     | '/api/tools/pdf'
     | '/api/tools/petition'
     | '/api/tools/presentation'
@@ -1308,6 +1319,7 @@ export interface FileRouteTypes {
     | '/_authenticated/settings/firm'
     | '/_authenticated/settings/oauth'
     | '/api/chat/stream'
+    | '/api/public/deck'
     | '/api/tools/pdf'
     | '/api/tools/petition'
     | '/api/tools/presentation'
@@ -1367,6 +1379,7 @@ export interface RootRouteChildren {
   DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
   ApiChatStreamRoute: typeof ApiChatStreamRoute
+  ApiPublicDeckRoute: typeof ApiPublicDeckRoute
   ApiToolsPdfRoute: typeof ApiToolsPdfRoute
   ApiToolsPetitionRoute: typeof ApiToolsPetitionRoute
   ApiToolsPresentationRoute: typeof ApiToolsPresentationRoute
@@ -1802,6 +1815,13 @@ declare module '@tanstack/react-router' {
       path: '/api/tools/pdf'
       fullPath: '/api/tools/pdf'
       preLoaderRoute: typeof ApiToolsPdfRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/deck': {
+      id: '/api/public/deck'
+      path: '/api/public/deck'
+      fullPath: '/api/public/deck'
+      preLoaderRoute: typeof ApiPublicDeckRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/chat/stream': {
@@ -2411,6 +2431,7 @@ const rootRouteChildren: RootRouteChildren = {
   DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
   Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
   ApiChatStreamRoute: ApiChatStreamRoute,
+  ApiPublicDeckRoute: ApiPublicDeckRoute,
   ApiToolsPdfRoute: ApiToolsPdfRoute,
   ApiToolsPetitionRoute: ApiToolsPetitionRoute,
   ApiToolsPresentationRoute: ApiToolsPresentationRoute,
