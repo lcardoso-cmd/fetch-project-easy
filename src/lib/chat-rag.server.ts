@@ -694,7 +694,20 @@ INSTRUÇÕES:
         slides: Array.isArray(args.slides) ? args.slides : [],
       };
     }
+    if (name === "search_jurisprudence") {
+      const { searchJurisprudence } = await import(
+        "./jurisprudence/jurisprudence-search.server"
+      );
+      const courts = Array.isArray(args.courts) ? args.courts.map(String) : undefined;
+      const result = await searchJurisprudence({
+        query: String(args.query ?? ""),
+        courts,
+        limit: args.limit ? Number(args.limit) : undefined,
+      });
+      return { kind: "jurisprudence", ...result };
+    }
     return { error: `Tool desconhecida: ${name}` };
+
   };
 
   return {
