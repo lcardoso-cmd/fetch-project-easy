@@ -235,7 +235,7 @@ function CaseWorkspacePage() {
               >
                 <JurisMindMark
                   size={20}
-                  context={JURISMIND_CONTEXT["chip-dark"]}
+                  context={JURISMIND_CONTEXT.chipDark}
                   className="shrink-0"
                 />
                 <span className="hidden sm:inline">Perguntar ao JurisMind</span>
