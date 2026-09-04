@@ -101,6 +101,9 @@
   /* Cabeçalho do app: nível de superfície próprio, entre canvas e cartão. */
   --color-header: var(--header);
 
+  /* Terceiro nível de texto: metadados legíveis, sem competir com títulos. */
+  --color-meta-foreground: var(--meta-foreground);
+
 }
 
 
@@ -119,6 +122,7 @@
   --surface-2: oklch(0.961 0.007 268.5);       /* #F0F2F7 */
   --surface-3: oklch(0.932 0.010 268.5);       /* #E7EAF2 */
   --header: oklch(1 0 0);                      /* cabeçalho branco no claro */
+  --meta-foreground: oklch(0.545 0.026 257.8); /* metadados no claro */
 
 
 
@@ -189,10 +193,10 @@
   --muted-foreground: oklch(0.775 0.010 262);   /* AA sobre surface-1/2 */
   --accent: var(--surface-3);
   --accent-foreground: var(--foreground);
-  --destructive: oklch(0.62 0.185 25);
+  --destructive: oklch(0.55 0.190 25);
   --destructive-foreground: oklch(0.99 0 0);
-  --border: oklch(0.375 0.012 262);      /* borda visível, não fantasma */
-  --input: oklch(0.445 0.014 262);       /* campos parecem campos */
+  --border: oklch(0.440 0.013 262);      /* borda visível, não fantasma */
+  --input: oklch(0.500 0.015 262);       /* campos parecem campos */
   --ring: var(--brand-cyan);
   --chart-1: var(--brand-cyan);
   --chart-2: oklch(0.80 0.008 262);
