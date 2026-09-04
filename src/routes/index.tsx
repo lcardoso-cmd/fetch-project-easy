@@ -273,7 +273,7 @@ function LandingPage() {
                 {PITCH.hero.subtitle}
               </p>
 
-              <div className="mx-auto mt-8 flex max-w-2xl flex-col gap-3 sm:flex-row sm:justify-center sm:flex-nowrap [&>*]:w-full sm:[&>*]:w-auto">
+              <div className="mx-auto mt-8 flex max-w-2xl flex-col gap-3 lg:flex-row lg:justify-center lg:flex-nowrap [&>*]:w-full lg:[&>*]:w-auto">
                 {user ? (
                   <OpenDashboardButton className="bg-brand-cyan text-brand-navy hover:bg-brand-cyan/90" />
                 ) : (
