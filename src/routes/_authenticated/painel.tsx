@@ -481,14 +481,15 @@ function HomePage() {
         </section>
 
         <section className="space-y-3 lg:col-span-4">
-          <div className="flex items-center justify-between gap-2">
-            <h2 className="font-heading text-section-title">Próximos 7 dias</h2>
+          <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
+            <h2 className="font-heading text-section-title whitespace-nowrap">Próximos 7 dias</h2>
             <Button variant="ghost" size="sm" className="min-h-10" asChild>
               <Link to="/tarefas" search={{ tab: "agenda" }}>
                 Ver agenda completa
               </Link>
             </Button>
           </div>
+
           {cockpitQuery.isLoading || !data ? (
             <Skeleton className="h-40 w-full rounded-lg" />
           ) : data.agenda.length === 0 ? (
