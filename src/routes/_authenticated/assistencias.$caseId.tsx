@@ -29,6 +29,7 @@ import { DocumentList } from "@/components/documents/document-list";
 import { CaseSummaryCard } from "@/components/cases/case-summary-card";
 import { CaseJurisMindPanel } from "@/components/chat/case-jurismind-panel";
 import { useAccess } from "@/hooks/use-access";
+import { JurisMindMark, JURISMIND_CONTEXT } from "@/components/brand/jurismind-mark";
 import { CaseTasksDialog } from "@/components/tasks/case-tasks-dialog";
 import { ConversationView } from "@/components/chat/conversation-view";
 import { QuesitosCard } from "@/components/cases/quesitos-card";
@@ -126,6 +127,14 @@ function CaseWorkspacePage() {
       return next;
     });
   }, [readyDocIds]);
+
+  // ── JurisMind AI: ação principal do caso (painel lateral) ──
+  const { hasOrgPermission } = useAccess();
+  const canUseAi = hasOrgPermission("ai.use");
+  const canUpload = hasOrgPermission("documents.upload");
+  const [aiOpen, setAiOpen] = useState(tab === "jurismind");
+  // Thread persistida compartilhada entre o painel e a rota de tela inteira.
+  const [aiThreadId, setAiThreadId] = useState<string | null>(null);
 
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({
@@ -475,6 +484,35 @@ function CaseWorkspacePage() {
           </div>
         </TabsContent>
       </Tabs>
+
+      {canUseAi && caseData && (
+        <CaseJurisMindPanel
+          open={aiOpen}
+          onOpenChange={setAiOpen}
+          caseId={caseId}
+          threadId={aiThreadId}
+          onThreadChange={setAiThreadId}
+          canUpload={canUpload}
+          caseInfo={{
+            title: caseData.title,
+            client_name: caseData.client_name,
+            status: caseData.status,
+            case_number: caseData.case_number,
+            case_type: caseData.case_type,
+            jurisdiction: caseData.jurisdiction,
+            parties,
+            represented_party: (caseData.represented_party ?? null) as {
+              role: string;
+              name: string;
+            } | null,
+          }}
+          documents={docs}
+          selectedDocIds={selectedDocIds}
+          onToggleSelect={toggleSelect}
+          onSelectAll={selectAll}
+          onDeselectAll={deselectAll}
+        />
+      )}
 
       {unsavedDialog}
     </div>
