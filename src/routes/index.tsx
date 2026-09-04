@@ -350,17 +350,17 @@ function DemoPanel() {
         <p className="text-sm font-semibold uppercase tracking-wide text-accent">
           Documentos do caso
         </p>
-        <div className="mt-2 flex flex-wrap gap-2">
+        <ul className="mt-2 space-y-2">
           {demo.docs.map((d) => (
-            <span
+            <li
               key={d}
-              className="inline-flex items-center gap-1.5 rounded-md border border-primary-foreground/25 bg-primary/50 px-2 py-1 text-sm text-primary-foreground/90"
+              className="flex items-center gap-2 rounded-md border border-primary-foreground/25 bg-primary/50 px-2.5 py-1.5 text-sm text-primary-foreground/90"
             >
               <FileText className="h-3.5 w-3.5 shrink-0 text-accent" />
-              {d}
-            </span>
+              <span className="min-w-0 flex-1 truncate">{d}</span>
+            </li>
           ))}
-        </div>
+        </ul>
       </div>
 
       <div className="my-2 flex justify-center">
