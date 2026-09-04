@@ -138,9 +138,10 @@ function RootComponent() {
         <ThemeProvider>
           <AuthProvider>
             <UploadManagerProvider>
-            {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
-            <Outlet />
-            <Toaster richColors position="top-right" />
+              {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
+              <Outlet />
+              <Toaster richColors position="top-right" />
+            </UploadManagerProvider>
           </AuthProvider>
         </ThemeProvider>
       </QueryClientProvider>
