@@ -3,6 +3,7 @@ import { Link, useLocation } from "@tanstack/react-router";
 import { JurisMindMark, JURISMIND_CONTEXT } from "@/components/brand/jurismind-mark";
 import { useAuth } from "@/hooks/use-auth";
 import { UserMenu } from "@/components/layout/user-menu";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { useProfile } from "@/hooks/use-profile";
 import { useAccess } from "@/hooks/use-access";
 import type { OrgPermission, PlatformRole } from "@/lib/org-permissions";
@@ -826,6 +827,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
               </Link>
             </div>
             <div className="flex shrink-0 items-center gap-1">
+              <ThemeToggle />
               <ConversationsDrawer />
               <NotificationBell />
               <UserMenu compact />
@@ -850,6 +852,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
               </nav>
             </div>
             <div className="flex shrink-0 items-center gap-2">
+              <ThemeToggle />
               <ConversationsDrawer />
               <NotificationBell />
               <UserMenu />
