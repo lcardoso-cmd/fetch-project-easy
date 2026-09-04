@@ -251,48 +251,29 @@ function LandingPage() {
       </header>
 
       <main>
-        {/* 1 · HERO */}
-        <section className="relative overflow-hidden bg-brand-navy text-brand-on-navy">
-          <div
-            className="absolute inset-0 opacity-20"
-            style={{
-              backgroundImage:
-                "radial-gradient(circle at 15% 25%, oklch(0.86 0.16 195) 0, transparent 42%), radial-gradient(circle at 85% 75%, oklch(0.65 0.16 220) 0, transparent 45%)",
-            }}
-          />
-          <div className="relative mx-auto flex max-w-6xl flex-col items-center gap-10 px-4 py-16 lg:py-20">
-            <div className="max-w-3xl text-center">
-              <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-brand-cyan/15 px-3 py-1 text-sm font-semibold text-brand-cyan">
-                <JurisMindMark size={14} context={JURISMIND_CONTEXT.inlineDark} />
-                {PITCH.hero.eyebrow}
-              </div>
-              <h1 className="font-heading text-4xl font-extrabold leading-[1.08] tracking-tight md:text-5xl">
-                {PITCH.hero.title}
-              </h1>
-              <p className="mx-auto mt-5 max-w-2xl text-lg text-brand-on-navy/90">
-                {PITCH.hero.subtitle}
-              </p>
-
-              <div className="mx-auto mt-8 flex max-w-2xl flex-col gap-3 lg:flex-row lg:justify-center lg:flex-nowrap [&>*]:w-full lg:[&>*]:w-auto">
-                {user ? (
-                  <OpenDashboardButton className="bg-brand-cyan text-brand-navy hover:bg-brand-cyan/90" />
-                ) : (
-                  <TrialSignupButton className="bg-brand-cyan text-brand-navy hover:bg-brand-cyan/90" />
-                )}
-                <LearnMoreButton className="border-brand-on-navy/35 bg-transparent text-brand-on-navy hover:bg-brand-on-navy/10" />
-                <DeckDownloadButton className="border-brand-on-navy/35 bg-transparent text-brand-on-navy hover:bg-brand-on-navy/10" />
-              </div>
-
-              <p className="mt-6 text-base font-medium text-brand-cyan">
-                {PITCH.hero.highlight}
-              </p>
-            </div>
-
-            <div className="w-full">
-              <HeroCarousel />
-            </div>
+        {/* 1 · HERO — carrossel em tela cheia com texto sobreposto */}
+        <HeroCarousel>
+          <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-brand-cyan/15 px-3 py-1 text-sm font-semibold text-brand-cyan">
+            <JurisMindMark size={14} context={JURISMIND_CONTEXT.inlineDark} />
+            {PITCH.hero.eyebrow}
           </div>
-        </section>
+          <h1 className="font-heading text-4xl font-extrabold leading-[1.08] tracking-tight md:text-5xl">
+            {PITCH.hero.title}
+          </h1>
+          <p className="mt-5 text-lg text-brand-on-navy/90">{PITCH.hero.subtitle}</p>
+
+          <div className="mt-8 flex flex-col gap-3 lg:flex-row lg:flex-nowrap [&>*]:w-full lg:[&>*]:w-auto">
+            {user ? (
+              <OpenDashboardButton className="bg-brand-cyan text-brand-navy hover:bg-brand-cyan/90" />
+            ) : (
+              <TrialSignupButton className="bg-brand-cyan text-brand-navy hover:bg-brand-cyan/90" />
+            )}
+            <LearnMoreButton className="border-brand-on-navy/35 bg-transparent text-brand-on-navy hover:bg-brand-on-navy/10" />
+            <DeckDownloadButton className="border-brand-on-navy/35 bg-transparent text-brand-on-navy hover:bg-brand-on-navy/10" />
+          </div>
+
+          <p className="mt-6 text-base font-medium text-brand-cyan">{PITCH.hero.highlight}</p>
+        </HeroCarousel>
 
         {/* 2 · FLUXO ÚNICO */}
         <section id="fluxo" className="border-b bg-card">
