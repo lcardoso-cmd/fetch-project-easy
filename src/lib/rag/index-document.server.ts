@@ -336,7 +336,9 @@ export async function indexDocumentCore(
           ? Array.from({ length: pageCount }, (_, i) => i + 1)
           : weakPages;
         if (targetOcr.length > 0) {
-          if (fileSize > 0 && fileSize > OCR_MAX_FILE_BYTES) {
+          // Sem tamanho conhecido, presume-se grande: melhor entregar o
+          // documento parcial do que estourar a memória do servidor.
+          if (effectiveSize <= 0 || effectiveSize > OCR_MAX_FILE_BYTES) {
             ocrSkippedPages = targetOcr;
           } else {
             await setStatus("ocr_processing");
@@ -346,12 +348,17 @@ export async function indexDocumentCore(
               ocrSkippedPages = targetOcr.slice(OCR_PAGE_LIMIT);
             }
             const bytes = await step("download", async () => {
-              const { data, error } = await supabase.storage
-                .from("documents")
-                .download(doc.storage_path as string);
-              if (error || !data) throw new Error("Falha ao baixar arquivo do storage");
-              return new Uint8Array(await data.arrayBuffer());
+              const res = await fetch(signedUrl);
+              if (!res.ok) throw new Error("Falha ao baixar arquivo do storage");
+              const buf = new Uint8Array(await res.arrayBuffer());
+              if (buf.byteLength > OCR_MAX_FILE_BYTES) {
+                throw new FileTooLargeForMemoryError(
+                  "Arquivo grande demais para OCR completo nesta execução.",
+                );
+              }
+              return buf;
             });
+
             const out = await step("ocr", () =>
               ocrPdfPages({ bytes, filename: doc.filename as string, pages }),
             );
