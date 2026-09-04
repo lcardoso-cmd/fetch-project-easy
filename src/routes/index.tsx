@@ -27,6 +27,7 @@ import {
   Library,
 } from "lucide-react";
 import { JurisMindMark, JURISMIND_CONTEXT } from "@/components/brand/jurismind-mark";
+import { OutputShowcase } from "@/components/marketing/output-showcase";
 import { useAuth } from "@/hooks/use-auth";
 
 const TRIAL_SEARCH = { modo: "cadastro", origem: "trial30" } as const;
