@@ -29,6 +29,7 @@ import {
   registerDocument,
 } from "@/lib/documents.functions";
 import { indexDocument } from "@/lib/rag.functions";
+import { splitPdf, shouldSplitPdf } from "@/lib/documents/pdf-splitter";
 import {
   UploadProgressList,
   type UploadItem,
@@ -36,6 +37,18 @@ import {
 
 export interface CaseUploadItem extends UploadItem {
   caseId: string;
+  parentId?: string;
+  partIndex?: number;
+  partCount?: number;
+}
+
+interface PartMeta {
+  blob: Blob;
+  filename: string;
+  pageCount: number;
+  partIndex: number;
+  partCount: number;
+  pageOffset: number;
 }
 
 interface EnqueueArgs {

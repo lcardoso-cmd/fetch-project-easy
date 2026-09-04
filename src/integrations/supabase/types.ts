@@ -1894,9 +1894,16 @@ export type Database = {
           file_type: string
           filename: string
           id: string
+          is_split_root: boolean
           organization_id: string
+          page_count: number | null
+          page_offset: number
+          parent_document_id: string | null
+          part_count: number | null
+          part_index: number | null
           processing_status: string
-          storage_path: string
+          split_group_id: string | null
+          storage_path: string | null
           updated_at: string
         }
         Insert: {
@@ -1909,9 +1916,16 @@ export type Database = {
           file_type: string
           filename: string
           id?: string
+          is_split_root?: boolean
           organization_id: string
+          page_count?: number | null
+          page_offset?: number
+          parent_document_id?: string | null
+          part_count?: number | null
+          part_index?: number | null
           processing_status?: string
-          storage_path: string
+          split_group_id?: string | null
+          storage_path?: string | null
           updated_at?: string
         }
         Update: {
@@ -1924,9 +1938,16 @@ export type Database = {
           file_type?: string
           filename?: string
           id?: string
+          is_split_root?: boolean
           organization_id?: string
+          page_count?: number | null
+          page_offset?: number
+          parent_document_id?: string | null
+          part_count?: number | null
+          part_index?: number | null
           processing_status?: string
-          storage_path?: string
+          split_group_id?: string | null
+          storage_path?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -1942,6 +1963,13 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "documents_parent_document_id_fkey"
+            columns: ["parent_document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
             referencedColumns: ["id"]
           },
         ]
