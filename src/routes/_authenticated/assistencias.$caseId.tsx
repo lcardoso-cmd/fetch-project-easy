@@ -243,7 +243,7 @@ function CaseWorkspacePage() {
       {canUseAi && (
         <section
           aria-label="JurisMind AI neste caso"
-          className="rounded-xl bg-[#000038] p-5 text-white shadow-sm"
+          className="rounded-xl bg-[#000038] p-5 text-white shadow-sm ring-1 ring-white/15"
         >
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div className="flex min-w-0 items-start gap-3">
