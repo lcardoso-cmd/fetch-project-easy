@@ -42,11 +42,23 @@ describe("decisão de OCR por página", () => {
     ).toBe("native");
   });
 
-  it("usa OCR quando a página é uma imagem grande sem texto suficiente", () => {
+  it("mantém texto nativo em página com digitalização de fundo em página inteira", () => {
     expect(
       decidePdfPageReadMode({
         ...base,
-        text: "Documento juntado",
+        text: "Conclusão. Julgo procedente o pedido inicial.",
+        textItemCount: 3,
+        rasterImageCount: 1,
+        maxRasterCoverage: 0.98,
+      }),
+    ).toBe("native");
+  });
+
+  it("usa OCR quando a página é imagem e não tem texto próprio relevante", () => {
+    expect(
+      decidePdfPageReadMode({
+        ...base,
+        text: "fl. 12",
         textItemCount: 1,
         rasterImageCount: 1,
         maxRasterCoverage: 0.96,
@@ -60,3 +72,4 @@ describe("decisão de OCR por página", () => {
     expect(needsNativeVerification(signals)).toBe(false);
   });
 });
+

@@ -81,6 +81,9 @@ Fonte da verdade: organização é o cliente do SaaS. Sem migração gradual, se
 - [x] Indicador global minimizado com retomada do cadastro.
 - [x] Cancelamento real com descarte do arquivo e limpeza do rascunho.
 - [x] Validação real do PDF grande: parte 1 reservada e retomada com afinidade, 191 páginas verificadas e partes 2–11 mantidas aguardando.
+- [x] Texto primeiro: página com carimbo, logotipo ou imagem de fundo sobre texto legível não vai mais para leitura de imagem; o documento conclui com o texto e informa quantas páginas são só imagem.
+- [x] Leitura de imagem apenas sob pedido, com botão confirmado por documento e reinício limpo de leituras antigas classificadas pela regra anterior.
+
 
 ## Ajustes homepage (concluídos)
 - [x] Logo no header deve ter cérebro branco no modo escuro (contraste com fundo navy).

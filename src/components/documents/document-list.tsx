@@ -133,6 +133,8 @@ function StatusCell({
   forcing,
   onCancel,
   cancelling,
+  onReadImages,
+  readingImages,
 }: {
   status: string;
   job?: IndexJobView;
@@ -142,6 +144,8 @@ function StatusCell({
   forcing: boolean;
   onCancel: () => void;
   cancelling: boolean;
+  onReadImages: () => void;
+  readingImages: boolean;
 }) {
   const isError = status.startsWith("error") || job?.status === "error" || job?.status === "paused";
   const isEmpty = status === "empty";
@@ -149,6 +153,9 @@ function StatusCell({
   const canRetry = isError || isEmpty;
   const detail = jobDetail(job);
   const canForce = status !== "ready" && !isPartial && !isEmpty && status !== "cancelled";
+  // Páginas que são só imagem ficam listadas para leitura sob pedido.
+  const imagePages = Number(/(\d+) página\(s\) são imagem/.exec(status)?.[1] ?? 0);
+
   const inProgress =
     status !== "ready" &&
     status !== "cancelled" &&
@@ -297,6 +304,21 @@ function StatusCell({
         </span>
       )}
 
+      {isPartial && imagePages > 0 && (
+        <ConfirmActionButton
+          variant="outline"
+          className="h-7 text-xs"
+          icon={<ScanText className="mr-1 h-3 w-3" />}
+          label={`Ler ${imagePages} página(s) em imagem`}
+          ariaLabel={`Ler as ${imagePages} páginas em imagem deste documento`}
+          loading={readingImages}
+          onConfirm={onReadImages}
+          title="Ler as páginas em imagem deste documento?"
+          description="Essas páginas não têm texto próprio e precisam ser reconhecidas por imagem, o que é mais lento. O texto já lido continua disponível durante o processo."
+          confirmLabel="Ler as páginas em imagem"
+        />
+      )}
+
       {(inProgress || canForce || status === "cancelled") && (
         <div className="flex flex-wrap items-center gap-2">
           {inProgress && (
@@ -426,6 +448,24 @@ export function DocumentList({
       ]);
     }
   };
+
+  /** Leitura por imagem sob pedido: só as páginas sem texto próprio. */
+  const onReadImages = async (id: string) => {
+    setVisionId(id);
+    try {
+      await forceFn({ data: { document_id: id, force_vision: true } });
+      toast.success("Leitura das páginas em imagem iniciada. O andamento aparece aqui.");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : String(e));
+    } finally {
+      setVisionId(null);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["documents", caseId] }),
+        queryClient.invalidateQueries({ queryKey: ["index-jobs", caseId] }),
+      ]);
+    }
+  };
+
 
   const onCancel = async (id: string) => {
     setCancellingId(id);
@@ -628,7 +668,10 @@ export function DocumentList({
                           forcing={forcingId === d.id}
                           onCancel={() => onCancel(d.id)}
                           cancelling={cancellingId === d.id}
+                          onReadImages={() => onReadImages(d.id)}
+                          readingImages={visionId === d.id}
                         />
+
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1">
