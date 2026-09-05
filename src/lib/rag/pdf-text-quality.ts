@@ -19,7 +19,11 @@ export type PdfPageReadMode = "native" | "ocr" | "blank";
 
 const STRONG_NATIVE_ALNUM_CHARS = 120;
 const STRONG_NATIVE_WORDS = 20;
-const LARGE_RASTER_COVERAGE = 0.25;
+/**
+ * Abaixo disso a camada textual é irrelevante (um número de página, um selo).
+ * Só nesse caso vale gastar leitura de imagem.
+ */
+const MINIMAL_NATIVE_ALNUM_CHARS = 16;
 
 export function compactAlphanumericLength(text: string): number {
   return (text.match(/[\p{L}\p{N}]/gu) ?? []).length;
@@ -33,10 +37,11 @@ function wordCount(text: string): number {
  * Decide entre texto nativo, OCR e página vazia.
  *
  * Regras conservadoras:
- * - uma camada textual substancial sempre prevalece, mesmo sobre uma imagem;
- * - texto curto sem imagem grande continua nativo;
- * - página sem texto e sem raster não consome OCR;
- * - OCR é reservado a página rasterizada sem camada textual suficiente.
+ * - qualquer camada textual real prevalece, mesmo com imagem grande ao fundo
+ *   (peça com carimbo do tribunal, logotipo do escritório ou digitalização
+ *   sobreposta continua sendo lida como texto);
+ * - página sem texto e sem imagem não consome leitura de imagem;
+ * - leitura por imagem é reservada à página praticamente sem texto próprio.
  */
 export function decidePdfPageReadMode(signals: PdfPageTextSignals): PdfPageReadMode {
   const alnum = compactAlphanumericLength(signals.text);
@@ -44,13 +49,12 @@ export function decidePdfPageReadMode(signals: PdfPageTextSignals): PdfPageReadM
   const strongText = alnum >= STRONG_NATIVE_ALNUM_CHARS || words >= STRONG_NATIVE_WORDS;
 
   if (strongText) return "native";
+  if (alnum >= MINIMAL_NATIVE_ALNUM_CHARS) return "native";
 
   const hasRaster = signals.rasterImageCount > 0;
-  const hasLargeRaster = signals.maxRasterCoverage >= LARGE_RASTER_COVERAGE;
-  if (alnum === 0) return hasRaster ? "ocr" : "blank";
-  if (hasLargeRaster) return "ocr";
-  return "native";
+  return hasRaster ? "ocr" : "blank";
 }
+
 
 /** Página rasterizada que merece segunda leitura nativa antes do OCR. */
 export function needsNativeVerification(signals: PdfPageTextSignals): boolean {

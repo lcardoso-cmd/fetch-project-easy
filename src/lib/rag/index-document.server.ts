@@ -25,7 +25,7 @@ const OCR_MAX_FILE_BYTES = 40 * 1024 * 1024;
 const DIRECT_DOWNLOAD_MAX_BYTES = 40 * 1024 * 1024;
 /** Teto de páginas enviadas para OCR em uma execução. */
 const OCR_PAGE_LIMIT = 60;
-const NATIVE_DETECTION_VERSION = "native-v2";
+const NATIVE_DETECTION_VERSION = "native-v3";
 
 export interface IndexResumeProgress {
   run_id?: string;
@@ -74,6 +74,9 @@ export interface IndexDocumentResult {
   pages_total?: number;
   /** Páginas de imagem que ficaram sem OCR (arquivo grande demais). */
   ocr_skipped_pages?: number[];
+  /** Páginas sem texto próprio, disponíveis para leitura de imagem sob pedido. */
+  pending_image_pages?: number[];
+
   /** Estado necessário para continuar exatamente de onde parou. */
   resume_progress?: IndexResumeProgress;
 }
@@ -105,14 +108,16 @@ export async function indexDocumentCore(params: IndexDocumentParams): Promise<In
     done: 100,
   };
 
-  // Checkpoints criados antes da classificação nativa v2 podem conter páginas
-  // encaminhadas ao OCR apenas porque o leitor por faixas falhou. Esses runs
-  // são reiniciados de forma limpa; o OCR já realizado não é reutilizado.
+  // Checkpoints criados por versões anteriores da classificação carregam
+  // páginas marcadas como "imagem" por critérios que hoje sabemos errados
+  // (carimbo, logotipo ou digitalização de fundo sobre texto legível). Esses
+  // runs são reiniciados de forma limpa para que o texto seja lido primeiro.
   const legacyAutomaticOcrResume = Boolean(
     !params.forceVision &&
-    params.resumeProgress?.phase === "ocr_processing" &&
-    params.resumeProgress?.native_detection_version !== NATIVE_DETECTION_VERSION,
+      params.resumeProgress &&
+      params.resumeProgress.native_detection_version !== NATIVE_DETECTION_VERSION,
   );
+
   const activeResume = legacyAutomaticOcrResume ? null : params.resumeProgress;
   let resumeState: IndexResumeProgress = {
     ...(activeResume ?? {}),
@@ -308,6 +313,9 @@ export async function indexDocumentCore(params: IndexDocumentParams): Promise<In
     let ocrPagesRun = 0;
     let ocrFailedPages: number[] = [...(activeResume?.ocr_failed_pages ?? [])];
     let ocrSkippedPages: number[] = [];
+    /** Páginas sem texto próprio, aguardando leitura de imagem sob pedido. */
+    let pendingImagePages: number[] = [];
+
     let pageCount = 0;
     let pagesDone = Math.max(indexedUntilPage, resumedTextPage);
     let incomplete = false;
@@ -576,10 +584,18 @@ export async function indexDocumentCore(params: IndexDocumentParams): Promise<In
       }
 
       if (!incomplete) {
+        const imagePages = weakPages();
+        // Texto primeiro: a leitura de imagens (OCR) é a etapa mais lenta e não
+        // pode travar a fila nem o documento. Ela só roda quando o usuário
+        // pede explicitamente, e apenas nas páginas sem texto próprio.
         const targetOcr = params.forceVision
-          ? Array.from({ length: pageCount }, (_, i) => i + 1)
-          : weakPages();
+          ? imagePages.length > 0
+            ? imagePages
+            : Array.from({ length: pageCount }, (_, i) => i + 1)
+          : [];
+        if (!params.forceVision) pendingImagePages = imagePages;
         if (targetOcr.length > 0) {
+
           // Sem tamanho conhecido, presume-se grande: melhor entregar o
           // documento parcial do que estourar a memória do servidor.
           if (effectiveSize <= 0 || effectiveSize > OCR_MAX_FILE_BYTES) {
@@ -755,15 +771,19 @@ export async function indexDocumentCore(params: IndexDocumentParams): Promise<In
     }
 
     const partialOcr = ocrFailedPages.length > 0;
+    const textPagesRead = Math.max(0, pageCount - pendingImagePages.length);
     const status = incomplete
       ? resumeState.phase === "ocr_processing"
         ? "ocr_processing"
         : "extracting"
-      : ocrSkippedPages.length > 0
-        ? `partial: ${ocrSkippedPages.length} página(s) de imagem sem OCR (arquivo grande). Divida o arquivo em partes para ler as imagens.`
-        : partialOcr
-          ? `partial: OCR falhou nas páginas ${ocrFailedPages.slice(0, 20).join(", ")}`
-          : "ready";
+      : pendingImagePages.length > 0
+        ? `partial: ${textPagesRead} página(s) lidas como texto · ${pendingImagePages.length} página(s) são imagem e podem ser lidas sob pedido.`
+        : ocrSkippedPages.length > 0
+          ? `partial: ${ocrSkippedPages.length} página(s) de imagem sem OCR (arquivo grande). Divida o arquivo em partes para ler as imagens.`
+          : partialOcr
+            ? `partial: OCR falhou nas páginas ${ocrFailedPages.slice(0, 20).join(", ")}`
+            : "ready";
+
 
     await supabase
       .from("documents")
@@ -791,6 +811,8 @@ export async function indexDocumentCore(params: IndexDocumentParams): Promise<In
       pages_total: pageCount,
       ...(incomplete ? { resume_progress: resumeState } : {}),
       ...(ocrSkippedPages.length > 0 ? { ocr_skipped_pages: ocrSkippedPages } : {}),
+      ...(pendingImagePages.length > 0 ? { pending_image_pages: pendingImagePages } : {}),
+
     };
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
