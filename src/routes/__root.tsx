@@ -51,6 +51,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
+      { name: "google-site-verification", content: "p3ExxCrmwEsSNVlYERSKycUlGwJJm3BL7AaCzNGUWJU" },
       { title: "B2B | JurisMind AI" },
       { name: "description", content: "B2B | JurisMind AI é uma plataforma jurídica para advogados: RAG de documentos jurídicos e gestão inteligente de prazos." },
       { name: "author", content: "B2B | JurisMind AI" },
