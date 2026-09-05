@@ -21,6 +21,7 @@ import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as PTokenRouteImport } from './routes/p.$token'
 import { Route as InviteTokenRouteImport } from './routes/invite.$token'
+import { Route as GuiaAutomatizarPeticoesJuridicasIaRouteImport } from './routes/guia.automatizar-peticoes-juridicas-ia'
 import { Route as DocsMcpRouteImport } from './routes/docs.mcp'
 import { Route as ConviteTokenRouteImport } from './routes/convite.$token'
 import { Route as AuthenticatedTarefasRouteImport } from './routes/_authenticated/tarefas'
@@ -176,6 +177,12 @@ const InviteTokenRoute = InviteTokenRouteImport.update({
   path: '/invite/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
+const GuiaAutomatizarPeticoesJuridicasIaRoute =
+  GuiaAutomatizarPeticoesJuridicasIaRouteImport.update({
+    id: '/guia/automatizar-peticoes-juridicas-ia',
+    path: '/guia/automatizar-peticoes-juridicas-ia',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const DocsMcpRoute = DocsMcpRouteImport.update({
   id: '/docs/mcp',
   path: '/docs/mcp',
@@ -756,6 +763,7 @@ export interface FileRoutesByFullPath {
   '/tarefas': typeof AuthenticatedTarefasRoute
   '/convite/$token': typeof ConviteTokenRoute
   '/docs/mcp': typeof DocsMcpRoute
+  '/guia/automatizar-peticoes-juridicas-ia': typeof GuiaAutomatizarPeticoesJuridicasIaRoute
   '/invite/$token': typeof InviteTokenRoute
   '/p/$token': typeof PTokenRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
@@ -862,6 +870,7 @@ export interface FileRoutesByTo {
   '/tarefas': typeof AuthenticatedTarefasRoute
   '/convite/$token': typeof ConviteTokenRoute
   '/docs/mcp': typeof DocsMcpRoute
+  '/guia/automatizar-peticoes-juridicas-ia': typeof GuiaAutomatizarPeticoesJuridicasIaRoute
   '/invite/$token': typeof InviteTokenRoute
   '/p/$token': typeof PTokenRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
@@ -972,6 +981,7 @@ export interface FileRoutesById {
   '/_authenticated/tarefas': typeof AuthenticatedTarefasRoute
   '/convite/$token': typeof ConviteTokenRoute
   '/docs/mcp': typeof DocsMcpRoute
+  '/guia/automatizar-peticoes-juridicas-ia': typeof GuiaAutomatizarPeticoesJuridicasIaRoute
   '/invite/$token': typeof InviteTokenRoute
   '/p/$token': typeof PTokenRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
@@ -1082,6 +1092,7 @@ export interface FileRouteTypes {
     | '/tarefas'
     | '/convite/$token'
     | '/docs/mcp'
+    | '/guia/automatizar-peticoes-juridicas-ia'
     | '/invite/$token'
     | '/p/$token'
     | '/.lovable/oauth/consent'
@@ -1188,6 +1199,7 @@ export interface FileRouteTypes {
     | '/tarefas'
     | '/convite/$token'
     | '/docs/mcp'
+    | '/guia/automatizar-peticoes-juridicas-ia'
     | '/invite/$token'
     | '/p/$token'
     | '/.lovable/oauth/consent'
@@ -1297,6 +1309,7 @@ export interface FileRouteTypes {
     | '/_authenticated/tarefas'
     | '/convite/$token'
     | '/docs/mcp'
+    | '/guia/automatizar-peticoes-juridicas-ia'
     | '/invite/$token'
     | '/p/$token'
     | '/.lovable/oauth/consent'
@@ -1374,6 +1387,7 @@ export interface RootRouteChildren {
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   ConviteTokenRoute: typeof ConviteTokenRoute
   DocsMcpRoute: typeof DocsMcpRoute
+  GuiaAutomatizarPeticoesJuridicasIaRoute: typeof GuiaAutomatizarPeticoesJuridicasIaRoute
   InviteTokenRoute: typeof InviteTokenRoute
   PTokenRoute: typeof PTokenRoute
   DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
@@ -1479,6 +1493,13 @@ declare module '@tanstack/react-router' {
       path: '/invite/$token'
       fullPath: '/invite/$token'
       preLoaderRoute: typeof InviteTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/guia/automatizar-peticoes-juridicas-ia': {
+      id: '/guia/automatizar-peticoes-juridicas-ia'
+      path: '/guia/automatizar-peticoes-juridicas-ia'
+      fullPath: '/guia/automatizar-peticoes-juridicas-ia'
+      preLoaderRoute: typeof GuiaAutomatizarPeticoesJuridicasIaRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/docs/mcp': {
@@ -2426,6 +2447,8 @@ const rootRouteChildren: RootRouteChildren = {
     Char91DotwellKnownChar93OauthProtectedResourceRoute,
   ConviteTokenRoute: ConviteTokenRoute,
   DocsMcpRoute: DocsMcpRoute,
+  GuiaAutomatizarPeticoesJuridicasIaRoute:
+    GuiaAutomatizarPeticoesJuridicasIaRoute,
   InviteTokenRoute: InviteTokenRoute,
   PTokenRoute: PTokenRoute,
   DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
