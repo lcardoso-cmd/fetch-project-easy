@@ -79,7 +79,7 @@ export const indexDocument = createServerFn({ method: "POST" })
         .eq("id", data.document_id);
 
       const { kickDocumentWorker } = await import("@/lib/jobs/worker.server");
-      kickDocumentWorker();
+      await kickDocumentWorker();
 
       return { ok: true as const, queued: true as const, job_id: jobId };
     }

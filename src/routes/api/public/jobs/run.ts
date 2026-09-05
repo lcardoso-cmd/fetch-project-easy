@@ -9,7 +9,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 
 /** Nº máximo de rodadas em uma mesma requisição (limite de trabalho por run). */
-const MAX_ROUNDS = 3;
+const MAX_ROUNDS = 2;
 
 export const Route = createFileRoute("/api/public/jobs/run")({
   server: {
@@ -30,7 +30,7 @@ export const Route = createFileRoute("/api/public/jobs/run")({
         let halted: string | undefined;
 
         for (let round = 0; round < MAX_ROUNDS; round++) {
-          const r = await runDocumentQueues({ maxJobs: 2, timeBudgetMs: 20_000 });
+          const r = await runDocumentQueues({ maxJobs: 10, timeBudgetMs: 50_000 });
           processed += r.processed;
           intake += r.intake;
           index += r.index;
