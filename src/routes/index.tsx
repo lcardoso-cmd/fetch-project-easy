@@ -644,6 +644,11 @@ function LandingPage() {
             <p className="font-heading font-bold text-foreground">Institucional</p>
             <ul className="mt-3 space-y-2 text-muted-foreground">
               <li>
+                <Link to="/guia/automatizar-peticoes-juridicas-ia" className="hover:text-foreground">
+                  Como automatizar petições jurídicas com IA
+                </Link>
+              </li>
+              <li>
                 <Link to="/privacidade" className="hover:text-foreground">
                   Política de privacidade
                 </Link>
