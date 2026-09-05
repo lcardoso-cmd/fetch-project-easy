@@ -7,9 +7,37 @@
  */
 
 import { createFileRoute } from "@tanstack/react-router";
+import { getWorkerExecutionContext } from "@/lib/request-context.server";
 
 /** Nº máximo de rodadas em uma mesma requisição (limite de trabalho por run). */
 const MAX_ROUNDS = 2;
+const MAX_CHAIN_DEPTH = 12;
+const NEXT_HOP_COOLDOWN_MS = 1_000;
+
+function scheduleNextHop(request: Request, depth: number, token: string): void {
+  if (depth >= MAX_CHAIN_DEPTH) return;
+  const executionContext = getWorkerExecutionContext();
+  if (!executionContext) return;
+
+  const nextUrl = new URL("/api/public/jobs/run", request.url);
+  executionContext.waitUntil(
+    new Promise((resolve) => setTimeout(resolve, NEXT_HOP_COOLDOWN_MS))
+      .then(() =>
+        fetch(nextUrl, {
+          method: "POST",
+          headers: {
+            "x-jobs-token": token,
+            "x-jobs-depth": String(depth + 1),
+          },
+        }),
+      )
+      .then(async (response) => {
+        if (!response.ok) {
+          throw new Error(`Continuação da fila falhou (${response.status}): ${await response.text()}`);
+        }
+      }),
+  );
+}
 
 export const Route = createFileRoute("/api/public/jobs/run")({
   server: {
@@ -20,6 +48,9 @@ export const Route = createFileRoute("/api/public/jobs/run")({
         if (!expected || !provided || provided !== expected) {
           return new Response("Unauthorized", { status: 401 });
         }
+
+        const rawDepth = Number.parseInt(request.headers.get("x-jobs-depth") ?? "0", 10);
+        const depth = Number.isFinite(rawDepth) ? Math.max(0, rawDepth) : 0;
 
         const { runDocumentQueues } = await import("@/lib/jobs/worker.server");
 
@@ -39,7 +70,9 @@ export const Route = createFileRoute("/api/public/jobs/run")({
           if (r.processed === 0 || !r.remaining || r.halted) break;
         }
 
-        return Response.json({ ok: true, processed, intake, index, remaining, halted });
+        if (remaining && !halted) scheduleNextHop(request, depth, provided);
+
+        return Response.json({ ok: true, processed, intake, index, remaining, halted, depth });
       },
     },
   },
