@@ -36,11 +36,11 @@ import {
   BrainCircuit,
   CheckCircle,
   Clock,
-  Eye,
   FileText,
   Loader2,
   Play,
   RefreshCw,
+  ScanText,
   XCircle,
   Trash2,
 } from "lucide-react";
@@ -80,6 +80,7 @@ const STAGE_LABEL: Record<string, string> = {
   parse: "abrindo o arquivo",
   extracting_text: "lendo o texto",
   text_extraction: "lendo o texto",
+  verifying_text: "confirmando a camada textual",
   ocr_processing: "lendo imagens (OCR)",
   ocr: "lendo imagens (OCR)",
   chunking: "dividindo em trechos",
@@ -101,8 +102,13 @@ function jobDetail(job: IndexJobView | undefined): string | null {
   }
   if (job.status === "queued") {
     const warning = job.step_warning ? ` ${job.step_warning}` : "";
-    if (isResuming(job))
-      return `Progresso salvo: ${job.pages_done} de ${job.pages_total ?? "?"} página(s) concluídas. Aguardando a próxima execução.${warning}`;
+    if (isResuming(job)) {
+      const action =
+        job.stage === "verifying_text"
+          ? "página(s) verificadas antes do OCR"
+          : "página(s) concluídas";
+      return `Progresso salvo: ${job.pages_done} de ${job.pages_total ?? "?"} ${action}. Aguardando a próxima execução.${warning}`;
+    }
     if (job.queue_position === 1)
       return `É o próximo da fila. A leitura começa em instantes.${warning}`;
     if (job.queue_position && job.queue_position > 1)
@@ -657,16 +663,18 @@ export function DocumentList({
                               <TooltipTrigger asChild>
                                 <Button
                                   variant="ghost"
-                                  size="icon"
-                                  className="h-8 w-8 text-muted-foreground hover:text-primary"
+                                  size="sm"
+                                  className="h-8 gap-1.5 px-2 text-muted-foreground hover:text-primary"
                                   disabled={visionId === d.id}
                                   onClick={() => onVision(d.id, d.filename)}
+                                  aria-label={`Usar OCR no documento ${d.filename}`}
                                 >
                                   {visionId === d.id ? (
                                     <Loader2 className="h-4 w-4 animate-spin" />
                                   ) : (
-                                    <Eye className="h-4 w-4" />
+                                    <ScanText className="h-4 w-4" />
                                   )}
+                                  <span className="hidden xl:inline">Usar OCR</span>
                                 </Button>
                               </TooltipTrigger>
                               <TooltipContent>

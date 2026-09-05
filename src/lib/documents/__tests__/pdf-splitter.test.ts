@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { PDFDocument } from "pdf-lib";
+import { PDFDocument, StandardFonts } from "pdf-lib";
+import { extractText, getDocumentProxy } from "unpdf";
 import { planSplit, partFilename, splitPdfBytes } from "../pdf-splitter.core";
 
 describe("planSplit", () => {
@@ -84,5 +85,31 @@ describe("splitPdfBytes", () => {
     const result = await splitPdfBytes(bytes, "Peticao.pdf", 200, 60, PDFDocument);
     expect(result.parts).toHaveLength(1);
     expect(result.parts[0].filename).toBe("Peticao.pdf");
+  });
+
+  it("preserva a camada textual pesquisável nas partes", async () => {
+    const source = await PDFDocument.create();
+    const font = await source.embedFont(StandardFonts.Helvetica);
+    for (let page = 1; page <= 6; page++) {
+      const pdfPage = source.addPage([595, 842]);
+      pdfPage.drawText(`Conteudo nativo pesquisavel da pagina ${page}`, {
+        x: 40,
+        y: 790,
+        size: 12,
+        font,
+      });
+    }
+
+    const result = await splitPdfBytes(await source.save(), "Processo.pdf", 2, 1, PDFDocument);
+    expect(result.parts).toHaveLength(3);
+
+    const texts: string[] = [];
+    for (const part of result.parts) {
+      const proxy = await getDocumentProxy(Uint8Array.from(part.bytes));
+      const extracted = await extractText(proxy, { mergePages: false });
+      texts.push(...(Array.isArray(extracted.text) ? extracted.text : [extracted.text]));
+    }
+    expect(texts.join(" ")).toContain("Conteudo nativo pesquisavel da pagina 1");
+    expect(texts.join(" ")).toContain("Conteudo nativo pesquisavel da pagina 6");
   });
 });

@@ -46,6 +46,12 @@ function isAiBlocked(err: unknown): boolean {
 /** Traduz falhas técnicas de leitura para linguagem do usuário. */
 export function friendlyIndexError(raw: string): string {
   const m = raw.toLowerCase();
+  if (
+    m.includes("native_text_verification_failed") ||
+    m.includes("native_text_extraction_failed")
+  ) {
+    return "A camada textual do PDF não pôde ser confirmada. O OCR não foi acionado automaticamente para evitar uma leitura mais lenta e de menor fidelidade. Tente processar novamente.";
+  }
   if (m.includes("memory limit") || m.includes("exceeded before eof")) {
     return "O arquivo é grande demais para ser lido de uma vez. Divida-o em partes menores e envie novamente.";
   }
@@ -199,12 +205,17 @@ export async function runDocumentQueues(opts: WorkerRunOptions = {}): Promise<Wo
       );
       if (result.incomplete) {
         const ocrProgress = result.resume_progress?.phase === "ocr_processing";
+        const verificationProgress = result.resume_progress?.phase === "verifying_text";
         const resumePagesDone = ocrProgress
           ? (result.resume_progress?.ocr_pages_done?.length ?? 0)
-          : (result.pages_done ?? null);
+          : verificationProgress
+            ? (result.resume_progress?.native_verified_pages?.length ?? 0)
+            : (result.pages_done ?? null);
         const resumePagesTotal = ocrProgress
           ? (result.resume_progress?.ocr_pages_total ?? null)
-          : (result.pages_total ?? null);
+          : verificationProgress
+            ? (result.resume_progress?.native_candidate_pages?.length ?? null)
+            : (result.pages_total ?? null);
         // Progresso real gravado: volta para a fila para continuar da próxima
         // página, sem gastar tentativas.
         await supabaseAdmin
@@ -220,8 +231,10 @@ export async function runDocumentQueues(opts: WorkerRunOptions = {}): Promise<Wo
               percent:
                 resumePagesTotal && resumePagesDone !== null
                   ? ocrProgress
-                    ? 20 + Math.round((resumePagesDone / resumePagesTotal) * 78)
-                    : 5 + Math.round((resumePagesDone / resumePagesTotal) * 15)
+                    ? 30 + Math.round((resumePagesDone / resumePagesTotal) * 65)
+                    : verificationProgress
+                      ? 20 + Math.round((resumePagesDone / resumePagesTotal) * 10)
+                      : 5 + Math.round((resumePagesDone / resumePagesTotal) * 15)
                   : null,
             },
             heartbeat_at: new Date().toISOString(),

@@ -16,8 +16,9 @@ import {
   classifyIntakeError,
   missingFieldsFrom,
   parseModelJson,
-  weakPages,
 } from "./intake-core";
+import { decidePdfPageReadMode } from "../rag/pdf-text-quality";
+import type { PdfPageInfo } from "../rag/pdf-range.server";
 
 export interface IntakeRow {
   id: string;
@@ -142,8 +143,7 @@ async function extractText(
   row: IntakeRow,
   opts: { forceOcr: boolean; pageLimit?: number },
 ): Promise<ExtractedText> {
-  const isPdf =
-    row.file_type === "application/pdf" || row.filename.toLowerCase().endsWith(".pdf");
+  const isPdf = row.file_type === "application/pdf" || row.filename.toLowerCase().endsWith(".pdf");
 
   if (!isPdf) {
     // Formatos leves (DOCX/XLSX/CSV/TXT/imagem) usam os leitores existentes.
@@ -164,7 +164,10 @@ async function extractText(
         filename: row.filename,
         fileType: row.file_type,
       });
-      const ocrText = blocks.map((b) => b.content).join("\n\n").trim();
+      const ocrText = blocks
+        .map((b) => b.content)
+        .join("\n\n")
+        .trim();
       if (ocrText.length > text.length) {
         text = ocrText;
         usedOcr = true;
@@ -183,7 +186,8 @@ async function extractText(
 
   // PDF: leitura por faixas de bytes, só as primeiras páginas.
   const url = await signedUrlFor(admin, row.storage_path);
-  const { readRemotePdfPages, RangeNotSupportedError } = await import("../rag/pdf-range.server");
+  const { readRemotePdfPages, readPdfPageInfoWithRetry, openPdfBytes, RangeNotSupportedError } =
+    await import("../rag/pdf-range.server");
 
   let read: Awaited<ReturnType<typeof readRemotePdfPages>>;
   try {
@@ -205,26 +209,56 @@ async function extractText(
         .from("documents")
         .download(row.storage_path);
       if (error || !blob) throw new Error("file_missing");
-      const { parseDocument } = await import("../rag/parsers.server");
-      const parsed = await parseDocument({
-        blob,
-        filename: row.filename,
-        fileType: row.file_type,
-      });
-      read = {
-        pageTexts: parsed.plainText.split(/\n{2,}/),
-        pageCount: parsed.pageCount,
-        pagesRead: Math.min(parsed.pageCount, INTAKE_TEXT_PAGE_LIMIT),
-        failedPages: [],
-        bytesFetched: row.file_size,
-      };
+      const bytes = new Uint8Array(await blob.arrayBuffer());
+      // Preserva o buffer original: o PDF.js pode transferir o ArrayBuffer da
+      // cópia usada na leitura nativa.
+      const localPdf = await openPdfBytes(bytes.slice());
+      try {
+        const pagesRead = Math.min(localPdf.numPages, INTAKE_TEXT_PAGE_LIMIT);
+        const pageSignals: PdfPageInfo[] = [];
+        const failedPages: number[] = [];
+        for (let page = 1; page <= pagesRead; page++) {
+          try {
+            pageSignals.push(await readPdfPageInfoWithRetry(localPdf, page));
+          } catch {
+            pageSignals.push({
+              page,
+              text: "",
+              textItemCount: 0,
+              rasterImageCount: 0,
+              maxRasterCoverage: 0,
+            });
+            failedPages.push(page);
+          }
+        }
+        read = {
+          pageTexts: pageSignals.map((page) => page.text),
+          pageSignals,
+          pageCount: localPdf.numPages,
+          pagesRead,
+          failedPages,
+          bytesFetched: bytes.byteLength,
+        };
+      } finally {
+        await localPdf.destroy().catch(() => {});
+      }
     } else {
       throw err;
     }
   }
 
-  const weak = weakPages(read.pageTexts);
-  const needsOcr = opts.forceOcr || weak.length === read.pageTexts.length;
+  // Falha técnica de leitura não equivale a página digitalizada. Sem esta
+  // separação, um problema transitório do parser encaminhava o PDF inteiro
+  // para OCR e consumia IA sem necessidade.
+  if (!opts.forceOcr && read.failedPages.length === read.pagesRead) {
+    throw new Error("native_text_extraction_failed");
+  }
+  const failedSet = new Set(read.failedPages);
+  const weak = read.pageSignals
+    .filter((page) => !failedSet.has(page.page) && decidePdfPageReadMode(page) === "ocr")
+    .map((page) => page.page);
+  const readablePages = read.pagesRead - read.failedPages.length;
+  const needsOcr = opts.forceOcr || (readablePages > 0 && weak.length === readablePages);
   let pageTexts = read.pageTexts;
   let ocrPages: number[] = [];
   let ocrFailed: number[] = [];
@@ -232,9 +266,8 @@ async function extractText(
   if (needsOcr) {
     if (!canOcrFile(row.file_size)) throw new Error("ocr_file_too_large");
     await touch(admin, row.id, { status: "ocr_processing" });
-    const target = (opts.forceOcr
-      ? Array.from({ length: read.pagesRead }, (_, i) => i + 1)
-      : weak
+    const target = (
+      opts.forceOcr ? Array.from({ length: read.pagesRead }, (_, i) => i + 1) : weak
     ).slice(0, INTAKE_OCR_PAGE_LIMIT);
 
     const { data: blob, error } = await admin.storage.from("documents").download(row.storage_path);
@@ -422,8 +455,7 @@ export async function processIntakeDocument(
     const warnings = [...quick.warnings, ...full.warnings].filter(
       (warning, index, all) =>
         all.findIndex(
-          (candidate) =>
-            candidate.field === warning.field && candidate.message === warning.message,
+          (candidate) => candidate.field === warning.field && candidate.message === warning.message,
         ) === index,
     );
 

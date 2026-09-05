@@ -152,7 +152,9 @@ export const forceIndexNow = createServerFn({ method: "POST" })
           finished_at: null,
           last_error_code: null,
           last_error_message: null,
-          ...(data.force_vision ? { force_vision: true } : {}),
+          // “Processar agora” sempre volta ao modo automático. Sem este reset,
+          // um OCR forçado anteriormente ficava gravado no job para sempre.
+          force_vision: data.force_vision ?? false,
         })
         .eq("id", existing.id);
       if (error) throw new Error(`Não foi possível liberar a leitura: ${error.message}`);

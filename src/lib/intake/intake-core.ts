@@ -69,6 +69,7 @@ export type IntakeErrorCode =
   | "unsupported_format"
   | "file_missing"
   | "encrypted_pdf"
+  | "native_text_failed"
   | "no_text_layer"
   | "ocr_file_too_large"
   | "ocr_failed"
@@ -97,7 +98,11 @@ export function classifyIntakeError(err: unknown): ClassifiedIntakeError {
       retryable: false,
     };
   }
-  if (m.includes("object not found") || m.includes("não encontrado no storage") || m.includes("file_missing")) {
+  if (
+    m.includes("object not found") ||
+    m.includes("não encontrado no storage") ||
+    m.includes("file_missing")
+  ) {
     return {
       code: "file_missing",
       message: "O arquivo enviado não foi encontrado. Envie o documento novamente.",
@@ -127,6 +132,14 @@ export function classifyIntakeError(err: unknown): ClassifiedIntakeError {
       retryable: false,
     };
   }
+  if (m.includes("native_text_extraction_failed")) {
+    return {
+      code: "native_text_failed",
+      message:
+        "A leitura da camada textual do PDF falhou. O sistema não acionou OCR automaticamente para evitar custo e perda de qualidade; tente novamente.",
+      retryable: true,
+    };
+  }
   if (m.includes("ocr") && m.includes("falh")) {
     return {
       code: "ocr_failed",
@@ -137,14 +150,16 @@ export function classifyIntakeError(err: unknown): ClassifiedIntakeError {
   if (m.includes("402") || m.includes("créditos") || m.includes("credits")) {
     return {
       code: "model_quota",
-      message: "A análise automática está indisponível por falta de créditos de IA. Avise o responsável pela conta.",
+      message:
+        "A análise automática está indisponível por falta de créditos de IA. Avise o responsável pela conta.",
       retryable: false,
     };
   }
   if (m.includes("403") || m.includes("401")) {
     return {
       code: "model_unavailable",
-      message: "A análise automática está bloqueada nesta conta. Fale com o responsável pela conta.",
+      message:
+        "A análise automática está bloqueada nesta conta. Fale com o responsável pela conta.",
       retryable: false,
     };
   }
@@ -196,7 +211,10 @@ export function buildAnalysisContext(
   const parts: string[] = [];
   let used = 0;
   for (let i = 0; i < pageTexts.length; i++) {
-    const clean = (pageTexts[i] ?? "").replace(/\r\n?/g, "\n").replace(/[ \t]{2,}/g, " ").trim();
+    const clean = (pageTexts[i] ?? "")
+      .replace(/\r\n?/g, "\n")
+      .replace(/[ \t]{2,}/g, " ")
+      .trim();
     if (!clean) continue;
     const header = `--- Página ${i + 1} ---\n`;
     const remaining = budget - used - header.length;

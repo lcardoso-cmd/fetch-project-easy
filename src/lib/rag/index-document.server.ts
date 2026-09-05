@@ -13,6 +13,7 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { DocBlock } from "./chunking";
+import { decidePdfPageReadMode, needsNativeVerification } from "./pdf-text-quality";
 
 export const EMBEDDING_MODEL = "openai/text-embedding-3-small";
 
@@ -24,14 +25,18 @@ const OCR_MAX_FILE_BYTES = 40 * 1024 * 1024;
 const DIRECT_DOWNLOAD_MAX_BYTES = 40 * 1024 * 1024;
 /** Teto de páginas enviadas para OCR em uma execução. */
 const OCR_PAGE_LIMIT = 60;
-const MIN_CHARS_PER_PAGE = 120;
+const NATIVE_DETECTION_VERSION = "native-v2";
 
 export interface IndexResumeProgress {
   run_id?: string;
-  phase?: "extracting_text" | "ocr_processing";
+  phase?: "extracting_text" | "verifying_text" | "ocr_processing";
   text_pages_done?: number;
   pages_total?: number;
   weak_pages?: number[];
+  native_detection_version?: string;
+  native_candidate_pages?: number[];
+  native_verified_pages?: number[];
+  native_failed_pages?: number[];
   ocr_pages_done?: number[];
   ocr_failed_pages?: number[];
   ocr_pages_total?: number;
@@ -80,10 +85,6 @@ export class FileTooLargeForMemoryError extends Error {
   }
 }
 
-function weakText(text: string): boolean {
-  return text.replace(/\s+/g, "").length < MIN_CHARS_PER_PAGE;
-}
-
 export async function indexDocumentCore(params: IndexDocumentParams): Promise<IndexDocumentResult> {
   const { supabase, documentId, organizationId, userId } = params;
   const { embedTexts } = await import("../ai.server");
@@ -97,18 +98,32 @@ export async function indexDocumentCore(params: IndexDocumentParams): Promise<In
     download: 2,
     parse: 5,
     extracting_text: 10,
-    ocr_processing: 20,
-    chunking: 60,
-    embedding: 70,
+    verifying_text: 20,
+    ocr_processing: 30,
+    chunking: 96,
+    embedding: 98,
     done: 100,
   };
 
+  // Checkpoints criados antes da classificação nativa v2 podem conter páginas
+  // encaminhadas ao OCR apenas porque o leitor por faixas falhou. Esses runs
+  // são reiniciados de forma limpa; o OCR já realizado não é reutilizado.
+  const legacyAutomaticOcrResume = Boolean(
+    !params.forceVision &&
+    params.resumeProgress?.phase === "ocr_processing" &&
+    params.resumeProgress?.native_detection_version !== NATIVE_DETECTION_VERSION,
+  );
+  const activeResume = legacyAutomaticOcrResume ? null : params.resumeProgress;
   let resumeState: IndexResumeProgress = {
-    ...(params.resumeProgress ?? {}),
-    run_id: params.resumeProgress?.run_id ?? crypto.randomUUID(),
-    weak_pages: [...(params.resumeProgress?.weak_pages ?? [])],
-    ocr_pages_done: [...(params.resumeProgress?.ocr_pages_done ?? [])],
-    ocr_failed_pages: [...(params.resumeProgress?.ocr_failed_pages ?? [])],
+    ...(activeResume ?? {}),
+    run_id: activeResume?.run_id ?? crypto.randomUUID(),
+    weak_pages: [...(activeResume?.weak_pages ?? [])],
+    native_detection_version: NATIVE_DETECTION_VERSION,
+    native_candidate_pages: [...(activeResume?.native_candidate_pages ?? [])],
+    native_verified_pages: [...(activeResume?.native_verified_pages ?? [])],
+    native_failed_pages: [...(activeResume?.native_failed_pages ?? [])],
+    ocr_pages_done: [...(activeResume?.ocr_pages_done ?? [])],
+    ocr_failed_pages: [...(activeResume?.ocr_failed_pages ?? [])],
   };
   let currentStage = "extracting";
   let currentPercent: number | null = null;
@@ -173,6 +188,27 @@ export async function indexDocumentCore(params: IndexDocumentParams): Promise<In
     }
 
     // ---------- estado do índice: retomada e limpeza ----------
+    if (legacyAutomaticOcrResume && params.resumeProgress?.run_id) {
+      const oldRunId = params.resumeProgress.run_id;
+      const { data: oldRunChunks } = await supabase
+        .from("document_chunks")
+        .select("id, metadata")
+        .eq("document_id", documentId);
+      const oldRunIds = (oldRunChunks ?? [])
+        .filter((chunk) => {
+          const metadata = (chunk.metadata ?? {}) as Record<string, unknown>;
+          return metadata.index_run_id === oldRunId;
+        })
+        .map((chunk) => chunk.id as string);
+      for (let i = 0; i < oldRunIds.length; i += 200) {
+        const { error } = await supabase
+          .from("document_chunks")
+          .delete()
+          .in("id", oldRunIds.slice(i, i + 200));
+        if (error) throw error;
+      }
+    }
+
     const { data: idxRows } = await supabase
       .from("document_chunks")
       .select("chunk_index")
@@ -189,10 +225,11 @@ export async function indexDocumentCore(params: IndexDocumentParams): Promise<In
       .not("page_end", "is", null)
       .order("page_end", { ascending: false })
       .limit(1);
-    const resumedTextPage = Math.max(0, Number(params.resumeProgress?.text_pages_done ?? 0) || 0);
+    const resumedTextPage = Math.max(0, Number(activeResume?.text_pages_done ?? 0) || 0);
     const hasDurableResume =
-      params.resumeProgress?.phase === "extracting_text" ||
-      params.resumeProgress?.phase === "ocr_processing";
+      activeResume?.phase === "extracting_text" ||
+      activeResume?.phase === "verifying_text" ||
+      activeResume?.phase === "ocr_processing";
     // Chunks existentes, sozinhos, não significam que este trabalho é uma
     // continuação: um clique em “Processar novamente” precisa gerar um índice
     // novo. Só usamos o maior page_end quando há checkpoint da fila.
@@ -269,7 +306,7 @@ export async function indexDocumentCore(params: IndexDocumentParams): Promise<In
     let textChunks = 0;
     let visionChunks = 0;
     let ocrPagesRun = 0;
-    let ocrFailedPages: number[] = [...(params.resumeProgress?.ocr_failed_pages ?? [])];
+    let ocrFailedPages: number[] = [...(activeResume?.ocr_failed_pages ?? [])];
     let ocrSkippedPages: number[] = [];
     let pageCount = 0;
     let pagesDone = Math.max(indexedUntilPage, resumedTextPage);
@@ -291,24 +328,77 @@ export async function indexDocumentCore(params: IndexDocumentParams): Promise<In
         return data.signedUrl;
       });
 
-      const { openRemotePdf, remoteFileSize } = await import("./pdf-range.server");
+      const {
+        openPdfBytes,
+        openRemotePdf,
+        readPdfPageInfoWithRetry,
+        remoteFileSize,
+        RangeNotSupportedError,
+      } = await import("./pdf-range.server");
       // Tamanho real do arquivo: o cadastro pode estar zerado/desatualizado e é
       // ele que decide se o OCR (que exige o arquivo em memória) é possível.
       let effectiveSize = fileSize;
       if (effectiveSize <= 0) {
         effectiveSize = await remoteFileSize(signedUrl).catch(() => 0);
       }
-      const pdf = await step("parse", () => openRemotePdf(signedUrl, effectiveSize || undefined));
+      let fullPdfBytes: Uint8Array | null = null;
+      const downloadFullPdf = async () => {
+        if (fullPdfBytes) return fullPdfBytes;
+        fullPdfBytes = await step("download", async () => {
+          const res = await fetch(signedUrl);
+          if (!res.ok) throw new Error("Falha ao baixar arquivo do storage");
+          const declaredSize = Number(res.headers.get("content-length") ?? 0);
+          if (declaredSize > OCR_MAX_FILE_BYTES) {
+            await res.body?.cancel().catch(() => {});
+            throw new FileTooLargeForMemoryError(
+              "Arquivo grande demais para leitura integral nesta execução.",
+            );
+          }
+          const bytes = new Uint8Array(await res.arrayBuffer());
+          if (bytes.byteLength > OCR_MAX_FILE_BYTES) {
+            throw new FileTooLargeForMemoryError(
+              "Arquivo grande demais para leitura integral nesta execução.",
+            );
+          }
+          return bytes;
+        });
+        return fullPdfBytes;
+      };
+
+      let pdf: Awaited<ReturnType<typeof openRemotePdf>>;
+      try {
+        pdf = await step("parse", () => openRemotePdf(signedUrl, effectiveSize || undefined));
+      } catch (error) {
+        if (!(error instanceof RangeNotSupportedError)) throw error;
+        // Algumas configurações de storage não aceitam HTTP Range. As partes
+        // pequenas continuam sendo lidas nativamente pelo buffer completo.
+        if (effectiveSize <= 0 || effectiveSize > OCR_MAX_FILE_BYTES) {
+          throw new FileTooLargeForMemoryError(
+            "O armazenamento não ofereceu leitura por partes e o arquivo é grande demais para leitura integral.",
+          );
+        }
+        const bytes = await downloadFullPdf();
+        pdf = await step("parse", () => openPdfBytes(bytes.slice()));
+      }
 
       pageCount = pdf.numPages;
-      const weakPageSet = new Set<number>(params.resumeProgress?.weak_pages ?? []);
+      const weakPageSet = new Set<number>(activeResume?.weak_pages ?? []);
       const weakPages = () => [...weakPageSet].sort((a, b) => a - b);
+      const nativeCandidateSet = new Set<number>(activeResume?.native_candidate_pages ?? []);
+      const nativeVerifiedSet = new Set<number>(activeResume?.native_verified_pages ?? []);
+      const nativeFailedSet = new Set<number>(activeResume?.native_failed_pages ?? []);
+      const nativeCandidates = () => [...nativeCandidateSet].sort((a, b) => a - b);
+      const nativeVerified = () => [...nativeVerifiedSet].sort((a, b) => a - b);
+      const nativeFailed = () => [...nativeFailedSet].sort((a, b) => a - b);
       resumeState = {
         ...resumeState,
         phase: "extracting_text",
         text_pages_done: pagesDone,
         pages_total: pageCount,
         weak_pages: weakPages(),
+        native_candidate_pages: nativeCandidates(),
+        native_verified_pages: nativeVerified(),
+        native_failed_pages: nativeFailed(),
       };
 
       try {
@@ -324,21 +414,31 @@ export async function indexDocumentCore(params: IndexDocumentParams): Promise<In
           const blocks: DocBlock[] = [];
 
           for (let page = start; page <= end; page++) {
-            let text = "";
+            let info;
             try {
-              text = await pdf.pageText(page);
+              info = await readPdfPageInfoWithRetry(pdf, page);
             } catch {
-              // Página ilegível não interrompe o documento.
-              text = "";
+              // Falha do parser não significa ausência de texto. A página será
+              // verificada por uma segunda via antes de qualquer OCR.
+              nativeCandidateSet.add(page);
+              nativeFailedSet.add(page);
+              continue;
             }
-            if (weakText(text)) {
+
+            const mode = decidePdfPageReadMode(info);
+            if (needsNativeVerification(info)) nativeCandidateSet.add(page);
+            if (mode === "ocr") {
               weakPageSet.add(page);
-              if (!text.trim()) continue;
+              continue;
             }
-            for (const b of splitByHeadings(text.replace(/\r\n?/g, "\n").trim())) {
-              blocks.push({ ...b, page, kind: "text" });
+            weakPageSet.delete(page);
+            nativeFailedSet.delete(page);
+            if (mode === "native") {
+              for (const b of splitByHeadings(info.text.replace(/\r\n?/g, "\n").trim())) {
+                blocks.push({ ...b, page, kind: "text" });
+              }
+              if (plainAccum.length < 200_000) plainAccum += `${info.text}\n\n`;
             }
-            if (plainAccum.length < 200_000) plainAccum += `${text}\n\n`;
           }
 
           if (blocks.length > 0) textChunks += await embedAndInsert(blocks);
@@ -350,6 +450,9 @@ export async function indexDocumentCore(params: IndexDocumentParams): Promise<In
             text_pages_done: pagesDone,
             pages_total: pageCount,
             weak_pages: weakPages(),
+            native_candidate_pages: nativeCandidates(),
+            native_verified_pages: nativeVerified(),
+            native_failed_pages: nativeFailed(),
           };
           const percent = 5 + Math.round((pagesDone / Math.max(1, pageCount)) * 15);
           await report("extracting_text", {
@@ -368,6 +471,110 @@ export async function indexDocumentCore(params: IndexDocumentParams): Promise<In
         await pdf.destroy().catch(() => {});
       }
 
+      // Antes do OCR, toda página curta, vazia ou com erro é reaberta a partir
+      // do arquivo completo (segunda via nativa). Como as partes são mantidas
+      // abaixo do teto de memória, isso elimina falsos OCR causados por Range.
+      const unverifiedNative = nativeCandidates().filter((page) => !nativeVerifiedSet.has(page));
+      if (!incomplete && !params.forceVision && unverifiedNative.length > 0) {
+        if (effectiveSize > 0 && effectiveSize <= OCR_MAX_FILE_BYTES) {
+          fullPdfBytes = await downloadFullPdf();
+
+          // O PDF.js pode transferir/destacar o ArrayBuffer recebido. Mantemos
+          // os bytes originais intactos porque eles ainda podem ser usados pelo
+          // OCR nas poucas páginas realmente rasterizadas.
+          const localPdf = await step("parse", () => openPdfBytes(fullPdfBytes!.slice()));
+          try {
+            if (localPdf.numPages !== pageCount) {
+              throw new Error(
+                `Contagem de páginas inconsistente: leitura remota ${pageCount}, leitura local ${localPdf.numPages}.`,
+              );
+            }
+            resumeState = {
+              ...resumeState,
+              phase: "verifying_text",
+              native_candidate_pages: nativeCandidates(),
+              native_verified_pages: nativeVerified(),
+              native_failed_pages: nativeFailed(),
+            };
+            await report("verifying_text", {
+              pages: nativeCandidateSet.size,
+              pages_done: nativeVerifiedSet.size,
+              pages_total: nativeCandidateSet.size,
+              percent: 20,
+            });
+
+            for (let start = 0; start < unverifiedNative.length; start += PAGE_WINDOW) {
+              const pages = unverifiedNative.slice(start, start + PAGE_WINDOW);
+              const blocks: DocBlock[] = [];
+              for (const page of pages) {
+                let info;
+                try {
+                  info = await readPdfPageInfoWithRetry(localPdf, page);
+                } catch (error) {
+                  throw new Error(
+                    `native_text_verification_failed_page_${page}: ${
+                      error instanceof Error ? error.message : String(error)
+                    }`,
+                  );
+                }
+
+                const mode = decidePdfPageReadMode(info);
+                nativeFailedSet.delete(page);
+                nativeVerifiedSet.add(page);
+                if (mode === "ocr") {
+                  weakPageSet.add(page);
+                  continue;
+                }
+
+                weakPageSet.delete(page);
+                if (mode === "native") {
+                  for (const b of splitByHeadings(info.text.replace(/\r\n?/g, "\n").trim())) {
+                    blocks.push({ ...b, page, kind: "text" });
+                  }
+                  if (plainAccum.length < 200_000) plainAccum += `${info.text}\n\n`;
+                }
+              }
+
+              if (blocks.length > 0) textChunks += await embedAndInsert(blocks);
+              resumeState = {
+                ...resumeState,
+                phase: "verifying_text",
+                weak_pages: weakPages(),
+                native_candidate_pages: nativeCandidates(),
+                native_verified_pages: nativeVerified(),
+                native_failed_pages: nativeFailed(),
+              };
+              await report("verifying_text", {
+                pages: nativeCandidateSet.size,
+                pages_done: nativeVerifiedSet.size,
+                pages_total: nativeCandidateSet.size,
+                percent:
+                  20 +
+                  Math.round((nativeVerifiedSet.size / Math.max(1, nativeCandidateSet.size)) * 10),
+              });
+
+              const stillUnverified = nativeCandidates().some(
+                (page) => !nativeVerifiedSet.has(page),
+              );
+              if (params.deadlineAt && Date.now() > params.deadlineAt && stillUnverified) {
+                incomplete = true;
+                break;
+              }
+            }
+          } finally {
+            await localPdf.destroy().catch(() => {});
+          }
+        } else if (nativeFailedSet.size > 0) {
+          throw new Error(
+            `native_text_extraction_failed_pages_${nativeFailed().slice(0, 20).join("_")}`,
+          );
+        } else {
+          // Em arquivo maior que o teto, páginas confirmadamente rasterizadas
+          // serão sinalizadas como parciais; páginas vazias não gastam OCR.
+          unverifiedNative.forEach((page) => nativeVerifiedSet.add(page));
+        }
+      }
+
       if (!incomplete) {
         const targetOcr = params.forceVision
           ? Array.from({ length: pageCount }, (_, i) => i + 1)
@@ -380,7 +587,7 @@ export async function indexDocumentCore(params: IndexDocumentParams): Promise<In
           } else {
             try {
               await setStatus("ocr_processing");
-              const completedOcr = new Set<number>(params.resumeProgress?.ocr_pages_done ?? []);
+              const completedOcr = new Set<number>(activeResume?.ocr_pages_done ?? []);
               const failedOcr = new Set<number>(ocrFailedPages);
               const remainingOcr = targetOcr.filter((page) => !completedOcr.has(page));
               const pages = remainingOcr.slice(0, OCR_PAGE_LIMIT);
@@ -398,23 +605,13 @@ export async function indexDocumentCore(params: IndexDocumentParams): Promise<In
                 pages: targetOcr.length,
                 pages_done: completedOcr.size,
                 pages_total: targetOcr.length,
-                percent: 20 + Math.round((completedOcr.size / targetOcr.length) * 78),
+                percent: 30 + Math.round((completedOcr.size / targetOcr.length) * 65),
               });
 
               if (pages.length === 0) {
                 ocrFailedPages = [...failedOcr].sort((a, b) => a - b);
               } else {
-                const bytes = await step("download", async () => {
-                  const res = await fetch(signedUrl);
-                  if (!res.ok) throw new Error("Falha ao baixar arquivo do storage");
-                  const buf = new Uint8Array(await res.arrayBuffer());
-                  if (buf.byteLength > OCR_MAX_FILE_BYTES) {
-                    throw new FileTooLargeForMemoryError(
-                      "Arquivo grande demais para OCR completo nesta execução.",
-                    );
-                  }
-                  return buf;
-                });
+                const bytes = fullPdfBytes ?? (await downloadFullPdf());
 
                 const out = await ocrPdfPages({
                   bytes,
@@ -444,7 +641,7 @@ export async function indexDocumentCore(params: IndexDocumentParams): Promise<In
                       pages: targetOcr.length,
                       pages_done: completedOcr.size,
                       pages_total: targetOcr.length,
-                      percent: 20 + Math.round((completedOcr.size / targetOcr.length) * 78),
+                      percent: 30 + Math.round((completedOcr.size / targetOcr.length) * 65),
                     });
                   },
                 });
@@ -454,7 +651,7 @@ export async function indexDocumentCore(params: IndexDocumentParams): Promise<In
             } catch (error) {
               if (error instanceof FileTooLargeForMemoryError) {
                 ocrSkippedPages = targetOcr.filter(
-                  (page) => !(params.resumeProgress?.ocr_pages_done ?? []).includes(page),
+                  (page) => !(activeResume?.ocr_pages_done ?? []).includes(page),
                 );
               } else {
                 throw error;

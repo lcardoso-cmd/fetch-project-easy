@@ -58,6 +58,7 @@ const STAGE_TO_STEP: Record<string, ReadingStepKey> = {
   parse: "leitura",
   extracting_text: "leitura",
   text_extraction: "leitura",
+  verifying_text: "leitura",
   ocr: "ocr",
   ocr_processing: "ocr",
   chunking: "trechos",
@@ -92,9 +93,10 @@ export function readingProgressPercent(
   const total = job?.pages_total;
   if (typeof done === "number" && typeof total === "number" && total > 0 && done >= 0) {
     const ratio = Math.max(0, Math.min(1, done / total));
+    if (job?.stage === "verifying_text") return 20 + Math.round(ratio * 10);
     const step = stepKeyFor(job, status);
-    if (step === "ocr") return 80 + Math.round(ratio * 18);
-    if (step === "leitura") return 30 + Math.round(ratio * 50);
+    if (step === "ocr") return 30 + Math.round(ratio * 65);
+    if (step === "leitura") return 5 + Math.round(ratio * 15);
   }
 
   if (typeof job?.percent === "number") {
@@ -107,11 +109,11 @@ export function readingProgressPercent(
     parse: 20,
     extracting_text: 30,
     text_extraction: 30,
-    ocr_processing: 80,
-    ocr: 80,
-    chunking: 80,
-    embedding: 90,
-    analyzing: 95,
+    ocr_processing: 30,
+    ocr: 30,
+    chunking: 96,
+    embedding: 98,
+    analyzing: 98,
     done: 100,
   };
   return fallback[job?.stage ?? status] ?? 10;
@@ -173,7 +175,9 @@ export function describeReadingStage(
   const resuming = isResuming(job);
   const parts: string[] = resuming
     ? [
-        `${job!.pages_done} de ${job!.pages_total ?? "?"} página(s) concluídas. O progresso foi salvo e aguarda a próxima execução.`,
+        job?.stage === "verifying_text"
+          ? `${job.pages_done} de ${job.pages_total ?? "?"} página(s) suspeitas verificadas antes de decidir se OCR é necessário. O progresso foi salvo.`
+          : `${job!.pages_done} de ${job!.pages_total ?? "?"} página(s) concluídas. O progresso foi salvo e aguarda a próxima execução.`,
       ]
     : [step.description];
 

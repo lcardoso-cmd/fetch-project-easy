@@ -94,7 +94,7 @@ describe("reading-eta", () => {
         },
         "extracting_text",
       ),
-    ).toBe(31);
+    ).toBe(5);
   });
 
   it("preserva o estágio OCR ao retomar um checkpoint", () => {
@@ -106,6 +106,6 @@ describe("reading-eta", () => {
       pages_total: 100,
     };
     expect(stepKeyFor(job, "queued")).toBe("ocr");
-    expect(readingProgressPercent(job, "queued")).toBe(82);
+    expect(readingProgressPercent(job, "queued")).toBe(37);
   });
 });
