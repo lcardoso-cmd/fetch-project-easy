@@ -68,6 +68,7 @@ import { NotificationBell } from "@/components/layout/notification-bell";
 import { ConversationsDrawer } from "@/components/chat/conversations-drawer";
 import { TeamChatDock } from "@/components/chat/team-chat-dock";
 import { IntakeStatusDock } from "@/components/layout/intake-status-dock";
+import { BUILD_INFO } from "@/lib/build-info";
 
 /* ────────────────────────────────────────────────────────────────
    Modelo de navegação orientado a dados.
@@ -702,6 +703,25 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
       />
     ));
 
+  const buildStamp = (isCollapsed = false) => {
+    const fullLabel = BUILD_INFO.identifiable
+      ? `Commit ${BUILD_INFO.commit} · build ${BUILD_INFO.builtAt}`
+      : `Build não identificado · ${BUILD_INFO.builtAt}`;
+
+    return (
+      <div
+        title={fullLabel}
+        aria-label={fullLabel}
+        className={cn(
+          "shrink-0 border-t border-white/[0.08] py-1.5 text-[12px] font-medium tracking-wide text-sidebar-foreground/55",
+          isCollapsed ? "px-1 text-center" : "px-3",
+        )}
+      >
+        {isCollapsed ? `#${BUILD_INFO.shortCommit.slice(0, 3)}` : `Build ${BUILD_INFO.shortCommit}`}
+      </div>
+    );
+  };
+
   return (
     <TooltipProvider delayDuration={200}>
       <div className="flex h-dvh w-full overflow-hidden bg-background">
@@ -771,6 +791,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
               {footerRows({ collapsed })}
             </div>
           )}
+          {buildStamp(collapsed)}
         </aside>
 
         {/* Main column */}
@@ -814,6 +835,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                       {footerRows({ onNavigate: () => setMobileOpen(false) })}
                     </div>
                   )}
+                  {buildStamp()}
                 </SheetContent>
               </Sheet>
               <Link

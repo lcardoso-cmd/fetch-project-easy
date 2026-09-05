@@ -3,6 +3,7 @@ import "./lib/error-capture";
 import { consumeLastCapturedError } from "./lib/error-capture";
 import { renderErrorPage } from "./lib/error-page";
 import { runWithWorkerExecutionContext } from "./lib/request-context.server";
+import { BUILD_INFO } from "./lib/build-info";
 
 type ServerEntry = {
   fetch: (request: Request, env: unknown, ctx: unknown) => Promise<Response> | Response;
@@ -41,6 +42,16 @@ async function normalizeCatastrophicSsrResponse(response: Response): Promise<Res
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
     try {
+      const url = new URL(request.url);
+      if (request.method === "GET" && url.pathname === "/api/public/version") {
+        return Response.json(BUILD_INFO, {
+          headers: {
+            "cache-control": "no-store, max-age=0",
+            "x-content-type-options": "nosniff",
+          },
+        });
+      }
+
       const handler = await getServerEntry();
       const response = await runWithWorkerExecutionContext(ctx, () =>
         Promise.resolve(handler.fetch(request, env, ctx)),
