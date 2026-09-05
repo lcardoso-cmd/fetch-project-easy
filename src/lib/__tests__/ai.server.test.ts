@@ -28,7 +28,12 @@ vi.mock("../ai-session-log.server", () => ({
 // LOVABLE_API_KEY é lida dentro do handler
 process.env.LOVABLE_API_KEY = "test-key";
 
-import { chatComplete, type ChatMessage } from "../ai.server";
+import {
+  chatComplete,
+  OCR_PRIMARY_MODEL,
+  visionExtractPdfSlice,
+  type ChatMessage,
+} from "../ai.server";
 
 interface FetchCall {
   url: string;
@@ -173,7 +178,6 @@ describe("chatComplete: 5 tentativas com fallback", () => {
     expect(calls.every((c) => c.body.model === "google/gemini-2.5-flash")).toBe(true);
   });
 
-
   it("aciona fallback também em 408 e 425", async () => {
     limitsRef.maxRetries = 2;
     const { calls, fetchMock } = mockFetchSequence([
@@ -224,5 +228,20 @@ describe("chatComplete: forceFallback", () => {
     expect(res.content).toBe("recovered by force");
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(calls[1].body.model).toBe("google/gemini-2.5-flash-lite");
+  });
+});
+
+describe("OCR: modelo controlado", () => {
+  it("não rebaixa silenciosamente do Gemini Flash para o Flash Lite", async () => {
+    limitsRef.forceFallback = true;
+    limitsRef.maxRetries = 4;
+    const { calls, fetchMock } = mockFetchSequence([{ status: 429, body: "rate limited" }]);
+
+    await expect(
+      visionExtractPdfSlice(new Uint8Array([1, 2, 3]), "teste.pdf", [1]),
+    ).rejects.toThrow(/429/);
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(calls[0].body.model).toBe(OCR_PRIMARY_MODEL);
   });
 });

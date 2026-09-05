@@ -220,8 +220,8 @@ export async function runDocumentQueues(opts: WorkerRunOptions = {}): Promise<Wo
               percent:
                 resumePagesTotal && resumePagesDone !== null
                   ? ocrProgress
-                    ? 80 + Math.round((resumePagesDone / resumePagesTotal) * 18)
-                    : 30 + Math.round((resumePagesDone / resumePagesTotal) * 50)
+                    ? 20 + Math.round((resumePagesDone / resumePagesTotal) * 78)
+                    : 5 + Math.round((resumePagesDone / resumePagesTotal) * 15)
                   : null,
             },
             heartbeat_at: new Date().toISOString(),

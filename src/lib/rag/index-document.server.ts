@@ -94,10 +94,10 @@ export async function indexDocumentCore(params: IndexDocumentParams): Promise<In
   const { withStepRetry, describeStepFailure } = await import("./step-retry");
 
   const STAGE_PCT: Record<string, number> = {
-    download: 8,
-    parse: 15,
-    extracting_text: 30,
-    ocr_processing: 85,
+    download: 2,
+    parse: 5,
+    extracting_text: 10,
+    ocr_processing: 20,
     chunking: 60,
     embedding: 70,
     done: 100,
@@ -316,7 +316,7 @@ export async function indexDocumentCore(params: IndexDocumentParams): Promise<In
           pages: pageCount,
           pages_done: pagesDone,
           pages_total: pageCount,
-          percent: 30,
+          percent: 5,
         });
 
         for (let start = pagesDone + 1; start <= pageCount; start += PAGE_WINDOW) {
@@ -351,7 +351,7 @@ export async function indexDocumentCore(params: IndexDocumentParams): Promise<In
             pages_total: pageCount,
             weak_pages: weakPages(),
           };
-          const percent = 30 + Math.round((pagesDone / Math.max(1, pageCount)) * 50);
+          const percent = 5 + Math.round((pagesDone / Math.max(1, pageCount)) * 15);
           await report("extracting_text", {
             pages: pageCount,
             pages_done: pagesDone,
@@ -398,7 +398,7 @@ export async function indexDocumentCore(params: IndexDocumentParams): Promise<In
                 pages: targetOcr.length,
                 pages_done: completedOcr.size,
                 pages_total: targetOcr.length,
-                percent: 80 + Math.round((completedOcr.size / targetOcr.length) * 18),
+                percent: 20 + Math.round((completedOcr.size / targetOcr.length) * 78),
               });
 
               if (pages.length === 0) {
@@ -444,7 +444,7 @@ export async function indexDocumentCore(params: IndexDocumentParams): Promise<In
                       pages: targetOcr.length,
                       pages_done: completedOcr.size,
                       pages_total: targetOcr.length,
-                      percent: 80 + Math.round((completedOcr.size / targetOcr.length) * 18),
+                      percent: 20 + Math.round((completedOcr.size / targetOcr.length) * 78),
                     });
                   },
                 });
