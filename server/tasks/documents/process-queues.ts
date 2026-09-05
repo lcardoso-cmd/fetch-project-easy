@@ -3,8 +3,8 @@ import { defineTask } from "nitro/task";
 import { runDocumentQueues } from "../../../src/lib/jobs/worker.server";
 
 const TASK_TIME_BUDGET_MS = 50_000;
-const RUN_TIME_BUDGET_MS = 20_000;
-const MAX_ROUNDS = 3;
+const RUN_TIME_BUDGET_MS = 48_000;
+const MAX_ROUNDS = 1;
 
 export default defineTask({
   meta: {
@@ -25,7 +25,7 @@ export default defineTask({
       if (available < 5_000) break;
 
       const result = await runDocumentQueues({
-        maxJobs: 2,
+        maxJobs: 10,
         timeBudgetMs: Math.min(RUN_TIME_BUDGET_MS, available - 2_000),
       });
       rounds++;

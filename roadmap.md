@@ -80,7 +80,7 @@ Fonte da verdade: organização é o cliente do SaaS. Sem migração gradual, se
 - [x] Preenchimento progressivo sem sobrescrever edições manuais.
 - [x] Indicador global minimizado com retomada do cadastro.
 - [x] Cancelamento real com descarte do arquivo e limpeza do rascunho.
-- [ ] Validação real do PDF grande atualmente em fila.
+- [x] Validação real do PDF grande: parte 1 reservada e retomada com afinidade, 191 páginas verificadas e partes 2–11 mantidas aguardando.
 
 ## Ajustes homepage (concluídos)
 - [x] Logo no header deve ter cérebro branco no modo escuro (contraste com fundo navy).

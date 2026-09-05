@@ -18,6 +18,7 @@ const WORKER_MAX_JOBS = 4;
 /** Sinal interno de que o usuário cancelou a leitura deste documento. */
 const CANCELLED_MARKER = "__job_cancelled__";
 const WORKER_TIME_BUDGET_MS = 50_000;
+const CONTINUATION_COOLDOWN_MS = 250;
 
 export interface WorkerRunResult {
   processed: number;
@@ -78,45 +79,6 @@ export async function runDocumentQueues(opts: WorkerRunOptions = {}): Promise<Wo
   let indexDone = 0;
   let halted: "ai_blocked" | undefined;
 
-  /**
-   * Reserva de forma otimista o documento escolhido em "Processar agora".
-   * A condição status=queued + locked_by IS NULL impede duas execuções do
-   * mesmo job. Se outro worker ganhar a corrida, seguimos para a fila comum.
-   */
-  const claimPreferredIndexJob = async (documentId: string) => {
-    const { data: candidate } = await supabaseAdmin
-      .from("document_index_jobs")
-      .select("*")
-      .eq("document_id", documentId)
-      .eq("status", "queued")
-      .is("locked_by", null)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    if (!candidate) return null;
-
-    const now = new Date().toISOString();
-    const { data: claimed } = await supabaseAdmin
-      .from("document_index_jobs")
-      .update({
-        status: "running",
-        locked_by: worker,
-        locked_at: now,
-        heartbeat_at: now,
-        started_at: candidate.started_at ?? now,
-        attempt_count: Number(candidate.attempt_count ?? 0) + 1,
-        last_error_code: null,
-        last_error_message: null,
-      })
-      .eq("id", candidate.id)
-      .eq("status", "queued")
-      .is("locked_by", null)
-      .select("*")
-      .maybeSingle();
-
-    return claimed ?? null;
-  };
-
   for (let i = 0; i < maxJobs && Date.now() < deadline && !halted; i++) {
     // Uma solicitação explícita em "Processar agora" precede a fila comum.
     // Fora disso, a análise do "Novo caso" mantém a prioridade normal.
@@ -151,18 +113,26 @@ export async function runDocumentQueues(opts: WorkerRunOptions = {}): Promise<Wo
     }
 
     // 2) Indexação completa para consulta pela IA.
-    let job =
-      i === 0 && opts.preferredDocumentId
-        ? await claimPreferredIndexJob(opts.preferredDocumentId)
-        : null;
-    if (!job) {
-      const { data: indexRows } = await supabaseAdmin.rpc("claim_index_jobs", {
-        _worker: worker,
-        _limit: 1,
-      });
-      job = (indexRows ?? [])[0];
+    // Toda reserva passa pela função atômica do banco. Ela aplica single-flight
+    // por organização, afinidade ao checkpoint e ordem das partes do PDF.
+    const { data: indexRows, error: claimError } = await supabaseAdmin.rpc("claim_index_jobs", {
+      _worker: worker,
+      _limit: 1,
+    });
+    if (claimError) {
+      console.error("[jobs] falha ao reservar indexação", { worker, error: claimError.message });
+      break;
     }
+    const job = (indexRows ?? [])[0];
     if (!job) break;
+
+    console.info("[jobs] indexação reservada", {
+      worker,
+      job_id: job.id,
+      document_id: job.document_id,
+      organization_id: job.organization_id,
+      continuation: Boolean(job.started_at || Object.keys(job.progress ?? {}).length > 0),
+    });
 
     try {
       const result = await runWithUsageContext(
@@ -181,9 +151,9 @@ export async function runDocumentQueues(opts: WorkerRunOptions = {}): Promise<Wo
             forceVision: job.force_vision,
             resumeProgress: (job.progress ?? null) as
               import("@/lib/rag/index-document.server").IndexResumeProgress | null,
-            // Um documento pesado não consome o orçamento inteiro do lote:
-            // devolve o progresso e volta para a fila para continuar depois.
-            deadlineAt: Math.min(deadline, Date.now() + 40_000),
+            // Cada rodada deixa uma margem para persistir o checkpoint. A
+            // reserva seguinte dá prioridade a este mesmo trabalho.
+            deadlineAt: Math.min(deadline - 1_500, Date.now() + 40_000),
             onProgress: async (stage, detail) => {
               // Cancelamento cooperativo: o usuário pode parar a leitura de um
               // documento sem afetar os demais da fila.
@@ -245,6 +215,17 @@ export async function runDocumentQueues(opts: WorkerRunOptions = {}): Promise<Wo
           .eq("id", job.id)
           .neq("status", "cancelled");
         indexDone++;
+        console.info("[jobs] checkpoint salvo", {
+          worker,
+          job_id: job.id,
+          document_id: job.document_id,
+          phase: result.resume_progress?.phase ?? "extracting_text",
+          pages_done: resumePagesDone,
+          pages_total: resumePagesTotal,
+        });
+        if (Date.now() + CONTINUATION_COOLDOWN_MS < deadline) {
+          await new Promise((resolve) => setTimeout(resolve, CONTINUATION_COOLDOWN_MS));
+        }
         continue;
       }
       await supabaseAdmin
@@ -265,6 +246,12 @@ export async function runDocumentQueues(opts: WorkerRunOptions = {}): Promise<Wo
         .eq("id", job.id)
         .neq("status", "cancelled");
       indexDone++;
+      console.info("[jobs] indexação concluída", {
+        worker,
+        job_id: job.id,
+        document_id: job.document_id,
+        chunks: result.chunks,
+      });
     } catch (err) {
       if (err instanceof Error && err.message === CANCELLED_MARKER) {
         await supabaseAdmin
@@ -334,15 +321,18 @@ export async function kickDocumentWorker(
   opts: Pick<WorkerRunOptions, "preferredDocumentId"> = {},
 ): Promise<void> {
   const task = runDocumentQueues({
-    maxJobs: 2,
-    timeBudgetMs: 20_000,
+    maxJobs: 10,
+    timeBudgetMs: WORKER_TIME_BUDGET_MS,
     preferredDocumentId: opts.preferredDocumentId,
-  }).catch((error) => {
-    console.error("[jobs] falha ao acordar processador", error);
   });
   const executionContext = getWorkerExecutionContext();
   if (executionContext) {
-    executionContext.waitUntil(task);
+    executionContext.waitUntil(
+      task.catch((error) => {
+        console.error("[jobs] falha ao acordar processador", error);
+        throw error;
+      }),
+    );
     return;
   }
 
