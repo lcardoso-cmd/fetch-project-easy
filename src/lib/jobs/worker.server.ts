@@ -27,6 +27,13 @@ export interface WorkerRunResult {
   halted?: "ai_blocked";
 }
 
+interface WorkerRunOptions {
+  maxJobs?: number;
+  timeBudgetMs?: number;
+  /** Documento solicitado explicitamente pelo usuário. É reservado antes da fila comum. */
+  preferredDocumentId?: string;
+}
+
 function workerId(): string {
   return `w_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
 }
@@ -51,9 +58,7 @@ export function friendlyIndexError(raw: string): string {
 }
 
 /** Executa um lote limitado das duas filas. Nunca lança. */
-export async function runDocumentQueues(
-  opts: { maxJobs?: number; timeBudgetMs?: number } = {},
-): Promise<WorkerRunResult> {
+export async function runDocumentQueues(opts: WorkerRunOptions = {}): Promise<WorkerRunResult> {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { processIntakeDocument } = await import("@/lib/intake/intake.server");
   const { indexDocumentCore } = await import("@/lib/rag/index-document.server");
@@ -67,13 +72,56 @@ export async function runDocumentQueues(
   let indexDone = 0;
   let halted: "ai_blocked" | undefined;
 
+  /**
+   * Reserva de forma otimista o documento escolhido em "Processar agora".
+   * A condição status=queued + locked_by IS NULL impede duas execuções do
+   * mesmo job. Se outro worker ganhar a corrida, seguimos para a fila comum.
+   */
+  const claimPreferredIndexJob = async (documentId: string) => {
+    const { data: candidate } = await supabaseAdmin
+      .from("document_index_jobs")
+      .select("*")
+      .eq("document_id", documentId)
+      .eq("status", "queued")
+      .is("locked_by", null)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (!candidate) return null;
+
+    const now = new Date().toISOString();
+    const { data: claimed } = await supabaseAdmin
+      .from("document_index_jobs")
+      .update({
+        status: "running",
+        locked_by: worker,
+        locked_at: now,
+        heartbeat_at: now,
+        started_at: candidate.started_at ?? now,
+        attempt_count: Number(candidate.attempt_count ?? 0) + 1,
+        last_error_code: null,
+        last_error_message: null,
+      })
+      .eq("id", candidate.id)
+      .eq("status", "queued")
+      .is("locked_by", null)
+      .select("*")
+      .maybeSingle();
+
+    return claimed ?? null;
+  };
+
   for (let i = 0; i < maxJobs && Date.now() < deadline && !halted; i++) {
-    // 1) Análise de documentos do "Novo caso" tem prioridade (usuário esperando).
-    const { data: intakeRows } = await supabaseAdmin.rpc("claim_intake_jobs", {
-      _worker: worker,
-      _limit: 1,
-    });
-    const intake = (intakeRows ?? [])[0];
+    // Uma solicitação explícita em "Processar agora" precede a fila comum.
+    // Fora disso, a análise do "Novo caso" mantém a prioridade normal.
+    let intake = null;
+    if (!(i === 0 && opts.preferredDocumentId)) {
+      const { data: intakeRows } = await supabaseAdmin.rpc("claim_intake_jobs", {
+        _worker: worker,
+        _limit: 1,
+      });
+      intake = (intakeRows ?? [])[0] ?? null;
+    }
     if (intake) {
       const outcome = await runWithUsageContext(
         {
@@ -97,11 +145,17 @@ export async function runDocumentQueues(
     }
 
     // 2) Indexação completa para consulta pela IA.
-    const { data: indexRows } = await supabaseAdmin.rpc("claim_index_jobs", {
-      _worker: worker,
-      _limit: 1,
-    });
-    const job = (indexRows ?? [])[0];
+    let job =
+      i === 0 && opts.preferredDocumentId
+        ? await claimPreferredIndexJob(opts.preferredDocumentId)
+        : null;
+    if (!job) {
+      const { data: indexRows } = await supabaseAdmin.rpc("claim_index_jobs", {
+        _worker: worker,
+        _limit: 1,
+      });
+      job = (indexRows ?? [])[0];
+    }
     if (!job) break;
 
     try {
@@ -263,8 +317,14 @@ export async function hasPendingWork(): Promise<boolean> {
  * Acorda um lote limitado no contexto da requisição. Em produção, waitUntil
  * mantém o trabalho vivo mesmo depois de a resposta chegar ao usuário.
  */
-export async function kickDocumentWorker(): Promise<void> {
-  const task = runDocumentQueues({ maxJobs: 2, timeBudgetMs: 20_000 }).catch((error) => {
+export async function kickDocumentWorker(
+  opts: Pick<WorkerRunOptions, "preferredDocumentId"> = {},
+): Promise<void> {
+  const task = runDocumentQueues({
+    maxJobs: 2,
+    timeBudgetMs: 20_000,
+    preferredDocumentId: opts.preferredDocumentId,
+  }).catch((error) => {
     console.error("[jobs] falha ao acordar processador", error);
   });
   const executionContext = getWorkerExecutionContext();

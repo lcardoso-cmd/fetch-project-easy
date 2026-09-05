@@ -26,9 +26,7 @@ export interface IndexJobView {
   /** Páginas já lidas e total, quando o arquivo é lido em partes. */
   pages_done: number | null;
   pages_total: number | null;
-
 }
-
 
 const STALE_MS = 5 * 60 * 1000;
 
@@ -91,7 +89,6 @@ export const listIndexJobs = createServerFn({ method: "POST" })
           pages_done: progress.pages_done ?? null,
           pages_total: progress.pages_total ?? null,
         };
-
       });
 
     // Se há trabalho parado na fila e nada rodando, acorda o processador.
@@ -123,9 +120,7 @@ export const listIndexJobs = createServerFn({ method: "POST" })
 export const forceIndexNow = createServerFn({ method: "POST" })
   .middleware([requireOrg])
   .inputValidator((i: unknown) =>
-    z
-      .object({ document_id: z.string().uuid(), force_vision: z.boolean().optional() })
-      .parse(i),
+    z.object({ document_id: z.string().uuid(), force_vision: z.boolean().optional() }).parse(i),
   )
   .handler(async ({ data, context }) => {
     const { data: doc } = await context.supabase
@@ -146,38 +141,97 @@ export const forceIndexNow = createServerFn({ method: "POST" })
       .maybeSingle();
 
     if (existing) {
-      await context.supabase
+      const { error } = await context.supabase
         .from("document_index_jobs")
         .update({
           status: "queued",
           attempt_count: 0,
           locked_by: null,
           locked_at: null,
+          heartbeat_at: null,
           finished_at: null,
           last_error_code: null,
           last_error_message: null,
           ...(data.force_vision ? { force_vision: true } : {}),
         })
         .eq("id", existing.id);
+      if (error) throw new Error(`Não foi possível liberar a leitura: ${error.message}`);
     } else {
-      await context.supabase.from("document_index_jobs").insert({
+      const { error } = await context.supabase.from("document_index_jobs").insert({
         organization_id: context.organizationId,
         document_id: data.document_id,
         case_id: doc.case_id,
         requested_by_user_id: context.userId,
         force_vision: data.force_vision ?? false,
       });
+      if (error) throw new Error(`Não foi possível criar a leitura: ${error.message}`);
     }
 
-    await context.supabase
+    const { error: documentError } = await context.supabase
       .from("documents")
       .update({ processing_status: "queued" })
       .eq("id", data.document_id);
+    if (documentError) {
+      throw new Error(`Não foi possível atualizar o documento: ${documentError.message}`);
+    }
 
     const { kickDocumentWorker } = await import("@/lib/jobs/worker.server");
-    await kickDocumentWorker();
+    await kickDocumentWorker({ preferredDocumentId: data.document_id });
 
     return { ok: true as const };
+  });
+
+/** Retoma, em uma única ação, todos os jobs sem heartbeat recente de um caso. */
+export const resumeStalledCaseJobs = createServerFn({ method: "POST" })
+  .middleware([requireOrg])
+  .inputValidator((i: unknown) => z.object({ case_id: z.string().uuid() }).parse(i))
+  .handler(async ({ data, context }) => {
+    const { data: rows, error: selectError } = await context.supabase
+      .from("document_index_jobs")
+      .select("id, document_id, heartbeat_at, locked_at, started_at")
+      .eq("organization_id", context.organizationId)
+      .eq("case_id", data.case_id)
+      .eq("status", "running");
+    if (selectError) throw new Error(`Não foi possível consultar a fila: ${selectError.message}`);
+
+    const cutoff = Date.now() - STALE_MS;
+    const stalled = (rows ?? []).filter((row) => {
+      const signal = row.heartbeat_at ?? row.locked_at ?? row.started_at;
+      return Boolean(signal && new Date(signal).getTime() < cutoff);
+    });
+    if (stalled.length === 0) return { ok: true as const, resumed: 0 };
+
+    const jobIds = stalled.map((row) => row.id);
+    const documentIds = stalled.map((row) => row.document_id);
+    const { error: updateError } = await context.supabase
+      .from("document_index_jobs")
+      .update({
+        status: "queued",
+        attempt_count: 0,
+        locked_by: null,
+        locked_at: null,
+        heartbeat_at: null,
+        finished_at: null,
+        last_error_code: null,
+        last_error_message: null,
+      })
+      .in("id", jobIds)
+      .eq("status", "running");
+    if (updateError) throw new Error(`Não foi possível liberar a fila: ${updateError.message}`);
+
+    const { error: documentError } = await context.supabase
+      .from("documents")
+      .update({ processing_status: "queued" })
+      .eq("organization_id", context.organizationId)
+      .in("id", documentIds)
+      .neq("processing_status", "ready");
+    if (documentError) {
+      throw new Error(`Não foi possível atualizar os documentos: ${documentError.message}`);
+    }
+
+    const { kickDocumentWorker } = await import("@/lib/jobs/worker.server");
+    await kickDocumentWorker({ preferredDocumentId: documentIds[0] });
+    return { ok: true as const, resumed: stalled.length };
   });
 
 /**

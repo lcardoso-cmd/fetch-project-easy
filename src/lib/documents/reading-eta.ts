@@ -69,9 +69,52 @@ const STAGE_TO_STEP: Record<string, ReadingStepKey> = {
 export function stepKeyFor(job: ReadingJobLike | undefined, status: string): ReadingStepKey | null {
   if (!job) return STAGE_TO_STEP[status] ?? null;
   // Arquivos grandes são lidos em partes: quando volta para a fila com páginas
-  // já lidas, continua sendo a etapa de leitura, não "fila".
-  if (job.status === "queued") return isResuming(job) ? "leitura" : "fila";
+  // já lidas, preserva a etapa real do checkpoint, não volta visualmente à fila.
+  if (job.status === "queued") {
+    if (!isResuming(job)) return "fila";
+    const checkpointStep = STAGE_TO_STEP[job.stage ?? ""];
+    return checkpointStep === "ocr" ? "ocr" : "leitura";
+  }
   return STAGE_TO_STEP[job.stage ?? status] ?? null;
+}
+
+/** Percentual global coerente com a etapa e, quando disponível, com páginas reais. */
+export function readingProgressPercent(
+  job: ReadingJobLike | undefined,
+  status: string,
+): number | null {
+  if (status === "ready") return 100;
+  if (status.startsWith("partial")) return 100;
+  if (status.startsWith("error") || status === "empty") return null;
+  if (job?.status === "error" || job?.status === "paused") return null;
+
+  const done = job?.pages_done;
+  const total = job?.pages_total;
+  if (typeof done === "number" && typeof total === "number" && total > 0 && done >= 0) {
+    const ratio = Math.max(0, Math.min(1, done / total));
+    const step = stepKeyFor(job, status);
+    if (step === "ocr") return 80 + Math.round(ratio * 18);
+    if (step === "leitura") return 30 + Math.round(ratio * 50);
+  }
+
+  if (typeof job?.percent === "number") {
+    return Math.max(0, Math.min(100, Math.round(job.percent)));
+  }
+  if (job?.status === "queued" || status === "queued" || status === "pending") return 5;
+
+  const fallback: Record<string, number> = {
+    download: 10,
+    parse: 20,
+    extracting_text: 30,
+    text_extraction: 30,
+    ocr_processing: 80,
+    ocr: 80,
+    chunking: 80,
+    embedding: 90,
+    analyzing: 95,
+    done: 100,
+  };
+  return fallback[job?.stage ?? status] ?? 10;
 }
 
 /** Formata segundos em texto curto e humano ("cerca de 3 min"). */
@@ -130,7 +173,7 @@ export function describeReadingStage(
   const resuming = isResuming(job);
   const parts: string[] = resuming
     ? [
-        `${job!.pages_done} de ${job!.pages_total ?? "?"} página(s) já lidas. A leitura continua automaticamente de onde parou.`,
+        `${job!.pages_done} de ${job!.pages_total ?? "?"} página(s) concluídas. O progresso foi salvo e aguarda a próxima execução.`,
       ]
     : [step.description];
 

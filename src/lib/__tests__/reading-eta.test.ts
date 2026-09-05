@@ -3,6 +3,7 @@ import {
   describeReadingStage,
   estimateRemainingSeconds,
   formatDuration,
+  readingProgressPercent,
   stepKeyFor,
   type ReadingJobLike,
 } from "@/lib/documents/reading-eta";
@@ -57,10 +58,7 @@ describe("reading-eta", () => {
   });
 
   it("descreve a etapa da fila com a posição", () => {
-    const info = describeReadingStage(
-      { ...base, status: "queued", queue_position: 3 },
-      "queued",
-    )!;
+    const info = describeReadingStage({ ...base, status: "queued", queue_position: 3 }, "queued")!;
     expect(info.title).toBe("Etapa 1 de 5 — Fila");
     expect(info.description).toContain("2 documento(s) na frente");
     expect(info.eta).toBeNull();
@@ -82,5 +80,32 @@ describe("reading-eta", () => {
     expect(info.title).toBe("Etapa 3 de 5 — OCR");
     expect(info.description).toContain("40 página(s)");
     expect(info.eta).toBe("Restam cerca de 5 min");
+  });
+
+  it("calcula o avanço pela quantidade real de páginas de texto", () => {
+    expect(
+      readingProgressPercent(
+        {
+          ...base,
+          status: "queued",
+          percent: 81,
+          pages_done: 4,
+          pages_total: 143,
+        },
+        "extracting_text",
+      ),
+    ).toBe(31);
+  });
+
+  it("preserva o estágio OCR ao retomar um checkpoint", () => {
+    const job: ReadingJobLike = {
+      ...base,
+      status: "queued",
+      stage: "ocr_processing",
+      pages_done: 10,
+      pages_total: 100,
+    };
+    expect(stepKeyFor(job, "queued")).toBe("ocr");
+    expect(readingProgressPercent(job, "queued")).toBe(82);
   });
 });

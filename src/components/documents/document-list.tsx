@@ -6,6 +6,7 @@ import {
   cancelIndexJob,
   forceIndexNow,
   listIndexJobs,
+  resumeStalledCaseJobs,
   type IndexJobView,
 } from "@/lib/index-jobs.functions";
 import { indexDocument } from "@/lib/rag.functions";
@@ -14,7 +15,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
-import { describeReadingStage, isResuming } from "@/lib/documents/reading-eta";
+import {
+  describeReadingStage,
+  isResuming,
+  readingProgressPercent,
+} from "@/lib/documents/reading-eta";
 
 import {
   Table,
@@ -24,12 +29,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   AlertCircle,
   AlertTriangle,
@@ -62,7 +62,6 @@ export interface DocItem {
   page_count?: number | null;
 }
 
-
 function formatBytes(b: number | null) {
   if (!b) return "—";
   const k = 1024;
@@ -93,7 +92,7 @@ const STAGE_LABEL: Record<string, string> = {
 function jobDetail(job: IndexJobView | undefined): string | null {
   if (!job) return null;
   if (job.status === "running") {
-    const stage = job.stage ? STAGE_LABEL[job.stage] ?? job.stage : "processando";
+    const stage = job.stage ? (STAGE_LABEL[job.stage] ?? job.stage) : "processando";
     const pages = job.pages ? ` — ${job.pages} páginas` : "";
     if (job.stalled)
       return `A leitura começou (${stage}) mas parou de responder. Use "Processar agora".`;
@@ -103,7 +102,7 @@ function jobDetail(job: IndexJobView | undefined): string | null {
   if (job.status === "queued") {
     const warning = job.step_warning ? ` ${job.step_warning}` : "";
     if (isResuming(job))
-      return `Leitura em andamento: ${job.pages_done} de ${job.pages_total ?? "?"} página(s) lidas. Arquivos grandes são lidos em partes e continuam sozinhos.${warning}`;
+      return `Progresso salvo: ${job.pages_done} de ${job.pages_total ?? "?"} página(s) concluídas. Aguardando a próxima execução.${warning}`;
     if (job.queue_position === 1)
       return `É o próximo da fila. A leitura começa em instantes.${warning}`;
     if (job.queue_position && job.queue_position > 1)
@@ -118,33 +117,6 @@ function jobDetail(job: IndexJobView | undefined): string | null {
     }`;
   return null;
 }
-
-/** Percentual aproximado da leitura, por etapa conhecida. */
-const STAGE_PCT: Record<string, number> = {
-  download: 10,
-  parse: 20,
-  extracting_text: 35,
-  text_extraction: 35,
-  ocr_processing: 55,
-  ocr: 55,
-  chunking: 75,
-  embedding: 88,
-  analyzing: 92,
-  done: 100,
-};
-
-function readingPercent(status: string, job: IndexJobView | undefined): number | null {
-  if (status === "ready") return 100;
-  if (status.startsWith("error") || status === "empty") return null;
-  if (job?.status === "error" || job?.status === "paused") return null;
-  // O servidor guarda o progresso, então recarregar a página mantém a barra.
-  if (typeof job?.percent === "number") return job.percent;
-  if (job?.status === "queued" || status === "queued" || status === "pending") return 5;
-  const stage = job?.stage ?? status;
-  return STAGE_PCT[stage] ?? 30;
-}
-
-
 
 function StatusCell({
   status,
@@ -180,15 +152,12 @@ function StatusCell({
     job?.status !== "error";
   const isQueuedOnly =
     status === "queued" || status === "pending" || (!!job && job.status === "queued");
-  // "Processar agora" só faz sentido enquanto o documento aguarda a vez.
-  const isRunningNow = inProgress && !isQueuedOnly;
-  const pct = isPartial ? 100 : readingPercent(status, job);
+  // Um job sem heartbeat recente não está mais executando: precisa permitir retomada.
+  const isRunningNow = inProgress && !isQueuedOnly && !job?.stalled;
+  const pct = readingProgressPercent(job, status);
   const stageInfo = describeReadingStage(job, status);
 
-  const map: Record<
-    string,
-    { icon: typeof Clock; color: string; label: string; hint: string }
-  > = {
+  const map: Record<string, { icon: typeof Clock; color: string; label: string; hint: string }> = {
     queued: {
       icon: Clock,
       color: "text-muted-foreground",
@@ -244,36 +213,43 @@ function StatusCell({
       hint: 'Nenhum texto foi extraído. Tente reindexar ou use "Reprocessar com visão (OCR)".',
     },
   };
-  const info = isError
+  const info = job?.stalled
     ? {
-        icon: AlertCircle,
-        color: "text-destructive",
-        label: "Erro",
-        hint:
-          job?.last_error_message ||
-          status.replace(/^error:\s*/, "") ||
-          "Falha ao processar o documento.",
+        icon: AlertTriangle,
+        color: "text-amber-500",
+        label: "Processamento interrompido",
+        hint: 'O servidor deixou de atualizar este documento. Use "Processar agora" para retomar do último ponto salvo.',
       }
-    : isPartial
+    : isError
       ? {
-          icon: AlertTriangle,
-          color: "text-amber-500",
-          label: "Pronto (parcial)",
-          hint: status.replace(/^partial:\s*/, ""),
+          icon: AlertCircle,
+          color: "text-destructive",
+          label: "Erro",
+          hint:
+            job?.last_error_message ||
+            status.replace(/^error:\s*/, "") ||
+            "Falha ao processar o documento.",
         }
-      : isResuming(job)
-      ? {
-          icon: BrainCircuit,
-          color: "text-primary animate-pulse",
-          label: "Lendo o texto",
-          hint: "Arquivo grande: está sendo lido em partes e continua automaticamente até o fim.",
-        }
-      : map[status] ?? {
-        icon: Clock,
-        color: "text-muted-foreground",
-        label: "Processando",
-        hint: "O documento está sendo preparado para consulta.",
-      };
+      : isPartial
+        ? {
+            icon: AlertTriangle,
+            color: "text-amber-500",
+            label: "Pronto (parcial)",
+            hint: status.replace(/^partial:\s*/, ""),
+          }
+        : isResuming(job)
+          ? {
+              icon: Clock,
+              color: "text-muted-foreground",
+              label: "Continuação na fila",
+              hint: "O progresso já realizado foi salvo e a próxima execução continuará do mesmo ponto.",
+            }
+          : (map[status] ?? {
+              icon: Clock,
+              color: "text-muted-foreground",
+              label: "Processando",
+              hint: "O documento está sendo preparado para consulta.",
+            });
   const Icon = info.icon;
   return (
     <div className="flex flex-col items-start gap-1.5">
@@ -292,11 +268,7 @@ function StatusCell({
       </TooltipProvider>
       {status !== "ready" && status !== "cancelled" && !isPartial && pct !== null && (
         <div className="w-full max-w-[260px]">
-          <Progress
-            value={pct}
-            className="h-1.5"
-            aria-label={`Progresso da leitura: ${pct}%`}
-          />
+          <Progress value={pct} className="h-1.5" aria-label={`Progresso da leitura: ${pct}%`} />
           <div className="mt-1 flex items-baseline justify-between gap-2">
             <span className="text-xs font-medium text-foreground">
               {stageInfo?.title ?? "Processando"}
@@ -318,7 +290,6 @@ function StatusCell({
           {detail ?? info.hint}
         </span>
       )}
-
 
       {(inProgress || canForce || status === "cancelled") && (
         <div className="flex flex-wrap items-center gap-2">
@@ -364,7 +335,6 @@ function StatusCell({
         </div>
       )}
 
-
       {canRetry && (
         <Button
           variant="outline"
@@ -407,10 +377,12 @@ export function DocumentList({
   const jobsFn = useServerFn(listIndexJobs);
   const forceFn = useServerFn(forceIndexNow);
   const cancelFn = useServerFn(cancelIndexJob);
+  const resumeStalledFn = useServerFn(resumeStalledCaseJobs);
   const [retryingId, setRetryingId] = useState<string | null>(null);
   const [visionId, setVisionId] = useState<string | null>(null);
   const [forcingId, setForcingId] = useState<string | null>(null);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
+  const [resumingStalled, setResumingStalled] = useState(false);
 
   const pending = documents.some(
     (d) => !isDocUsable(d.processing_status) && d.processing_status !== "cancelled",
@@ -421,9 +393,8 @@ export function DocumentList({
     enabled: documents.length > 0,
     refetchInterval: pending ? 6_000 : false,
   });
-  const jobs = new Map(
-    (jobsQuery.data?.jobs ?? []).map((j) => [j.document_id, j] as const),
-  );
+  const jobs = new Map((jobsQuery.data?.jobs ?? []).map((j) => [j.document_id, j] as const));
+  const stalledCount = (jobsQuery.data?.jobs ?? []).filter((job) => job.stalled).length;
 
   // Cada leitura do andamento também atualiza a lista de documentos.
   const jobsSignature = (jobsQuery.data?.jobs ?? [])
@@ -459,6 +430,26 @@ export function DocumentList({
       toast.error(e instanceof Error ? e.message : String(e));
     } finally {
       setCancellingId(null);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["documents", caseId] }),
+        queryClient.invalidateQueries({ queryKey: ["index-jobs", caseId] }),
+      ]);
+    }
+  };
+
+  const onResumeStalled = async () => {
+    setResumingStalled(true);
+    try {
+      const result = await resumeStalledFn({ data: { case_id: caseId } });
+      toast.success(
+        result.resumed > 0
+          ? `${result.resumed} leitura(s) retomada(s) do último ponto salvo.`
+          : "Nenhuma leitura interrompida foi encontrada.",
+      );
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : String(e));
+    } finally {
+      setResumingStalled(false);
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["documents", caseId] }),
         queryClient.invalidateQueries({ queryKey: ["index-jobs", caseId] }),
@@ -528,17 +519,12 @@ export function DocumentList({
             <FileText className="h-5 w-5 text-primary" /> Documentos do Caso
           </CardTitle>
           <CardDescription>
-            {documents.length} arquivo(s) — {readyCount} pronto(s) para o chat.
-            Marque os que devem ser usados nas perguntas.
+            {documents.length} arquivo(s) — {readyCount} pronto(s) para o chat. Marque os que devem
+            ser usados nas perguntas.
           </CardDescription>
           {readyCount > 0 && (
             <div className="mt-2 flex gap-2 text-xs">
-              <Button
-                variant="link"
-                size="sm"
-                className="h-auto p-0"
-                onClick={onSelectAll}
-              >
+              <Button variant="link" size="sm" className="h-auto p-0" onClick={onSelectAll}>
                 Marcar todos
               </Button>
               <Button
@@ -553,6 +539,19 @@ export function DocumentList({
           )}
         </div>
         <div className="flex items-center gap-2">
+          {stalledCount > 0 && (
+            <ConfirmActionButton
+              variant="outline"
+              icon={<RefreshCw className="mr-1 h-4 w-4" />}
+              label={`Retomar ${stalledCount} interrompido${stalledCount === 1 ? "" : "s"}`}
+              ariaLabel="Retomar leituras interrompidas"
+              loading={resumingStalled}
+              onConfirm={onResumeStalled}
+              title="Retomar as leituras interrompidas?"
+              description="O progresso já salvo será preservado. Os documentos voltarão à fila e a leitura continuará do último ponto concluído."
+              confirmLabel="Retomar leituras"
+            />
+          )}
           <DocumentAuditDialog caseId={caseId} />
           <UploadDialog
             caseId={caseId}
@@ -611,9 +610,7 @@ export function DocumentList({
                         {formatBytes(d.file_size)}
                       </TableCell>
                       <TableCell className="hidden md:table-cell text-xs text-muted-foreground">
-                        {d.created_at
-                          ? new Date(d.created_at).toLocaleDateString("pt-BR")
-                          : "—"}
+                        {d.created_at ? new Date(d.created_at).toLocaleDateString("pt-BR") : "—"}
                       </TableCell>
                       <TableCell>
                         <StatusCell
