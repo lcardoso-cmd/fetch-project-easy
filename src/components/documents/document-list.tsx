@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { deleteDocument } from "@/lib/documents.functions";
+import { deleteDocument, getDocumentUrl } from "@/lib/documents.functions";
 import {
   cancelIndexJob,
   forceIndexNow,
@@ -22,17 +22,17 @@ import {
 } from "@/lib/documents/reading-eta";
 
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   AlertCircle,
   AlertTriangle,
+  ChevronDown,
+  ChevronRight,
   BrainCircuit,
   CheckCircle,
   Clock,
@@ -135,7 +135,9 @@ function StatusCell({
   cancelling,
   onReadImages,
   readingImages,
+  compact,
 }: {
+  compact?: boolean;
   status: string;
   job?: IndexJobView;
   onRetry: () => void;
@@ -264,21 +266,27 @@ function StatusCell({
               hint: "O documento está sendo preparado para consulta.",
             });
   const Icon = info.icon;
+  // Fora do documento em leitura, mostramos apenas o estado — sem detalhes nem barras.
+  const brief = compact && !isError && !isPartial && imagePages === 0;
+  const badge = (
+    <TooltipProvider delayDuration={150}>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <div className="flex items-center gap-2">
+            <Icon className={`h-4 w-4 ${info.color}`} />
+            <span className="text-xs">{info.label}</span>
+          </div>
+        </TooltipTrigger>
+        <TooltipContent className="max-w-xs">
+          <p className="text-xs">{info.hint}</p>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+  if (brief) return badge;
   return (
     <div className="flex flex-col items-start gap-1.5">
-      <TooltipProvider delayDuration={150}>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <div className="flex items-center gap-2">
-              <Icon className={`h-4 w-4 ${info.color}`} />
-              <span className="text-xs">{info.label}</span>
-            </div>
-          </TooltipTrigger>
-          <TooltipContent className="max-w-xs">
-            <p className="text-xs">{info.hint}</p>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
+      {badge}
       {status !== "ready" && status !== "cancelled" && !isPartial && pct !== null && (
         <div className="w-full max-w-[260px]">
           <Progress value={pct} className="h-1.5" aria-label={`Progresso da leitura: ${pct}%`} />
@@ -411,6 +419,10 @@ export function DocumentList({
   const [forcingId, setForcingId] = useState<string | null>(null);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
   const [resumingStalled, setResumingStalled] = useState(false);
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
+  const [previewDoc, setPreviewDoc] = useState<DocItem | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const docUrlFn = useServerFn(getDocumentUrl);
 
   const pending = documents.some(
     (d) => !isDocUsable(d.processing_status) && d.processing_status !== "cancelled",
@@ -557,9 +569,129 @@ export function DocumentList({
 
   const readyCount = documents.filter((d) => isDocUsable(d.processing_status)).length;
 
+  /** Documento em leitura agora (ou o próximo da fila) fica destacado no topo. */
+  const activeDoc =
+    documents.find((d) => jobs.get(d.id)?.status === "running") ??
+    documents.find((d) => jobs.get(d.id)?.stalled) ??
+    documents.find((d) => jobs.get(d.id)?.status === "queued") ??
+    null;
+
+  const groups = buildDocumentGroups(documents);
+
+  const openPreview = async (d: DocItem) => {
+    setPreviewDoc(d);
+    setPreviewUrl(null);
+    try {
+      const res = await docUrlFn({ data: { id: d.id } });
+      setPreviewUrl(res.url);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : String(e));
+      setPreviewDoc(null);
+    }
+  };
+
+  const renderRow = (d: DocItem, opts?: { part?: boolean }) => {
+    const ready = isDocUsable(d.processing_status);
+    const isActive = activeDoc?.id === d.id;
+    const label =
+      opts?.part && d.part_index
+        ? `Parte ${d.part_index}${d.part_count ? ` de ${d.part_count}` : ""}`
+        : d.filename;
+    return (
+      <div
+        key={d.id}
+        className={`flex flex-col gap-2 px-3 py-3 sm:px-4 ${opts?.part ? "pl-8 sm:pl-12" : ""}`}
+      >
+        <div className="flex items-start gap-3">
+          <Checkbox
+            className="mt-0.5 shrink-0"
+            checked={selectedDocIds.has(d.id)}
+            disabled={!ready}
+            onCheckedChange={() => onToggleSelect(d.id)}
+            aria-label={`Usar ${label} nas perguntas`}
+          />
+          <FileText className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+          <div className="min-w-0 flex-1">
+            <button
+              type="button"
+              onClick={() => void openPreview(d)}
+              className="block max-w-full truncate text-left text-sm font-medium hover:underline"
+              title={d.filename}
+            >
+              {label}
+            </button>
+            <p className="truncate text-xs text-muted-foreground">
+              {formatBytes(d.file_size)}
+              {d.page_count
+                ? ` · páginas ${(d.page_offset ?? 0) + 1}–${(d.page_offset ?? 0) + d.page_count}`
+                : ""}
+              {d.created_at ? ` · ${new Date(d.created_at).toLocaleDateString("pt-BR")}` : ""}
+            </p>
+          </div>
+          <div className="flex shrink-0 items-center gap-1">
+            {(d.processing_status.startsWith("error") || d.processing_status === "empty") && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-muted-foreground hover:text-primary"
+                disabled={retryingId === d.id}
+                onClick={() => onRetry(d.id)}
+                aria-label={`Reindexar ${d.filename}`}
+              >
+                {retryingId === d.id ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <RefreshCw className="h-4 w-4" />
+                )}
+              </Button>
+            )}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-muted-foreground hover:text-primary"
+              disabled={visionId === d.id}
+              onClick={() => onVision(d.id, d.filename)}
+              aria-label={`Usar OCR no documento ${d.filename}`}
+            >
+              {visionId === d.id ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <ScanText className="h-4 w-4" />
+              )}
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-muted-foreground hover:text-destructive"
+              onClick={() => onDelete(d.id, d.filename)}
+              aria-label={`Excluir documento ${d.filename}`}
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+        <div className="pl-10">
+          <StatusCell
+            status={d.processing_status}
+            job={jobs.get(d.id)}
+            compact={!isActive}
+            onRetry={() => onRetry(d.id)}
+            retrying={retryingId === d.id}
+            onForce={() => onForce(d.id)}
+            forcing={forcingId === d.id}
+            onCancel={() => onCancel(d.id)}
+            cancelling={cancellingId === d.id}
+            onReadImages={() => onReadImages(d.id)}
+            readingImages={visionId === d.id}
+          />
+        </div>
+      </div>
+    );
+  };
+
   return (
     <Card>
-      <CardHeader className="flex flex-row items-start justify-between space-y-0">
+      <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:space-y-0">
         <div>
           <CardTitle className="text-lg flex items-center gap-2">
             <FileText className="h-5 w-5 text-primary" /> Documentos do Caso
@@ -584,7 +716,7 @@ export function DocumentList({
             </div>
           )}
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {stalledCount > 0 && (
             <ConfirmActionButton
               variant="outline"
@@ -605,145 +737,134 @@ export function DocumentList({
           />
         </div>
       </CardHeader>
-      <CardContent>
+      <CardContent className="space-y-3">
         {documents.length === 0 ? (
           <p className="py-6 text-center text-sm text-muted-foreground">
             Nenhum documento ainda. Clique em "Carregar" para começar.
           </p>
         ) : (
-          <div className="rounded-lg border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-8"></TableHead>
-                  <TableHead>Nome</TableHead>
-                  <TableHead className="hidden md:table-cell">Tamanho</TableHead>
-                  <TableHead className="hidden md:table-cell">Enviado</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="w-10"></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {documents.map((d) => {
-                  const ready = isDocUsable(d.processing_status);
-                  return (
-                    <TableRow key={d.id}>
-                      <TableCell>
-                        <Checkbox
-                          checked={selectedDocIds.has(d.id)}
-                          disabled={!ready}
-                          onCheckedChange={() => onToggleSelect(d.id)}
-                        />
-                      </TableCell>
-                      <TableCell className="font-medium">
-                        <div className="flex items-center gap-2">
-                          <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
-                          <div className="min-w-0">
-                            <span className="block truncate">{d.filename}</span>
-                            {d.part_index && d.part_count ? (
-                              <span className="block text-xs font-normal text-muted-foreground">
-                                Parte {d.part_index} de {d.part_count}
-                                {d.page_count
-                                  ? ` · páginas ${(d.page_offset ?? 0) + 1}–${(d.page_offset ?? 0) + d.page_count}`
-                                  : ""}
-                              </span>
-                            ) : null}
-                          </div>
-                        </div>
-                      </TableCell>
-
-                      <TableCell className="hidden md:table-cell text-xs text-muted-foreground">
-                        {formatBytes(d.file_size)}
-                      </TableCell>
-                      <TableCell className="hidden md:table-cell text-xs text-muted-foreground">
-                        {d.created_at ? new Date(d.created_at).toLocaleDateString("pt-BR") : "—"}
-                      </TableCell>
-                      <TableCell>
-                        <StatusCell
-                          status={d.processing_status}
-                          job={jobs.get(d.id)}
-                          onRetry={() => onRetry(d.id)}
-                          retrying={retryingId === d.id}
-                          onForce={() => onForce(d.id)}
-                          forcing={forcingId === d.id}
-                          onCancel={() => onCancel(d.id)}
-                          cancelling={cancellingId === d.id}
-                          onReadImages={() => onReadImages(d.id)}
-                          readingImages={visionId === d.id}
-                        />
-
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-1">
-                          {(d.processing_status.startsWith("error") ||
-                            d.processing_status === "empty") && (
-                            <TooltipProvider delayDuration={150}>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-8 w-8 text-muted-foreground hover:text-primary"
-                                    disabled={retryingId === d.id}
-                                    onClick={() => onRetry(d.id)}
-                                    aria-label={`Reindexar ${d.filename}`}
-                                  >
-                                    {retryingId === d.id ? (
-                                      <Loader2 className="h-4 w-4 animate-spin" />
-                                    ) : (
-                                      <RefreshCw className="h-4 w-4" />
-                                    )}
-                                  </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p className="text-xs">Solicitar reindexação</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                          )}
-                          <TooltipProvider delayDuration={150}>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-8 gap-1.5 px-2 text-muted-foreground hover:text-primary"
-                                  disabled={visionId === d.id}
-                                  onClick={() => onVision(d.id, d.filename)}
-                                  aria-label={`Usar OCR no documento ${d.filename}`}
-                                >
-                                  {visionId === d.id ? (
-                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                  ) : (
-                                    <ScanText className="h-4 w-4" />
-                                  )}
-                                  <span className="hidden xl:inline">Usar OCR</span>
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p className="text-xs">Reprocessar com visão (OCR)</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                            onClick={() => onDelete(d.id, d.filename)}
-                            aria-label={`Excluir documento ${d.filename}`}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          </div>
+          <>
+            {activeDoc && (
+              <div className="rounded-lg border border-primary/40 bg-primary/5">
+                <p className="px-3 pt-3 text-xs font-semibold uppercase tracking-wide text-primary sm:px-4">
+                  Em leitura agora
+                </p>
+                {renderRow(activeDoc)}
+              </div>
+            )}
+            <div className="divide-y rounded-lg border">
+              {groups.map((g) =>
+                g.parts.length > 1 ? (
+                  <div key={g.key}>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setExpandedGroups((prev) => {
+                          const next = new Set(prev);
+                          if (next.has(g.key)) next.delete(g.key);
+                          else next.add(g.key);
+                          return next;
+                        })
+                      }
+                      className="flex w-full items-center gap-2 px-3 py-3 text-left hover:bg-muted/50 sm:px-4"
+                      aria-expanded={expandedGroups.has(g.key)}
+                    >
+                      {expandedGroups.has(g.key) ? (
+                        <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />
+                      ) : (
+                        <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+                      )}
+                      <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
+                      <span className="min-w-0 flex-1 truncate text-sm font-medium">{g.name}</span>
+                      <span className="shrink-0 text-xs text-muted-foreground">
+                        {g.parts.filter((p) => isDocUsable(p.processing_status)).length}/
+                        {g.parts.length} parte(s) pronta(s)
+                      </span>
+                    </button>
+                    {expandedGroups.has(g.key) && (
+                      <div className="divide-y border-t bg-muted/20">
+                        {g.parts.map((p) => renderRow(p, { part: true }))}
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  renderRow(g.parts[0]!)
+                ),
+              )}
+            </div>
+          </>
         )}
       </CardContent>
+
+      <Dialog
+        open={!!previewDoc}
+        onOpenChange={(open) => {
+          if (!open) {
+            setPreviewDoc(null);
+            setPreviewUrl(null);
+          }
+        }}
+      >
+        <DialogContent className="max-w-4xl">
+          <DialogHeader>
+            <DialogTitle className="truncate">{previewDoc?.filename}</DialogTitle>
+          </DialogHeader>
+          {previewUrl ? (
+            <>
+              <iframe
+                src={previewUrl}
+                title={previewDoc?.filename ?? "Documento"}
+                className="h-[70vh] w-full rounded-md border"
+              />
+              <a
+                href={previewUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="text-sm text-primary hover:underline"
+              >
+                Abrir em nova aba
+              </a>
+            </>
+          ) : (
+            <div className="flex h-40 items-center justify-center">
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </Card>
   );
+}
+
+/** Nome base do documento, sem o sufixo de parte gerado na divisão. */
+function baseDocumentName(filename: string): string {
+  return filename
+    .replace(/\s*[-–—]?\s*\(?parte\s*\d+(\s*(de|\/)\s*\d+)?\)?\s*(\.\w+)?$/i, "")
+    .trim() || filename;
+}
+
+interface DocGroup {
+  key: string;
+  name: string;
+  parts: DocItem[];
+}
+
+/** Agrupa as partes de um mesmo documento dividido sob um cabeçalho expansível. */
+export function buildDocumentGroups(documents: DocItem[]): DocGroup[] {
+  const groups: DocGroup[] = [];
+  const byKey = new Map<string, DocGroup>();
+  for (const d of documents) {
+    const key = d.split_group_id ?? d.id;
+    let g = byKey.get(key);
+    if (!g) {
+      g = { key, name: baseDocumentName(d.filename), parts: [] };
+      byKey.set(key, g);
+      groups.push(g);
+    }
+    g.parts.push(d);
+  }
+  for (const g of groups) {
+    g.parts.sort((a, b) => (a.part_index ?? 0) - (b.part_index ?? 0));
+  }
+  return groups;
 }
