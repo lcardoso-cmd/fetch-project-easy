@@ -135,6 +135,18 @@ const GOVERNANCE = PITCH.governance.items.map((i) => ({
   icon: GOVERNANCE_ICONS[i.key] ?? ShieldCheck,
 }));
 
+const GUIDE_ICONS: Record<string, typeof Upload> = {
+  subir: Upload,
+  pedir: MessageSquare,
+  revisar: FileSearch,
+  exportar: Download,
+};
+
+const GUIDE_STEPS = PITCH.guideHighlight.steps.map((i) => ({
+  ...i,
+  icon: GUIDE_ICONS[i.key] ?? BookOpen,
+}));
+
 function LoginButton({
   size = "default",
   className,
