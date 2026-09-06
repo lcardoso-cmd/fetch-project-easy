@@ -184,11 +184,13 @@ function LibraryPage() {
             const c = caseOf(d.case_id);
             const group = statusGroup(d.processing_status);
             return (
-              <li key={d.id} className="flex flex-wrap items-center gap-3 py-3">
-                <FileText className="h-4 w-4 shrink-0 text-muted-foreground" strokeWidth={1.5} />
+              <li key={d.id} className="flex flex-wrap items-center gap-x-3 gap-y-2 py-3 sm:flex-nowrap">
+                <FileText className="mt-1 h-4 w-4 shrink-0 self-start text-muted-foreground" strokeWidth={1.5} />
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium break-words">{d.filename}</p>
-                  <div className="mt-0.5 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+                  <p className="truncate text-sm font-medium" title={d.filename}>
+                    {d.filename}
+                  </p>
+                  <div className="mt-0.5 flex min-w-0 flex-wrap items-center gap-2 text-sm text-muted-foreground [&>span]:truncate">
                     <Badge
                       variant={group === "error" ? "destructive" : "secondary"}
                       className="text-xs"
@@ -204,7 +206,8 @@ function LibraryPage() {
                         <Link
                           to="/assistencias/$caseId"
                           params={{ caseId: d.case_id }}
-                          className="underline"
+                          className="max-w-[16rem] truncate underline"
+                          title={c.title}
                         >
                           {c.title}
                         </Link>
@@ -218,7 +221,7 @@ function LibraryPage() {
                     )}
                   </div>
                 </div>
-                <div className="flex shrink-0 items-center gap-1">
+                <div className="ml-7 flex w-full shrink-0 items-center gap-1 sm:ml-0 sm:w-auto">
                   <Button
                     variant="ghost"
                     size="sm"
