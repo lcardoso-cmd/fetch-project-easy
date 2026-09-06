@@ -1917,7 +1917,21 @@ export function JurisMindChat({
             <div ref={endRef} />
           </div>
 
-          <MaterialsSection messages={messages} />
+          <MaterialsSection
+            messages={messages}
+            onReuse={(label, content) => {
+              setInput((prev) =>
+                [
+                  prev.trim(),
+                  `Use o material "${label}" abaixo como base neste pedido:\n\n"""\n${content}\n"""`,
+                ]
+                  .filter(Boolean)
+                  .join("\n\n"),
+              );
+              toast.success(`"${label}" anexado ao pedido`);
+            }}
+          />
+
 
           <div className="shrink-0 border-t p-3">
 
