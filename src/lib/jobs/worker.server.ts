@@ -281,9 +281,15 @@ export async function runDocumentQueues(opts: WorkerRunOptions = {}): Promise<Wo
       if (blocked) halted = "ai_blocked";
       console.error("[jobs] indexação falhou", {
         job_id: job.id,
+        document_id: job.document_id,
         organization_id: job.organization_id,
         blocked,
+        error_code: blocked ? "ai_blocked" : memory ? "file_too_large" : "index_failed",
+        error_message: msg,
+        raw_error: raw.slice(0, 1000),
+        stack: err instanceof Error ? err.stack?.slice(0, 1500) : undefined,
       });
+
     }
   }
 

@@ -137,7 +137,11 @@ export async function openRemotePdf(url: string, knownLength?: number): Promise<
     disableAutoFetch: true,
     disableStream: true,
     isEvalSupported: false,
-    useSystemFonts: false,
+    // No Worker não há `standard_fonts/` para buscar: com `useSystemFonts: false`
+    // o pdf.js exige `standardFontDataUrl` e aborta a página inteira.
+    useSystemFonts: true,
+    disableFontFace: true,
+
   });
   const doc = await rangeGate.run(() => loadingTask.promise);
 
@@ -160,8 +164,10 @@ export async function openPdfBytes(bytes: Uint8Array): Promise<RangePdfDoc> {
   const doc = await pdfjs.getDocument({
     data: bytes,
     isEvalSupported: false,
-    useSystemFonts: false,
+    useSystemFonts: true,
+    disableFontFace: true,
   }).promise;
+
   return pdfHandle(doc, pdfjs.OPS, () => bytes.byteLength);
 }
 
