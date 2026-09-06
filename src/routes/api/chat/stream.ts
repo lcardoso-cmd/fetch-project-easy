@@ -307,14 +307,28 @@ export const Route = createFileRoute("/api/chat/stream")({
                 result_json: JSON.stringify(s.result),
               }));
 
-              let persistedThreadId: string | null = null;
-              if (body.thread_id && !abortSignal.aborted) {
-                persistedThreadId = body.thread_id;
+              let persistedThreadId: string | null = body.thread_id ?? null;
+              // Sem conversa recebida, cria uma agora: o histórico do caso
+              // precisa ficar salvo mesmo no primeiro envio.
+              if (!persistedThreadId && !abortSignal.aborted) {
+                const { data: createdThread } = await auth.supabase
+                  .from("ai_chat_threads")
+                  .insert({
+                    case_id: body.case_id,
+                    organization_id: auth.organizationId,
+                    created_by_user_id: auth.userId,
+                    title: "Nova conversa",
+                  })
+                  .select("id")
+                  .single();
+                persistedThreadId = createdThread?.id ?? null;
+              }
+              if (persistedThreadId && !abortSignal.aborted) {
                 await persistChatTurn({
                   supabase: auth.supabase,
                   userId: auth.userId,
                   organizationId: auth.organizationId,
-                  threadId: body.thread_id,
+                  threadId: persistedThreadId,
                   question: body.question,
                   images: body.images,
                   tier: run.tier,
