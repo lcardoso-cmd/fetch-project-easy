@@ -19,6 +19,8 @@ const WORKER_MAX_JOBS = 4;
 const CANCELLED_MARKER = "__job_cancelled__";
 const WORKER_TIME_BUDGET_MS = 50_000;
 const CONTINUATION_COOLDOWN_MS = 250;
+/** Orçamento por rodada quando o processamento roda no servidor da requisição. */
+const REQUEST_TIME_BUDGET_MS = 20_000;
 /** Teto de rodadas encadeadas por gatilho (o cron continua depois disso). */
 const MAX_CHAIN_DEPTH = 24;
 const CHAIN_COOLDOWN_MS = 1_000;
@@ -332,8 +334,10 @@ function scheduleContinuation(depth: number, preferredDocumentId?: string): void
     new Promise((resolve) => setTimeout(resolve, CHAIN_COOLDOWN_MS))
       .then(() =>
         runDocumentQueues({
-          maxJobs: 10,
-          timeBudgetMs: WORKER_TIME_BUDGET_MS,
+          // Um trabalho por rodada: o servidor que atende o usuário não pode
+          // acumular vários arquivos grandes na memória (erro 502).
+          maxJobs: 1,
+          timeBudgetMs: REQUEST_TIME_BUDGET_MS,
           chainDepth: depth + 1,
           preferredDocumentId,
         }),
@@ -377,8 +381,10 @@ export async function kickDocumentWorker(
   opts: Pick<WorkerRunOptions, "preferredDocumentId"> = {},
 ): Promise<void> {
   const task = runDocumentQueues({
-    maxJobs: 10,
-    timeBudgetMs: WORKER_TIME_BUDGET_MS,
+    // Apenas um trabalho por vez aqui: arquivos grandes consomem muita memória
+    // e o servidor da requisição do usuário responderia 502.
+    maxJobs: 1,
+    timeBudgetMs: REQUEST_TIME_BUDGET_MS,
     preferredDocumentId: opts.preferredDocumentId,
   });
   const executionContext = getWorkerExecutionContext();
