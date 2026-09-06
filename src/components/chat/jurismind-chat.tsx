@@ -87,6 +87,7 @@ import {
 } from "@/components/chat/artifact-cards";
 import { toast } from "sonner";
 import { isDocUsable } from "@/lib/documents/usable";
+import { SourcesBlock } from "@/components/chat/sources-block";
 
 
 interface Citation {
@@ -2475,63 +2476,4 @@ function MaterialsSection({ messages }: { messages: Msg[] }) {
       )}
     </div>
   );
-}
-
-function SourcesBlock({ citations }: { citations: Citation[] }) {
-  const [open, setOpen] = useState(false);
-  const evidence = citations.filter((c) => !c.is_context);
-  const context = citations.filter((c) => c.is_context);
-  const documents = Array.from(new Set(citations.map((c) => c.filename)));
-
-  return (
-    <div className="mt-3 border-t border-border/40 pt-2">
-      {/* Referências em destaque, com aparência clicável */}
-      <div className="flex flex-wrap items-center gap-1.5">
-        {citations
-          .filter((c) => c.ref)
-          .map((c, idx) => (
-            <button
-              key={c.chunk_id ?? `ref-${idx}`}
-              type="button"
-              onClick={() => setOpen(true)}
-              title={`${c.filename}${c.location ? ` · ${c.location}` : ""}`}
-              className="inline-flex items-center gap-1 rounded-md border border-primary/40 bg-primary/10 px-2 py-1 text-[13px] font-semibold text-primary transition hover:bg-primary/20"
-            >
-              [{c.ref}]
-              <span className="max-w-[12rem] truncate font-normal text-foreground/75">
-                {c.filename}
-              </span>
-            </button>
-          ))}
-      </div>
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        aria-expanded={open}
-        className="mt-2 flex w-full items-center justify-between text-sm font-semibold text-foreground/80 hover:text-foreground"
-      >
-        <span>
-          Fontes ({documents.length} documento{documents.length === 1 ? "" : "s"} ·{" "}
-          {evidence.length} trecho{evidence.length === 1 ? "" : "s"}
-          {context.length > 0 ? ` + ${context.length} de contexto` : ""})
-        </span>
-        <span aria-hidden>{open ? "−" : "+"}</span>
-      </button>
-      {open && (
-        <div className="mt-2 space-y-1.5">
-          {citations.map((c, idx) => (
-            <div key={c.chunk_id ?? idx} className="flex items-start gap-2 text-sm text-foreground/80">
-              <FileText className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-              <span className="min-w-0 flex-1">
-                <span className="font-medium">{c.ref ? `[${c.ref}] ` : ""}{c.filename}</span>
-                {c.location ? <span className="text-foreground/60"> · {c.location}</span> : null}
-                {c.is_context ? <span className="text-foreground/50"> · contexto vizinho</span> : null}
-              </span>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-
 }
