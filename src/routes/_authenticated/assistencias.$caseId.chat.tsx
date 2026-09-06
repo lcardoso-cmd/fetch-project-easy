@@ -1,30 +1,18 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useRef, useState } from "react";
-import {
-  ArrowLeft,
-  BrainCircuit,
-  MessageSquarePlus,
-  Trash2,
-} from "lucide-react";
-import { toast } from "sonner";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ArrowLeft, BrainCircuit, History } from "lucide-react";
 import { z } from "zod";
-
-import { formatDistanceToNow } from "date-fns";
-import { ptBR } from "date-fns/locale";
 
 import { getCase } from "@/lib/cases.functions";
 import { listDocuments } from "@/lib/documents.functions";
-import {
-  createThread,
-  deleteThread,
-  listThreads,
-} from "@/lib/threads.functions";
+import { ensureThread, listThreads } from "@/lib/threads.functions";
 import { JurisMindChat } from "@/components/chat/jurismind-chat";
+import { ThreadList } from "@/components/chat/thread-list";
 import { useAccess } from "@/hooks/use-access";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { isDocUsable } from "@/lib/documents/usable";
 
 const searchSchema = z.object({ thread: z.string().uuid().optional() });
@@ -37,13 +25,14 @@ export const Route = createFileRoute("/_authenticated/assistencias/$caseId/chat"
 function CaseChatFullPage() {
   const { caseId } = Route.useParams();
   const { thread: threadFromUrl } = Route.useSearch();
+  const navigate = useNavigate();
 
   const qc = useQueryClient();
   const getCaseFn = useServerFn(getCase);
   const listDocsFn = useServerFn(listDocuments);
   const listThreadsFn = useServerFn(listThreads);
-  const createThreadFn = useServerFn(createThread);
-  const deleteThreadFn = useServerFn(deleteThread);
+  const ensureThreadFn = useServerFn(ensureThread);
+  const [historyOpen, setHistoryOpen] = useState(false);
 
   const { hasOrgPermission, isLoading: accessLoading } = useAccess();
   const canUseAi = hasOrgPermission("ai.use");
@@ -63,41 +52,43 @@ function CaseChatFullPage() {
     refetchInterval: 15000,
   });
 
-  // Thread vinda do painel lateral do caso (?thread=...) tem prioridade:
-  // é a MESMA thread persistida, então a conversa continua sem perder contexto.
-  const [activeThreadId, setActiveThreadId] = useState<string | null>(threadFromUrl ?? null);
+  // A conversa ativa vive no endereço da página: recarregar ou voltar mantém
+  // exatamente a mesma conversa persistida.
+  const activeThreadId = threadFromUrl ?? null;
+  const setActiveThreadId = useCallback(
+    (id: string | null) => {
+      void navigate({
+        to: "/assistencias/$caseId/chat",
+        params: { caseId },
+        search: id ? { thread: id } : {},
+        replace: true,
+      });
+    },
+    [navigate, caseId],
+  );
 
+  // Sem conversa no endereço: continua a mais recente ou cria uma.
+  const ensuringRef = useRef(false);
   useEffect(() => {
-    if (threadFromUrl && threadFromUrl !== activeThreadId) setActiveThreadId(threadFromUrl);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [threadFromUrl]);
-
-  // Seleciona a primeira thread automaticamente
-  useEffect(() => {
-    if (!activeThreadId && threads.length > 0) {
+    if (activeThreadId || ensuringRef.current) return;
+    if (threads.length > 0) {
       setActiveThreadId(threads[0].id);
+      return;
     }
-  }, [threads, activeThreadId]);
-
-  const createMut = useMutation({
-    mutationFn: () => createThreadFn({ data: { case_id: caseId } }),
-    onSuccess: (t) => {
-      setActiveThreadId(t.id);
-      void qc.invalidateQueries({ queryKey: ["ai-threads", caseId] });
-    },
-    onError: (e) =>
-      toast.error(e instanceof Error ? e.message : "Erro ao criar conversa"),
-  });
-
-  const deleteMut = useMutation({
-    mutationFn: (id: string) => deleteThreadFn({ data: { id } }),
-    onSuccess: (_r, id) => {
-      if (activeThreadId === id) setActiveThreadId(null);
-      void qc.invalidateQueries({ queryKey: ["ai-threads", caseId] });
-    },
-    onError: (e) =>
-      toast.error(e instanceof Error ? e.message : "Erro ao excluir conversa"),
-  });
+    ensuringRef.current = true;
+    void (async () => {
+      try {
+        const t = await ensureThreadFn({ data: { case_id: caseId } });
+        setActiveThreadId(t.id);
+        void qc.invalidateQueries({ queryKey: ["ai-threads", caseId] });
+      } catch {
+        // silencioso: o envio ainda cria a conversa no servidor
+      } finally {
+        ensuringRef.current = false;
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeThreadId, threads, caseId]);
 
   const readyDocIds = useMemo(
     () => docs.filter((d) => isDocUsable(d.processing_status)).map((d) => d.id),
