@@ -69,7 +69,42 @@ export const PITCH = {
         t: "Conduzir",
         d: "Tarefas, prazos e agenda ficam vinculados ao mesmo caso e à equipe.",
       },
+  ] satisfies PitchItem[],
+},
+
+  guideHighlight: {
+    eyebrow: "Guia prático",
+    title: "Como automatizar petições jurídicas com IA",
+    subtitle:
+      "Reduza o tempo de produção de peças sem abrir mão da revisão final. Veja como o JurisMind transforma documentos em minutas editáveis.",
+    steps: [
+      {
+        key: "subir",
+        n: "01",
+        t: "Suba os documentos do caso",
+        d: "Petições, contratos, notificações e provas são indexados para consulta.",
+      },
+      {
+        key: "pedir",
+        n: "02",
+        t: "Peça a minuta no chat",
+        d: "Contestation, embargos, execução ou ação de cobrança: a IA usa os autos como base.",
+      },
+      {
+        key: "revisar",
+        n: "03",
+        t: "Revise as fontes citadas",
+        d: "Cada afirmação vem com referência ao documento e página de origem.",
+      },
+      {
+        key: "exportar",
+        n: "04",
+        t: "Exporte e finalize",
+        d: "A minuta abre em editor e sai em .docx ou PDF para os ajustes finais.",
+      },
     ] satisfies PitchItem[],
+    ctaPrimary: "Ver o guia completo",
+    ctaSecondary: "Testar grátis por 30 dias",
   },
 
   deliverables: {
