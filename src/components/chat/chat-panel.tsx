@@ -108,7 +108,7 @@ export function ChatPanel({
               >
                 {m.content}
                 {m.citations && m.citations.length > 0 && (
-                  <SourcesBlock citations={m.citations} defaultOpen />
+                  <SourcesBlock citations={m.citations} />
                 )}
                 {m.steps && m.steps.length > 0 && (
                   <div className="mt-3 space-y-1 border-t border-border/40 pt-2">
