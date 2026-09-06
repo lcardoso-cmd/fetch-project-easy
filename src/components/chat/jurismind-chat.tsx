@@ -2408,7 +2408,31 @@ function friendlyToolName(name: string) {
  * Materiais gerados na conversa, agrupados em um só lugar para o advogado não
  * precisar rolar todo o histórico para reencontrar um arquivo.
  */
-function MaterialsSection({ messages }: { messages: Msg[] }) {
+/** Texto reaproveitável de um material já gerado, para citar em novo pedido. */
+function artifactAsText(r: NonNullable<ReturnType<typeof parseToolResult>>): string {
+  if (r.kind === "table") {
+    const rows = r.rows ?? [];
+    return rows.map((row) => (Array.isArray(row) ? row.join(" | ") : String(row))).join("\n");
+  }
+  if (r.kind === "presentation") {
+    const slides = r.slides ?? [];
+    return slides
+      .map((s: unknown) => {
+        const slide = s as { title?: string; bullets?: string[] };
+        return [slide.title, ...(slide.bullets ?? [])].filter(Boolean).join("\n");
+      })
+      .join("\n\n");
+  }
+  return r.conteudo ?? "";
+}
+
+function MaterialsSection({
+  messages,
+  onReuse,
+}: {
+  messages: Msg[];
+  onReuse?: (label: string, content: string) => void;
+}) {
   const [open, setOpen] = useState(false);
 
   const artifacts = useMemo(() => {
