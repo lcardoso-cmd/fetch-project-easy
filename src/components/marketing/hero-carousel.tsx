@@ -20,6 +20,12 @@ import {
 import { Button } from "@/components/ui/button";
 import { JurisMindMark, JURISMIND_CONTEXT } from "@/components/brand/jurismind-mark";
 import { cn } from "@/lib/utils";
+import bg1 from "@/assets/hero/hero-bg-1.jpg";
+import bg2 from "@/assets/hero/hero-bg-2.jpg";
+import bg3 from "@/assets/hero/hero-bg-3.jpg";
+import bg4 from "@/assets/hero/hero-bg-4.jpg";
+import bg5 from "@/assets/hero/hero-bg-5.jpg";
+import bg6 from "@/assets/hero/hero-bg-6.jpg";
 
 const INTERVAL_MS = 6000;
 
@@ -29,6 +35,8 @@ interface Slide {
   title: string;
   href: string;
   visual: ReactNode;
+  /** Imagem de fundo do banner (inspirada na apresentação institucional). */
+  bg: string;
   /** Texto do banner (slides 2+); o slide 1 recebe o conteúdo institucional via children. */
   subtitle?: string;
   ctaLabel?: string;
@@ -256,6 +264,7 @@ function GovernanceVisual() {
 const SLIDES: Slide[] = [
   {
     id: "console",
+    bg: bg1,
     eyebrow: "Console do caso",
     title: "Uma pergunta, uma resposta com fonte",
     href: "#entregas",
@@ -264,6 +273,7 @@ const SLIDES: Slide[] = [
   },
   {
     id: "fluxo",
+    bg: bg2,
     eyebrow: "Fluxo único",
     title: "Localizar, organizar, produzir, apresentar, conduzir",
     href: "#fluxo",
@@ -274,6 +284,7 @@ const SLIDES: Slide[] = [
   },
   {
     id: "entregas",
+    bg: bg3,
     eyebrow: "Entregas reais",
     title: "Análise, peça, planilha e apresentação",
     href: "#entregas",
@@ -284,6 +295,7 @@ const SLIDES: Slide[] = [
   },
   {
     id: "inteligencia",
+    bg: bg4,
     eyebrow: "Inteligência sobre os autos",
     title: "Respostas ancoradas nos seus documentos",
     href: "#inteligencia",
@@ -294,6 +306,7 @@ const SLIDES: Slide[] = [
   },
   {
     id: "jurisprudencia",
+    bg: bg5,
     eyebrow: "Fontes oficiais",
     title: "Jurisprudência de tribunais, não de palpite",
     href: "#jurisprudencia",
@@ -304,6 +317,7 @@ const SLIDES: Slide[] = [
   },
   {
     id: "governanca",
+    bg: bg6,
     eyebrow: "Governança",
     title: "Controle, custo e rastreabilidade",
     href: "#plataforma",
@@ -314,19 +328,24 @@ const SLIDES: Slide[] = [
   },
 ];
 
-/** Copy do banner de cada slide (2+): eyebrow, título, subtítulo e CTA próprios. */
+/** Copy do banner (slides 2+): logo, selo, título, apoio e CTA próprios. */
 function SlideCopy({ slide, active }: { slide: Slide; active: boolean }) {
   return (
-    <div className="max-w-2xl lg:max-w-xl">
-      <span className="mb-4 inline-flex items-center gap-2 rounded-full bg-brand-cyan/15 px-3 py-1 text-sm font-semibold text-brand-cyan">
-        <JurisMindMark size={14} context={JURISMIND_CONTEXT.inlineDark} />
-        {slide.eyebrow}
+    <div className="min-w-0 max-w-2xl">
+      <div className="flex min-w-0 items-center gap-2">
+        <JurisMindMark size={26} context={JURISMIND_CONTEXT.inlineDark} />
+        <span className="truncate font-heading text-base font-bold tracking-tight text-brand-on-navy">
+          JurisMind AI
+        </span>
+      </div>
+      <span className="mt-4 inline-flex max-w-full items-center gap-2 rounded-full border border-brand-cyan/40 bg-brand-cyan/15 px-3 py-1 text-sm font-semibold text-brand-cyan">
+        <span className="truncate">{slide.eyebrow}</span>
       </span>
-      <h2 className="font-heading text-3xl font-extrabold leading-[1.12] tracking-tight text-brand-on-navy md:text-4xl">
+      <h2 className="mt-3 font-heading text-3xl font-extrabold leading-[1.1] tracking-tight text-brand-on-navy sm:text-4xl lg:text-5xl">
         {slide.title}
       </h2>
       {slide.subtitle ? (
-        <p className="mt-4 text-base leading-relaxed text-brand-on-navy/90 md:text-lg">
+        <p className="mt-4 max-w-xl text-base leading-relaxed text-brand-on-navy/90 sm:text-lg">
           {slide.subtitle}
         </p>
       ) : null}
@@ -334,10 +353,10 @@ function SlideCopy({ slide, active }: { slide: Slide; active: boolean }) {
         <a
           href={slide.ctaHref}
           tabIndex={active ? 0 : -1}
-          className="mt-7 inline-flex h-11 items-center gap-2 whitespace-nowrap rounded-md border border-brand-on-navy/35 px-5 text-sm font-semibold text-brand-on-navy transition-colors hover:bg-brand-on-navy/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+          className="mt-7 inline-flex h-11 items-center gap-2 whitespace-nowrap rounded-md border border-brand-on-navy/40 px-5 text-base font-semibold text-brand-on-navy transition-colors hover:bg-brand-on-navy/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
         >
           {slide.ctaLabel}
-          <ArrowRight className="h-4 w-4" aria-hidden />
+          <ArrowRight className="h-4 w-4 shrink-0" aria-hidden />
         </a>
       ) : null}
     </div>
@@ -345,10 +364,10 @@ function SlideCopy({ slide, active }: { slide: Slide; active: boolean }) {
 }
 
 /**
- * Hero em tela cheia no esquema de carrossel: cada slide é um banner
- * completo — visual do produto à direita e copy própria (título, texto e
- * CTA) à esquerda — alternando automaticamente. O primeiro slide recebe o
- * conteúdo institucional (children). Pontos ao centro, controles no topo.
+ * Hero em carrossel com altura contida: cada banner tem imagem de fundo
+ * própria (inspirada na apresentação institucional) coberta por uma névoa
+ * azul que garante a leitura, copy à esquerda e a prévia do produto como
+ * cartão discreto à direita no desktop.
  */
 export function HeroCarousel({ children }: { children?: ReactNode }) {
   const [index, setIndex] = useState(0);
@@ -399,7 +418,7 @@ export function HeroCarousel({ children }: { children?: ReactNode }) {
     <section
       aria-roledescription="carrossel"
       aria-label="Destaques do JurisMind"
-      className="relative min-h-[calc(100svh-4rem)] overflow-hidden bg-brand-navy text-brand-on-navy"
+      className="relative isolate overflow-hidden bg-brand-navy text-brand-on-navy"
       onMouseEnter={() => setPlaying(false)}
       onMouseLeave={() => setPlaying(true)}
       onFocusCapture={() => setPlaying(false)}
@@ -415,37 +434,67 @@ export function HeroCarousel({ children }: { children?: ReactNode }) {
       }}
       tabIndex={-1}
     >
-      {/* Slides em tela cheia — visual como fundo */}
-      <div className="absolute inset-0">
+      {/* Fundos: uma imagem por banner, sob a névoa de leitura */}
+      <div className="absolute inset-0" aria-hidden>
         {SLIDES.map((s, i) => (
-          <div
+          <img
             key={s.id}
-            role="group"
-            aria-roledescription="slide"
-            aria-label={`${i + 1} de ${SLIDES.length}: ${s.title}`}
-            aria-hidden={i !== index}
+            src={s.bg}
+            alt=""
+            width={1920}
+            height={1080}
+            loading={i === 0 ? "eager" : "lazy"}
             className={cn(
-              "absolute inset-0 transition-all duration-700 ease-out",
-              i === index
-                ? "translate-x-0 opacity-100"
-                : "pointer-events-none translate-x-4 opacity-0",
+              "absolute inset-0 h-full w-full object-cover transition-opacity duration-700 ease-out",
+              i === index ? "opacity-100" : "opacity-0",
             )}
-          >
-            {/* Brilho de marca atrás do visual */}
-            <div
-              className="absolute inset-0 opacity-25"
-              style={{
-                backgroundImage:
-                  "radial-gradient(circle at 18% 22%, oklch(0.86 0.16 195) 0, transparent 42%), radial-gradient(circle at 85% 72%, oklch(0.65 0.16 220) 0, transparent 45%)",
-              }}
-            />
-            {/* Visual do banner — à direita no desktop, esmaecido atrás da copy nas telas menores */}
-            <div className="mx-auto flex h-full max-w-6xl items-start justify-end px-4 pt-16 sm:pt-20 lg:items-center lg:pt-0">
+          />
+        ))}
+        {/* Névoa: véu azul com desfoque suave para não atrapalhar a leitura */}
+        <div className="absolute inset-0 bg-brand-navy/45 backdrop-blur-[1px]" />
+        <div className="absolute inset-0 bg-gradient-to-t from-brand-navy via-brand-navy/80 to-brand-navy/40 lg:bg-gradient-to-r lg:from-brand-navy lg:via-brand-navy/75 lg:to-brand-navy/25" />
+      </div>
+
+      {/* Conteúdo do banner */}
+      <div className="relative mx-auto w-full max-w-6xl px-4 pb-16 pt-12 sm:pb-20 sm:pt-16 lg:min-h-[min(72svh,680px)] lg:py-20">
+        <div className="grid items-center gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,26rem)]">
+          <div className="relative min-w-0">
+            {SLIDES.map((s, i) => (
+              <div
+                key={s.id}
+                role="group"
+                aria-roledescription="slide"
+                aria-label={`${i + 1} de ${SLIDES.length}: ${s.title}`}
+                aria-hidden={i !== index}
+                className={cn(
+                  "transition-opacity duration-500 ease-out",
+                  i === index
+                    ? "opacity-100"
+                    : "pointer-events-none absolute inset-0 opacity-0",
+                )}
+              >
+                {s.heroSlot ? (
+                  <div className="min-w-0 max-w-2xl">{children}</div>
+                ) : (
+                  <SlideCopy slide={s} active={i === index} />
+                )}
+              </div>
+            ))}
+          </div>
+
+          {/* Prévia do produto — cartão discreto, apenas no desktop */}
+          <div className="relative hidden min-h-[30rem] lg:block">
+            {SLIDES.map((s, i) => (
               <a
+                key={s.id}
                 href={s.href}
                 tabIndex={i === index ? 0 : -1}
+                aria-hidden={i !== index}
                 aria-label={s.title}
-                className="pointer-events-none block w-full max-w-xl opacity-35 outline-none transition-opacity hover:opacity-90 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-accent sm:opacity-50 lg:pointer-events-auto lg:opacity-100"
+                className={cn(
+                  "absolute inset-0 block overflow-hidden rounded-2xl border border-brand-navy-foreground/20 bg-brand-navy/70 p-5 shadow-2xl [&>*:last-child]:origin-top [&>*:last-child]:scale-[0.97] transition-opacity duration-500 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent",
+                  i === index ? "opacity-100" : "pointer-events-none opacity-0",
+                )}
               >
                 <span className="mb-3 inline-flex items-center gap-2 rounded-full bg-brand-cyan/15 px-3 py-1 text-sm font-semibold uppercase tracking-wide text-brand-cyan">
                   <JurisMindMark size={14} context={JURISMIND_CONTEXT.inlineDark} />
@@ -453,28 +502,13 @@ export function HeroCarousel({ children }: { children?: ReactNode }) {
                 </span>
                 {s.visual}
               </a>
-            </div>
-
-            {/* Véu de legibilidade do banner (transiciona junto com o slide) */}
-            <div
-              className="pointer-events-none absolute inset-0 bg-gradient-to-t from-brand-navy via-brand-navy/90 to-brand-navy/50 lg:bg-gradient-to-r lg:from-brand-navy lg:from-25% lg:via-brand-navy/90 lg:via-55% lg:to-brand-navy/30"
-              aria-hidden
-            />
-
-            {/* Copy do banner — canto inferior esquerdo */}
-            <div className="absolute inset-0 mx-auto flex w-full max-w-6xl flex-col justify-end px-4 pb-16 pt-24 lg:justify-center lg:pb-24">
-              {s.heroSlot ? (
-                <div className="max-w-2xl lg:max-w-xl">{children}</div>
-              ) : (
-                <SlideCopy slide={s} active={i === index} />
-              )}
-            </div>
+            ))}
           </div>
-        ))}
+        </div>
       </div>
 
       {/* Barra de progresso do slide atual */}
-      <div className="absolute inset-x-0 top-0 h-1 bg-brand-navy-foreground/15">
+      <div className="absolute inset-x-0 top-0 h-1 bg-brand-navy-foreground/20">
         <div
           className="h-full bg-brand-cyan transition-[width] duration-100 ease-linear"
           style={{ width: `${Math.round(progress * 100)}%` }}
@@ -482,14 +516,14 @@ export function HeroCarousel({ children }: { children?: ReactNode }) {
       </div>
 
       {/* Controles */}
-      <div className="absolute right-4 top-4 flex items-center gap-1">
+      <div className="absolute right-3 top-3 flex items-center gap-1 sm:right-4 sm:top-4">
         <Button
           type="button"
           variant="ghost"
           size="icon"
           aria-label="Destaque anterior"
           onClick={prev}
-          className="h-9 w-9 text-brand-on-navy hover:bg-brand-navy-foreground/10"
+          className="h-10 w-10 text-brand-on-navy hover:bg-brand-navy-foreground/15"
         >
           <ChevronLeft className="h-4 w-4" aria-hidden />
         </Button>
@@ -500,7 +534,7 @@ export function HeroCarousel({ children }: { children?: ReactNode }) {
           aria-label={playing ? "Pausar carrossel" : "Retomar carrossel"}
           aria-pressed={!playing}
           onClick={() => setPlaying((p) => !p)}
-          className="h-9 w-9 text-brand-on-navy hover:bg-brand-navy-foreground/10"
+          className="h-10 w-10 text-brand-on-navy hover:bg-brand-navy-foreground/15"
         >
           {playing ? (
             <Pause className="h-4 w-4" aria-hidden />
@@ -514,7 +548,7 @@ export function HeroCarousel({ children }: { children?: ReactNode }) {
           size="icon"
           aria-label="Próximo destaque"
           onClick={next}
-          className="h-9 w-9 text-brand-on-navy hover:bg-brand-navy-foreground/10"
+          className="h-10 w-10 text-brand-on-navy hover:bg-brand-navy-foreground/15"
         >
           <ChevronRight className="h-4 w-4" aria-hidden />
         </Button>
@@ -524,7 +558,7 @@ export function HeroCarousel({ children }: { children?: ReactNode }) {
         {label}
       </div>
 
-      {/* Pontos de navegação ao centro, sobre a base do hero */}
+      {/* Pontos de navegação */}
       <div className="absolute inset-x-0 bottom-4 flex items-center justify-center gap-2">
         {SLIDES.map((s, i) => (
           <button
@@ -535,7 +569,7 @@ export function HeroCarousel({ children }: { children?: ReactNode }) {
             aria-current={i === index}
             className={cn(
               "h-2.5 rounded-full transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent",
-              i === index ? "w-6 bg-brand-cyan" : "w-2.5 bg-brand-navy-foreground/35",
+              i === index ? "w-7 bg-brand-cyan" : "w-2.5 bg-brand-navy-foreground/45",
             )}
           />
         ))}

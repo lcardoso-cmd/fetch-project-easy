@@ -229,29 +229,29 @@ function LandingPage() {
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-40 border-b bg-background/85 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3">
-          <Link to="/" className="flex items-center gap-2">
+          <Link to="/" className="flex min-w-0 shrink-0 items-center gap-2">
             <JurisMindMark size={28} context={JURISMIND_CONTEXT.inline} />
-            <span className="font-heading text-lg font-bold tracking-tight text-foreground">
+            <span className="whitespace-nowrap font-heading text-lg font-bold tracking-tight text-foreground">
               JurisMind AI
             </span>
           </Link>
-          <nav className="hidden items-center gap-6 text-base text-muted-foreground md:flex">
-            <a href="#fluxo" className="hover:text-foreground">
+          <nav className="hidden items-center gap-6 text-base text-muted-foreground lg:flex">
+            <a href="#fluxo" className="whitespace-nowrap hover:text-foreground">
               Fluxo do caso
             </a>
-            <a href="#entregas" className="hover:text-foreground">
+            <a href="#entregas" className="whitespace-nowrap hover:text-foreground">
               Entregas
             </a>
-            <a href="#guia" className="hover:text-foreground">
+            <a href="#guia" className="whitespace-nowrap hover:text-foreground">
               Guia
             </a>
-            <a href="#inteligencia" className="hover:text-foreground">
+            <a href="#inteligencia" className="whitespace-nowrap hover:text-foreground">
               Inteligência
             </a>
-            <a href="#jurisprudencia" className="hover:text-foreground">
+            <a href="#jurisprudencia" className="whitespace-nowrap hover:text-foreground">
               Jurisprudência
             </a>
-            <a href="#plataforma" className="hover:text-foreground">
+            <a href="#plataforma" className="whitespace-nowrap hover:text-foreground">
               Plataforma
             </a>
           </nav>
@@ -271,16 +271,21 @@ function LandingPage() {
       <main>
         {/* 1 · HERO — carrossel em tela cheia com texto sobreposto */}
         <HeroCarousel>
-          <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-brand-cyan/15 px-3 py-1 text-sm font-semibold text-brand-cyan">
-            <JurisMindMark size={14} context={JURISMIND_CONTEXT.inlineDark} />
+          <div className="flex min-w-0 items-center gap-2">
+            <JurisMindMark size={30} context={JURISMIND_CONTEXT.inlineDark} />
+            <span className="truncate font-heading text-lg font-bold tracking-tight text-brand-on-navy">
+              JurisMind AI
+            </span>
+          </div>
+          <div className="mb-4 mt-4 inline-flex max-w-full items-center gap-2 rounded-full border border-brand-cyan/40 bg-brand-cyan/15 px-3 py-1 text-sm font-semibold text-brand-cyan">
             {PITCH.hero.eyebrow}
           </div>
-          <h1 className="font-heading text-4xl font-extrabold leading-[1.08] tracking-tight md:text-5xl">
+          <h1 className="font-heading text-3xl font-extrabold leading-[1.1] tracking-tight sm:text-4xl lg:text-5xl">
             {PITCH.hero.title}
           </h1>
-          <p className="mt-5 text-lg text-brand-on-navy/90">{PITCH.hero.subtitle}</p>
+          <p className="mt-5 max-w-xl text-base leading-relaxed text-brand-on-navy/90 sm:text-lg">{PITCH.hero.subtitle}</p>
 
-          <div className="mt-8 flex flex-col gap-3 lg:flex-row lg:flex-nowrap [&>*]:w-full lg:[&>*]:w-auto">
+          <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap [&>*]:w-full sm:[&>*]:w-auto">
             {user ? (
               <OpenDashboardButton className="bg-brand-cyan text-brand-navy hover:bg-brand-cyan/90" />
             ) : (
@@ -295,7 +300,7 @@ function LandingPage() {
 
         {/* 2 · FLUXO ÚNICO */}
         <section id="fluxo" className="border-b bg-card">
-          <div className="mx-auto max-w-6xl px-4 py-16">
+          <div className="mx-auto max-w-6xl px-4 py-20 sm:py-24">
             <div className="mx-auto max-w-2xl text-center">
               <h2 className="font-heading text-3xl font-bold tracking-tight text-foreground md:text-4xl">
                 {PITCH.flow.title}
@@ -305,7 +310,7 @@ function LandingPage() {
               </p>
             </div>
 
-            <ol className="mt-10 grid gap-4 md:grid-cols-3 lg:grid-cols-5">
+            <ol className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
               {FLOW.map((s) => (
                 <li key={s.n} className="rounded-2xl border bg-background p-5 shadow-sm">
                   <div className="flex items-center justify-between">
@@ -326,7 +331,7 @@ function LandingPage() {
 
         {/* 2.5 · DESTAQUE DO GUIA */}
         <section id="guia" className="border-y bg-brand-navy text-brand-on-navy">
-          <div className="mx-auto max-w-6xl px-4 py-16">
+          <div className="mx-auto max-w-6xl px-4 py-20 sm:py-24">
             <div className="mx-auto max-w-3xl text-center">
               <span className="inline-flex items-center gap-2 rounded-full bg-brand-cyan/15 px-3 py-1 text-sm font-semibold text-brand-cyan">
                 <BookOpen className="h-4 w-4" aria-hidden />
@@ -340,7 +345,7 @@ function LandingPage() {
               </p>
             </div>
 
-            <ol className="mt-10 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <ol className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               {GUIDE_STEPS.map((s) => (
                 <li
                   key={s.key}
@@ -391,7 +396,7 @@ function LandingPage() {
         </section>
 
         {/* 3 · DEMONSTRAÇÃO DAS ENTREGAS */}
-        <section id="entregas" className="mx-auto max-w-6xl px-4 py-16">
+        <section id="entregas" className="mx-auto max-w-6xl px-4 py-20 sm:py-24">
           <div className="mx-auto max-w-2xl text-center">
             <h2 className="font-heading text-3xl font-bold tracking-tight text-foreground md:text-4xl">
               {PITCH.deliverables.title}
@@ -419,7 +424,7 @@ function LandingPage() {
 
         {/* 4 · INTELIGÊNCIA (RAG explicado pelo resultado) */}
         <section id="inteligencia" className="border-y bg-card">
-          <div className="mx-auto max-w-6xl px-4 py-16">
+          <div className="mx-auto max-w-6xl px-4 py-20 sm:py-24">
             <div className="mx-auto max-w-2xl text-center">
               <h2 className="font-heading text-3xl font-bold tracking-tight text-foreground md:text-4xl">
                 {PITCH.intelligence.title}
@@ -429,7 +434,7 @@ function LandingPage() {
               </p>
             </div>
 
-            <div className="mt-10 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               {TECH.map((c) => (
                 <div key={c.t} className="rounded-2xl border bg-background p-5">
                   <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
@@ -471,7 +476,7 @@ function LandingPage() {
         </section>
 
         {/* 5 · JURISPRUDÊNCIA */}
-        <section id="jurisprudencia" className="mx-auto max-w-6xl px-4 py-16">
+        <section id="jurisprudencia" className="mx-auto max-w-6xl px-4 py-20 sm:py-24">
           <div className="grid gap-8 lg:grid-cols-[1fr_1fr] lg:items-center">
             <div>
               <span className="inline-flex items-center gap-2 rounded-full border border-accent/50 bg-accent/10 px-3 py-1 text-sm font-semibold text-foreground">
@@ -528,7 +533,7 @@ function LandingPage() {
 
         {/* 6 · DIFERENCIAÇÃO ESTRUTURAL */}
         <section className="border-y bg-muted/30">
-          <div className="mx-auto max-w-6xl px-4 py-16">
+          <div className="mx-auto max-w-6xl px-4 py-20 sm:py-24">
             <div className="mx-auto max-w-3xl text-center">
               <h2 className="font-heading text-3xl font-bold tracking-tight text-foreground md:text-4xl">
                 {PITCH.differentiation.title}
@@ -538,7 +543,7 @@ function LandingPage() {
               </p>
             </div>
 
-            <div className="mt-10 grid gap-6 md:grid-cols-2">
+            <div className="mt-10 grid gap-6 sm:grid-cols-2">
               <div className="rounded-2xl border bg-background p-6">
                 <h3 className="font-heading text-lg font-bold text-foreground">
                   {PITCH.differentiation.genericTitle}
@@ -575,11 +580,11 @@ function LandingPage() {
         </section>
 
         {/* 7 · PLATAFORMA */}
-        <section id="plataforma" className="mx-auto max-w-6xl px-4 py-16">
+        <section id="plataforma" className="mx-auto max-w-6xl px-4 py-20 sm:py-24">
           <h2 className="text-center font-heading text-3xl font-bold tracking-tight text-foreground md:text-4xl">
             {PITCH.platform.title}
           </h2>
-          <div className="mt-10 grid gap-5 md:grid-cols-3">
+          <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {LAYERS.map((l) => (
               <div key={l.t} className="rounded-2xl border bg-card p-6">
                 <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
@@ -594,7 +599,7 @@ function LandingPage() {
 
         {/* 8 · GOVERNANÇA E CONFIANÇA */}
         <section className="border-t bg-card">
-          <div className="mx-auto max-w-6xl px-4 py-16">
+          <div className="mx-auto max-w-6xl px-4 py-20 sm:py-24">
             <div className="grid gap-8 lg:grid-cols-[1fr_1fr] lg:items-center">
               <div>
                 <h2 className="font-heading text-3xl font-bold tracking-tight text-foreground md:text-4xl">
@@ -624,7 +629,7 @@ function LandingPage() {
 
         {/* 9 · TESTE GRATUITO / CONTINUIDADE */}
         <section className="bg-brand-navy text-brand-on-navy">
-          <div className="mx-auto max-w-3xl px-4 py-16 text-center">
+          <div className="mx-auto max-w-3xl px-4 py-20 sm:py-24 text-center">
             {user ? (
               <>
                 <h2 className="font-heading text-3xl font-bold tracking-tight md:text-4xl">
@@ -669,7 +674,7 @@ function LandingPage() {
       </main>
 
       <footer className="border-t bg-card">
-        <div className="mx-auto grid max-w-6xl gap-8 px-4 py-12 md:grid-cols-3">
+        <div className="mx-auto grid max-w-6xl gap-8 px-4 py-12 sm:grid-cols-2 lg:grid-cols-3">
           <div>
             <div className="flex items-center gap-2">
               <JurisMindMark size={26} context={JURISMIND_CONTEXT.inlineLight} />
@@ -687,12 +692,12 @@ function LandingPage() {
               {user ? (
                 <>
                   <li>
-                    <Link to="/painel" className="hover:text-foreground">
+                    <Link to="/painel" className="whitespace-nowrap hover:text-foreground">
                       Abrir painel
                     </Link>
                   </li>
                   <li>
-                    <Link to="/configuracoes" className="hover:text-foreground">
+                    <Link to="/configuracoes" className="whitespace-nowrap hover:text-foreground">
                       Minha conta
                     </Link>
                   </li>
@@ -700,24 +705,24 @@ function LandingPage() {
               ) : (
                 <>
                   <li>
-                    <Link to="/entrar" className="hover:text-foreground">
+                    <Link to="/entrar" className="whitespace-nowrap hover:text-foreground">
                       Entrar
                     </Link>
                   </li>
                   <li>
-                    <Link to="/entrar" search={TRIAL_SEARCH} className="hover:text-foreground">
+                    <Link to="/entrar" search={TRIAL_SEARCH} className="whitespace-nowrap hover:text-foreground">
                       Criar conta
                     </Link>
                   </li>
                 </>
               )}
               <li>
-                <a href="#fluxo" className="hover:text-foreground">
+                <a href="#fluxo" className="whitespace-nowrap hover:text-foreground">
                   Fluxo do caso
                 </a>
               </li>
               <li>
-                <a href="#entregas" className="hover:text-foreground">
+                <a href="#entregas" className="whitespace-nowrap hover:text-foreground">
                   Entregas
                 </a>
               </li>
@@ -728,22 +733,22 @@ function LandingPage() {
             <p className="font-heading font-bold text-foreground">Institucional</p>
             <ul className="mt-3 space-y-2 text-muted-foreground">
               <li>
-                <Link to="/guia/automatizar-peticoes-juridicas-ia" className="hover:text-foreground">
+                <Link to="/guia/automatizar-peticoes-juridicas-ia" className="whitespace-nowrap hover:text-foreground">
                   Como automatizar petições jurídicas com IA
                 </Link>
               </li>
               <li>
-                <Link to="/privacidade" className="hover:text-foreground">
+                <Link to="/privacidade" className="whitespace-nowrap hover:text-foreground">
                   Política de privacidade
                 </Link>
               </li>
               <li>
-                <Link to="/termos" className="hover:text-foreground">
+                <Link to="/termos" className="whitespace-nowrap hover:text-foreground">
                   Termos de uso
                 </Link>
               </li>
               <li>
-                <a href="mailto:contato@b2bconsulting.com.br" className="hover:text-foreground">
+                <a href="mailto:contato@b2bconsulting.com.br" className="whitespace-nowrap hover:text-foreground">
                   contato@b2bconsulting.com.br
                 </a>
               </li>
