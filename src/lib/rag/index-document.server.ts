@@ -25,7 +25,12 @@ const OCR_MAX_FILE_BYTES = 40 * 1024 * 1024;
 const DIRECT_DOWNLOAD_MAX_BYTES = 40 * 1024 * 1024;
 /** Teto de páginas enviadas para OCR em uma execução. */
 const OCR_PAGE_LIMIT = 60;
+/** Teto de páginas descritas (catálogo de imagens) por execução. */
+const IMAGE_CATALOG_PAGE_LIMIT = 40;
+/** Fatia de tempo máxima gasta com o catálogo em uma execução. */
+const IMAGE_CATALOG_TIME_BUDGET_MS = 15_000;
 const NATIVE_DETECTION_VERSION = "native-v3";
+
 
 export interface IndexResumeProgress {
   run_id?: string;
