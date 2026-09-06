@@ -451,12 +451,12 @@ export function HeroCarousel({ children }: { children?: ReactNode }) {
           />
         ))}
         {/* Névoa: véu azul com desfoque suave para não atrapalhar a leitura */}
-        <div className="absolute inset-0 bg-brand-navy/80 backdrop-blur-[2px]" />
-        <div className="absolute inset-0 bg-gradient-to-t from-brand-navy via-brand-navy/85 to-brand-navy/55 lg:bg-gradient-to-r lg:from-brand-navy lg:via-brand-navy/85 lg:to-brand-navy/45" />
+        <div className="absolute inset-0 bg-brand-navy/45 backdrop-blur-[1px]" />
+        <div className="absolute inset-0 bg-gradient-to-t from-brand-navy via-brand-navy/80 to-brand-navy/40 lg:bg-gradient-to-r lg:from-brand-navy lg:via-brand-navy/75 lg:to-brand-navy/25" />
       </div>
 
       {/* Conteúdo do banner */}
-      <div className="relative mx-auto w-full max-w-6xl px-4 pb-16 pt-12 sm:pb-20 sm:pt-16 lg:min-h-[min(78svh,760px)] lg:py-24">
+      <div className="relative mx-auto w-full max-w-6xl px-4 pb-16 pt-12 sm:pb-20 sm:pt-16 lg:min-h-[min(72svh,680px)] lg:py-20">
         <div className="grid items-center gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,26rem)]">
           <div className="relative min-w-0">
             {SLIDES.map((s, i) => (
@@ -483,7 +483,7 @@ export function HeroCarousel({ children }: { children?: ReactNode }) {
           </div>
 
           {/* Prévia do produto — cartão discreto, apenas no desktop */}
-          <div className="relative hidden min-h-[26rem] lg:block">
+          <div className="relative hidden min-h-[24rem] lg:block">
             {SLIDES.map((s, i) => (
               <a
                 key={s.id}

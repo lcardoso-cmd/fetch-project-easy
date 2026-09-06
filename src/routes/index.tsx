@@ -236,22 +236,22 @@ function LandingPage() {
             </span>
           </Link>
           <nav className="hidden items-center gap-6 text-base text-muted-foreground lg:flex">
-            <a href="#fluxo" className="hover:text-foreground">
+            <a href="#fluxo" className="whitespace-nowrap hover:text-foreground">
               Fluxo do caso
             </a>
-            <a href="#entregas" className="hover:text-foreground">
+            <a href="#entregas" className="whitespace-nowrap hover:text-foreground">
               Entregas
             </a>
-            <a href="#guia" className="hover:text-foreground">
+            <a href="#guia" className="whitespace-nowrap hover:text-foreground">
               Guia
             </a>
-            <a href="#inteligencia" className="hover:text-foreground">
+            <a href="#inteligencia" className="whitespace-nowrap hover:text-foreground">
               Inteligência
             </a>
-            <a href="#jurisprudencia" className="hover:text-foreground">
+            <a href="#jurisprudencia" className="whitespace-nowrap hover:text-foreground">
               Jurisprudência
             </a>
-            <a href="#plataforma" className="hover:text-foreground">
+            <a href="#plataforma" className="whitespace-nowrap hover:text-foreground">
               Plataforma
             </a>
           </nav>
@@ -285,7 +285,7 @@ function LandingPage() {
           </h1>
           <p className="mt-5 max-w-xl text-base leading-relaxed text-brand-on-navy/90 sm:text-lg">{PITCH.hero.subtitle}</p>
 
-          <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap lg:flex-nowrap [&>*]:w-full sm:[&>*]:w-auto">
+          <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap [&>*]:w-full sm:[&>*]:w-auto">
             {user ? (
               <OpenDashboardButton className="bg-brand-cyan text-brand-navy hover:bg-brand-cyan/90" />
             ) : (
@@ -692,12 +692,12 @@ function LandingPage() {
               {user ? (
                 <>
                   <li>
-                    <Link to="/painel" className="hover:text-foreground">
+                    <Link to="/painel" className="whitespace-nowrap hover:text-foreground">
                       Abrir painel
                     </Link>
                   </li>
                   <li>
-                    <Link to="/configuracoes" className="hover:text-foreground">
+                    <Link to="/configuracoes" className="whitespace-nowrap hover:text-foreground">
                       Minha conta
                     </Link>
                   </li>
@@ -705,24 +705,24 @@ function LandingPage() {
               ) : (
                 <>
                   <li>
-                    <Link to="/entrar" className="hover:text-foreground">
+                    <Link to="/entrar" className="whitespace-nowrap hover:text-foreground">
                       Entrar
                     </Link>
                   </li>
                   <li>
-                    <Link to="/entrar" search={TRIAL_SEARCH} className="hover:text-foreground">
+                    <Link to="/entrar" search={TRIAL_SEARCH} className="whitespace-nowrap hover:text-foreground">
                       Criar conta
                     </Link>
                   </li>
                 </>
               )}
               <li>
-                <a href="#fluxo" className="hover:text-foreground">
+                <a href="#fluxo" className="whitespace-nowrap hover:text-foreground">
                   Fluxo do caso
                 </a>
               </li>
               <li>
-                <a href="#entregas" className="hover:text-foreground">
+                <a href="#entregas" className="whitespace-nowrap hover:text-foreground">
                   Entregas
                 </a>
               </li>
@@ -733,22 +733,22 @@ function LandingPage() {
             <p className="font-heading font-bold text-foreground">Institucional</p>
             <ul className="mt-3 space-y-2 text-muted-foreground">
               <li>
-                <Link to="/guia/automatizar-peticoes-juridicas-ia" className="hover:text-foreground">
+                <Link to="/guia/automatizar-peticoes-juridicas-ia" className="whitespace-nowrap hover:text-foreground">
                   Como automatizar petições jurídicas com IA
                 </Link>
               </li>
               <li>
-                <Link to="/privacidade" className="hover:text-foreground">
+                <Link to="/privacidade" className="whitespace-nowrap hover:text-foreground">
                   Política de privacidade
                 </Link>
               </li>
               <li>
-                <Link to="/termos" className="hover:text-foreground">
+                <Link to="/termos" className="whitespace-nowrap hover:text-foreground">
                   Termos de uso
                 </Link>
               </li>
               <li>
-                <a href="mailto:contato@b2bconsulting.com.br" className="hover:text-foreground">
+                <a href="mailto:contato@b2bconsulting.com.br" className="whitespace-nowrap hover:text-foreground">
                   contato@b2bconsulting.com.br
                 </a>
               </li>
