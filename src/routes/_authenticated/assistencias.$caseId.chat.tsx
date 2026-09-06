@@ -146,77 +146,48 @@ function CaseChatFullPage() {
             <ArrowLeft className="mr-1 h-4 w-4" /> Voltar ao caso
           </Link>
         </Button>
-        <div className="flex min-w-0 items-center gap-2">
+        <div className="flex min-w-0 flex-1 items-center gap-2">
           <BrainCircuit className="h-5 w-5 shrink-0 text-primary" />
           <p className="truncate font-semibold">
             JurisMind AI — {caseData.title}
           </p>
         </div>
+        <Button
+          variant="outline"
+          size="sm"
+          className="shrink-0 md:hidden"
+          onClick={() => setHistoryOpen(true)}
+        >
+          <History className="mr-1 h-4 w-4" />
+          Conversas
+        </Button>
       </div>
       <div className="flex min-h-0 flex-1 overflow-hidden">
-        {/* Sidebar de conversas */}
-        <aside className="hidden w-64 shrink-0 flex-col border-r bg-muted/30 md:flex">
-          <div className="flex items-center justify-between border-b px-3 py-2">
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Conversas
-            </p>
-            <Button
-              size="sm"
-              variant="ghost"
-              className="h-7 gap-1 px-2"
-              onClick={() => createMut.mutate()}
-              disabled={createMut.isPending}
-            >
-              <MessageSquarePlus className="h-4 w-4" />
-              Nova
-            </Button>
-          </div>
-          <div className="flex-1 overflow-y-auto p-2">
-            {threads.length === 0 ? (
-              <p className="p-3 text-center text-xs text-muted-foreground">
-                Nenhuma conversa ainda. Clique em <b>Nova</b> para começar.
-              </p>
-            ) : (
-              <ul className="space-y-1">
-                {threads.map((t) => (
-                  <li key={t.id}>
-                    <div
-                      className={cn(
-                        "group flex items-start gap-1 rounded-md px-2 py-1.5 hover:bg-muted",
-                        activeThreadId === t.id && "bg-muted",
-                      )}
-                    >
-                      <button
-                        type="button"
-                        onClick={() => setActiveThreadId(t.id)}
-                        className="min-w-0 flex-1 text-left"
-                      >
-                        <p className="truncate text-sm">{t.title}</p>
-                        <p className="truncate text-xs text-muted-foreground">
-                          {formatDistanceToNow(new Date(t.last_message_at), {
-                            addSuffix: true,
-                            locale: ptBR,
-                          })}
-                        </p>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (confirm(`Excluir conversa "${t.title}"?`))
-                            deleteMut.mutate(t.id);
-                        }}
-                        className="rounded p-1 opacity-0 hover:bg-destructive/10 hover:text-destructive group-hover:opacity-100"
-                        title="Excluir"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        </aside>
+        {/* Histórico de conversas do caso */}
+        <ThreadList
+          caseId={caseId}
+          activeThreadId={activeThreadId}
+          onSelect={setActiveThreadId}
+          className="hidden w-64 shrink-0 border-r bg-muted/30 md:flex"
+        />
+
+        <Sheet open={historyOpen} onOpenChange={setHistoryOpen}>
+          <SheetContent side="left" className="w-[85vw] max-w-sm p-0">
+            <SheetTitle className="border-b px-4 py-3 text-base">
+              Conversas do caso
+            </SheetTitle>
+            <ThreadList
+              caseId={caseId}
+              activeThreadId={activeThreadId}
+              onSelect={(id) => {
+                setActiveThreadId(id);
+                setHistoryOpen(false);
+              }}
+              className="h-[calc(100svh-3.5rem)]"
+            />
+          </SheetContent>
+        </Sheet>
+
 
         <div className="min-h-0 flex-1 overflow-hidden">
           <JurisMindChat
