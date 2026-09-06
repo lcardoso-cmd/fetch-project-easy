@@ -149,14 +149,8 @@ export async function runDbTool(opts: {
   const chunkCounts = async (docIds: string[]) => {
     const counts = new Map<string, number>();
     if (docIds.length === 0) return counts;
-    const { data } = await supabase
-      .from("document_chunks")
-      .select("document_id")
-      .eq("case_id", caseId)
-      .in("id_placeholder_never", []) // noop guard removed below
-      .limit(0);
-    void data;
-    // Contagem por documento (uma consulta por documento seria caro; usamos head+count)
+    // Contagem por documento (head + count é barato e respeita a RLS)
+
     await Promise.all(
       docIds.map(async (id) => {
         const { count } = await supabase
