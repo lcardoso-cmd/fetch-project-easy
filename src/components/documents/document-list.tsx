@@ -45,6 +45,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { isDocUsable } from "@/lib/documents/usable";
+import { baseDocumentName } from "@/lib/documents/naming";
 import { ConfirmActionButton } from "./confirm-action-button";
 import { UploadDialog } from "./upload-dialog";
 import { DocumentAuditDialog } from "./document-audit-dialog";
@@ -830,13 +831,6 @@ export function DocumentList({
       </Dialog>
     </Card>
   );
-}
-
-/** Nome base do documento, sem o sufixo de parte gerado na divisão. */
-function baseDocumentName(filename: string): string {
-  return filename
-    .replace(/\s*[-–—]?\s*\(?parte\s*\d+(\s*(de|\/)\s*\d+)?\)?\s*(\.\w+)?$/i, "")
-    .trim() || filename;
 }
 
 interface DocGroup {
