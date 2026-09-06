@@ -41,7 +41,7 @@ export function citationSpotLabel(c: CitationLike): string {
   return [part, page].filter(Boolean).join(" · ") || "trecho";
 }
 
-export function citationGroupKey(c: Citation, index: number): string {
+export function citationGroupKey(c: CitationLike, index: number): string {
   return c.group_key ?? c.document_id ?? `c-${index}`;
 }
 
