@@ -1871,6 +1871,67 @@ export type Database = {
           },
         ]
       }
+      document_image_pages: {
+        Row: {
+          case_id: string
+          created_at: string
+          description: string
+          document_id: string
+          id: string
+          label: string
+          organization_id: string
+          page_local: number | null
+          page_number: number
+          updated_at: string
+        }
+        Insert: {
+          case_id: string
+          created_at?: string
+          description?: string
+          document_id: string
+          id?: string
+          label?: string
+          organization_id: string
+          page_local?: number | null
+          page_number: number
+          updated_at?: string
+        }
+        Update: {
+          case_id?: string
+          created_at?: string
+          description?: string
+          document_id?: string
+          id?: string
+          label?: string
+          organization_id?: string
+          page_local?: number | null
+          page_number?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_image_pages_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_image_pages_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_image_pages_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       document_index_jobs: {
         Row: {
           attempt_count: number

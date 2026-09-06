@@ -13,6 +13,7 @@ export const DB_TOOL_NAMES = [
   "search_case_documents",
   "list_case_publications",
   "find_cases",
+  "list_image_pages",
 ] as const;
 
 export const dbToolDefs: ToolDef[] = [
@@ -100,6 +101,22 @@ export const dbToolDefs: ToolDef[] = [
           limit: { type: "number", description: "Máximo de casos (padrão 8)." },
         },
         required: ["query"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "list_image_pages",
+      description:
+        "Catálogo das páginas que são apenas imagem (sem texto próprio), com o tipo identificado de cada uma (nota fiscal, cartão de ponto, foto, recibo, assinatura). Use quando o usuário perguntar o que existe nas páginas em imagem, ou quando o texto não contiver um documento que provavelmente está digitalizado. Cite documento e página; a leitura completa dessas páginas só ocorre a pedido do usuário.",
+      parameters: {
+        type: "object",
+        properties: {
+          document_id: { type: "string", description: "Opcional: restringe a um documento." },
+          contains: { type: "string", description: "Opcional: filtra pelo tipo/descrição." },
+          limit: { type: "number", description: "Máximo de páginas (padrão 40)." },
+        },
       },
     },
   },
@@ -294,6 +311,49 @@ export async function runDbTool(opts: {
       if (used >= MAX_TEXT_CHARS) break;
     }
     return { truncado: used >= MAX_TEXT_CHARS, documentos: parts };
+  }
+
+  if (name === "list_image_pages") {
+    const limit = num(args.limit, 40, 1, 200);
+    const docs = await fetchDocs();
+    const byId = new Map(docs.map((d) => [d.id, d]));
+    let query = supabase
+      .from("document_image_pages")
+      .select("document_id, page_number, label, description")
+      .eq("case_id", caseId)
+      .order("page_number", { ascending: true })
+      .limit(limit);
+    const docId = String(args.document_id ?? "").trim();
+    if (docId) query = query.eq("document_id", docId);
+    const contains = String(args.contains ?? "").trim();
+    if (contains) {
+      const safe = contains.replace(/[%_,]/g, "");
+      query = query.or(`label.ilike.%${safe}%,description.ilike.%${safe}%`);
+    }
+    const { data, error } = await query;
+    if (error) return { error: error.message };
+    const rows = (data ?? []) as Array<{
+      document_id: string;
+      page_number: number;
+      label: string;
+      description: string;
+    }>;
+    return {
+      total: rows.length,
+      observacao:
+        "Estas páginas não têm texto próprio; o tipo foi identificado visualmente. A transcrição completa só é feita quando o usuário pede a leitura da imagem.",
+      paginas: rows.map((r) => {
+        const d = byId.get(r.document_id);
+        return {
+          document_id: r.document_id,
+          documento: d ? baseDocumentName(d.filename) : "documento",
+          parte: d?.part_index ?? null,
+          pagina: r.page_number,
+          tipo: r.label,
+          descricao: r.description,
+        };
+      }),
+    };
   }
 
   if (name === "search_case_documents") {
