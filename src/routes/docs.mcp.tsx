@@ -162,7 +162,7 @@ due_date?: string (YYYY-MM-DD)`,
 
 function McpDocsPage() {
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen overflow-x-hidden bg-background [&_code]:break-words [&_pre_code]:break-normal">
       <header className="border-b border-border/60">
         <div className="mx-auto flex max-w-4xl items-center justify-between px-6 py-4">
           <Link
