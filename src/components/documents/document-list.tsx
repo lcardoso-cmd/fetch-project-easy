@@ -625,6 +625,21 @@ export function DocumentList({
               {d.created_at ? ` · ${new Date(d.created_at).toLocaleDateString("pt-BR")}` : ""}
             </p>
           </div>
+          {!isActive && (
+            <div className="hidden max-w-[45%] shrink-0 sm:block"><StatusCell
+              status={d.processing_status}
+              job={jobs.get(d.id)}
+              compact={!isActive}
+              onRetry={() => onRetry(d.id)}
+              retrying={retryingId === d.id}
+              onForce={() => onForce(d.id)}
+              forcing={forcingId === d.id}
+              onCancel={() => onCancel(d.id)}
+              cancelling={cancellingId === d.id}
+              onReadImages={() => onReadImages(d.id)}
+              readingImages={visionId === d.id}
+            /></div>
+          )}
           <div className="flex shrink-0 items-center gap-1">
             {(d.processing_status.startsWith("error") || d.processing_status === "empty") && (
               <Button
@@ -667,21 +682,19 @@ export function DocumentList({
             </Button>
           </div>
         </div>
-        <div className="pl-10">
-          <StatusCell
-            status={d.processing_status}
-            job={jobs.get(d.id)}
-            compact={!isActive}
-            onRetry={() => onRetry(d.id)}
-            retrying={retryingId === d.id}
-            onForce={() => onForce(d.id)}
-            forcing={forcingId === d.id}
-            onCancel={() => onCancel(d.id)}
-            cancelling={cancellingId === d.id}
-            onReadImages={() => onReadImages(d.id)}
-            readingImages={visionId === d.id}
-          />
-        </div>
+        <div className={isActive ? "pl-10" : "pl-10 sm:hidden"}><StatusCell
+              status={d.processing_status}
+              job={jobs.get(d.id)}
+              compact={!isActive}
+              onRetry={() => onRetry(d.id)}
+              retrying={retryingId === d.id}
+              onForce={() => onForce(d.id)}
+              forcing={forcingId === d.id}
+              onCancel={() => onCancel(d.id)}
+              cancelling={cancellingId === d.id}
+              onReadImages={() => onReadImages(d.id)}
+              readingImages={visionId === d.id}
+            /></div>
       </div>
     );
   };
