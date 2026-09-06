@@ -164,8 +164,10 @@ export async function openPdfBytes(bytes: Uint8Array): Promise<RangePdfDoc> {
   const doc = await pdfjs.getDocument({
     data: bytes,
     isEvalSupported: false,
-    useSystemFonts: false,
+    useSystemFonts: true,
+    disableFontFace: true,
   }).promise;
+
   return pdfHandle(doc, pdfjs.OPS, () => bytes.byteLength);
 }
 
