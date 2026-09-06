@@ -27,6 +27,9 @@ import {
   FileSpreadsheet,
   Presentation,
   CheckCircle2,
+  Upload,
+  MessageSquare,
+  Download,
 } from "lucide-react";
 import { JurisMindMark, JURISMIND_CONTEXT } from "@/components/brand/jurismind-mark";
 import { OutputShowcase } from "@/components/marketing/output-showcase";
