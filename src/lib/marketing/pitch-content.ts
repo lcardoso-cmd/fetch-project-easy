@@ -88,7 +88,7 @@ export const PITCH = {
         key: "pedir",
         n: "02",
         t: "Peça a minuta no chat",
-        d: "Contestation, embargos, execução ou ação de cobrança: a IA usa os autos como base.",
+        d: "Contestação, embargos, execução ou ação de cobrança: a IA usa os autos como base.",
       },
       {
         key: "revisar",
