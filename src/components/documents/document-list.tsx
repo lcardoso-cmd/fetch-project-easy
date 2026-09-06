@@ -401,7 +401,7 @@ function StatusCell({
         <ImagePageCatalog
           documentId={documentId}
           count={imagePages}
-          onOpenImagePage={onOpenImagePage}
+          onOpenPage={onOpenImagePage}
         />
       )}
 
@@ -677,6 +677,19 @@ export function DocumentList({
     try {
       const res = await docUrlFn({ data: { id: d.id } });
       setPreviewUrl(res.url);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : String(e));
+      setPreviewDoc(null);
+    }
+  };
+
+  /** Abre a visualização do documento já na página em imagem escolhida. */
+  const onOpenImagePage = async (d: DocItem, page: number) => {
+    setPreviewDoc(d);
+    setPreviewUrl(null);
+    try {
+      const res = await docUrlFn({ data: { id: d.id } });
+      setPreviewUrl(`${res.url}#page=${page}`);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : String(e));
       setPreviewDoc(null);
