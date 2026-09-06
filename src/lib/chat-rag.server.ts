@@ -576,6 +576,13 @@ export async function prepareRagRun(opts: {
     },
   ];
 
+  // Consultas diretas ao banco (dados reais do caso), além dos trechos do RAG.
+  const { dbToolDefs, DB_TOOL_NAMES, runDbTool } = await import("./chat-db-tools.server");
+  tools.push(...dbToolDefs);
+  const dbToolNames = new Set<string>(DB_TOOL_NAMES);
+
+
+
 
   const parties = (caseRow.parties ?? []) as PartyRow[];
   const rep = caseRow.represented_party as PartyRow | null;
