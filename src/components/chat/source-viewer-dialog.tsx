@@ -11,15 +11,31 @@ import {
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { getDocumentUrl } from "@/lib/documents.functions";
-import type { Citation } from "@/lib/chat-rag.server";
 
-export function citationPartLabel(c: Citation): string | null {
+/** Citação tolerante: mensagens antigas não têm os campos de parte/página. */
+export interface CitationLike {
+  ref?: string;
+  chunk_id?: string;
+  document_id: string;
+  filename: string;
+  snippet?: string;
+  location?: string | null;
+  is_context?: boolean;
+  group_key?: string;
+  base_filename?: string;
+  part_index?: number | null;
+  part_count?: number | null;
+  page?: number | null;
+  page_in_part?: number | null;
+}
+
+export function citationPartLabel(c: CitationLike): string | null {
   if (c.part_index == null) return null;
   return `Parte ${c.part_index}${c.part_count ? ` de ${c.part_count}` : ""}`;
 }
 
 /** Rótulo curto do trecho: "Parte 2 · p. 143" (ou apenas a localização). */
-export function citationSpotLabel(c: Citation): string {
+export function citationSpotLabel(c: CitationLike): string {
   const part = citationPartLabel(c);
   const page = c.page != null ? `p. ${c.page}` : c.location;
   return [part, page].filter(Boolean).join(" · ") || "trecho";
@@ -29,7 +45,7 @@ export function citationGroupKey(c: Citation, index: number): string {
   return c.group_key ?? c.document_id ?? `c-${index}`;
 }
 
-export function citationDocumentName(c: Citation): string {
+export function citationDocumentName(c: CitationLike): string {
   return c.base_filename ?? c.filename;
 }
 
@@ -38,7 +54,7 @@ export function SourceViewerDialog({
   citation,
   onOpenChange,
 }: {
-  citation: Citation | null;
+  citation: CitationLike | null;
   onOpenChange: (open: boolean) => void;
 }) {
   const getUrl = useServerFn(getDocumentUrl);
