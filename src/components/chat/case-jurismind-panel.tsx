@@ -1,16 +1,24 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { AlertCircle, CheckCircle2, Loader2, Maximize2, MessageSquarePlus } from "lucide-react";
+import {
+  AlertCircle,
+  CheckCircle2,
+  History,
+  Loader2,
+  Maximize2,
+  MessageSquarePlus,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { JurisMindMark, JURISMIND_CONTEXT } from "@/components/brand/jurismind-mark";
 import { JurisMindChat } from "@/components/chat/jurismind-chat";
+import { ThreadList } from "@/components/chat/thread-list";
 import type { DocItem } from "@/components/documents/document-list";
-import { createThread, listThreads } from "@/lib/threads.functions";
+import { createThread, ensureThread, listThreads } from "@/lib/threads.functions";
 import { cn } from "@/lib/utils";
 import { isDocUsable } from "@/lib/documents/usable";
 
@@ -67,7 +75,9 @@ export function CaseJurisMindPanel({
   const navigate = useNavigate();
   const listThreadsFn = useServerFn(listThreads);
   const createThreadFn = useServerFn(createThread);
+  const ensureThreadFn = useServerFn(ensureThread);
   const [creating, setCreating] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
 
   // Threads reais do caso: ao abrir sem thread ativa, continua a mais recente.
   const { data: threads = [] } = useQuery({
@@ -77,6 +87,28 @@ export function CaseJurisMindPanel({
   });
 
   const effectiveThreadId = threadId ?? threads[0]?.id ?? null;
+
+  // Sem conversa ativa (caso novo), garante uma antes do primeiro envio para
+  // que nada seja perdido ao fechar o painel.
+  useEffect(() => {
+    if (!open || effectiveThreadId) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const t = await ensureThreadFn({ data: { case_id: caseId } });
+        if (!cancelled) {
+          onThreadChange(t.id);
+          void qc.invalidateQueries({ queryKey: ["ai-threads", caseId] });
+        }
+      } catch {
+        // silencioso: o envio ainda cria a conversa no servidor
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, effectiveThreadId, caseId]);
 
   const createMut = useMutation({
     mutationFn: () => createThreadFn({ data: { case_id: caseId } }),
@@ -124,6 +156,15 @@ export function CaseJurisMindPanel({
           </div>
           <DocStateBadge {...docState} />
           <div className="flex shrink-0 items-center gap-1">
+            <Button
+              variant="outline"
+              size="sm"
+              className="lg:hidden"
+              onClick={() => setHistoryOpen(true)}
+            >
+              <History className="mr-1 h-4 w-4" />
+              Conversas
+            </Button>
             <Button
               variant="outline"
               size="sm"
@@ -185,26 +226,51 @@ export function CaseJurisMindPanel({
           </div>
         )}
 
-        {/* ── Corpo: chat real ── */}
-        <div className="min-h-0 flex-1 overflow-hidden">
-          <JurisMindChat
-            fullscreen
+        {/* ── Corpo: histórico + chat real ── */}
+        <div className="flex min-h-0 flex-1 overflow-hidden">
+          <ThreadList
             caseId={caseId}
-            initialPrompt={initialPrompt}
-            threadId={effectiveThreadId}
-
-            onThreadCreated={(id) => {
-              onThreadChange(id);
-              void qc.invalidateQueries({ queryKey: ["ai-threads", caseId] });
-            }}
-            caseInfo={caseInfo}
-            documents={documents}
-            selectedDocIds={selectedDocIds}
-            onToggleSelect={onToggleSelect}
-            onSelectAll={onSelectAll}
-            onDeselectAll={onDeselectAll}
+            activeThreadId={effectiveThreadId}
+            onSelect={onThreadChange}
+            className="hidden w-60 shrink-0 border-r bg-muted/30 lg:flex"
           />
+          <div className="min-h-0 flex-1 overflow-hidden">
+            <JurisMindChat
+              fullscreen
+              caseId={caseId}
+              initialPrompt={initialPrompt}
+              threadId={effectiveThreadId}
+              onThreadCreated={(id) => {
+                onThreadChange(id);
+                void qc.invalidateQueries({ queryKey: ["ai-threads", caseId] });
+              }}
+              caseInfo={caseInfo}
+              documents={documents}
+              selectedDocIds={selectedDocIds}
+              onToggleSelect={onToggleSelect}
+              onSelectAll={onSelectAll}
+              onDeselectAll={onDeselectAll}
+            />
+          </div>
         </div>
+
+        {/* Histórico em telas menores */}
+        <Sheet open={historyOpen} onOpenChange={setHistoryOpen}>
+          <SheetContent side="left" className="w-[85vw] max-w-sm p-0">
+            <SheetTitle className="border-b px-4 py-3 text-base">
+              Conversas do caso
+            </SheetTitle>
+            <ThreadList
+              caseId={caseId}
+              activeThreadId={effectiveThreadId}
+              onSelect={(id) => {
+                onThreadChange(id);
+                setHistoryOpen(false);
+              }}
+              className="h-[calc(100svh-3.5rem)]"
+            />
+          </SheetContent>
+        </Sheet>
       </SheetContent>
     </Sheet>
   );

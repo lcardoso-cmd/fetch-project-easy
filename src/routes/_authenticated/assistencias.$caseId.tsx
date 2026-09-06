@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, Outlet, useChildMatches } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -63,8 +63,19 @@ function CaseDataRow({ label, value }: { label: string; value: string }) {
 
 export const Route = createFileRoute("/_authenticated/assistencias/$caseId")({
   validateSearch: (s) => searchSchema.parse(s),
-  component: CaseWorkspacePage,
+  component: CaseRouteShell,
 });
+
+/**
+ * Rotas filhas (ex.: `/assistencias/$caseId/chat`, a tela inteira do
+ * JurisMind) precisam de espaço próprio: sem isto o clique navegava mas a
+ * página do caso continuava aparecendo.
+ */
+function CaseRouteShell() {
+  const childMatches = useChildMatches();
+  if (childMatches.length > 0) return <Outlet />;
+  return <CaseWorkspacePage />;
+}
 
 function CaseWorkspacePage() {
   const { caseId } = Route.useParams();

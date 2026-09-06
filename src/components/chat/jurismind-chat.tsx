@@ -1917,7 +1917,21 @@ export function JurisMindChat({
             <div ref={endRef} />
           </div>
 
-          <MaterialsSection messages={messages} />
+          <MaterialsSection
+            messages={messages}
+            onReuse={(label, content) => {
+              setInput((prev) =>
+                [
+                  prev.trim(),
+                  `Use o material "${label}" abaixo como base neste pedido:\n\n"""\n${content}\n"""`,
+                ]
+                  .filter(Boolean)
+                  .join("\n\n"),
+              );
+              toast.success(`"${label}" anexado ao pedido`);
+            }}
+          />
+
 
           <div className="shrink-0 border-t p-3">
 
@@ -2408,7 +2422,31 @@ function friendlyToolName(name: string) {
  * Materiais gerados na conversa, agrupados em um só lugar para o advogado não
  * precisar rolar todo o histórico para reencontrar um arquivo.
  */
-function MaterialsSection({ messages }: { messages: Msg[] }) {
+/** Texto reaproveitável de um material já gerado, para citar em novo pedido. */
+function artifactAsText(r: NonNullable<ReturnType<typeof parseToolResult>>): string {
+  if (r.kind === "table") {
+    const rows = r.rows ?? [];
+    return rows.map((row) => (Array.isArray(row) ? row.join(" | ") : String(row))).join("\n");
+  }
+  if (r.kind === "presentation") {
+    const slides = r.slides ?? [];
+    return slides
+      .map((s: unknown) => {
+        const slide = s as { title?: string; bullets?: string[] };
+        return [slide.title, ...(slide.bullets ?? [])].filter(Boolean).join("\n");
+      })
+      .join("\n\n");
+  }
+  return r.conteudo ?? "";
+}
+
+function MaterialsSection({
+  messages,
+  onReuse,
+}: {
+  messages: Msg[];
+  onReuse?: (label: string, content: string) => void;
+}) {
   const [open, setOpen] = useState(false);
 
   const artifacts = useMemo(() => {
@@ -2447,30 +2485,46 @@ function MaterialsSection({ messages }: { messages: Msg[] }) {
       {open && (
         <div className="max-h-[45vh] overflow-auto px-4 pb-4">
           {artifacts.map((r) => {
-            if (r.kind === "petition")
-              return (
-                <PetitionCard
-                  key={r.key}
-                  titulo={r.titulo ?? "Peça jurídica"}
-                  conteudo={r.conteudo ?? ""}
-                />
-              );
-            if (r.kind === "pdf")
-              return (
-                <PDFCard key={r.key} titulo={r.titulo ?? "Documento"} conteudo={r.conteudo ?? ""} />
-              );
-            if (r.kind === "table")
-              return <TableCard key={r.key} titulo={r.titulo ?? "Tabela"} rows={r.rows ?? []} />;
-            if (r.kind === "presentation")
-              return (
+            const label =
+              r.kind === "presentation"
+                ? (r.title ?? "Apresentação")
+                : (r.titulo ??
+                  (r.kind === "table"
+                    ? "Tabela"
+                    : r.kind === "pdf"
+                      ? "Documento"
+                      : "Peça jurídica"));
+            const card =
+              r.kind === "petition" ? (
+                <PetitionCard titulo={label} conteudo={r.conteudo ?? ""} />
+              ) : r.kind === "pdf" ? (
+                <PDFCard titulo={label} conteudo={r.conteudo ?? ""} />
+              ) : r.kind === "table" ? (
+                <TableCard titulo={label} rows={r.rows ?? []} />
+              ) : r.kind === "presentation" ? (
                 <PresentationCard
-                  key={r.key}
-                  title={r.title ?? "Apresentação"}
+                  title={label}
                   subtitle={r.subtitle}
                   slides={r.slides ?? []}
                 />
-              );
-            return null;
+              ) : null;
+            if (!card) return null;
+            return (
+              <div key={r.key}>
+                {card}
+                {onReuse && (
+                  <div className="mb-3 flex justify-end">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => onReuse(label, artifactAsText(r))}
+                    >
+                      Usar neste pedido
+                    </Button>
+                  </div>
+                )}
+              </div>
+            );
           })}
         </div>
       )}
