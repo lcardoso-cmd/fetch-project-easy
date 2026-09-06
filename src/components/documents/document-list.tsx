@@ -1,7 +1,11 @@
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { deleteDocument, getDocumentUrl } from "@/lib/documents.functions";
+import {
+  deleteDocument,
+  getDocumentUrl,
+  listDocumentImagePages,
+} from "@/lib/documents.functions";
 import {
   cancelIndexJob,
   forceIndexNow,
@@ -121,9 +125,91 @@ function jobDetail(job: IndexJobView | undefined): string | null {
   return null;
 }
 
+/**
+ * Catálogo das páginas em imagem: o que cada página é, sem transcrição.
+ * Carregado somente quando o usuário abre a lista — não pesa na tela.
+ */
+function ImagePageCatalog({
+  documentId,
+  count,
+  onOpenPage,
+}: {
+  documentId: string;
+  count: number;
+  onOpenPage: (page: number) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const listFn = useServerFn(listDocumentImagePages);
+  const query = useQuery({
+    queryKey: ["document-image-pages", documentId],
+    queryFn: () => listFn({ data: { document_id: documentId } }),
+    enabled: open,
+  });
+  const pages = query.data ?? [];
+
+  return (
+    <div className="w-full">
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        className="h-7 px-1 text-xs"
+        aria-expanded={open}
+        onClick={() => setOpen((v) => !v)}
+      >
+        {open ? (
+          <ChevronDown className="mr-1 h-3 w-3" />
+        ) : (
+          <ChevronRight className="mr-1 h-3 w-3" />
+        )}
+        {open ? "Ocultar o que há nessas páginas" : `Ver o que há nessas ${count} página(s)`}
+      </Button>
+      {open && (
+        <div className="mt-1 space-y-1 rounded-md border border-border/60 p-2">
+          {query.isPending && (
+            <p className="text-xs text-muted-foreground">Carregando o catálogo…</p>
+          )}
+          {!query.isPending && pages.length === 0 && (
+            <p className="text-xs text-muted-foreground">
+              O catálogo dessas páginas ainda não foi gerado. Ele aparece assim que a leitura do
+              documento termina.
+            </p>
+          )}
+          {pages.map((page) => (
+            <div
+              key={page.id}
+              className="flex flex-wrap items-baseline justify-between gap-2 border-b border-border/40 pb-1 last:border-0 last:pb-0"
+            >
+              <div className="min-w-0">
+                <span className="text-xs font-medium text-foreground">
+                  Página {page.page_number} · {page.label}
+                </span>
+                {page.description && (
+                  <p className="text-xs leading-snug text-muted-foreground">{page.description}</p>
+                )}
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-6 text-xs"
+                onClick={() => onOpenPage(page.page_local ?? page.page_number)}
+              >
+                Abrir página
+              </Button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function StatusCell({
   status,
   job,
+  documentId,
+  onOpenImagePage,
   onRetry,
   retrying,
   onForce,
@@ -137,6 +223,8 @@ function StatusCell({
   compact?: boolean;
   status: string;
   job?: IndexJobView;
+  documentId: string;
+  onOpenImagePage: (page: number) => void;
   onRetry: () => void;
   retrying: boolean;
   onForce: () => void;
@@ -307,6 +395,14 @@ function StatusCell({
         <span className="text-xs leading-snug text-muted-foreground">
           {detail ?? info.hint}
         </span>
+      )}
+
+      {isPartial && imagePages > 0 && (
+        <ImagePageCatalog
+          documentId={documentId}
+          count={imagePages}
+          onOpenImagePage={onOpenImagePage}
+        />
       )}
 
       {isPartial && imagePages > 0 && (
@@ -629,6 +725,8 @@ export function DocumentList({
             <div className="hidden max-w-[45%] shrink-0 sm:block"><StatusCell
               status={d.processing_status}
               job={jobs.get(d.id)}
+              documentId={d.id}
+              onOpenImagePage={(page) => void onOpenImagePage(d, page)}
               compact={!isActive}
               onRetry={() => onRetry(d.id)}
               retrying={retryingId === d.id}
@@ -685,6 +783,8 @@ export function DocumentList({
         <div className={isActive ? "pl-10" : "pl-10 sm:hidden"}><StatusCell
               status={d.processing_status}
               job={jobs.get(d.id)}
+              documentId={d.id}
+              onOpenImagePage={(page) => void onOpenImagePage(d, page)}
               compact={!isActive}
               onRetry={() => onRetry(d.id)}
               retrying={retryingId === d.id}
