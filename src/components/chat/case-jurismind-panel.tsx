@@ -226,26 +226,51 @@ export function CaseJurisMindPanel({
           </div>
         )}
 
-        {/* ── Corpo: chat real ── */}
-        <div className="min-h-0 flex-1 overflow-hidden">
-          <JurisMindChat
-            fullscreen
+        {/* ── Corpo: histórico + chat real ── */}
+        <div className="flex min-h-0 flex-1 overflow-hidden">
+          <ThreadList
             caseId={caseId}
-            initialPrompt={initialPrompt}
-            threadId={effectiveThreadId}
-
-            onThreadCreated={(id) => {
-              onThreadChange(id);
-              void qc.invalidateQueries({ queryKey: ["ai-threads", caseId] });
-            }}
-            caseInfo={caseInfo}
-            documents={documents}
-            selectedDocIds={selectedDocIds}
-            onToggleSelect={onToggleSelect}
-            onSelectAll={onSelectAll}
-            onDeselectAll={onDeselectAll}
+            activeThreadId={effectiveThreadId}
+            onSelect={onThreadChange}
+            className="hidden w-60 shrink-0 border-r bg-muted/30 lg:flex"
           />
+          <div className="min-h-0 flex-1 overflow-hidden">
+            <JurisMindChat
+              fullscreen
+              caseId={caseId}
+              initialPrompt={initialPrompt}
+              threadId={effectiveThreadId}
+              onThreadCreated={(id) => {
+                onThreadChange(id);
+                void qc.invalidateQueries({ queryKey: ["ai-threads", caseId] });
+              }}
+              caseInfo={caseInfo}
+              documents={documents}
+              selectedDocIds={selectedDocIds}
+              onToggleSelect={onToggleSelect}
+              onSelectAll={onSelectAll}
+              onDeselectAll={onDeselectAll}
+            />
+          </div>
         </div>
+
+        {/* Histórico em telas menores */}
+        <Sheet open={historyOpen} onOpenChange={setHistoryOpen}>
+          <SheetContent side="left" className="w-[85vw] max-w-sm p-0">
+            <SheetTitle className="border-b px-4 py-3 text-base">
+              Conversas do caso
+            </SheetTitle>
+            <ThreadList
+              caseId={caseId}
+              activeThreadId={effectiveThreadId}
+              onSelect={(id) => {
+                onThreadChange(id);
+                setHistoryOpen(false);
+              }}
+              className="h-[calc(100svh-3.5rem)]"
+            />
+          </SheetContent>
+        </Sheet>
       </SheetContent>
     </Sheet>
   );
