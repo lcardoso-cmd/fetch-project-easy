@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { deleteDocument } from "@/lib/documents.functions";
+import { deleteDocument, getDocumentUrl } from "@/lib/documents.functions";
 import {
   cancelIndexJob,
   forceIndexNow,
@@ -22,17 +22,17 @@ import {
 } from "@/lib/documents/reading-eta";
 
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   AlertCircle,
   AlertTriangle,
+  ChevronDown,
+  ChevronRight,
   BrainCircuit,
   CheckCircle,
   Clock,
@@ -135,7 +135,9 @@ function StatusCell({
   cancelling,
   onReadImages,
   readingImages,
+  compact,
 }: {
+  compact?: boolean;
   status: string;
   job?: IndexJobView;
   onRetry: () => void;
@@ -411,6 +413,10 @@ export function DocumentList({
   const [forcingId, setForcingId] = useState<string | null>(null);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
   const [resumingStalled, setResumingStalled] = useState(false);
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
+  const [previewDoc, setPreviewDoc] = useState<DocItem | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const docUrlFn = useServerFn(getDocumentUrl);
 
   const pending = documents.some(
     (d) => !isDocUsable(d.processing_status) && d.processing_status !== "cancelled",
