@@ -373,6 +373,73 @@ export async function indexDocumentCore(params: IndexDocumentParams): Promise<In
         return fullPdfBytes;
       };
 
+      /**
+       * Catálogo das páginas só-imagem: uma frase por página, sem transcrever.
+       * É acessório — qualquer falha aqui não invalida a leitura de texto.
+       * Retorna true quando ainda restam páginas por descrever e houve avanço.
+       */
+      const catalogImagePages = async (pages: number[]): Promise<boolean> => {
+        if (pages.length === 0) return false;
+        if (effectiveSize <= 0 || effectiveSize > OCR_MAX_FILE_BYTES) return false;
+        try {
+          const { data: existing } = await supabase
+            .from("document_image_pages")
+            .select("page_number")
+            .eq("document_id", documentId);
+          const done = new Set(
+            (existing ?? []).map((row) => Number((row as { page_number: number }).page_number) - pageOffset),
+          );
+          const remaining = pages.filter((page) => !done.has(page));
+          if (remaining.length === 0) return false;
+          const todo = remaining.slice(0, IMAGE_CATALOG_PAGE_LIMIT);
+
+          await report("cataloging_images", { pages: todo.length });
+          const bytes = fullPdfBytes ?? (await downloadFullPdf());
+          const { describeImagePages } = await import("./image-catalog.server");
+          const out = await describeImagePages({
+            bytes,
+            filename: doc.filename as string,
+            pages: todo,
+            deadlineAt: Math.min(
+              params.deadlineAt ?? Number.MAX_SAFE_INTEGER,
+              Date.now() + IMAGE_CATALOG_TIME_BUDGET_MS,
+            ),
+            onBatch: async (batch) => {
+              await supabase.from("document_image_pages").upsert(
+                batch.map((item) => ({
+                  document_id: documentId,
+                  case_id: doc.case_id as string,
+                  organization_id: organizationId,
+                  page_number: (shiftPage(item.page) as number) ?? item.page,
+                  page_local: item.page,
+                  label: item.label,
+                  description: item.description,
+                })),
+                { onConflict: "document_id,page_number" },
+              );
+              // Indexa a descrição para que o JurisMind cite a página e ofereça abri-la.
+              visionChunks += await embedAndInsert(
+                batch.map((item) => ({
+                  content: `Página ${(shiftPage(item.page) as number) ?? item.page} (imagem, sem texto): ${item.label}. ${item.description}`,
+                  kind: "vision" as const,
+                  page: item.page,
+                })),
+              );
+            },
+          });
+          const stillMissing = remaining.length > out.described.length;
+          return stillMissing && out.described.length > 0;
+        } catch (error) {
+          console.warn("[image-catalog] catálogo indisponível", {
+            document_id: documentId,
+            error: error instanceof Error ? error.message : String(error),
+          });
+          return false;
+        }
+      };
+
+
+
       let pdf: Awaited<ReturnType<typeof openRemotePdf>>;
       try {
         pdf = await step("parse", () => openRemotePdf(signedUrl, effectiveSize || undefined));
