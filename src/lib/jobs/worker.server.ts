@@ -332,8 +332,10 @@ function scheduleContinuation(depth: number, preferredDocumentId?: string): void
     new Promise((resolve) => setTimeout(resolve, CHAIN_COOLDOWN_MS))
       .then(() =>
         runDocumentQueues({
-          maxJobs: 10,
-          timeBudgetMs: WORKER_TIME_BUDGET_MS,
+          // Um trabalho por rodada: o servidor que atende o usuário não pode
+          // acumular vários arquivos grandes na memória (erro 502).
+          maxJobs: 1,
+          timeBudgetMs: REQUEST_TIME_BUDGET_MS,
           chainDepth: depth + 1,
           preferredDocumentId,
         }),
