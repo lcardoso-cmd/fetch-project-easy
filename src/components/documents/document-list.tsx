@@ -44,6 +44,7 @@ import {
   XCircle,
   Trash2,
 } from "lucide-react";
+import { isDocUsable } from "@/lib/documents/usable";
 import { ConfirmActionButton } from "./confirm-action-button";
 import { UploadDialog } from "./upload-dialog";
 import { DocumentAuditDialog } from "./document-audit-dialog";
@@ -68,11 +69,6 @@ function formatBytes(b: number | null) {
   const sizes = ["B", "KB", "MB", "GB"];
   const i = Math.floor(Math.log(b) / Math.log(k));
   return `${(b / Math.pow(k, i)).toFixed(1)} ${sizes[i]}`;
-}
-
-/** Documento já consultável pelo JurisMind (inclui leitura parcial). */
-function isDocUsable(status: string | null | undefined): boolean {
-  return status === "ready" || Boolean(status?.startsWith("partial"));
 }
 
 const STAGE_LABEL: Record<string, string> = {

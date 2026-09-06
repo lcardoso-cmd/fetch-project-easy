@@ -12,6 +12,7 @@ import { JurisMindChat } from "@/components/chat/jurismind-chat";
 import type { DocItem } from "@/components/documents/document-list";
 import { createThread, listThreads } from "@/lib/threads.functions";
 import { cn } from "@/lib/utils";
+import { isDocUsable } from "@/lib/documents/usable";
 
 export interface CaseChatInfo {
   title: string;
@@ -88,7 +89,7 @@ export function CaseJurisMindPanel({
   });
 
   const docState = useMemo(() => {
-    const ready = documents.filter((d) => d.processing_status === "ready").length;
+    const ready = documents.filter((d) => isDocUsable(d.processing_status)).length;
     const failed = documents.filter((d) => d.processing_status === "error" || d.processing_status === "failed").length;
     const processing = documents.length - ready - failed;
     return { ready, failed, processing, total: documents.length };

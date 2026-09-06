@@ -86,6 +86,7 @@ import {
   TableCard,
 } from "@/components/chat/artifact-cards";
 import { toast } from "sonner";
+import { isDocUsable } from "@/lib/documents/usable";
 
 
 interface Citation {
@@ -1235,7 +1236,7 @@ export function JurisMindChat({
   }, [messages]);
 
   const readyDocs = useMemo(
-    () => documents.filter((d) => d.processing_status === "ready"),
+    () => documents.filter((d) => isDocUsable(d.processing_status)),
     [documents],
   );
   const pendingDocs = useMemo(

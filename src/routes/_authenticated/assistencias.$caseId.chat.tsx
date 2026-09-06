@@ -25,6 +25,7 @@ import { JurisMindChat } from "@/components/chat/jurismind-chat";
 import { useAccess } from "@/hooks/use-access";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { isDocUsable } from "@/lib/documents/usable";
 
 const searchSchema = z.object({ thread: z.string().uuid().optional() });
 
@@ -99,7 +100,7 @@ function CaseChatFullPage() {
   });
 
   const readyDocIds = useMemo(
-    () => docs.filter((d) => d.processing_status === "ready").map((d) => d.id),
+    () => docs.filter((d) => isDocUsable(d.processing_status)).map((d) => d.id),
     [docs],
   );
   const [selectedDocIds, setSelectedDocIds] = useState<Set<string>>(new Set());

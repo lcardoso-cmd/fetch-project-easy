@@ -40,6 +40,7 @@ import { EmptyState } from "@/components/empty-state";
 import { ClipboardCheck } from "lucide-react";
 import type { MatterKind } from "@/lib/practice-labels";
 import { useUnsavedChangesGuard } from "@/hooks/use-unsaved-changes-guard";
+import { isDocUsable } from "@/lib/documents/usable";
 
 const TABS = ["visao-geral", "documentos", "producao", "prazos", "atividade"] as const;
 // "jurismind" permanece aceito apenas para links antigos: abre o painel lateral.
@@ -110,7 +111,7 @@ function CaseWorkspacePage() {
       return next;
     });
   const readyDocIds = useMemo(
-    () => docs.filter((d) => d.processing_status === "ready").map((d) => d.id),
+    () => docs.filter((d) => isDocUsable(d.processing_status)).map((d) => d.id),
     [docs],
   );
   const selectAll = () => setSelectedDocIds(new Set(readyDocIds));
