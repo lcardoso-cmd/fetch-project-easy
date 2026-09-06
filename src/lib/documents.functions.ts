@@ -76,7 +76,8 @@ export const listDocuments = createServerFn({ method: "GET" })
       )
       .eq("case_id", data.case_id)
       .eq("organization_id", context.organizationId)
-      .order("created_at", { ascending: false });
+      // Documentos do caso seguem a ordem de envio (partes 1, 2, 3...).
+      .order("created_at", { ascending: true });
     if (error) throw error;
     return docs ?? [];
   });
