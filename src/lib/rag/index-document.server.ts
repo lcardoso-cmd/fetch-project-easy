@@ -665,7 +665,13 @@ export async function indexDocumentCore(params: IndexDocumentParams): Promise<In
             ? imagePages
             : Array.from({ length: pageCount }, (_, i) => i + 1)
           : [];
-        if (!params.forceVision) pendingImagePages = imagePages;
+        if (!params.forceVision) {
+          pendingImagePages = imagePages;
+          // Catálogo rápido dessas páginas, depois do texto e antes de fechar o
+          // documento. Se não couber no tempo, a rodada seguinte continua.
+          if (await catalogImagePages(imagePages)) incomplete = true;
+        }
+
         if (targetOcr.length > 0) {
 
           // Sem tamanho conhecido, presume-se grande: melhor entregar o
