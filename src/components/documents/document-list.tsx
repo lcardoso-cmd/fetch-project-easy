@@ -282,10 +282,10 @@ function StatusCell({
   );
   if (brief) return badge;
   return (
-    <div className="flex flex-col items-start gap-1.5">
+    <div className="flex w-full flex-col items-start gap-1.5">
       {badge}
       {status !== "ready" && status !== "cancelled" && !isPartial && pct !== null && (
-        <div className="w-full max-w-[260px]">
+        <div className="w-full">
           <Progress value={pct} className="h-1.5" aria-label={`Progresso da leitura: ${pct}%`} />
           <div className="mt-1 flex items-baseline justify-between gap-2">
             <span className="text-xs font-medium text-foreground">
@@ -304,7 +304,7 @@ function StatusCell({
         </div>
       )}
       {status !== "ready" && (
-        <span className="max-w-[240px] text-xs leading-snug text-muted-foreground">
+        <span className="text-xs leading-snug text-muted-foreground">
           {detail ?? info.hint}
         </span>
       )}
@@ -326,21 +326,6 @@ function StatusCell({
 
       {(inProgress || canForce || status === "cancelled") && (
         <div className="flex flex-wrap items-center gap-2">
-          {inProgress && (
-            <ConfirmActionButton
-              variant="ghost"
-              className="h-7 text-xs text-muted-foreground hover:text-destructive"
-              icon={<XCircle className="mr-1 h-3 w-3" />}
-              label="Cancelar leitura"
-              ariaLabel="Cancelar a leitura deste documento"
-              loading={cancelling}
-              onConfirm={onCancel}
-              title="Cancelar a leitura deste documento?"
-              description="A leitura em andamento será interrompida. Os outros documentos continuam sendo lidos normalmente e você pode retomar este depois."
-              confirmLabel="Cancelar leitura"
-            />
-          )}
-
           {(canForce || status === "cancelled") && (
             <ConfirmActionButton
               variant="outline"
@@ -363,6 +348,21 @@ function StatusCell({
               }
               description="A leitura deste documento passa à frente na fila e começa imediatamente. Isso pode deixar os outros documentos um pouco mais lentos."
               confirmLabel={status === "cancelled" ? "Retomar leitura" : "Processar agora"}
+            />
+          )}
+
+          {inProgress && (
+            <ConfirmActionButton
+              variant="ghost"
+              className="h-7 text-xs text-muted-foreground hover:text-destructive"
+              icon={<XCircle className="mr-1 h-3 w-3" />}
+              label="Cancelar leitura"
+              ariaLabel="Cancelar a leitura deste documento"
+              loading={cancelling}
+              onConfirm={onCancel}
+              title="Cancelar a leitura deste documento?"
+              description="A leitura em andamento será interrompida. Os outros documentos continuam sendo lidos normalmente e você pode retomar este depois."
+              confirmLabel="Cancelar leitura"
             />
           )}
         </div>
