@@ -1,16 +1,24 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { AlertCircle, CheckCircle2, Loader2, Maximize2, MessageSquarePlus } from "lucide-react";
+import {
+  AlertCircle,
+  CheckCircle2,
+  History,
+  Loader2,
+  Maximize2,
+  MessageSquarePlus,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { JurisMindMark, JURISMIND_CONTEXT } from "@/components/brand/jurismind-mark";
 import { JurisMindChat } from "@/components/chat/jurismind-chat";
+import { ThreadList } from "@/components/chat/thread-list";
 import type { DocItem } from "@/components/documents/document-list";
-import { createThread, listThreads } from "@/lib/threads.functions";
+import { createThread, ensureThread, listThreads } from "@/lib/threads.functions";
 import { cn } from "@/lib/utils";
 import { isDocUsable } from "@/lib/documents/usable";
 
