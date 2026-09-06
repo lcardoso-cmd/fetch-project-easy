@@ -266,21 +266,27 @@ function StatusCell({
               hint: "O documento está sendo preparado para consulta.",
             });
   const Icon = info.icon;
+  // Fora do documento em leitura, mostramos apenas o estado — sem detalhes nem barras.
+  const brief = compact && !isError && !isPartial && imagePages === 0;
+  const badge = (
+    <TooltipProvider delayDuration={150}>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <div className="flex items-center gap-2">
+            <Icon className={`h-4 w-4 ${info.color}`} />
+            <span className="text-xs">{info.label}</span>
+          </div>
+        </TooltipTrigger>
+        <TooltipContent className="max-w-xs">
+          <p className="text-xs">{info.hint}</p>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+  if (brief) return badge;
   return (
     <div className="flex flex-col items-start gap-1.5">
-      <TooltipProvider delayDuration={150}>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <div className="flex items-center gap-2">
-              <Icon className={`h-4 w-4 ${info.color}`} />
-              <span className="text-xs">{info.label}</span>
-            </div>
-          </TooltipTrigger>
-          <TooltipContent className="max-w-xs">
-            <p className="text-xs">{info.hint}</p>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
+      {badge}
       {status !== "ready" && status !== "cancelled" && !isPartial && pct !== null && (
         <div className="w-full max-w-[260px]">
           <Progress value={pct} className="h-1.5" aria-label={`Progresso da leitura: ${pct}%`} />
