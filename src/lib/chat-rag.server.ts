@@ -760,7 +760,17 @@ INSTRUÇÕES:
       });
       return { kind: "jurisprudence", ...result };
     }
+    if (dbToolNames.has(name)) {
+      return await runDbTool({
+        supabase,
+        organizationId,
+        caseId: data.case_id,
+        name,
+        args,
+      });
+    }
     return { error: `Tool desconhecida: ${name}` };
+
 
   };
 
