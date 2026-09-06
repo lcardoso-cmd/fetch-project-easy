@@ -27,6 +27,9 @@ import {
   FileSpreadsheet,
   Presentation,
   CheckCircle2,
+  Upload,
+  MessageSquare,
+  Download,
 } from "lucide-react";
 import { JurisMindMark, JURISMIND_CONTEXT } from "@/components/brand/jurismind-mark";
 import { OutputShowcase } from "@/components/marketing/output-showcase";
@@ -132,6 +135,18 @@ const GOVERNANCE = PITCH.governance.items.map((i) => ({
   icon: GOVERNANCE_ICONS[i.key] ?? ShieldCheck,
 }));
 
+const GUIDE_ICONS: Record<string, typeof Upload> = {
+  subir: Upload,
+  pedir: MessageSquare,
+  revisar: FileSearch,
+  exportar: Download,
+};
+
+const GUIDE_STEPS = PITCH.guideHighlight.steps.map((i) => ({
+  ...i,
+  icon: GUIDE_ICONS[i.key] ?? BookOpen,
+}));
+
 function LoginButton({
   size = "default",
   className,
@@ -227,6 +242,9 @@ function LandingPage() {
             <a href="#entregas" className="hover:text-foreground">
               Entregas
             </a>
+            <a href="#guia" className="hover:text-foreground">
+              Guia
+            </a>
             <a href="#inteligencia" className="hover:text-foreground">
               Inteligência
             </a>
@@ -303,6 +321,72 @@ function LandingPage() {
                 </li>
               ))}
             </ol>
+          </div>
+        </section>
+
+        {/* 2.5 · DESTAQUE DO GUIA */}
+        <section id="guia" className="border-y bg-brand-navy text-brand-on-navy">
+          <div className="mx-auto max-w-6xl px-4 py-16">
+            <div className="mx-auto max-w-3xl text-center">
+              <span className="inline-flex items-center gap-2 rounded-full bg-brand-cyan/15 px-3 py-1 text-sm font-semibold text-brand-cyan">
+                <BookOpen className="h-4 w-4" aria-hidden />
+                {PITCH.guideHighlight.eyebrow}
+              </span>
+              <h2 className="mt-4 font-heading text-3xl font-bold tracking-tight md:text-4xl">
+                {PITCH.guideHighlight.title}
+              </h2>
+              <p className="mt-4 text-lg text-brand-on-navy/85">
+                {PITCH.guideHighlight.subtitle}
+              </p>
+            </div>
+
+            <ol className="mt-10 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+              {GUIDE_STEPS.map((s) => (
+                <li
+                  key={s.key}
+                  className="rounded-2xl border border-brand-on-navy/15 bg-brand-on-navy/5 p-5"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-cyan/15 text-brand-cyan">
+                      <s.icon className="h-4 w-4" aria-hidden />
+                    </span>
+                    <span className="font-heading text-sm font-bold text-brand-on-navy/60">
+                      {s.n}
+                    </span>
+                  </div>
+                  <h3 className="mt-4 font-heading text-base font-bold text-brand-on-navy">
+                    {s.t}
+                  </h3>
+                  <p className="mt-2 text-base leading-relaxed text-brand-on-navy/80">{s.d}</p>
+                </li>
+              ))}
+            </ol>
+
+            <div className="mt-10 flex flex-col items-center justify-center gap-3 lg:flex-row lg:flex-nowrap [&>*]:w-full lg:[&>*]:w-auto">
+              <Button
+                asChild
+                size="lg"
+                className="whitespace-nowrap bg-brand-cyan text-brand-navy hover:bg-brand-cyan/90"
+              >
+                <Link to="/guia/automatizar-peticoes-juridicas-ia">
+                  {PITCH.guideHighlight.ctaPrimary}
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Link>
+              </Button>
+              <Button
+                asChild
+                size="lg"
+                variant="outline"
+                className="whitespace-nowrap border-brand-on-navy/35 bg-transparent text-brand-on-navy hover:bg-brand-on-navy/10"
+              >
+                <Link
+                  to="/entrar"
+                  search={{ modo: "cadastro", origem: "guia_home" }}
+                >
+                  {PITCH.guideHighlight.ctaSecondary}
+                </Link>
+              </Button>
+            </div>
           </div>
         </section>
 
