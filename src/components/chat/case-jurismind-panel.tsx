@@ -75,7 +75,9 @@ export function CaseJurisMindPanel({
   const navigate = useNavigate();
   const listThreadsFn = useServerFn(listThreads);
   const createThreadFn = useServerFn(createThread);
+  const ensureThreadFn = useServerFn(ensureThread);
   const [creating, setCreating] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
 
   // Threads reais do caso: ao abrir sem thread ativa, continua a mais recente.
   const { data: threads = [] } = useQuery({
@@ -85,6 +87,28 @@ export function CaseJurisMindPanel({
   });
 
   const effectiveThreadId = threadId ?? threads[0]?.id ?? null;
+
+  // Sem conversa ativa (caso novo), garante uma antes do primeiro envio para
+  // que nada seja perdido ao fechar o painel.
+  useEffect(() => {
+    if (!open || effectiveThreadId) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const t = await ensureThreadFn({ data: { case_id: caseId } });
+        if (!cancelled) {
+          onThreadChange(t.id);
+          void qc.invalidateQueries({ queryKey: ["ai-threads", caseId] });
+        }
+      } catch {
+        // silencioso: o envio ainda cria a conversa no servidor
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, effectiveThreadId, caseId]);
 
   const createMut = useMutation({
     mutationFn: () => createThreadFn({ data: { case_id: caseId } }),
