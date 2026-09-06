@@ -483,7 +483,7 @@ export function HeroCarousel({ children }: { children?: ReactNode }) {
           </div>
 
           {/* Prévia do produto — cartão discreto, apenas no desktop */}
-          <div className="relative hidden min-h-[24rem] lg:block">
+          <div className="relative hidden min-h-[30rem] lg:block">
             {SLIDES.map((s, i) => (
               <a
                 key={s.id}
@@ -492,7 +492,7 @@ export function HeroCarousel({ children }: { children?: ReactNode }) {
                 aria-hidden={i !== index}
                 aria-label={s.title}
                 className={cn(
-                  "absolute inset-0 block overflow-hidden rounded-2xl border border-brand-navy-foreground/20 bg-brand-navy/70 p-5 shadow-2xl transition-opacity duration-500 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent",
+                  "absolute inset-0 block overflow-hidden rounded-2xl border border-brand-navy-foreground/20 bg-brand-navy/70 p-5 shadow-2xl [&>*:last-child]:origin-top [&>*:last-child]:scale-[0.97] transition-opacity duration-500 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent",
                   i === index ? "opacity-100" : "pointer-events-none opacity-0",
                 )}
               >
