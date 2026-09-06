@@ -19,10 +19,14 @@ export const EMBEDDING_MODEL = "openai/text-embedding-3-small";
 
 /** Páginas lidas/indexadas por janela. Mantém a memória previsível. */
 const PAGE_WINDOW = 20;
-/** Acima disso, OCR (que exige o arquivo em memória) não é possível. */
-const OCR_MAX_FILE_BYTES = 40 * 1024 * 1024;
+/**
+ * Acima disso, OCR (que exige o arquivo em memória) não é possível.
+ * O envio para a IA converte os bytes em base64, o que dobra o consumo: por
+ * isso o teto fica bem abaixo do limite de memória do servidor.
+ */
+const OCR_MAX_FILE_BYTES = 18 * 1024 * 1024;
 /** Formatos que não são PDF são lidos por inteiro; acima disso, recusa clara. */
-const DIRECT_DOWNLOAD_MAX_BYTES = 40 * 1024 * 1024;
+const DIRECT_DOWNLOAD_MAX_BYTES = 18 * 1024 * 1024;
 /** Teto de páginas enviadas para OCR em uma execução. */
 const OCR_PAGE_LIMIT = 60;
 /** Teto de páginas descritas (catálogo de imagens) por execução. */
