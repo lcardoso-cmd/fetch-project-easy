@@ -69,7 +69,7 @@ export default {
       const response = await runWithWorkerExecutionContext(ctx, () =>
         Promise.resolve(handler.fetch(request, env, ctx)),
       );
-      return await normalizeCatastrophicSsrResponse(response);
+      return await normalizeCatastrophicSsrResponse(response, request);
     } catch (error) {
       console.error(error);
       return new Response(renderErrorPage(), {
