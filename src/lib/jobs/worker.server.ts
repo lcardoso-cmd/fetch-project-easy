@@ -19,6 +19,12 @@ const WORKER_MAX_JOBS = 4;
 const CANCELLED_MARKER = "__job_cancelled__";
 const WORKER_TIME_BUDGET_MS = 50_000;
 const CONTINUATION_COOLDOWN_MS = 250;
+/** Teto de rodadas encadeadas por gatilho (o cron continua depois disso). */
+const MAX_CHAIN_DEPTH = 24;
+const CHAIN_COOLDOWN_MS = 1_000;
+/** Bloqueio considerado vencido: o trabalho volta a ser reservável. */
+const STALE_RUNNING_MS = 120_000;
+
 
 export interface WorkerRunResult {
   processed: number;
@@ -33,7 +39,10 @@ interface WorkerRunOptions {
   timeBudgetMs?: number;
   /** Documento solicitado explicitamente pelo usuário. É reservado antes da fila comum. */
   preferredDocumentId?: string;
+  /** Profundidade da cadeia de continuações automáticas. */
+  chainDepth?: number;
 }
+
 
 function workerId(): string {
   return `w_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
@@ -294,6 +303,13 @@ export async function runDocumentQueues(opts: WorkerRunOptions = {}): Promise<Wo
   }
 
   const remaining = halted ? false : await hasPendingWork();
+
+  // Retomada automática: enquanto houver trabalho e ainda houver orçamento de
+  // continuações, a própria execução agenda a próxima rodada. Sem isso, o
+  // documento parava depois da etapa de texto até alguém apertar "Processar
+  // agora". Só encadeia quando o runtime mantém trabalho após a resposta.
+  if (remaining && !halted) scheduleContinuation(opts.chainDepth ?? 0, opts.preferredDocumentId);
+
   return {
     processed: intakeDone + indexDone,
     intake: intakeDone,
@@ -303,10 +319,36 @@ export async function runDocumentQueues(opts: WorkerRunOptions = {}): Promise<Wo
   };
 }
 
+/** Agenda a rodada seguinte da fila sem depender de nenhuma requisição HTTP. */
+function scheduleContinuation(depth: number, preferredDocumentId?: string): void {
+  if (depth >= MAX_CHAIN_DEPTH) {
+    console.info("[jobs] limite de continuações atingido; o cron retoma a fila", { depth });
+    return;
+  }
+  const executionContext = getWorkerExecutionContext();
+  if (!executionContext) return;
+
+  executionContext.waitUntil(
+    new Promise((resolve) => setTimeout(resolve, CHAIN_COOLDOWN_MS))
+      .then(() =>
+        runDocumentQueues({
+          maxJobs: 10,
+          timeBudgetMs: WORKER_TIME_BUDGET_MS,
+          chainDepth: depth + 1,
+          preferredDocumentId,
+        }),
+      )
+      .catch((error) => {
+        console.error("[jobs] falha ao continuar a fila", { depth, error });
+      }),
+  );
+}
+
 /** Existe trabalho pendente em alguma das filas? */
 export async function hasPendingWork(): Promise<boolean> {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  const [{ count: a }, { count: b }] = await Promise.all([
+  const staleBefore = new Date(Date.now() - STALE_RUNNING_MS).toISOString();
+  const [{ count: a }, { count: b }, { count: c }] = await Promise.all([
     supabaseAdmin
       .from("case_intake_documents")
       .select("id", { count: "exact", head: true })
@@ -315,9 +357,17 @@ export async function hasPendingWork(): Promise<boolean> {
       .from("document_index_jobs")
       .select("id", { count: "exact", head: true })
       .eq("status", "queued"),
+    // Trabalho travado (bloqueio vencido) também conta como pendente: a rodada
+    // seguinte o reserva de novo a partir do último ponto de retomada.
+    supabaseAdmin
+      .from("document_index_jobs")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "running")
+      .lt("heartbeat_at", staleBefore),
   ]);
-  return (a ?? 0) > 0 || (b ?? 0) > 0;
+  return (a ?? 0) > 0 || (b ?? 0) > 0 || (c ?? 0) > 0;
 }
+
 
 /**
  * Acorda um lote limitado no contexto da requisição. Em produção, waitUntil
