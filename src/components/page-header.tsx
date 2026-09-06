@@ -16,12 +16,12 @@ export function PageHeader({ title, subtitle, actions, className }: PageHeaderPr
   return (
     <header
       className={cn(
-        "grid grid-cols-[minmax(0,1fr)_auto] items-start gap-4 sm:flex sm:flex-wrap sm:items-center sm:justify-between",
+        "flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-4",
         className,
       )}
     >
       <div className="min-w-0">
-        <h1 className="text-page-title break-words text-foreground">
+        <h1 className="text-page-title text-balance break-words text-foreground">
           {title}
         </h1>
         {subtitle ? (
@@ -29,8 +29,11 @@ export function PageHeader({ title, subtitle, actions, className }: PageHeaderPr
         ) : null}
       </div>
       {actions ? (
-        <div className="flex flex-wrap items-center gap-2 shrink-0">{actions}</div>
+        <div className="flex flex-wrap items-center gap-2 sm:shrink-0 [&>*]:min-w-0 [&_button]:whitespace-nowrap [&_a]:whitespace-nowrap">
+          {actions}
+        </div>
       ) : null}
     </header>
   );
 }
+

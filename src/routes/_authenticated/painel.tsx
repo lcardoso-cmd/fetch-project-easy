@@ -232,13 +232,14 @@ function HomePage() {
       />
 
       {/* Ações secundárias + escopo */}
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center [&_button]:w-full [&_button]:whitespace-nowrap sm:[&_button]:w-auto">
         <Button variant="outline" size="sm" className="min-h-10" asChild>
           <Link to="/assistencias/nova">
             <Plus className="mr-2 h-4 w-4" /> Novo caso
           </Link>
         </Button>
         <UploadCasePicker cases={caseOptions} />
+
         <AddTaskDialog
           assignees={assignees}
           cases={caseOptions}
@@ -275,14 +276,14 @@ function HomePage() {
           <div
             role="group"
             aria-label="Escopo do painel"
-            className="ml-auto flex rounded-md border border-border p-0.5"
+            className="grid w-full grid-cols-2 rounded-md border border-border p-0.5 sm:ml-auto sm:flex sm:w-auto"
           >
             <button
               type="button"
               onClick={() => setScope("mine")}
               aria-pressed={scope === "mine"}
               className={cn(
-                "min-h-9 rounded-[5px] px-3 text-sm font-medium",
+                "min-h-9 whitespace-nowrap rounded-[5px] px-3 text-sm font-medium",
                 scope === "mine" ? "bg-primary text-primary-foreground" : "text-muted-foreground",
               )}
             >
@@ -293,7 +294,7 @@ function HomePage() {
               onClick={() => setScope("org")}
               aria-pressed={scope === "org"}
               className={cn(
-                "min-h-9 rounded-[5px] px-3 text-sm font-medium",
+                "min-h-9 whitespace-nowrap rounded-[5px] px-3 text-sm font-medium",
                 scope === "org" ? "bg-primary text-primary-foreground" : "text-muted-foreground",
               )}
             >
@@ -301,6 +302,7 @@ function HomePage() {
             </button>
           </div>
         ) : null}
+
       </div>
 
       {cockpitQuery.isError ? (
@@ -314,13 +316,13 @@ function HomePage() {
 
       {/* Indicadores */}
       {cockpitQuery.isLoading || !data ? (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
           {[0, 1, 2, 3].map((i) => (
             <Skeleton key={i} className="h-[76px] w-full rounded-lg" />
           ))}
         </div>
       ) : (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
           <Indicator
             label="Prazos de hoje"
             value={data.indicators.deadlinesToday}
@@ -394,7 +396,7 @@ function HomePage() {
                 const Icon = KIND_ICON[item.kind];
                 const danger = item.state === "overdue" || item.state === "failed";
                 return (
-                  <li key={item.id} className="flex flex-wrap items-start gap-3 p-4">
+                  <li key={item.id} className="flex flex-wrap items-start gap-3 p-4 sm:flex-nowrap">
                     <Icon
                       className={cn(
                         "mt-0.5 h-4 w-4 shrink-0",
@@ -403,7 +405,10 @@ function HomePage() {
                       aria-hidden
                     />
                     <div className="min-w-0 flex-1">
-                      <p className="text-base font-medium [overflow-wrap:anywhere]">
+                      <p
+                        className="line-clamp-2 text-base font-medium [overflow-wrap:anywhere]"
+                        title={typeof item.title === "string" ? item.title : undefined}
+                      >
                         {item.title}
                       </p>
                       <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
@@ -437,7 +442,7 @@ function HomePage() {
                         </p>
                       ) : null}
                     </div>
-                    <div className="flex shrink-0 flex-wrap gap-2">
+                    <div className="flex w-full flex-wrap gap-2 sm:w-auto sm:shrink-0 [&_button]:whitespace-nowrap">
                       {item.kind === "task" ? (
                         <Button
                           size="sm"
@@ -620,7 +625,7 @@ function HomePage() {
                     ) : null}
                   </div>
                 </div>
-                <div className="flex shrink-0 flex-wrap gap-2">
+                <div className="flex w-full flex-wrap gap-2 sm:w-auto sm:shrink-0 [&_button]:whitespace-nowrap">
                   <Button size="sm" variant="outline" className="min-h-10" asChild>
                     <Link to="/assistencias/$caseId" params={{ caseId: c.id }}>
                       Abrir caso
