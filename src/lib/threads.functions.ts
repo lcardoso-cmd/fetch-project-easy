@@ -145,3 +145,38 @@ export const getMessageAudioUrl = createServerFn({ method: "POST" })
     }
     return { url: signed.signedUrl };
   });
+
+/**
+ * Garante que exista uma conversa para o caso: devolve a mais recente ou cria
+ * uma nova. Necessário porque o histórico só é persistido quando o envio
+ * carrega um `thread_id` — sem isso a conversa "desaparecia" ao fechar a tela.
+ */
+export const ensureThread = createServerFn({ method: "POST" })
+  .middleware([requireOrgPermission("ai.use")])
+  .inputValidator((i: unknown) =>
+    z.object({ case_id: z.string().uuid() }).parse(i),
+  )
+  .handler(async ({ data, context }) => {
+    const { data: existing, error: listErr } = await context.supabase
+      .from("ai_chat_threads")
+      .select("id, title, case_id, last_message_at, created_at")
+      .eq("case_id", data.case_id)
+      .eq("organization_id", context.organizationId)
+      .order("last_message_at", { ascending: false })
+      .limit(1);
+    if (listErr) throw listErr;
+    if (existing && existing.length > 0) return existing[0] as AiThread;
+
+    const { data: row, error } = await context.supabase
+      .from("ai_chat_threads")
+      .insert({
+        case_id: data.case_id,
+        organization_id: context.organizationId,
+        created_by_user_id: context.userId,
+        title: "Nova conversa",
+      })
+      .select("id, title, case_id, last_message_at, created_at")
+      .single();
+    if (error) throw error;
+    return row as AiThread;
+  });
