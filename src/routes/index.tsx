@@ -227,6 +227,9 @@ function LandingPage() {
             <a href="#entregas" className="hover:text-foreground">
               Entregas
             </a>
+            <a href="#guia" className="hover:text-foreground">
+              Guia
+            </a>
             <a href="#inteligencia" className="hover:text-foreground">
               Inteligência
             </a>
