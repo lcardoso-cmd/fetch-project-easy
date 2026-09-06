@@ -159,6 +159,15 @@ export function CaseJurisMindPanel({
             <Button
               variant="outline"
               size="sm"
+              className="lg:hidden"
+              onClick={() => setHistoryOpen(true)}
+            >
+              <History className="mr-1 h-4 w-4" />
+              Conversas
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
               onClick={() => {
                 setCreating(true);
                 createMut.mutate();
