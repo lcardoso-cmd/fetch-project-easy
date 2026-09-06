@@ -2471,30 +2471,46 @@ function MaterialsSection({
       {open && (
         <div className="max-h-[45vh] overflow-auto px-4 pb-4">
           {artifacts.map((r) => {
-            if (r.kind === "petition")
-              return (
-                <PetitionCard
-                  key={r.key}
-                  titulo={r.titulo ?? "Peça jurídica"}
-                  conteudo={r.conteudo ?? ""}
-                />
-              );
-            if (r.kind === "pdf")
-              return (
-                <PDFCard key={r.key} titulo={r.titulo ?? "Documento"} conteudo={r.conteudo ?? ""} />
-              );
-            if (r.kind === "table")
-              return <TableCard key={r.key} titulo={r.titulo ?? "Tabela"} rows={r.rows ?? []} />;
-            if (r.kind === "presentation")
-              return (
+            const label =
+              r.kind === "presentation"
+                ? (r.title ?? "Apresentação")
+                : (r.titulo ??
+                  (r.kind === "table"
+                    ? "Tabela"
+                    : r.kind === "pdf"
+                      ? "Documento"
+                      : "Peça jurídica"));
+            const card =
+              r.kind === "petition" ? (
+                <PetitionCard titulo={label} conteudo={r.conteudo ?? ""} />
+              ) : r.kind === "pdf" ? (
+                <PDFCard titulo={label} conteudo={r.conteudo ?? ""} />
+              ) : r.kind === "table" ? (
+                <TableCard titulo={label} rows={r.rows ?? []} />
+              ) : r.kind === "presentation" ? (
                 <PresentationCard
-                  key={r.key}
-                  title={r.title ?? "Apresentação"}
+                  title={label}
                   subtitle={r.subtitle}
                   slides={r.slides ?? []}
                 />
-              );
-            return null;
+              ) : null;
+            if (!card) return null;
+            return (
+              <div key={r.key}>
+                {card}
+                {onReuse && (
+                  <div className="mb-3 flex justify-end">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => onReuse(label, artifactAsText(r))}
+                    >
+                      Usar neste pedido
+                    </Button>
+                  </div>
+                )}
+              </div>
+            );
           })}
         </div>
       )}
