@@ -27,6 +27,17 @@ export interface Citation {
   fts_rank: number | null;
   /** true = entrou apenas como contexto vizinho, não como evidência. */
   is_context: boolean;
+  /** Agrupa partes do mesmo documento dividido (split_group_id ou o próprio id). */
+  group_key?: string;
+  /** Nome do documento original, sem o sufixo "- parte N". */
+  base_filename?: string;
+  /** Índice da parte quando o documento foi dividido para leitura. */
+  part_index?: number | null;
+  part_count?: number | null;
+  /** Página no documento original (numeração contínua). */
+  page?: number | null;
+  /** Página dentro do arquivo da parte, usada para abrir o PDF na posição certa. */
+  page_in_part?: number | null;
 }
 
 export interface RetrievalLog {
@@ -229,16 +240,35 @@ export async function prepareRagRun(opts: {
   );
   const { data: docs } = await supabase
     .from("documents")
-    .select("id, filename")
+    .select("id, filename, split_group_id, part_index, part_count, page_offset")
     .in("id", docIds.length ? docIds : ["00000000-0000-0000-0000-000000000000"]);
-  const nameById = new Map(
-    ((docs ?? []) as Array<{ id: string; filename: string }>).map((d) => [d.id, d.filename]),
-  );
+  interface DocMeta {
+    id: string;
+    filename: string;
+    split_group_id: string | null;
+    part_index: number | null;
+    part_count: number | null;
+    page_offset: number | null;
+  }
+  const docMetaById = new Map(((docs ?? []) as DocMeta[]).map((d) => [d.id, d]));
+  const nameById = new Map(((docs ?? []) as DocMeta[]).map((d) => [d.id, d.filename]));
+  const { baseDocumentName } = await import("./documents/naming");
+
+  /** Rótulo humano da fonte: nome do documento + parte + página original. */
+  const sourceLabel = (documentId: string, loc: string | null) => {
+    const meta = docMetaById.get(documentId);
+    const base = meta ? baseDocumentName(meta.filename) : "documento";
+    const part =
+      meta?.part_index != null
+        ? `Parte ${meta.part_index}${meta.part_count ? ` de ${meta.part_count}` : ""}`
+        : null;
+    return [base, part, loc].filter(Boolean).join(" · ");
+  };
 
   const labelFor = (row: Candidate) => {
     const loc = locationLabel(row);
     const tag = row.source_kind === "vision" ? "visão/OCR" : null;
-    return [nameById.get(row.document_id) ?? "documento", loc, tag].filter(Boolean).join(" · ");
+    return [sourceLabel(row.document_id, loc), tag].filter(Boolean).join(" · ");
   };
 
   // Reranking com procedência; fallback determinístico registrado em log.
@@ -279,11 +309,21 @@ export async function prepareRagRun(opts: {
     ...neighbors.map((row) => ({ row, isContext: true })),
   ];
 
-  const citations: Citation[] = ordered.map(({ row, isContext }, idx) => ({
+  const citations: Citation[] = ordered.map(({ row, isContext }, idx) => {
+    const meta = docMetaById.get(row.document_id);
+    const page = (row as { page_start?: number | null }).page_start ?? null;
+    const offset = meta?.page_offset ?? 0;
+    return {
     ref: `F${idx + 1}`,
     chunk_id: row.id,
     document_id: row.document_id,
     filename: nameById.get(row.document_id) ?? "documento",
+    group_key: meta?.split_group_id ?? row.document_id,
+    base_filename: meta ? baseDocumentName(meta.filename) : "documento",
+    part_index: meta?.part_index ?? null,
+    part_count: meta?.part_count ?? null,
+    page,
+    page_in_part: page != null ? Math.max(1, page - offset) : null,
     snippet: row.content.slice(0, 600),
     location: locationLabel(row),
     source_kind: row.source_kind,
@@ -291,13 +331,14 @@ export async function prepareRagRun(opts: {
     vector_similarity: row.vector_similarity ?? null,
     fts_rank: row.fts_rank ?? null,
     is_context: isContext,
-  }));
+    };
+  });
 
   const contextBlock = citations.length
     ? citations
         .map(
           (c) =>
-            `[${c.ref}] (${[c.filename, c.location, c.is_context ? "contexto vizinho" : "evidência"]
+            `[${c.ref}] (${[sourceLabel(c.document_id, c.location), c.is_context ? "contexto vizinho" : "evidência"]
               .filter(Boolean)
               .join(" · ")})\n${ordered.find((o) => o.row.id === c.chunk_id)?.row.content ?? c.snippet}`,
         )
