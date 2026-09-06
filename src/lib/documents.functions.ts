@@ -538,3 +538,43 @@ export const listDocumentAuditEvents = createServerFn({ method: "POST" })
         null,
     }));
   });
+
+/**
+ * Catálogo das páginas que são apenas imagem: o tipo identificado de cada uma
+ * ("nota fiscal", "cartão de ponto"), sem transcrição. Serve para o usuário
+ * saber o que há nessas páginas antes de pedir a leitura completa.
+ */
+export const listDocumentImagePages = createServerFn({ method: "POST" })
+  .middleware([requireOrg])
+  .inputValidator((i: unknown) =>
+    z
+      .object({
+        document_id: z.string().uuid().optional(),
+        case_id: z.string().uuid().optional(),
+        limit: z.number().int().min(1).max(500).optional(),
+      })
+      .refine((v) => Boolean(v.document_id || v.case_id), {
+        message: "Informe o documento ou o caso.",
+      })
+      .parse(i),
+  )
+  .handler(async ({ data, context }) => {
+    let query = context.supabase
+      .from("document_image_pages")
+      .select("id, document_id, page_number, page_local, label, description")
+      .eq("organization_id", context.organizationId)
+      .order("page_number", { ascending: true })
+      .limit(data.limit ?? 300);
+    if (data.document_id) query = query.eq("document_id", data.document_id);
+    if (data.case_id) query = query.eq("case_id", data.case_id);
+    const { data: rows, error } = await query;
+    if (error) throw error;
+    return (rows ?? []).map((r) => ({
+      id: r.id as string,
+      document_id: r.document_id as string,
+      page_number: r.page_number as number,
+      page_local: (r.page_local as number | null) ?? null,
+      label: (r.label as string) || "Página em imagem",
+      description: (r.description as string) || "",
+    }));
+  });
