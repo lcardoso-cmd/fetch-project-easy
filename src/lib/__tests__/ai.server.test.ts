@@ -164,7 +164,7 @@ describe("chatComplete: 5 tentativas com fallback", () => {
     expect(fetchMock).toHaveBeenCalledTimes(5);
   });
 
-  it("em erro não-retentável (400) re-tenta no mesmo modelo, sem trocar de fallback", async () => {
+  it("em erro não-retentável (400) encerra imediatamente", async () => {
     limitsRef.maxRetries = 2;
     const { fetchMock, calls } = mockFetchSequence([{ status: 400, body: "bad request" }]);
     await expect(
@@ -173,8 +173,7 @@ describe("chatComplete: 5 tentativas com fallback", () => {
         noCache: true,
       }),
     ).rejects.toThrow(/400/);
-    // 1 inicial + 2 retries = 3, todas no modelo original
-    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(calls.every((c) => c.body.model === "google/gemini-2.5-flash")).toBe(true);
   });
 
@@ -214,20 +213,15 @@ describe("chatComplete: timeout de latência", () => {
 });
 
 describe("chatComplete: forceFallback", () => {
-  it("força fallback mesmo em erro normalmente não-retentável (400) quando o toggle está on", async () => {
+  it("não força fallback em erro terminal 400", async () => {
     limitsRef.maxRetries = 2;
     limitsRef.forceFallback = true;
-    const { calls, fetchMock } = mockFetchSequence([
-      { status: 400, body: "bad" },
-      { status: 200, body: okBody("recovered by force") },
-    ]);
-    const res = await chatComplete([{ role: "user", content: "hi" }], {
+    const { fetchMock } = mockFetchSequence([{ status: 400, body: "bad" }]);
+    await expect(chatComplete([{ role: "user", content: "hi" }], {
       model: "google/gemini-2.5-flash",
       noCache: true,
-    });
-    expect(res.content).toBe("recovered by force");
-    expect(fetchMock).toHaveBeenCalledTimes(2);
-    expect(calls[1].body.model).toBe("google/gemini-2.5-flash-lite");
+    })).rejects.toThrow(/400/);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });
 

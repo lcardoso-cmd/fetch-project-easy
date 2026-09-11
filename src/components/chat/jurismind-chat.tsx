@@ -130,6 +130,7 @@ interface Msg {
   audio_path?: string | null;
   audio_duration_ms?: number | null;
   audio_blob_url?: string; // local playback for freshly sent audio
+  reasoning?: string;
 }
 
 /** Precedente localizado em fonte oficial externa aos autos. */
@@ -1321,10 +1322,6 @@ export function JurisMindChat({
     setMessages(next);
     setBusy(true);
 
-    const history = messages.slice(-8).map((m) => ({
-      role: m.role,
-      content: m.content,
-    }));
     const selected = Array.from(selectedDocIds);
 
     const patchAssistant = (patch: Partial<Msg>) => {
@@ -1342,6 +1339,15 @@ export function JurisMindChat({
         const cur = copy[assistantIdx];
         if (!cur || cur.role !== "assistant") return prev;
         copy[assistantIdx] = { ...cur, content: cur.content + t };
+        return copy;
+      });
+    };
+    const appendReasoning = (t: string) => {
+      setMessages((prev) => {
+        const copy = prev.slice();
+        const cur = copy[assistantIdx];
+        if (!cur || cur.role !== "assistant") return prev;
+        copy[assistantIdx] = { ...cur, reasoning: (cur.reasoning ?? "") + t };
         return copy;
       });
     };
@@ -1388,7 +1394,6 @@ export function JurisMindChat({
         body: JSON.stringify({
           case_id: caseId,
           question: q || "Analise as imagens enviadas.",
-          history,
           selected_doc_ids: selected.length ? selected : undefined,
           images: sentImages.length ? sentImages : undefined,
           model_tier: modelTier,
@@ -1428,6 +1433,9 @@ export function JurisMindChat({
         if (event === "token") {
           const t = (payload as { text?: string }).text;
           if (t) appendToken(t);
+        } else if (event === "reasoning") {
+          const t = (payload as { text?: string }).text;
+          if (t) appendReasoning(t);
         } else if (event === "citations") {
           const c = (payload as { citations?: Citation[] }).citations;
           if (c) {
@@ -1819,9 +1827,9 @@ export function JurisMindChat({
                 <SelectValue>{MODEL_LABELS[modelTier]}</SelectValue>
               </SelectTrigger>
               <SelectContent align="end">
-                <SelectItem value="fast">Rápido · Flash</SelectItem>
-                <SelectItem value="balanced">Balanceado · 2.5 Flash</SelectItem>
-                <SelectItem value="max">Máximo · 2.5 Pro</SelectItem>
+                <SelectItem value="fast">Rápido · análise objetiva</SelectItem>
+                <SelectItem value="balanced">Balanceado · análise completa</SelectItem>
+                <SelectItem value="max">Máximo · verificação aprofundada</SelectItem>
               </SelectContent>
             </Select>
             {!fullscreen && (
@@ -1869,11 +1877,17 @@ export function JurisMindChat({
                     )}
                   >
                     {m.role === "assistant" ? (
-                      <div className="prose prose-sm dark:prose-invert max-w-none prose-p:my-2 prose-headings:mt-3 prose-headings:mb-2 prose-ul:my-2 prose-ol:my-2">
-                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                          {m.content}
-                        </ReactMarkdown>
-                      </div>
+                      <>
+                        {m.reasoning && (
+                          <details className="mb-3 border-b border-border/50 pb-3 text-xs text-muted-foreground">
+                            <summary className="cursor-pointer font-medium text-foreground">Como a análise foi feita</summary>
+                            <p className="mt-2 whitespace-pre-wrap leading-relaxed">{m.reasoning}</p>
+                          </details>
+                        )}
+                        <div className="prose prose-sm dark:prose-invert max-w-none prose-p:my-2 prose-headings:mt-3 prose-headings:mb-2 prose-ul:my-2 prose-ol:my-2">
+                          <ReactMarkdown remarkPlugins={[remarkGfm]}>{m.content}</ReactMarkdown>
+                        </div>
+                      </>
                     ) : (
                       <>
                         {m.input_kind === "voice" && (

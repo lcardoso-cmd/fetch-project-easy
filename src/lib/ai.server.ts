@@ -242,11 +242,8 @@ export async function chatComplete(
       lastErr = err;
       const isLast = i === totalAttempts - 1;
       const forced = limits.forceFallback;
-      const canFallback = shouldFallback(err) || forced;
-      if (isLast || !canFallback) {
-        if (!isLast) continue; // erro não-retentável e sem force: para
-        break;
-      }
+      const canFallback = shouldFallback(err);
+      if (isLast || !canFallback) break;
       // troca para modelo mais barato quando disponível
       if (!opts.noFallback) {
         const fb = fallbackModel(currentModel);
@@ -412,8 +409,8 @@ export async function chatCompleteStream(
     if (!res.ok || !res.body) {
       const txt = await res.text().catch(() => "");
       const err = new Error(`Chat stream falhou (${res.status}): ${txt}`);
-      const forced = limits.forceFallback;
-      if (allowFallback && (shouldFallback(err) || forced)) {
+       const forced = limits.forceFallback;
+       if (allowFallback && shouldFallback(err)) {
         const fb = fallbackModel(m);
         if (fb) {
           const label = forced && !shouldFallback(err) ? `[forçado] ${err.message}` : err.message;

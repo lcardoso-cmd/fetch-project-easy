@@ -24,23 +24,46 @@ export const askWithRag = createServerFn({ method: "POST" })
   .middleware([requireAiEnabled])
   .inputValidator((i: unknown) => AskSchema.parse(i))
   .handler(async ({ data, context }) => {
-    const { chatWithTools } = await import("./ai.server");
+    const { legalChatWithTools } = await import("./legal-ai.server");
     const { prepareRagRun, persistChatTurn } = await import("./chat-rag.server");
     const { splitSources, stripInvalidRefs } = await import("./rag/citations");
     const { logRetrievalEvent } = await import("./rag/log.server");
     const { EMBEDDING_MODEL } = await import("./rag.functions");
 
+    let serverHistory = data.history ?? [];
+    if (data.thread_id) {
+      const { data: thread } = await context.supabase
+        .from("ai_chat_threads")
+        .select("id")
+        .eq("id", data.thread_id)
+        .eq("case_id", data.case_id)
+        .eq("organization_id", context.organizationId)
+        .maybeSingle();
+      if (!thread) throw new Error("Conversa não encontrada neste caso.");
+      const { data: historyRows, error: historyError } = await context.supabase
+        .from("ai_chat_messages")
+        .select("role, content")
+        .eq("thread_id", data.thread_id)
+        .eq("organization_id", context.organizationId)
+        .order("created_at", { ascending: true });
+      if (historyError) throw historyError;
+      serverHistory = (historyRows ?? []).map((message) => ({
+        role: message.role as "user" | "assistant",
+        content: message.content,
+      }));
+    }
+
     const run = await prepareRagRun({
       supabase: context.supabase,
       userId: context.userId,
       organizationId: context.organizationId,
-      data,
+      data: { ...data, history: serverHistory },
     });
 
-    const { content, steps } = await chatWithTools(run.messages, run.tools, run.executor, {
-      model: run.model,
-      temperature: 0.2,
+    const { content, steps } = await legalChatWithTools(run.messages, run.tools, run.executor, {
+      depth: run.tier,
       maxSteps: 6,
+      feature: "legal_chat",
     });
 
     // Rastreabilidade: remove refs inexistentes e separa citadas de apoio.
