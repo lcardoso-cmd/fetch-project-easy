@@ -570,6 +570,7 @@ export function JurisMindChat({
   const [previewDoc, setPreviewDoc] = useState<DocItem | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
+  const [historyLoading, setHistoryLoading] = useState(false);
 
   // --- Live transcription (streaming) refs ---
   const pcmChunksRef = useRef<Float32Array[]>([]);
@@ -737,9 +738,12 @@ export function JurisMindChat({
   useEffect(() => {
     if (!threadId) {
       setMessages([]);
+      setHistoryLoading(false);
       return;
     }
     let cancelled = false;
+    setMessages([]);
+    setHistoryLoading(true);
     void (async () => {
       try {
         const rows = await getMessagesFn({ data: { thread_id: threadId } });
@@ -761,9 +765,12 @@ export function JurisMindChat({
           })),
         );
       } catch (e) {
+        if (cancelled) return;
         toast.error(
           e instanceof Error ? e.message : "Erro ao carregar conversa",
         );
+      } finally {
+        if (!cancelled) setHistoryLoading(false);
       }
     })();
     return () => {
