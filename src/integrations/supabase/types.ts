@@ -985,6 +985,137 @@ export type Database = {
           },
         ]
       }
+      case_update_audit: {
+        Row: {
+          action: string
+          actor_user_id: string
+          applied_values: Json
+          case_id: string
+          created_at: string
+          id: string
+          organization_id: string
+          previous_values: Json
+          proposal_id: string
+          source_refs: Json
+        }
+        Insert: {
+          action: string
+          actor_user_id: string
+          applied_values?: Json
+          case_id: string
+          created_at?: string
+          id?: string
+          organization_id: string
+          previous_values?: Json
+          proposal_id: string
+          source_refs?: Json
+        }
+        Update: {
+          action?: string
+          actor_user_id?: string
+          applied_values?: Json
+          case_id?: string
+          created_at?: string
+          id?: string
+          organization_id?: string
+          previous_values?: Json
+          proposal_id?: string
+          source_refs?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "case_update_audit_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "case_update_audit_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "case_update_audit_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "case_update_proposals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      case_update_proposals: {
+        Row: {
+          case_id: string
+          consultation_id: string
+          created_at: string
+          created_by_user_id: string
+          current_values: Json
+          decided_at: string | null
+          decided_by_user_id: string | null
+          id: string
+          organization_id: string
+          proposed_values: Json
+          source_refs: Json
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          case_id: string
+          consultation_id: string
+          created_at?: string
+          created_by_user_id: string
+          current_values?: Json
+          decided_at?: string | null
+          decided_by_user_id?: string | null
+          id?: string
+          organization_id: string
+          proposed_values?: Json
+          source_refs?: Json
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          case_id?: string
+          consultation_id?: string
+          created_at?: string
+          created_by_user_id?: string
+          current_values?: Json
+          decided_at?: string | null
+          decided_by_user_id?: string | null
+          id?: string
+          organization_id?: string
+          proposed_values?: Json
+          source_refs?: Json
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "case_update_proposals_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "case_update_proposals_consultation_id_fkey"
+            columns: ["consultation_id"]
+            isOneToOne: false
+            referencedRelation: "process_consultations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "case_update_proposals_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cases: {
         Row: {
           assisted_party_name: string | null
@@ -3419,6 +3550,164 @@ export type Database = {
         }
         Relationships: []
       }
+      process_consultations: {
+        Row: {
+          case_id: string
+          cnj: string
+          completed_at: string | null
+          consulted_at: string
+          created_at: string
+          error_message: string | null
+          id: string
+          organization_id: string
+          requested_by_user_id: string
+          sources: Json
+          status: string
+          summary: Json
+          thread_id: string | null
+          updated_at: string
+          warnings: Json
+        }
+        Insert: {
+          case_id: string
+          cnj: string
+          completed_at?: string | null
+          consulted_at?: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          organization_id: string
+          requested_by_user_id: string
+          sources?: Json
+          status?: string
+          summary?: Json
+          thread_id?: string | null
+          updated_at?: string
+          warnings?: Json
+        }
+        Update: {
+          case_id?: string
+          cnj?: string
+          completed_at?: string | null
+          consulted_at?: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          organization_id?: string
+          requested_by_user_id?: string
+          sources?: Json
+          status?: string
+          summary?: Json
+          thread_id?: string | null
+          updated_at?: string
+          warnings?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "process_consultations_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "process_consultations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "process_consultations_thread_id_fkey"
+            columns: ["thread_id"]
+            isOneToOne: false
+            referencedRelation: "ai_chat_threads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      process_movements: {
+        Row: {
+          case_id: string
+          cnj: string
+          complement: string | null
+          consultation_id: string
+          court: string | null
+          created_at: string
+          id: string
+          movement_code: number | null
+          movement_date: string | null
+          movement_name: string
+          organization_id: string
+          raw_data: Json
+          source: string
+          source_hash: string
+          source_id: string | null
+          source_url: string | null
+          unit_name: string | null
+        }
+        Insert: {
+          case_id: string
+          cnj: string
+          complement?: string | null
+          consultation_id: string
+          court?: string | null
+          created_at?: string
+          id?: string
+          movement_code?: number | null
+          movement_date?: string | null
+          movement_name: string
+          organization_id: string
+          raw_data?: Json
+          source: string
+          source_hash: string
+          source_id?: string | null
+          source_url?: string | null
+          unit_name?: string | null
+        }
+        Update: {
+          case_id?: string
+          cnj?: string
+          complement?: string | null
+          consultation_id?: string
+          court?: string | null
+          created_at?: string
+          id?: string
+          movement_code?: number | null
+          movement_date?: string | null
+          movement_name?: string
+          organization_id?: string
+          raw_data?: Json
+          source?: string
+          source_hash?: string
+          source_id?: string | null
+          source_url?: string | null
+          unit_name?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "process_movements_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "process_movements_consultation_id_fkey"
+            columns: ["consultation_id"]
+            isOneToOne: false
+            referencedRelation: "process_consultations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "process_movements_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string
@@ -4692,6 +4981,10 @@ export type Database = {
       }
       crm_digits: { Args: { _value: string }; Returns: string }
       crm_normalize_email: { Args: { _value: string }; Returns: string }
+      decide_case_update_proposal: {
+        Args: { _decision: string; _proposal_id: string }
+        Returns: Json
+      }
       fetch_chunk_neighbors: {
         Args: {
           chunk_indexes: number[]
