@@ -12,10 +12,10 @@
 @theme inline {
   /* Guideline da marca: Cassannet (títulos) e Kelson (interface).
    * Os arquivos licenciados não estão no repositório, portanto usamos
-   * substitutas legíveis: Sora para títulos e Inter para interface/corpo.
+   * substitutas legíveis: Sora para títulos e Manrope para interface/corpo.
    * Ao receber os arquivos, basta declarar @font-face e trocar os nomes. */
   --font-heading: "Sora", "Cassannet", system-ui, -apple-system, sans-serif;
-  --font-body: "Inter", "Kelson", system-ui, -apple-system, sans-serif;
+  --font-body: "Manrope", "Kelson", system-ui, -apple-system, sans-serif;
 
   /* Escala tipográfica semântica (base 16px do navegador).
    * Nada abaixo de 12px é usado para informação operacional. */

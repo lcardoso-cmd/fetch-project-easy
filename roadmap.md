@@ -88,3 +88,9 @@ Fonte da verdade: organização é o cliente do SaaS. Sem migração gradual, se
 ## Ajustes homepage (concluídos)
 - [x] Logo no header deve ter cérebro branco no modo escuro (contraste com fundo navy).
 - [x] HeroCarousel deve ser o hero integral da página, não um painel lateral ao lado do texto "Do documento à entrega".
+
+## Redesign do workspace JurisMind (concluído)
+- [x] Contexto do caso e documentos reunidos em barra lateral organizada e recolhível.
+- [x] Documentos legíveis, selecionáveis e com prévia sem sair da conversa.
+- [x] Dados do caso e partes sem truncamento, conversa centralizada e campo de pedido ampliado.
+- [x] Tipografia Sora + Manrope e comportamento responsivo preservando as funções existentes.
