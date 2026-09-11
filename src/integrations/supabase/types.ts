@@ -4981,6 +4981,10 @@ export type Database = {
       }
       crm_digits: { Args: { _value: string }; Returns: string }
       crm_normalize_email: { Args: { _value: string }; Returns: string }
+      decide_case_update_proposal: {
+        Args: { _decision: string; _proposal_id: string }
+        Returns: Json
+      }
       fetch_chunk_neighbors: {
         Args: {
           chunk_indexes: number[]
