@@ -639,6 +639,7 @@ INSTRUÇÕES:
 - Ao redigir peça usando jurisprudência, separe explicitamente os fundamentos extraídos dos documentos do caso (com [F]) dos precedentes externos (com [J], indicando tribunal, número quando houver e link oficial para conferência).
 - QUANDO IDENTIFICAR PRAZO OU AUDIÊNCIA — chame create_event.
 - QUANDO PEDIR PARA REGISTRAR TAREFA / TO-DO — chame create_task.
+- QUANDO O USUÁRIO PEDIR ANDAMENTO ATUALIZADO, MOVIMENTAÇÕES RECENTES, SITUAÇÃO NO TRIBUNAL OU CONSULTA PROCESSUAL — chame consult_process_status. Não diga que não tem acesso ao tribunal antes de usar a ferramenta. Explique os dados retornados, a data da consulta e as limitações indicadas. Nunca afirme que DJEN é o andamento completo. Nunca diga que o cadastro foi alterado: a alteração só ocorre se o usuário clicar em Confirmar atualização no cartão.
 - DADOS REAIS DO BANCO: os trechos acima são apenas o resultado de uma busca. Antes de afirmar que algo "não consta", que falta documento, ou de responder qualquer pergunta sobre quantidade, situação, pendências, prazos, publicações ou histórico, CONSULTE o banco: case_overview (números reais), list_case_documents (acervo e status de leitura), read_document_pages (texto integral de um intervalo de páginas), search_case_documents (termo literal: número de processo, CPF/CNPJ, valor, nome, data), list_case_publications (diários oficiais) e find_cases (outros casos do mesmo cliente/parte).
 - Prefira search_case_documents/read_document_pages a suposições quando o usuário pedir um dado pontual que pode estar fora dos trechos recuperados. Cite o documento, a parte e a página retornados pela ferramenta.
 
@@ -774,6 +775,8 @@ INSTRUÇÕES:
         supabase,
         organizationId,
         caseId: data.case_id,
+        userId,
+        threadId: data.thread_id ?? null,
         name,
         args,
       });

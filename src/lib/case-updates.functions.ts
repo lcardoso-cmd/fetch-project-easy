@@ -26,5 +26,9 @@ export const decideCaseUpdateProposal = createServerFn({ method: "POST" })
       _decision: data.decision,
     });
     if (error) throw new Error(error.message);
-    return result as { ok: boolean; status: "applied" | "rejected"; applied_values: Record<string, unknown> };
+    const parsed = result as { ok?: unknown; status?: unknown } | null;
+    return {
+      ok: parsed?.ok === true,
+      status: parsed?.status === "applied" ? "applied" : "rejected",
+    };
   });

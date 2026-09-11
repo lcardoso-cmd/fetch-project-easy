@@ -6,6 +6,7 @@ import remarkGfm from "remark-gfm";
 
 import { getThreadMessages, getMessageAudioUrl } from "@/lib/threads.functions";
 import { getDocumentUrl } from "@/lib/documents.functions";
+import { decideCaseUpdateProposal } from "@/lib/case-updates.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -68,6 +69,9 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   Users,
+  CheckCircle2,
+  ExternalLink,
+  Gavel,
 } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
@@ -146,6 +150,26 @@ interface JurisprudenceRef {
   consulted_at: string;
 }
 
+interface ProcessConsultationResult {
+  kind: "process_consultation";
+  ok: boolean;
+  proposal_id?: string;
+  proposal_status?: "pending" | "applied" | "rejected";
+  cnj: string;
+  consulted_at: string;
+  court?: string | null;
+  degree?: string | null;
+  class_name?: string | null;
+  subjects?: string[];
+  unit_name?: string | null;
+  movements?: Array<{ date: string | null; name: string; complement: string | null; source: string; source_url: string | null }>;
+  total_movements?: number;
+  changes?: Array<{ field: string; label: string; current: string | null; proposed: string }>;
+  sources?: Array<{ name: string; url: string; status: "ok" | "unavailable"; detail?: string }>;
+  warnings?: string[];
+  error?: string;
+}
+
 function parseToolResult(step: ToolStep): {
   kind?: string;
   titulo?: string;
@@ -159,6 +183,19 @@ function parseToolResult(step: ToolStep): {
   query?: string;
   consulted_at?: string;
   results?: JurisprudenceRef[];
+  proposal_id?: string;
+  proposal_status?: "pending" | "applied" | "rejected";
+  cnj?: string;
+  court?: string | null;
+  degree?: string | null;
+  class_name?: string | null;
+  subjects?: string[];
+  unit_name?: string | null;
+  movements?: ProcessConsultationResult["movements"];
+  total_movements?: number;
+  changes?: ProcessConsultationResult["changes"];
+  sources?: ProcessConsultationResult["sources"];
+  warnings?: string[];
 } | null {
   try {
     return JSON.parse(step.result_json) as {
@@ -174,6 +211,19 @@ function parseToolResult(step: ToolStep): {
       query?: string;
       consulted_at?: string;
       results?: JurisprudenceRef[];
+      proposal_id?: string;
+      proposal_status?: "pending" | "applied" | "rejected";
+      cnj?: string;
+      court?: string | null;
+      degree?: string | null;
+      class_name?: string | null;
+      subjects?: string[];
+      unit_name?: string | null;
+      movements?: ProcessConsultationResult["movements"];
+      total_movements?: number;
+      changes?: ProcessConsultationResult["changes"];
+      sources?: ProcessConsultationResult["sources"];
+      warnings?: string[];
     };
   } catch {
     return null;
@@ -1964,6 +2014,8 @@ export function JurisMindChat({
                               results={r.results ?? []}
                             />
                           );
+                        if (r.kind === "process_consultation" && r.cnj)
+                          return <ProcessConsultationCard key={idx} result={r as ProcessConsultationResult} />;
                       } catch {
                         // ignore
                       }
@@ -2518,6 +2570,7 @@ const TOOL_LABELS: Record<string, string> = {
   list_case_events: "Consultou eventos do caso",
   list_case_tasks: "Consultou tarefas do caso",
   search_jurisprudence: "Pesquisa de jurisprudência (fontes oficiais)",
+  consult_process_status: "Consulta processual oficial",
 };
 
 function friendlyToolName(name: string) {

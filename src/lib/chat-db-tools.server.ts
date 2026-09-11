@@ -14,9 +14,27 @@ export const DB_TOOL_NAMES = [
   "list_case_publications",
   "find_cases",
   "list_image_pages",
+  "consult_process_status",
 ] as const;
 
 export const dbToolDefs: ToolDef[] = [
+  {
+    type: "function",
+    function: {
+      name: "consult_process_status",
+      description:
+        "Consulta agora o andamento público oficial de um processo no DataJud/CNJ e as publicações complementares do DJEN. Use quando o usuário pedir andamento, movimentações recentes, situação atual ou consulta ao tribunal. A ferramenta apenas consulta e prepara diferenças; qualquer alteração do cadastro exige confirmação do usuário no cartão.",
+      parameters: {
+        type: "object",
+        properties: {
+          cnj: {
+            type: "string",
+            description: "Número CNJ informado pelo usuário. Omita para usar o número cadastrado no caso.",
+          },
+        },
+      },
+    },
+  },
   {
     type: "function",
     function: {
@@ -146,10 +164,12 @@ export async function runDbTool(opts: {
   supabase: any;
   organizationId: string;
   caseId: string;
+  userId: string;
+  threadId?: string | null;
   name: string;
   args: Record<string, unknown>;
 }): Promise<unknown> {
-  const { supabase, organizationId, caseId, name, args } = opts;
+  const { supabase, organizationId, caseId, userId, threadId, name, args } = opts;
   const { baseDocumentName } = await import("./documents/naming");
 
   const fetchDocs = async (): Promise<DocRow[]> => {
@@ -162,6 +182,18 @@ export async function runDbTool(opts: {
       .order("created_at", { ascending: true });
     return (data ?? []) as DocRow[];
   };
+
+  if (name === "consult_process_status") {
+    const { consultProcess } = await import("./case-tracking/process-search.server");
+    return consultProcess({
+      supabase,
+      organizationId,
+      userId,
+      caseId,
+      threadId,
+      requestedCnj: args.cnj ? String(args.cnj) : null,
+    });
+  }
 
   const chunkCounts = async (docIds: string[]) => {
     const counts = new Map<string, number>();

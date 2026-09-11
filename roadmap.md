@@ -101,3 +101,10 @@ Fonte da verdade: organização é o cliente do SaaS. Sem migração gradual, se
 - [x] Erros terminais e retentáveis tratados sem rebaixamento silencioso de modelo.
 - [x] Cache persistente multiempresa com invalidação por versão do caso e documentos.
 - [x] Benchmark automatizado de rastreabilidade e validação real do gateway adicionados.
+
+## Consulta processual pelo chat
+- [x] Consulta oficial DataJud/CNJ pelo número cadastrado ou informado no pedido.
+- [x] Complemento por publicações do DJEN, com fonte, horário e limitações explícitas.
+- [x] Histórico normalizado e deduplicado de movimentações por organização e caso.
+- [x] Proposta de atualização com comparação e confirmação ou descarte explícitos.
+- [x] Auditoria da decisão e aplicação restrita ao número do processo e à vara/tribunal.
