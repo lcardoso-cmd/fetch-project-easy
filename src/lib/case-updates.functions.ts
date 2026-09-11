@@ -32,3 +32,19 @@ export const decideCaseUpdateProposal = createServerFn({ method: "POST" })
       status: parsed?.status === "applied" ? "applied" : "rejected",
     };
   });
+
+export const getCaseUpdateProposalStatus = createServerFn({ method: "GET" })
+  .middleware([requireOrg])
+  .inputValidator((input: unknown) => z.object({ proposal_id: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    const { data: proposal, error } = await context.supabase
+      .from("case_update_proposals")
+      .select("status")
+      .eq("id", data.proposal_id)
+      .eq("organization_id", context.organizationId)
+      .maybeSingle();
+    if (error) throw error;
+    if (!proposal) throw new Error("Proposta de atualização não encontrada.");
+    const status = proposal.status === "applied" || proposal.status === "rejected" ? proposal.status : "pending";
+    return { status };
+  });

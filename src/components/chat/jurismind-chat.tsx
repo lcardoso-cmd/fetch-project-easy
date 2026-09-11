@@ -6,7 +6,7 @@ import remarkGfm from "remark-gfm";
 
 import { getThreadMessages, getMessageAudioUrl } from "@/lib/threads.functions";
 import { getDocumentUrl } from "@/lib/documents.functions";
-import { decideCaseUpdateProposal } from "@/lib/case-updates.functions";
+import { decideCaseUpdateProposal, getCaseUpdateProposalStatus } from "@/lib/case-updates.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -2482,8 +2482,22 @@ export function JurisMindChat({
 
 function ProcessConsultationCard({ result }: { result: ProcessConsultationResult }) {
   const decideProposal = useServerFn(decideCaseUpdateProposal);
+  const getProposalStatus = useServerFn(getCaseUpdateProposalStatus);
   const [status, setStatus] = useState(result.proposal_status ?? (result.proposal_id ? "pending" : undefined));
   const [deciding, setDeciding] = useState<"applied" | "rejected" | null>(null);
+
+  useEffect(() => {
+    if (!result.proposal_id) return;
+    let active = true;
+    void getProposalStatus({ data: { proposal_id: result.proposal_id } })
+      .then((response) => {
+        if (active) setStatus(response.status);
+      })
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, [getProposalStatus, result.proposal_id]);
 
   const decide = async (decision: "applied" | "rejected") => {
     if (!result.proposal_id || deciding) return;
