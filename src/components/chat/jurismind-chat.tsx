@@ -1900,7 +1900,14 @@ export function JurisMindChat({
           </div>
 
           <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-4 py-6 sm:px-6 lg:px-10">
-            {messages.length === 0 ? (
+            {historyLoading ? (
+              <div className="flex h-full items-center justify-center" role="status">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Abrindo conversa…
+                </div>
+              </div>
+            ) : messages.length === 0 ? (
               <div className="mx-auto flex h-full w-full max-w-3xl flex-col justify-center gap-5 py-8">
                 <div className="rounded-lg border border-primary/20 bg-primary/5 p-5 sm:p-6">
                   <div className="flex items-start gap-4">
@@ -1919,7 +1926,7 @@ export function JurisMindChat({
             ) : (
               messages.map((m, i) => (
                 <div
-                  key={i}
+                  key={m.id ?? i}
                   className={cn(
                     "flex",
                     m.role === "user" ? "justify-end" : "justify-start",
@@ -2076,7 +2083,7 @@ export function JurisMindChat({
           <div className="shrink-0 border-t bg-card px-4 py-4 sm:px-6 lg:px-10">
             <div className="mx-auto max-w-3xl">
 
-            {messages.length === 0 && (
+            {!historyLoading && messages.length === 0 && (
               <div className="mb-3">
                 <p className="mb-2 text-2xs font-medium uppercase tracking-wide text-muted-foreground">
                   Sugestões
