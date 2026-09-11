@@ -169,6 +169,63 @@ export type Database = {
           },
         ]
       }
+      ai_response_cache: {
+        Row: {
+          cache_key: string
+          case_id: string
+          citations: Json
+          created_at: string
+          document_version: string
+          expires_at: string
+          id: string
+          mode: string
+          organization_id: string
+          response_content: string
+          updated_at: string
+        }
+        Insert: {
+          cache_key: string
+          case_id: string
+          citations?: Json
+          created_at?: string
+          document_version: string
+          expires_at: string
+          id?: string
+          mode: string
+          organization_id: string
+          response_content: string
+          updated_at?: string
+        }
+        Update: {
+          cache_key?: string
+          case_id?: string
+          citations?: Json
+          created_at?: string
+          document_version?: string
+          expires_at?: string
+          id?: string
+          mode?: string
+          organization_id?: string
+          response_content?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_response_cache_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_response_cache_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ai_session_events: {
         Row: {
           case_id: string | null

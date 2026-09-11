@@ -6,9 +6,9 @@ import type { Candidate } from "./rag/retrieval";
 export type Tier = "fast" | "balanced" | "max";
 
 export const MODEL_MAP: Record<Tier, string> = {
-  fast: "google/gemini-3-flash-preview",
-  balanced: "google/gemini-2.5-flash",
-  max: "google/gemini-2.5-pro",
+  fast: "openai/gpt-6-astra",
+  balanced: "openai/gpt-6-astra",
+  max: "openai/gpt-6-astra",
 };
 
 export interface Citation {
@@ -92,6 +92,8 @@ export interface RagRun {
   retrievalLog: RetrievalLog;
   tier: Tier;
   model: string;
+  documentVersion: string;
+  selectedDocumentIds: string[];
 }
 
 function fmtDateTime() {
@@ -137,7 +139,7 @@ export async function prepareRagRun(opts: {
   const { data: caseRow } = await supabase
     .from("cases")
     .select(
-      "id, title, case_number, jurisdiction, case_type, matter_kind, client_name, description, summary, status, parties, represented_party",
+      "id, title, case_number, jurisdiction, case_type, matter_kind, client_name, description, summary, status, parties, represented_party, updated_at",
     )
     .eq("id", data.case_id)
     .maybeSingle();
@@ -148,7 +150,7 @@ export async function prepareRagRun(opts: {
 
   const { data: allDocs } = await supabase
     .from("documents")
-    .select("id, filename, processing_status")
+    .select("id, filename, processing_status, updated_at")
     .eq("case_id", data.case_id)
     .order("created_at", { ascending: false });
 
@@ -165,11 +167,12 @@ export async function prepareRagRun(opts: {
 
   const tier: Tier = data.model_tier ?? "fast";
   const useAdvancedRetrieval = tier !== "fast";
+  const retrievalQueries = tier === "max" ? 3 : 2;
 
   let queries: string[] = [data.question];
   let keywords: string[] = [];
   if (useAdvancedRetrieval) {
-    const rw = await rewriteQuery(data.question, 2);
+    const rw = await rewriteQuery(data.question, retrievalQueries);
     queries = Array.from(new Set([data.question, ...rw.queries])).slice(0, 4);
     keywords = rw.keywords.slice(0, 12);
   }
@@ -181,15 +184,11 @@ export async function prepareRagRun(opts: {
   const activeDocIds = activeDocs.map((d: { id: string }) => d.id);
   const docFilter = activeDocIds.length > 0 ? activeDocIds : null;
 
-  const lists: Candidate[][] = [];
-
-  for (let qi = 0; qi < queries.length; qi++) {
-    const q = queries[qi]!;
+  const { withStepRetry } = await import("./rag/step-retry");
+  const listResults = await Promise.all(queries.map(async (q, qi) => {
     const emb = embs[qi];
-    if (!emb) continue;
-    const perQueryLimit = useAdvancedRetrieval ? 20 : 24;
-
-    const { withStepRetry } = await import("./rag/step-retry");
+    if (!emb) return [] as Candidate[];
+    const perQueryLimit = tier === "max" ? 24 : useAdvancedRetrieval ? 18 : 14;
     const hits = await withStepRetry("search", async () => {
       const { data: rpcData, error } = await supabase.rpc("hybrid_search_chunks_v2", {
         query_embedding: emb as unknown as string,
@@ -205,21 +204,21 @@ export async function prepareRagRun(opts: {
     });
 
 
-    lists.push(((hits ?? []) as Candidate[]).map((r) => ({ ...r })));
-
-  }
+    return ((hits ?? []) as Candidate[]).map((r) => ({ ...r }));
+  }));
+  const lists: Candidate[][] = listResults.filter((rows) => rows.length > 0);
 
   const fused = rrfFuse(lists);
   const candidatesCount = fused.length;
   const evidence = diversifyByDocument(dedupeOverlapping(fused), 4);
 
-  const maxEvidence = useAdvancedRetrieval ? 10 : 12;
+  const maxEvidence = tier === "max" ? 12 : tier === "balanced" ? 8 : 6;
   let primary: Candidate[] = evidence.slice(0, maxEvidence);
 
   // Contexto vizinho (chunk anterior/seguinte) das melhores evidências.
   let neighbors: Candidate[] = [];
   if (useAdvancedRetrieval && primary.length > 0) {
-    const targets = neighborTargets(primary.slice(0, 6), 1);
+    const targets = neighborTargets(primary.slice(0, tier === "max" ? 8 : 5), 1);
     if (targets.length > 0) {
       const { data: nb } = await supabase.rpc("fetch_chunk_neighbors", {
         filter_organization_id: organizationId,
@@ -230,7 +229,7 @@ export async function prepareRagRun(opts: {
       const known = new Set(primary.map((p) => p.id));
       neighbors = ((nb ?? []) as Candidate[])
         .filter((r) => !known.has(r.id))
-        .slice(0, 6)
+        .slice(0, tier === "max" ? 8 : 4)
         .map((r) => ({ ...r, vector_similarity: null, fts_rank: null }));
     }
   }
@@ -645,6 +644,13 @@ INSTRUÇÕES:
 
 - Após chamar uma tool que gera arquivo (petition/pdf/table/presentation), confirme em UMA frase curta que o arquivo está pronto — não repita o conteúdo em texto.`;
 
+  const depthInstruction =
+    tier === "fast"
+      ? "MODO RÁPIDO: responda de forma objetiva, normalmente em até 6 parágrafos, sem omitir ressalvas essenciais."
+      : tier === "max"
+        ? "MODO MÁXIMO: faça verificação aprofundada, confronte evidências e explicite lacunas antes da conclusão."
+        : "MODO BALANCEADO: desenvolva a análise na medida necessária, priorizando fatos verificáveis e concisão.";
+
   const userContent: string | Array<Record<string, unknown>> =
     data.images && data.images.length > 0
       ? [
@@ -654,7 +660,7 @@ INSTRUÇÕES:
       : data.question;
 
   const messages: ChatMessage[] = [
-    { role: "system", content: systemPrompt },
+    { role: "system", content: `${systemPrompt}\n\n${depthInstruction}` },
     ...(data.history ?? []).map((h) => ({ role: h.role, content: h.content })),
     { role: "user", content: userContent },
   ];
@@ -786,6 +792,11 @@ INSTRUÇÕES:
     retrievalLog,
     tier,
     model: MODEL_MAP[tier],
+    documentVersion: [
+      String(caseRow.updated_at ?? ""),
+      ...activeDocs.map((doc: { id: string; updated_at?: string | null }) => `${doc.id}:${doc.updated_at ?? ""}`),
+    ].sort().join("|"),
+    selectedDocumentIds: activeDocIds,
   };
 }
 

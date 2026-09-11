@@ -94,3 +94,10 @@ Fonte da verdade: organização é o cliente do SaaS. Sem migração gradual, se
 - [x] Documentos legíveis, selecionáveis e com prévia sem sair da conversa.
 - [x] Dados do caso e partes sem truncamento, conversa centralizada e campo de pedido ampliado.
 - [x] Tipografia Sora + Manrope e comportamento responsivo preservando as funções existentes.
+
+## Motor jurídico de ponta (em andamento)
+- [x] Chat jurídico migrado para `openai/gpt-6-astra` com streaming, raciocínio por profundidade e ferramentas.
+- [x] Histórico confiável carregado pelo servidor e contexto documental dimensionado por modo.
+- [x] Erros terminais e retentáveis tratados sem rebaixamento silencioso de modelo.
+- [x] Cache persistente multiempresa com invalidação por versão do caso e documentos.
+- [x] Benchmark automatizado de rastreabilidade e validação real do gateway adicionados.

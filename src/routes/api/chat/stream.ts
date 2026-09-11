@@ -123,12 +123,52 @@ export const Route = createFileRoute("/api/chat/stream")({
         }
 
         const { prepareRagRun, persistChatTurn } = await import("@/lib/chat-rag.server");
-        const { chatCompleteStream } = await import("@/lib/ai.server");
+        const { legalChatStream, removeNullArguments } = await import("@/lib/legal-ai.server");
         const { runWithUsageContext } = await import("@/lib/ai-usage.server");
         type ChatMessage = import("@/lib/ai.server").ChatMessage;
 
         const encoder = new TextEncoder();
         const abortSignal = request.signal;
+
+        let hasPriorHistory = false;
+        if (body.thread_id) {
+          const { data: thread } = await auth.supabase
+            .from("ai_chat_threads")
+            .select("id, case_id")
+            .eq("id", body.thread_id)
+            .eq("case_id", body.case_id)
+            .eq("organization_id", auth.organizationId)
+            .maybeSingle();
+          if (!thread) return new Response("Conversa não encontrada neste caso.", { status: 404 });
+          const { data: persistedMessages, error: historyError } = await auth.supabase
+            .from("ai_chat_messages")
+            .select("role, content")
+            .eq("thread_id", body.thread_id)
+            .eq("organization_id", auth.organizationId)
+            .order("created_at", { ascending: true });
+          if (historyError) return new Response(historyError.message, { status: 500 });
+          hasPriorHistory = (persistedMessages ?? []).length > 0;
+          body.history = (persistedMessages ?? []).map((message) => ({
+            role: message.role as "user" | "assistant",
+            content: message.content,
+          }));
+        } else {
+          body.history = [];
+          const { data: createdThread, error: createThreadError } = await auth.supabase
+            .from("ai_chat_threads")
+            .insert({
+              case_id: body.case_id,
+              organization_id: auth.organizationId,
+              created_by_user_id: auth.userId,
+              title: "Nova conversa",
+            })
+            .select("id")
+            .single();
+          if (createThreadError || !createdThread) {
+            return new Response(createThreadError?.message ?? "Não foi possível iniciar a conversa.", { status: 500 });
+          }
+          body.thread_id = createdThread.id;
+        }
 
         const sessionId =
           (globalThis.crypto?.randomUUID?.() as string | undefined) ??
@@ -198,22 +238,79 @@ export const Route = createFileRoute("/api/chat/stream")({
               });
               if (abortSignal.aborted) return;
 
+              const { buildLegalCacheKey, getLegalCache, isSafeLegalCacheQuestion, setLegalCache } =
+                await import("@/lib/legal-response-cache.server");
+              const cacheEligible = !hasPriorHistory && isSafeLegalCacheQuestion(
+                body.question,
+                Boolean(body.images?.length),
+              );
+              const cacheKey = cacheEligible
+                ? await buildLegalCacheKey({
+                    organizationId: auth.organizationId,
+                    caseId: body.case_id,
+                    question: body.question,
+                    selectedDocIds: run.selectedDocumentIds,
+                    documentVersion: run.documentVersion,
+                    tier: run.tier,
+                  })
+                : null;
+              const cached = cacheKey
+                ? await getLegalCache({ supabase: auth.supabase, organizationId: auth.organizationId, key: cacheKey })
+                : null;
+              if (cached && body.thread_id) {
+                send("citations", { citations: cached.citations });
+                for (let index = 0; index < cached.content.length; index += 48) {
+                  send("token", { text: cached.content.slice(index, index + 48) });
+                }
+                await persistChatTurn({
+                  supabase: auth.supabase,
+                  userId: auth.userId,
+                  organizationId: auth.organizationId,
+                  threadId: body.thread_id,
+                  question: body.question,
+                  images: body.images,
+                  tier: run.tier,
+                  content: cached.content,
+                  toolSteps: [],
+                  citations: cached.citations,
+                  inputKind: body.input_kind,
+                  audioPath: body.audio_path ?? null,
+                  audioDurationMs: body.audio_duration_ms ?? null,
+                });
+                send("done", {
+                  answer: cached.content,
+                  citations: cached.citations,
+                  steps: [],
+                  thread_id: body.thread_id,
+                  cached: true,
+                });
+                return;
+              }
+
               send("citations", { citations: run.citations });
 
 
               const convo: ChatMessage[] = [...run.messages];
               const steps: { name: string; args: unknown; result: unknown }[] = [];
               let finalContent = "";
+              let reasoningSummary = "";
+              let gatewayRunId = request.headers.get("X-Lovable-AIG-Run-ID") ?? undefined;
               const maxSteps = 6;
 
               for (let i = 0; i < maxSteps; i++) {
                 if (abortSignal.aborted) break;
-                const r = await chatCompleteStream(convo, {
-                  model: run.model,
-                  temperature: 0.2,
+                const r = await legalChatStream(convo, {
+                  depth: run.tier,
                   tools: run.tools,
                   signal: abortSignal,
                   onDelta: (delta) => send("token", { text: delta }),
+                  onReasoningDelta: (delta) => {
+                    reasoningSummary += delta;
+                    send("reasoning", { text: delta });
+                  },
+                  initialRunId: gatewayRunId,
+                  onRunId: (runId) => { gatewayRunId = runId; },
+                  feature: "legal_chat",
                 });
                 if (abortSignal.aborted) break;
                 if (!r.tool_calls || r.tool_calls.length === 0) {
@@ -238,7 +335,7 @@ export const Route = createFileRoute("/api/chat/stream")({
                   if (abortSignal.aborted) break;
                   let args: Record<string, unknown> = {};
                   try {
-                    args = JSON.parse(tc.function.arguments || "{}");
+                    args = removeNullArguments(JSON.parse(tc.function.arguments || "{}")) as Record<string, unknown>;
                   } catch {
                     args = {};
                   }
@@ -267,11 +364,17 @@ export const Route = createFileRoute("/api/chat/stream")({
               if (!abortSignal.aborted && !finalContent && steps.length > 0) {
                 // Última tentativa forçando resposta final sem tools
                 const generatedDocument = hasGeneratedDocument(steps);
-                const final = await chatCompleteStream(convo, {
-                  model: run.model,
-                  temperature: 0.2,
+                const final = await legalChatStream(convo, {
+                  depth: run.tier,
                   signal: abortSignal,
                   onDelta: generatedDocument ? undefined : (delta) => send("token", { text: delta }),
+                  onReasoningDelta: (delta) => {
+                    reasoningSummary += delta;
+                    send("reasoning", { text: delta });
+                  },
+                  initialRunId: gatewayRunId,
+                  onRunId: (runId) => { gatewayRunId = runId; },
+                  feature: "legal_chat_final",
                 });
                 finalContent = final.content;
               }
@@ -307,22 +410,7 @@ export const Route = createFileRoute("/api/chat/stream")({
                 result_json: JSON.stringify(s.result),
               }));
 
-              let persistedThreadId: string | null = body.thread_id ?? null;
-              // Sem conversa recebida, cria uma agora: o histórico do caso
-              // precisa ficar salvo mesmo no primeiro envio.
-              if (!persistedThreadId && !abortSignal.aborted) {
-                const { data: createdThread } = await auth.supabase
-                  .from("ai_chat_threads")
-                  .insert({
-                    case_id: body.case_id,
-                    organization_id: auth.organizationId,
-                    created_by_user_id: auth.userId,
-                    title: "Nova conversa",
-                  })
-                  .select("id")
-                  .single();
-                persistedThreadId = createdThread?.id ?? null;
-              }
+              const persistedThreadId: string | null = body.thread_id ?? null;
               if (persistedThreadId && !abortSignal.aborted) {
                 await persistChatTurn({
                   supabase: auth.supabase,
@@ -340,6 +428,18 @@ export const Route = createFileRoute("/api/chat/stream")({
                   audioDurationMs: body.audio_duration_ms ?? null,
                 });
               }
+              if (cacheKey && steps.length === 0 && finalContent && !abortSignal.aborted) {
+                await setLegalCache({
+                  supabase: auth.supabase,
+                  organizationId: auth.organizationId,
+                  caseId: body.case_id,
+                  key: cacheKey,
+                  documentVersion: run.documentVersion,
+                  tier: run.tier,
+                  content: finalContent,
+                  citations: run.citations,
+                });
+              }
 
               if (!abortSignal.aborted) {
                 send("done", {
@@ -350,6 +450,7 @@ export const Route = createFileRoute("/api/chat/stream")({
                   sufficiency: run.sufficiency,
                   steps: toolSteps,
                   thread_id: persistedThreadId,
+                  reasoning_summary: reasoningSummary || undefined,
                 });
               } else {
                 send("aborted", { partial: finalContent });

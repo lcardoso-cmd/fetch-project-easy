@@ -21,6 +21,8 @@ const PRICING: Record<string, Price> = {
   "openai/gpt-5": { in: 1.25, out: 10.0 },
   "openai/gpt-5-mini": { in: 0.25, out: 2.0 },
   "openai/gpt-5-nano": { in: 0.05, out: 0.4 },
+  // Catálogo do Lovable AI Gateway, consultado em 11/09/2026.
+  "openai/gpt-6-astra": { in: 10.0, out: 50.0 },
   // Embeddings (só entrada)
   "openai/text-embedding-3-small": { in: 0.02, out: 0 },
   "openai/text-embedding-3-large": { in: 0.13, out: 0 },
