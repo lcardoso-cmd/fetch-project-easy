@@ -236,6 +236,7 @@ export function CaseJurisMindPanel({
           />
           <div className="min-h-0 flex-1 overflow-hidden">
             <JurisMindChat
+              key={effectiveThreadId ?? "new-conversation"}
               fullscreen
               caseId={caseId}
               initialPrompt={initialPrompt}
