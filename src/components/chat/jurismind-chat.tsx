@@ -1724,13 +1724,13 @@ export function JurisMindChat({
               ))}
             </dl>
           </section>
-          {caseInfo.parties.length > 0 && (
+          {(caseInfo.parties?.length ?? 0) > 0 && (
             <section className="mt-6 border-t pt-5">
               <h3 className="flex items-center gap-2 font-heading text-base font-semibold">
                 <Users className="h-4 w-4" /> Partes envolvidas
               </h3>
               <ul className="mt-3 space-y-3">
-                {caseInfo.parties.map((party, index) => (
+                {(caseInfo.parties ?? []).map((party, index) => (
                   <li key={`${party.role}-${index}`} className="grid grid-cols-[7rem_minmax(0,1fr)] gap-3 text-sm">
                     <span className="font-medium text-muted-foreground">{capitalize(party.role)}</span>
                     <span className="break-words text-foreground">{party.name}</span>
