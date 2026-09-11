@@ -6,6 +6,7 @@ import remarkGfm from "remark-gfm";
 
 import { getThreadMessages, getMessageAudioUrl } from "@/lib/threads.functions";
 import { getDocumentUrl } from "@/lib/documents.functions";
+import { decideCaseUpdateProposal, getCaseUpdateProposalStatus } from "@/lib/case-updates.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -68,6 +69,9 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   Users,
+  CheckCircle2,
+  ExternalLink,
+  Gavel,
 } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
@@ -146,6 +150,26 @@ interface JurisprudenceRef {
   consulted_at: string;
 }
 
+interface ProcessConsultationResult {
+  kind: "process_consultation";
+  ok: boolean;
+  proposal_id?: string;
+  proposal_status?: "pending" | "applied" | "rejected";
+  cnj: string;
+  consulted_at: string;
+  court?: string | null;
+  degree?: string | null;
+  class_name?: string | null;
+  subjects?: string[];
+  unit_name?: string | null;
+  movements?: Array<{ date: string | null; name: string; complement: string | null; source: string; source_url: string | null }>;
+  total_movements?: number;
+  changes?: Array<{ field: string; label: string; current: string | null; proposed: string }>;
+  sources?: Array<{ name: string; url: string; status: "ok" | "unavailable"; detail?: string }>;
+  warnings?: string[];
+  error?: string;
+}
+
 function parseToolResult(step: ToolStep): {
   kind?: string;
   titulo?: string;
@@ -159,6 +183,19 @@ function parseToolResult(step: ToolStep): {
   query?: string;
   consulted_at?: string;
   results?: JurisprudenceRef[];
+  proposal_id?: string;
+  proposal_status?: "pending" | "applied" | "rejected";
+  cnj?: string;
+  court?: string | null;
+  degree?: string | null;
+  class_name?: string | null;
+  subjects?: string[];
+  unit_name?: string | null;
+  movements?: ProcessConsultationResult["movements"];
+  total_movements?: number;
+  changes?: ProcessConsultationResult["changes"];
+  sources?: ProcessConsultationResult["sources"];
+  warnings?: string[];
 } | null {
   try {
     return JSON.parse(step.result_json) as {
@@ -174,6 +211,19 @@ function parseToolResult(step: ToolStep): {
       query?: string;
       consulted_at?: string;
       results?: JurisprudenceRef[];
+      proposal_id?: string;
+      proposal_status?: "pending" | "applied" | "rejected";
+      cnj?: string;
+      court?: string | null;
+      degree?: string | null;
+      class_name?: string | null;
+      subjects?: string[];
+      unit_name?: string | null;
+      movements?: ProcessConsultationResult["movements"];
+      total_movements?: number;
+      changes?: ProcessConsultationResult["changes"];
+      sources?: ProcessConsultationResult["sources"];
+      warnings?: string[];
     };
   } catch {
     return null;
@@ -1964,6 +2014,8 @@ export function JurisMindChat({
                               results={r.results ?? []}
                             />
                           );
+                        if (r.kind === "process_consultation" && r.cnj)
+                          return <ProcessConsultationCard key={idx} result={r as ProcessConsultationResult} />;
                       } catch {
                         // ignore
                       }
@@ -2428,6 +2480,141 @@ export function JurisMindChat({
   );
 }
 
+function ProcessConsultationCard({ result }: { result: ProcessConsultationResult }) {
+  const decideProposal = useServerFn(decideCaseUpdateProposal);
+  const getProposalStatus = useServerFn(getCaseUpdateProposalStatus);
+  const [status, setStatus] = useState(result.proposal_status ?? (result.proposal_id ? "pending" : undefined));
+  const [deciding, setDeciding] = useState<"applied" | "rejected" | null>(null);
+
+  useEffect(() => {
+    if (!result.proposal_id) return;
+    let active = true;
+    void getProposalStatus({ data: { proposal_id: result.proposal_id } })
+      .then((response) => {
+        if (active) setStatus(response.status);
+      })
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, [getProposalStatus, result.proposal_id]);
+
+  const decide = async (decision: "applied" | "rejected") => {
+    if (!result.proposal_id || deciding) return;
+    setDeciding(decision);
+    try {
+      const response = await decideProposal({ data: { proposal_id: result.proposal_id, decision } });
+      setStatus(response.status);
+      toast.success(decision === "applied" ? "Dados do caso atualizados." : "Atualização descartada.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Não foi possível registrar a decisão.");
+    } finally {
+      setDeciding(null);
+    }
+  };
+
+  const consulted = new Date(result.consulted_at);
+  const movements = result.movements ?? [];
+  const changes = result.changes ?? [];
+  const sources = result.sources ?? [];
+
+  return (
+    <section className="mt-3 overflow-hidden rounded-lg border border-primary/30 bg-card text-card-foreground">
+      <header className="border-b bg-primary/5 p-4">
+        <div className="flex items-start gap-3">
+          <Gavel className="mt-0.5 h-5 w-5 shrink-0 text-primary" aria-hidden />
+          <div className="min-w-0 flex-1">
+            <h3 className="text-base font-semibold">Andamento processual</h3>
+            <p className="mt-0.5 text-sm text-muted-foreground">{result.cnj}</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Consultado em {Number.isNaN(consulted.getTime()) ? result.consulted_at : consulted.toLocaleString("pt-BR")}
+            </p>
+          </div>
+          {result.ok ? (
+            <span className="inline-flex items-center gap-1 text-xs font-medium text-primary"><CheckCircle2 className="h-4 w-4" />Consulta concluída</span>
+          ) : (
+            <span className="text-xs font-medium text-destructive">Consulta incompleta</span>
+          )}
+        </div>
+      </header>
+
+      <div className="space-y-4 p-4">
+        {!result.ok ? <p className="text-sm text-destructive">{result.error ?? "A fonte oficial não retornou dados."}</p> : null}
+
+        {result.ok ? (
+          <div className="grid gap-2 text-sm sm:grid-cols-2">
+            {result.class_name ? <p><span className="text-muted-foreground">Classe:</span> {result.class_name}</p> : null}
+            {result.unit_name ? <p><span className="text-muted-foreground">Órgão:</span> {result.unit_name}</p> : null}
+            {result.court ? <p><span className="text-muted-foreground">Tribunal:</span> {result.court}{result.degree ? ` · ${result.degree}` : ""}</p> : null}
+            {result.subjects?.length ? <p><span className="text-muted-foreground">Assuntos:</span> {result.subjects.slice(0, 3).join(", ")}</p> : null}
+          </div>
+        ) : null}
+
+        {movements.length > 0 ? (
+          <details className="group" open>
+            <summary className="cursor-pointer text-sm font-semibold">Movimentações ({result.total_movements ?? movements.length})</summary>
+            <ol className="mt-3 max-h-80 space-y-3 overflow-y-auto border-l pl-4">
+              {movements.map((movement, index) => (
+                <li key={`${movement.date ?? "sem-data"}-${movement.name}-${index}`} className="text-sm">
+                  <p className="font-medium">{movement.name}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {movement.date ? new Date(movement.date).toLocaleString("pt-BR") : "Data não informada"} · {movement.source.toUpperCase()}
+                  </p>
+                  {movement.complement ? <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{movement.complement}</p> : null}
+                </li>
+              ))}
+            </ol>
+          </details>
+        ) : null}
+
+        {changes.length > 0 ? (
+          <div className="border-t pt-4">
+            <h4 className="text-sm font-semibold">Atualização proposta</h4>
+            <div className="mt-2 space-y-2">
+              {changes.map((change) => (
+                <div key={change.field} className="grid gap-1 rounded-md border p-3 text-sm sm:grid-cols-[9rem_1fr]">
+                  <span className="font-medium">{change.label}</span>
+                  <span><span className="text-muted-foreground">{change.current || "Não informado"}</span> → {change.proposed}</span>
+                </div>
+              ))}
+            </div>
+            {status === "pending" ? (
+              <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+                <Button size="sm" onClick={() => void decide("applied")} disabled={Boolean(deciding)}>
+                  {deciding === "applied" ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+                  Confirmar atualização
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => void decide("rejected")} disabled={Boolean(deciding)}>
+                  Descartar
+                </Button>
+              </div>
+            ) : (
+              <p className="mt-3 text-sm font-medium text-muted-foreground">
+                {status === "applied" ? "Atualização confirmada." : "Atualização descartada."}
+              </p>
+            )}
+          </div>
+        ) : result.ok ? <p className="text-sm text-muted-foreground">O cadastro do caso já corresponde aos dados encontrados.</p> : null}
+
+        <details className="border-t pt-3">
+          <summary className="cursor-pointer text-sm font-semibold">Fontes oficiais ({sources.length})</summary>
+          <ul className="mt-2 space-y-1.5">
+            {sources.map((source) => (
+              <li key={source.name} className="flex flex-wrap items-center gap-2 text-sm">
+                <a href={source.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 font-medium text-primary underline underline-offset-4">
+                  {source.name}<ExternalLink className="h-3.5 w-3.5" aria-hidden />
+                </a>
+                <span className="text-xs text-muted-foreground">{source.status === "ok" ? source.detail ?? "consultada" : source.detail ?? "indisponível"}</span>
+              </li>
+            ))}
+          </ul>
+        </details>
+        {(result.warnings ?? []).map((warning) => <p key={warning} className="text-xs leading-relaxed text-muted-foreground">{warning}</p>)}
+      </div>
+    </section>
+  );
+}
+
 /**
  * Jurisprudência localizada em fonte OFICIAL externa.
  * Fica separada das citações [F] dos autos para não se confundir com prova.
@@ -2518,6 +2705,7 @@ const TOOL_LABELS: Record<string, string> = {
   list_case_events: "Consultou eventos do caso",
   list_case_tasks: "Consultou tarefas do caso",
   search_jurisprudence: "Pesquisa de jurisprudência (fontes oficiais)",
+  consult_process_status: "Consulta processual oficial",
 };
 
 function friendlyToolName(name: string) {
