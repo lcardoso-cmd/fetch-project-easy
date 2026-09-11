@@ -1749,7 +1749,7 @@ export function JurisMindChat({
       ref={chatRef}
       className={cn(
         "grid h-full min-h-0 grid-cols-1 overflow-hidden bg-background lg:transition-[grid-template-columns] lg:duration-200",
-        contextOpen ? "lg:grid-cols-[23rem_minmax(0,1fr)]" : "lg:grid-cols-[0_minmax(0,1fr)]",
+        contextOpen ? "lg:grid-cols-[21rem_minmax(0,1fr)]" : "lg:grid-cols-[0_minmax(0,1fr)]",
       )}
     >
       {/* Sidebar desktop */}

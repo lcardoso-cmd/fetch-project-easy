@@ -155,7 +155,7 @@ function CaseChatFullPage() {
         <Button
           variant="outline"
           size="sm"
-          className="shrink-0 md:hidden"
+          className="shrink-0 2xl:hidden"
           onClick={() => setHistoryOpen(true)}
         >
           <History className="mr-1 h-4 w-4" />
@@ -168,7 +168,7 @@ function CaseChatFullPage() {
           caseId={caseId}
           activeThreadId={activeThreadId}
           onSelect={setActiveThreadId}
-          className="hidden w-64 shrink-0 border-r bg-muted/30 md:flex"
+          className="hidden w-64 shrink-0 border-r bg-muted/30 2xl:flex"
         />
 
         <Sheet open={historyOpen} onOpenChange={setHistoryOpen}>
