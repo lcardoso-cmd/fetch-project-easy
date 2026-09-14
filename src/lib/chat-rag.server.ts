@@ -881,3 +881,79 @@ export async function persistChatTurn(opts: {
     // silencioso
   }
 }
+
+export async function persistChatUserMessage(opts: {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabase: any;
+  userId: string;
+  organizationId: string;
+  threadId: string;
+  question: string;
+  images?: string[];
+  tier: Tier;
+  inputKind?: "text" | "voice";
+  audioPath?: string | null;
+  audioDurationMs?: number | null;
+}) {
+  const { error } = await opts.supabase.from("ai_chat_messages").insert({
+    thread_id: opts.threadId,
+    organization_id: opts.organizationId,
+    user_id: opts.userId,
+    role: "user",
+    content: opts.question,
+    images: opts.images ?? null,
+    model_tier: opts.tier,
+    input_kind: opts.inputKind ?? "text",
+    audio_path: opts.audioPath ?? null,
+    audio_duration_ms: opts.audioDurationMs ?? null,
+  });
+  if (error) throw error;
+
+  const { data: thread, error: threadError } = await opts.supabase
+    .from("ai_chat_threads")
+    .select("title")
+    .eq("id", opts.threadId)
+    .single();
+  if (threadError) throw threadError;
+  if (thread && (thread.title === "Nova conversa" || !thread.title)) {
+    const title = opts.question.replace(/\s+/g, " ").trim().slice(0, 80);
+    const { error: titleError } = await opts.supabase
+      .from("ai_chat_threads")
+      .update({ title })
+      .eq("id", opts.threadId);
+    if (titleError) throw titleError;
+  }
+}
+
+export async function persistChatAssistantMessage(opts: {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabase: any;
+  userId: string;
+  organizationId: string;
+  threadId: string;
+  tier: Tier;
+  content: string;
+  toolSteps: ToolStep[];
+  citations: Citation[];
+}) {
+  const { error } = await opts.supabase.from("ai_chat_messages").insert({
+    thread_id: opts.threadId,
+    organization_id: opts.organizationId,
+    user_id: opts.userId,
+    role: "assistant",
+    content: opts.content,
+    tool_steps: opts.toolSteps as unknown,
+    citations: opts.citations.map((citation) => ({
+      ref: citation.ref,
+      chunk_id: citation.chunk_id,
+      document_id: citation.document_id,
+      filename: citation.filename,
+      location: citation.location,
+      snippet: citation.snippet.slice(0, 600),
+      source_kind: citation.source_kind,
+      is_context: citation.is_context,
+    })) as unknown,
+    model_tier: opts.tier,
+  });
+  if (error) throw error;
+}
