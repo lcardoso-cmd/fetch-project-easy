@@ -122,7 +122,11 @@ export const Route = createFileRoute("/api/chat/stream")({
           return new Response(msg, { status: 400 });
         }
 
-        const { prepareRagRun, persistChatTurn } = await import("@/lib/chat-rag.server");
+        const {
+          prepareRagRun,
+          persistChatAssistantMessage,
+          persistChatUserMessage,
+        } = await import("@/lib/chat-rag.server");
         const { legalChatStream, removeNullArguments } = await import("@/lib/legal-ai.server");
         const { runWithUsageContext } = await import("@/lib/ai-usage.server");
         type ChatMessage = import("@/lib/ai.server").ChatMessage;
@@ -131,6 +135,7 @@ export const Route = createFileRoute("/api/chat/stream")({
         const abortSignal = request.signal;
 
         let hasPriorHistory = false;
+        let createdThreadId: string | null = null;
         if (body.thread_id) {
           const { data: thread } = await auth.supabase
             .from("ai_chat_threads")
@@ -168,6 +173,33 @@ export const Route = createFileRoute("/api/chat/stream")({
             return new Response(createThreadError?.message ?? "Não foi possível iniciar a conversa.", { status: 500 });
           }
           body.thread_id = createdThread.id;
+          createdThreadId = createdThread.id;
+        }
+
+        const persistedThreadId = body.thread_id;
+        try {
+          await persistChatUserMessage({
+            supabase: auth.supabase,
+            userId: auth.userId,
+            organizationId: auth.organizationId,
+            threadId: persistedThreadId,
+            question: body.question,
+            images: body.images,
+            tier: body.model_tier ?? "fast",
+            inputKind: body.input_kind,
+            audioPath: body.audio_path ?? null,
+            audioDurationMs: body.audio_duration_ms ?? null,
+          });
+        } catch (error) {
+          if (createdThreadId) {
+            await auth.supabase
+              .from("ai_chat_threads")
+              .delete()
+              .eq("id", createdThreadId)
+              .eq("organization_id", auth.organizationId);
+          }
+          const message = error instanceof Error ? error.message : "Não foi possível salvar a pergunta.";
+          return new Response(message, { status: 500 });
         }
 
         const sessionId =
@@ -229,7 +261,7 @@ export const Route = createFileRoute("/api/chat/stream")({
             abortSignal.addEventListener("abort", onAbort, { once: true });
 
             try {
-              send("session", { session_id: sessionId });
+              send("session", { session_id: sessionId, thread_id: persistedThreadId });
               const run = await prepareRagRun({
                 supabase: auth.supabase,
                 userId: auth.userId,
@@ -257,31 +289,26 @@ export const Route = createFileRoute("/api/chat/stream")({
               const cached = cacheKey
                 ? await getLegalCache({ supabase: auth.supabase, organizationId: auth.organizationId, key: cacheKey })
                 : null;
-              if (cached && body.thread_id) {
+              if (cached) {
                 send("citations", { citations: cached.citations });
                 for (let index = 0; index < cached.content.length; index += 48) {
                   send("token", { text: cached.content.slice(index, index + 48) });
                 }
-                await persistChatTurn({
+                await persistChatAssistantMessage({
                   supabase: auth.supabase,
                   userId: auth.userId,
                   organizationId: auth.organizationId,
-                  threadId: body.thread_id,
-                  question: body.question,
-                  images: body.images,
+                  threadId: persistedThreadId,
                   tier: run.tier,
                   content: cached.content,
                   toolSteps: [],
                   citations: cached.citations,
-                  inputKind: body.input_kind,
-                  audioPath: body.audio_path ?? null,
-                  audioDurationMs: body.audio_duration_ms ?? null,
                 });
                 send("done", {
                   answer: cached.content,
                   citations: cached.citations,
                   steps: [],
-                  thread_id: body.thread_id,
+                  thread_id: persistedThreadId,
                   cached: true,
                 });
                 return;
@@ -410,22 +437,16 @@ export const Route = createFileRoute("/api/chat/stream")({
                 result_json: JSON.stringify(s.result),
               }));
 
-              const persistedThreadId: string | null = body.thread_id ?? null;
-              if (persistedThreadId && !abortSignal.aborted) {
-                await persistChatTurn({
+              if (!abortSignal.aborted) {
+                await persistChatAssistantMessage({
                   supabase: auth.supabase,
                   userId: auth.userId,
                   organizationId: auth.organizationId,
                   threadId: persistedThreadId,
-                  question: body.question,
-                  images: body.images,
                   tier: run.tier,
                   content: finalContent,
                   toolSteps,
                   citations: run.citations,
-                  inputKind: body.input_kind,
-                  audioPath: body.audio_path ?? null,
-                  audioDurationMs: body.audio_duration_ms ?? null,
                 });
               }
               if (cacheKey && steps.length === 0 && finalContent && !abortSignal.aborted) {
@@ -485,6 +506,7 @@ export const Route = createFileRoute("/api/chat/stream")({
             "Cache-Control": "no-cache, no-transform",
             Connection: "keep-alive",
             "X-Accel-Buffering": "no",
+            "X-Chat-Thread-ID": persistedThreadId,
           },
         });
       },

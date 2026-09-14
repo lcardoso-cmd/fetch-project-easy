@@ -1409,6 +1409,7 @@ export function JurisMindChat({
       });
     };
 
+    let streamThreadId: string | null = threadId ?? null;
     try {
       const { supabase } = await import("@/integrations/supabase/client");
       const { data: sess } = await supabase.auth.getSession();
@@ -1464,6 +1465,7 @@ export function JurisMindChat({
         const txt = await res.text().catch(() => "");
         throw new Error(txt || `HTTP ${res.status}`);
       }
+      streamThreadId = res.headers.get("X-Chat-Thread-ID") ?? streamThreadId;
 
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
@@ -1478,7 +1480,6 @@ export function JurisMindChat({
       };
       let doneInfo: DoneInfo | null = null;
       let streamError: string | null = null;
-
       // Parser simples de SSE (event: X\ndata: {...}\n\n)
       const handleEvent = (event: string, dataStr: string) => {
         let payload: unknown;
@@ -1487,7 +1488,9 @@ export function JurisMindChat({
         } catch {
           return;
         }
-        if (event === "token") {
+        if (event === "session") {
+          streamThreadId = (payload as { thread_id?: string | null }).thread_id ?? streamThreadId;
+        } else if (event === "token") {
           const t = (payload as { text?: string }).text;
           if (t) appendToken(t);
         } else if (event === "reasoning") {
@@ -1546,9 +1549,7 @@ export function JurisMindChat({
           citations: finalDone.citations ?? collectedCitations,
           steps: dedupeGeneratedDocumentSteps(finalDone.steps ?? collectedSteps),
         });
-        if (finalDone.thread_id && finalDone.thread_id !== threadId) {
-          onThreadCreated?.(finalDone.thread_id);
-        }
+        streamThreadId = finalDone.thread_id ?? streamThreadId;
       }
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
@@ -1560,6 +1561,9 @@ export function JurisMindChat({
     } finally {
       abortRef.current = null;
       setBusy(false);
+      if (streamThreadId && streamThreadId !== threadId) {
+        onThreadCreated?.(streamThreadId);
+      }
       setTimeout(() => inputRef.current?.focus(), 50);
     }
   };

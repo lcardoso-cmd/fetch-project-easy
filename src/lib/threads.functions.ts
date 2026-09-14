@@ -42,12 +42,12 @@ export const listThreads = createServerFn({ method: "GET" })
   .handler(async ({ data, context }) => {
     const { data: rows, error } = await context.supabase
       .from("ai_chat_threads")
-      .select("id, title, case_id, last_message_at, created_at")
+      .select("id, title, case_id, last_message_at, created_at, ai_chat_messages!inner(id)")
       .eq("case_id", data.case_id)
       .eq("organization_id", context.organizationId)
       .order("last_message_at", { ascending: false });
     if (error) throw error;
-    return (rows ?? []) as AiThread[];
+    return (rows ?? []).map(({ ai_chat_messages: _messages, ...thread }) => thread) as AiThread[];
   });
 
 export const createThread = createServerFn({ method: "POST" })
@@ -159,13 +159,16 @@ export const ensureThread = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { data: existing, error: listErr } = await context.supabase
       .from("ai_chat_threads")
-      .select("id, title, case_id, last_message_at, created_at")
+      .select("id, title, case_id, last_message_at, created_at, ai_chat_messages!inner(id)")
       .eq("case_id", data.case_id)
       .eq("organization_id", context.organizationId)
       .order("last_message_at", { ascending: false })
       .limit(1);
     if (listErr) throw listErr;
-    if (existing && existing.length > 0) return existing[0] as AiThread;
+    if (existing && existing.length > 0) {
+      const { ai_chat_messages: _messages, ...thread } = existing[0];
+      return thread as AiThread;
+    }
 
     const { data: row, error } = await context.supabase
       .from("ai_chat_threads")
