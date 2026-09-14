@@ -492,6 +492,7 @@ export const Route = createFileRoute("/api/chat/stream")({
             "Cache-Control": "no-cache, no-transform",
             Connection: "keep-alive",
             "X-Accel-Buffering": "no",
+            "X-Chat-Thread-ID": persistedThreadId,
           },
         });
       },

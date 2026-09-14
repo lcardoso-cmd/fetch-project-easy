@@ -1465,6 +1465,7 @@ export function JurisMindChat({
         const txt = await res.text().catch(() => "");
         throw new Error(txt || `HTTP ${res.status}`);
       }
+      streamThreadId = res.headers.get("X-Chat-Thread-ID") ?? streamThreadId;
 
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
