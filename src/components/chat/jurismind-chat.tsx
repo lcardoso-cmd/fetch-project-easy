@@ -465,6 +465,7 @@ function VoiceMessagePlayback({
     if (url || !messageId) return;
     setLoading(true);
     setError(null);
+    let streamThreadId: string | null = threadId ?? null;
     try {
       const res = await getAudioUrl({ data: { message_id: messageId } });
       setUrl(res.url);
@@ -1478,8 +1479,6 @@ export function JurisMindChat({
       };
       let doneInfo: DoneInfo | null = null;
       let streamError: string | null = null;
-      let streamThreadId: string | null = threadId;
-
       // Parser simples de SSE (event: X\ndata: {...}\n\n)
       const handleEvent = (event: string, dataStr: string) => {
         let payload: unknown;
