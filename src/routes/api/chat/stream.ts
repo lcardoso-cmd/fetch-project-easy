@@ -135,6 +135,7 @@ export const Route = createFileRoute("/api/chat/stream")({
         const abortSignal = request.signal;
 
         let hasPriorHistory = false;
+        let createdThreadId: string | null = null;
         if (body.thread_id) {
           const { data: thread } = await auth.supabase
             .from("ai_chat_threads")
@@ -172,21 +173,34 @@ export const Route = createFileRoute("/api/chat/stream")({
             return new Response(createThreadError?.message ?? "Não foi possível iniciar a conversa.", { status: 500 });
           }
           body.thread_id = createdThread.id;
+          createdThreadId = createdThread.id;
         }
 
         const persistedThreadId = body.thread_id;
-        await persistChatUserMessage({
-          supabase: auth.supabase,
-          userId: auth.userId,
-          organizationId: auth.organizationId,
-          threadId: persistedThreadId,
-          question: body.question,
-          images: body.images,
-          tier: body.model_tier ?? "fast",
-          inputKind: body.input_kind,
-          audioPath: body.audio_path ?? null,
-          audioDurationMs: body.audio_duration_ms ?? null,
-        });
+        try {
+          await persistChatUserMessage({
+            supabase: auth.supabase,
+            userId: auth.userId,
+            organizationId: auth.organizationId,
+            threadId: persistedThreadId,
+            question: body.question,
+            images: body.images,
+            tier: body.model_tier ?? "fast",
+            inputKind: body.input_kind,
+            audioPath: body.audio_path ?? null,
+            audioDurationMs: body.audio_duration_ms ?? null,
+          });
+        } catch (error) {
+          if (createdThreadId) {
+            await auth.supabase
+              .from("ai_chat_threads")
+              .delete()
+              .eq("id", createdThreadId)
+              .eq("organization_id", auth.organizationId);
+          }
+          const message = error instanceof Error ? error.message : "Não foi possível salvar a pergunta.";
+          return new Response(message, { status: 500 });
+        }
 
         const sessionId =
           (globalThis.crypto?.randomUUID?.() as string | undefined) ??
