@@ -465,7 +465,6 @@ function VoiceMessagePlayback({
     if (url || !messageId) return;
     setLoading(true);
     setError(null);
-    let streamThreadId: string | null = threadId ?? null;
     try {
       const res = await getAudioUrl({ data: { message_id: messageId } });
       setUrl(res.url);
@@ -1410,6 +1409,7 @@ export function JurisMindChat({
       });
     };
 
+    let streamThreadId: string | null = threadId ?? null;
     try {
       const { supabase } = await import("@/integrations/supabase/client");
       const { data: sess } = await supabase.auth.getSession();
