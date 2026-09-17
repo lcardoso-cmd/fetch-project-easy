@@ -15,6 +15,13 @@
       "when": 1789653317250,
       "tag": "0001_document_folder_descendants",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1789653881761,
+      "tag": "0002_harden_b2b_attachment_visibility",
+      "breakpoints": true
     }
   ]
 }
