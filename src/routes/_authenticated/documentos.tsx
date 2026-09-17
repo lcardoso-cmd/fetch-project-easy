@@ -23,6 +23,16 @@ import { DocumentFolderTree, DocumentMoveButton } from "@/components/documents/d
 
 export const Route = createFileRoute("/_authenticated/documentos")({
   component: LibraryPage,
+  head: () => ({
+    meta: [
+      { title: "Biblioteca de documentos | JurisMind" },
+      { name: "description", content: "Organize e consulte os documentos jurídicos do escritório por caso e pasta." },
+      { property: "og:title", content: "Biblioteca de documentos | JurisMind" },
+      { property: "og:description", content: "Organize e consulte os documentos jurídicos do escritório por caso e pasta." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+    ],
+  }),
 });
 
 /** Status de processamento em linguagem compreensível. */
