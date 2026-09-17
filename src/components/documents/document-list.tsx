@@ -918,7 +918,7 @@ export function DocumentList({
                   </div>
                 ) : (
                   renderRow(g.parts[0]!)
-                ),
+                )
               }
             />
           </>
