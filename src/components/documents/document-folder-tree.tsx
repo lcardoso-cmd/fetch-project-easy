@@ -1,7 +1,7 @@
 import { useMemo, useState, type ReactNode } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ChevronDown, ChevronRight, Folder, FolderOpen, FolderPlus, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
+import { ChevronDown, ChevronRight, Folder, FolderOpen, FolderPlus, FolderSymlink, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import {
   createDocumentFolder, deleteDocumentFolder, listDocumentFolders,
-  renameDocumentFolder, type DocumentFolder,
+  moveDocument, renameDocumentFolder, type DocumentFolder,
 } from "@/lib/document-folders.functions";
 
 type FolderDoc = { id: string; folder_id?: string | null };
@@ -20,7 +20,7 @@ export function DocumentFolderTree<T extends FolderDoc>({
   renderDocument,
   emptyMessage = "Nenhum documento nesta pasta.",
 }: {
-  caseId: string | null;
+  caseId?: string | null;
   documents: T[];
   renderDocument: (document: T) => ReactNode;
   emptyMessage?: string;
@@ -30,10 +30,10 @@ export function DocumentFolderTree<T extends FolderDoc>({
   const createFn = useServerFn(createDocumentFolder);
   const renameFn = useServerFn(renameDocumentFolder);
   const deleteFn = useServerFn(deleteDocumentFolder);
-  const key = ["document-folders", caseId ?? "library"];
+  const key = ["document-folders", caseId === undefined ? "all" : (caseId ?? "library")];
   const { data: folders = [] } = useQuery({
     queryKey: key,
-    queryFn: () => listFn({ data: { case_id: caseId } }),
+    queryFn: () => listFn({ data: caseId === undefined ? {} : { case_id: caseId } }),
   });
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
@@ -58,7 +58,7 @@ export function DocumentFolderTree<T extends FolderDoc>({
     const name = window.prompt("Nome da nova pasta:")?.trim();
     if (!name) return;
     try {
-      const folder = await createFn({ data: { case_id: caseId, parent_folder_id: parentId, name } });
+      const folder = await createFn({ data: { case_id: caseId ?? null, parent_folder_id: parentId, name } });
       if (parentId) setExpanded((current) => new Set(current).add(parentId));
       toast.success(`Pasta “${folder.name}” criada`);
       await refresh();
@@ -136,4 +136,33 @@ export function DocumentFolderTree<T extends FolderDoc>({
       {folders.length === 0 && rootDocs.length === 0 && <p className="p-6 text-center text-sm text-muted-foreground">{emptyMessage}</p>}
     </div>
   </div>;
+}
+
+export function DocumentMoveButton({ documentId, caseId }: { documentId: string; caseId?: string }) {
+  const queryClient = useQueryClient();
+  const listFn = useServerFn(listDocumentFolders);
+  const moveFn = useServerFn(moveDocument);
+  const { data: folders = [] } = useQuery({
+    queryKey: ["document-folders", caseId ?? "all"],
+    queryFn: () => listFn({ data: caseId ? { case_id: caseId } : {} }),
+  });
+  const move = async (folderId: string | null) => {
+    try {
+      await moveFn({ data: { document_id: documentId, folder_id: folderId } });
+      toast.success("Documento movido");
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["documents-all"] }),
+        ...(caseId ? [queryClient.invalidateQueries({ queryKey: ["documents", caseId] })] : []),
+      ]);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Não foi possível mover o documento");
+    }
+  };
+  return <DropdownMenu>
+    <DropdownMenuTrigger asChild><Button type="button" variant="ghost" size="icon" className="size-8" aria-label="Mover documento"><FolderSymlink className="size-4" /></Button></DropdownMenuTrigger>
+    <DropdownMenuContent align="end" className="max-h-72 overflow-auto">
+      <DropdownMenuItem onSelect={() => void move(null)}>Sem pasta</DropdownMenuItem>
+      {folders.filter((folder) => !folder.case_id || !caseId || folder.case_id === caseId).map((folder) => <DropdownMenuItem key={folder.id} onSelect={() => void move(folder.id)}><Folder className="size-4" />{folder.name}</DropdownMenuItem>)}
+    </DropdownMenuContent>
+  </DropdownMenu>;
 }
