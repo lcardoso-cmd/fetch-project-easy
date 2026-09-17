@@ -53,6 +53,7 @@ import { baseDocumentName } from "@/lib/documents/naming";
 import { ConfirmActionButton } from "./confirm-action-button";
 import { UploadDialog } from "./upload-dialog";
 import { DocumentAuditDialog } from "./document-audit-dialog";
+import { DocumentFolderTree, DocumentMoveButton } from "./document-folder-tree";
 
 export interface DocItem {
   id: string;
@@ -66,6 +67,8 @@ export interface DocItem {
   part_count?: number | null;
   page_offset?: number | null;
   page_count?: number | null;
+  folder_id?: string | null;
+  relative_path?: string | null;
 }
 
 function formatBytes(b: number | null) {
@@ -752,6 +755,7 @@ export function DocumentList({
             /></div>
           )}
           <div className="flex shrink-0 items-center gap-1">
+            <DocumentMoveButton documentId={d.id} caseId={caseId} />
             {(d.processing_status.startsWith("error") || d.processing_status === "empty") && (
               <Button
                 variant="ghost"
@@ -875,8 +879,10 @@ export function DocumentList({
                 {renderRow(activeDoc)}
               </div>
             )}
-            <div className="divide-y rounded-lg border">
-              {groups.map((g) =>
+            <DocumentFolderTree
+              caseId={caseId}
+              documents={groups.map((group) => ({ ...group, id: group.parts[0]?.id ?? group.key, folder_id: group.parts[0]?.folder_id ?? null }))}
+              renderDocument={(g) =>
                 g.parts.length > 1 ? (
                   <div key={g.key}>
                     <button
@@ -912,9 +918,9 @@ export function DocumentList({
                   </div>
                 ) : (
                   renderRow(g.parts[0]!)
-                ),
-              )}
-            </div>
+                )
+              }
+            />
           </>
         )}
       </CardContent>
@@ -961,6 +967,8 @@ export function DocumentList({
 
 interface DocGroup {
   key: string;
+  id?: string;
+  folder_id?: string | null;
   name: string;
   parts: DocItem[];
 }

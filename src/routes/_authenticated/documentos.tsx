@@ -19,9 +19,20 @@ import { listAllDocuments, getDocumentUrl } from "@/lib/documents.functions";
 import { getCases } from "@/lib/cases.functions";
 import { FileText, Search, Download, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
+import { DocumentFolderTree, DocumentMoveButton } from "@/components/documents/document-folder-tree";
 
 export const Route = createFileRoute("/_authenticated/documentos")({
   component: LibraryPage,
+  head: () => ({
+    meta: [
+      { title: "Biblioteca de documentos | JurisMind" },
+      { name: "description", content: "Organize e consulte os documentos jurídicos do escritório por caso e pasta." },
+      { property: "og:title", content: "Biblioteca de documentos | JurisMind" },
+      { property: "og:description", content: "Organize e consulte os documentos jurídicos do escritório por caso e pasta." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+    ],
+  }),
 });
 
 /** Status de processamento em linguagem compreensível. */
@@ -179,8 +190,7 @@ function LibraryPage() {
           }
         />
       ) : (
-        <ul className="divide-y divide-border border-y border-border ">
-          {filtered.map((d) => {
+        <DocumentFolderTree documents={filtered} renderDocument={(d) => {
             const c = caseOf(d.case_id);
             const group = statusGroup(d.processing_status);
             return (
@@ -222,6 +232,7 @@ function LibraryPage() {
                   </div>
                 </div>
                 <div className="ml-7 flex w-full shrink-0 items-center gap-1 sm:ml-0 sm:w-auto">
+                  <DocumentMoveButton documentId={d.id} caseId={d.case_id} />
                   <Button
                     variant="ghost"
                     size="sm"
@@ -241,8 +252,7 @@ function LibraryPage() {
                 </div>
               </li>
             );
-          })}
-        </ul>
+          }} />
       )}
     </div>
   );

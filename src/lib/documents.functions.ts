@@ -22,6 +22,8 @@ const UploadSchema = z.object({
   page_offset: z.number().int().min(0).optional(),
   page_count: z.number().int().min(1).optional(),
   is_split_root: z.boolean().optional(),
+  folder_id: z.string().uuid().nullable().optional(),
+  relative_path: z.string().max(1200).nullable().optional(),
 });
 
 type AuditAction =
@@ -72,7 +74,7 @@ export const listDocuments = createServerFn({ method: "GET" })
     const { data: docs, error } = await context.supabase
       .from("documents")
       .select(
-        "id, filename, file_type, file_size, processing_status, created_at, parent_document_id, split_group_id, part_index, part_count, page_offset, page_count, is_split_root",
+        "id, filename, file_type, file_size, processing_status, created_at, parent_document_id, split_group_id, part_index, part_count, page_offset, page_count, is_split_root, folder_id, relative_path",
       )
       .eq("case_id", data.case_id)
       .eq("organization_id", context.organizationId)
@@ -87,7 +89,7 @@ export const listAllDocuments = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const { data, error } = await context.supabase
       .from("documents")
-      .select("id, filename, file_type, file_size, processing_status, created_at, case_id, storage_path")
+      .select("id, filename, file_type, file_size, processing_status, created_at, case_id, storage_path, parent_document_id, split_group_id, part_index, part_count, page_offset, page_count, is_split_root, folder_id, relative_path")
       .eq("organization_id", context.organizationId)
       .order("created_at", { ascending: false });
     if (error) throw error;
@@ -162,6 +164,7 @@ export const createUploadSignedUrl = createServerFn({ method: "POST" })
         filename: z.string().min(1).max(300),
         file_type: z.string().max(160).optional(),
         file_size: z.number().int().nonnegative().optional(),
+        relative_path: z.string().max(1200).optional(),
       })
       .parse(i),
   )
@@ -175,7 +178,16 @@ export const createUploadSignedUrl = createServerFn({ method: "POST" })
 
     const safeName = sanitizeStorageFilename(data.filename);
     const folder = data.case_id ?? "_intake";
-    const path = `${context.organizationId}/${folder}/${Date.now()}-${safeName}`;
+    const safeSegments = (data.relative_path ?? "")
+      .replace(/\\/g, "/")
+      .split("/")
+      .slice(0, -1)
+      .map((segment) => segment.trim())
+      .filter((segment) => segment && segment !== "." && segment !== "..")
+      .map(sanitizeStorageFilename)
+      .slice(0, 20);
+    const nested = safeSegments.length ? `${safeSegments.join("/")}/` : "";
+    const path = `${context.organizationId}/${folder}/${nested}${Date.now()}-${safeName}`;
     const { data: signed, error } = await context.supabase.storage
       .from("documents")
       .createSignedUploadUrl(path);
@@ -236,15 +248,24 @@ export const registerDocument = createServerFn({ method: "POST" })
   .middleware([requireOrgPermission("documents.upload")])
   .inputValidator((i: unknown) => UploadSchema.parse(i))
   .handler(async ({ data, context }) => {
-    // Duplicata por content_hash
+    if (data.folder_id) {
+      const { data: folder } = await context.supabase.from("document_folders")
+        .select("id, case_id").eq("id", data.folder_id)
+        .eq("organization_id", context.organizationId).maybeSingle();
+      if (!folder || (folder.case_id && folder.case_id !== data.case_id)) {
+        throw new Error("A pasta selecionada não pertence a este caso");
+      }
+    }
+    // Duplicata por content_hash dentro da mesma pasta.
     if (data.content_hash) {
-      const { data: byHash } = await context.supabase
+      let hashQuery = context.supabase
         .from("documents")
         .select("id, filename")
         .eq("organization_id", context.organizationId)
         .eq("case_id", data.case_id)
-        .eq("content_hash", data.content_hash)
-        .maybeSingle();
+        .eq("content_hash", data.content_hash);
+      hashQuery = data.folder_id ? hashQuery.eq("folder_id", data.folder_id) : hashQuery.is("folder_id", null);
+      const { data: byHash } = await hashQuery.maybeSingle();
       if (byHash) {
         // limpa o arquivo recém enviado, já temos um igual
         if (data.storage_path) {
@@ -272,13 +293,14 @@ export const registerDocument = createServerFn({ method: "POST" })
       }
     }
     // Duplicata por nome
-    const { data: byName } = await context.supabase
+    let nameQuery = context.supabase
       .from("documents")
       .select("id, filename")
       .eq("organization_id", context.organizationId)
       .eq("case_id", data.case_id)
-      .eq("filename", data.filename)
-      .maybeSingle();
+      .eq("filename", data.filename);
+    nameQuery = data.folder_id ? nameQuery.eq("folder_id", data.folder_id) : nameQuery.is("folder_id", null);
+    const { data: byName } = await nameQuery.maybeSingle();
     if (byName) {
       if (data.storage_path) {
         await context.supabase.storage
@@ -323,6 +345,8 @@ export const registerDocument = createServerFn({ method: "POST" })
         page_offset: data.page_offset,
         page_count: data.page_count,
         is_split_root: data.is_split_root,
+        folder_id: data.folder_id ?? null,
+        relative_path: data.relative_path ?? null,
       })
       .select()
       .single();

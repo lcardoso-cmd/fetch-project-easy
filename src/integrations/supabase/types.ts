@@ -2059,6 +2059,129 @@ export type Database = {
           },
         ]
       }
+      document_folder_audit_events: {
+        Row: {
+          action: string
+          actor_user_id: string
+          case_id: string | null
+          created_at: string
+          document_id: string | null
+          folder_id: string | null
+          id: string
+          new_values: Json
+          organization_id: string
+          previous_values: Json
+        }
+        Insert: {
+          action: string
+          actor_user_id: string
+          case_id?: string | null
+          created_at?: string
+          document_id?: string | null
+          folder_id?: string | null
+          id?: string
+          new_values?: Json
+          organization_id: string
+          previous_values?: Json
+        }
+        Update: {
+          action?: string
+          actor_user_id?: string
+          case_id?: string | null
+          created_at?: string
+          document_id?: string | null
+          folder_id?: string | null
+          id?: string
+          new_values?: Json
+          organization_id?: string
+          previous_values?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_folder_audit_events_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_folder_audit_events_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_folder_audit_events_folder_id_fkey"
+            columns: ["folder_id"]
+            isOneToOne: false
+            referencedRelation: "document_folders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_folder_audit_events_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      document_folders: {
+        Row: {
+          case_id: string | null
+          created_at: string
+          created_by_user_id: string
+          id: string
+          name: string
+          organization_id: string
+          parent_folder_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          case_id?: string | null
+          created_at?: string
+          created_by_user_id: string
+          id?: string
+          name: string
+          organization_id: string
+          parent_folder_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          case_id?: string | null
+          created_at?: string
+          created_by_user_id?: string
+          id?: string
+          name?: string
+          organization_id?: string
+          parent_folder_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_folders_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_folders_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_folders_parent_folder_id_fkey"
+            columns: ["parent_folder_id"]
+            isOneToOne: false
+            referencedRelation: "document_folders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       document_image_pages: {
         Row: {
           case_id: string
@@ -2218,6 +2341,7 @@ export type Database = {
           file_size: number | null
           file_type: string
           filename: string
+          folder_id: string | null
           id: string
           is_split_root: boolean
           organization_id: string
@@ -2227,6 +2351,7 @@ export type Database = {
           part_count: number | null
           part_index: number | null
           processing_status: string
+          relative_path: string | null
           split_group_id: string | null
           storage_path: string | null
           updated_at: string
@@ -2240,6 +2365,7 @@ export type Database = {
           file_size?: number | null
           file_type: string
           filename: string
+          folder_id?: string | null
           id?: string
           is_split_root?: boolean
           organization_id: string
@@ -2249,6 +2375,7 @@ export type Database = {
           part_count?: number | null
           part_index?: number | null
           processing_status?: string
+          relative_path?: string | null
           split_group_id?: string | null
           storage_path?: string | null
           updated_at?: string
@@ -2262,6 +2389,7 @@ export type Database = {
           file_size?: number | null
           file_type?: string
           filename?: string
+          folder_id?: string | null
           id?: string
           is_split_root?: boolean
           organization_id?: string
@@ -2271,6 +2399,7 @@ export type Database = {
           part_count?: number | null
           part_index?: number | null
           processing_status?: string
+          relative_path?: string | null
           split_group_id?: string | null
           storage_path?: string | null
           updated_at?: string
@@ -2281,6 +2410,13 @@ export type Database = {
             columns: ["case_id"]
             isOneToOne: false
             referencedRelation: "cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "documents_folder_id_fkey"
+            columns: ["folder_id"]
+            isOneToOne: false
+            referencedRelation: "document_folders"
             referencedColumns: ["id"]
           },
           {
@@ -4984,6 +5120,12 @@ export type Database = {
       decide_case_update_proposal: {
         Args: { _decision: string; _proposal_id: string }
         Returns: Json
+      }
+      document_folder_descendant_ids: {
+        Args: { _folder_id: string }
+        Returns: {
+          id: string
+        }[]
       }
       fetch_chunk_neighbors: {
         Args: {

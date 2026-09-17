@@ -108,3 +108,9 @@ Fonte da verdade: organização é o cliente do SaaS. Sem migração gradual, se
 - [x] Histórico normalizado e deduplicado de movimentações por organização e caso.
 - [x] Proposta de atualização com comparação e confirmação ou descarte explícitos.
 - [x] Auditoria da decisão e aplicação restrita ao número do processo e à vara/tribunal.
+
+## Organização documental por pastas
+- [x] Seleção e arraste de pastas inteiras, preservando a estrutura de subpastas.
+- [x] Pastas gerenciáveis com criação, renomeação, movimentação e exclusão sem apagar documentos.
+- [x] Visualização hierárquica nos documentos do caso e na Biblioteca geral.
+- [x] Isolamento por organização/caso, auditoria e validação segura de caminhos.
