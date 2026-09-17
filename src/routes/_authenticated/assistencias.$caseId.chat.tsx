@@ -191,7 +191,6 @@ function CaseChatFullPage() {
 
         <div className="min-h-0 flex-1 overflow-hidden">
           <JurisMindChat
-            key={activeThreadId ?? "new-conversation"}
             fullscreen
             caseId={caseId}
             threadId={activeThreadId}
