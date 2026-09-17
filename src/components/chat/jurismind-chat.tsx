@@ -545,6 +545,7 @@ export function JurisMindChat({
   const getDocumentUrlFn = useServerFn(getDocumentUrl);
   const pendingAudioRef = useRef<{ blob: Blob; durationMs: number } | null>(null);
   const [messages, setMessages] = useState<Msg[]>([]);
+  const locallyAdoptedThreadIdRef = useRef<string | null>(null);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [search, setSearch] = useState("");
@@ -736,6 +737,11 @@ export function JurisMindChat({
 
   // Carregar histórico ao trocar de thread
   useEffect(() => {
+    if (threadId && locallyAdoptedThreadIdRef.current === threadId) {
+      locallyAdoptedThreadIdRef.current = null;
+      setHistoryLoading(false);
+      return;
+    }
     if (!threadId) {
       setMessages([]);
       setHistoryLoading(false);
@@ -1562,6 +1568,7 @@ export function JurisMindChat({
       abortRef.current = null;
       setBusy(false);
       if (streamThreadId && streamThreadId !== threadId) {
+        locallyAdoptedThreadIdRef.current = streamThreadId;
         onThreadCreated?.(streamThreadId);
       }
       setTimeout(() => inputRef.current?.focus(), 50);
