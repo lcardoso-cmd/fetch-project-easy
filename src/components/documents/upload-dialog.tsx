@@ -100,8 +100,8 @@ async function readDroppedEntry(entry: DroppedEntry, prefix = ""): Promise<File[
 
 async function filesFromDrop(dataTransfer: DataTransfer): Promise<File[]> {
   const entries = Array.from(dataTransfer.items)
-    .map((item) => (item as DataTransferItem & { webkitGetAsEntry?: () => DroppedEntry | null }).webkitGetAsEntry?.())
-    .filter((entry): entry is DroppedEntry => Boolean(entry));
+    .map((item) => (item as unknown as { webkitGetAsEntry?: () => DroppedEntry | null }).webkitGetAsEntry?.() ?? null)
+    .filter((entry) => entry !== null) as DroppedEntry[];
   if (entries.length === 0) return Array.from(dataTransfer.files);
   return (await Promise.all(entries.map((entry) => readDroppedEntry(entry)))).flat();
 }
