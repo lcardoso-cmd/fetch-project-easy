@@ -71,6 +71,41 @@ interface ExistingDoc {
   filename: string;
 }
 
+type DroppedEntry = {
+  isFile: boolean;
+  isDirectory: boolean;
+  name: string;
+  file?: (success: (file: File) => void, error?: (error: DOMException) => void) => void;
+  createReader?: () => { readEntries: (success: (entries: DroppedEntry[]) => void) => void };
+};
+
+async function readDroppedEntry(entry: DroppedEntry, prefix = ""): Promise<File[]> {
+  if (entry.isFile && entry.file) {
+    return new Promise((resolve, reject) => entry.file?.((file) => {
+      const relative = `${prefix}${file.name}`;
+      Object.defineProperty(file, "webkitRelativePath", { value: relative, configurable: true });
+      resolve([file]);
+    }, reject));
+  }
+  if (!entry.isDirectory || !entry.createReader) return [];
+  const reader = entry.createReader();
+  const children: DroppedEntry[] = [];
+  while (true) {
+    const batch = await new Promise<DroppedEntry[]>((resolve) => reader.readEntries(resolve));
+    if (batch.length === 0) break;
+    children.push(...batch);
+  }
+  return (await Promise.all(children.map((child) => readDroppedEntry(child, `${prefix}${entry.name}/`)))).flat();
+}
+
+async function filesFromDrop(dataTransfer: DataTransfer): Promise<File[]> {
+  const entries = Array.from(dataTransfer.items)
+    .map((item) => (item as DataTransferItem & { webkitGetAsEntry?: () => DroppedEntry | null }).webkitGetAsEntry?.())
+    .filter((entry): entry is DroppedEntry => Boolean(entry));
+  if (entries.length === 0) return Array.from(dataTransfer.files);
+  return (await Promise.all(entries.map((entry) => readDroppedEntry(entry)))).flat();
+}
+
 export function UploadDialog({
   caseId,
   existingDocuments,
@@ -196,7 +231,9 @@ export function UploadDialog({
             onDrop={(e) => {
               e.preventDefault();
               setDragOver(false);
-              addFiles(Array.from(e.dataTransfer.files));
+              void filesFromDrop(e.dataTransfer).then(addFiles).catch(() => {
+                toast.error("Não foi possível ler esta pasta. Use “Selecionar pasta”.");
+              });
             }}
           >
             <DialogHeader>

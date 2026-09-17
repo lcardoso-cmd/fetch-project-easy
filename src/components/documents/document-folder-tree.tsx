@@ -6,10 +6,11 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+  DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
   createDocumentFolder, deleteDocumentFolder, listDocumentFolders,
-  moveDocument, renameDocumentFolder, type DocumentFolder,
+  moveDocument, moveDocumentFolder, renameDocumentFolder, type DocumentFolder,
 } from "@/lib/document-folders.functions";
 
 type FolderDoc = { id: string; folder_id?: string | null };
@@ -30,6 +31,7 @@ export function DocumentFolderTree<T extends FolderDoc>({
   const createFn = useServerFn(createDocumentFolder);
   const renameFn = useServerFn(renameDocumentFolder);
   const deleteFn = useServerFn(deleteDocumentFolder);
+  const moveFolderFn = useServerFn(moveDocumentFolder);
   const key = ["document-folders", caseId === undefined ? "all" : (caseId ?? "library")];
   const { data: folders = [] } = useQuery({
     queryKey: key,
@@ -90,6 +92,16 @@ export function DocumentFolderTree<T extends FolderDoc>({
     }
   };
 
+  const moveFolder = async (folder: DocumentFolder, parentId: string | null) => {
+    try {
+      await moveFolderFn({ data: { id: folder.id, parent_folder_id: parentId } });
+      toast.success("Pasta movida");
+      await refresh();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Não foi possível mover a pasta");
+    }
+  };
+
   const renderFolder = (folder: DocumentFolder, depth: number): ReactNode => {
     const open = expanded.has(folder.id);
     const nestedFolders = children.get(folder.id) ?? [];
@@ -111,6 +123,15 @@ export function DocumentFolderTree<T extends FolderDoc>({
             <DropdownMenuContent align="end">
               <DropdownMenuItem onSelect={() => void create(folder.id)}><FolderPlus />Nova subpasta</DropdownMenuItem>
               <DropdownMenuItem onSelect={() => void rename(folder)}><Pencil />Renomear</DropdownMenuItem>
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger><FolderSymlink />Mover para</DropdownMenuSubTrigger>
+                <DropdownMenuSubContent className="max-h-72 overflow-auto">
+                  <DropdownMenuItem onSelect={() => void moveFolder(folder, null)}>Nível principal</DropdownMenuItem>
+                  {folders.filter((target) => target.id !== folder.id && target.case_id === folder.case_id).map((target) => (
+                    <DropdownMenuItem key={target.id} onSelect={() => void moveFolder(folder, target.id)}><Folder className="size-4" />{target.name}</DropdownMenuItem>
+                  ))}
+                </DropdownMenuSubContent>
+              </DropdownMenuSub>
               <DropdownMenuItem className="text-destructive" onSelect={() => void remove(folder)}><Trash2 />Excluir pasta</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
