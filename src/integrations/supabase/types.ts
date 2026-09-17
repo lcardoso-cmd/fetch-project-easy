@@ -5121,6 +5121,12 @@ export type Database = {
         Args: { _decision: string; _proposal_id: string }
         Returns: Json
       }
+      document_folder_descendant_ids: {
+        Args: { _folder_id: string }
+        Returns: {
+          id: string
+        }[]
+      }
       fetch_chunk_neighbors: {
         Args: {
           chunk_indexes: number[]
