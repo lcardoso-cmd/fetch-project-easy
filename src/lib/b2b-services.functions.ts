@@ -285,7 +285,7 @@ const RegisterAttSchema = z.object({
   storage_path: z.string().min(1),
   mime_type: z.string().max(160).nullable().optional(),
   size_bytes: z.number().int().nonnegative().nullable().optional(),
-  visibility: z.enum(["client", "internal"]).default("client"),
+  visibility: z.enum(["client", "internal"]),
 });
 
 export const registerB2bAttachment = createServerFn({ method: "POST" })
