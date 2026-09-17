@@ -29,6 +29,7 @@ import {
   registerDocument,
 } from "@/lib/documents.functions";
 import { indexDocument } from "@/lib/rag.functions";
+import { ensureDocumentFolderPath } from "@/lib/document-folders.functions";
 import {
   splitPdfStream,
   shouldSplitPdf,

@@ -258,14 +258,14 @@ export const registerDocument = createServerFn({ method: "POST" })
     }
     // Duplicata por content_hash dentro da mesma pasta.
     if (data.content_hash) {
-      const { data: byHash } = await context.supabase
+      let hashQuery = context.supabase
         .from("documents")
         .select("id, filename")
         .eq("organization_id", context.organizationId)
         .eq("case_id", data.case_id)
-        .eq("content_hash", data.content_hash)
-        .eq("folder_id", data.folder_id ?? null)
-        .maybeSingle();
+        .eq("content_hash", data.content_hash);
+      hashQuery = data.folder_id ? hashQuery.eq("folder_id", data.folder_id) : hashQuery.is("folder_id", null);
+      const { data: byHash } = await hashQuery.maybeSingle();
       if (byHash) {
         // limpa o arquivo recém enviado, já temos um igual
         if (data.storage_path) {
@@ -293,14 +293,14 @@ export const registerDocument = createServerFn({ method: "POST" })
       }
     }
     // Duplicata por nome
-    const { data: byName } = await context.supabase
+    let nameQuery = context.supabase
       .from("documents")
       .select("id, filename")
       .eq("organization_id", context.organizationId)
       .eq("case_id", data.case_id)
-      .eq("filename", data.filename)
-      .eq("folder_id", data.folder_id ?? null)
-      .maybeSingle();
+      .eq("filename", data.filename);
+    nameQuery = data.folder_id ? nameQuery.eq("folder_id", data.folder_id) : nameQuery.is("folder_id", null);
+    const { data: byName } = await nameQuery.maybeSingle();
     if (byName) {
       if (data.storage_path) {
         await context.supabase.storage
