@@ -15,7 +15,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { FilePlus2, FolderInput, StopCircle, UploadCloud } from "lucide-react";
+import { FilePlus2, FolderInput, FolderUp, StopCircle, UploadCloud } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { UploadProgressList } from "./upload-progress-list";
 import { isUploadActive, useUploadManager } from "./upload-manager";
@@ -72,6 +72,7 @@ export function UploadDialog({
   existingDocuments: ExistingDoc[];
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
+  const folderInputRef = useRef<HTMLInputElement>(null);
   const {
     itemsForCase,
     enqueue,
@@ -83,7 +84,8 @@ export function UploadDialog({
   } = useUploadManager();
 
   const precomputedHashesRef = useRef<Map<string, string>>(new Map());
-  const fileKey = (f: File) => `${f.name}|${f.size}|${f.lastModified}`;
+  const relativePath = (f: File) => f.webkitRelativePath || f.name;
+  const fileKey = (f: File) => `${relativePath(f)}|${f.size}|${f.lastModified}`;
 
   const [open, setOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
@@ -123,7 +125,7 @@ export function UploadDialog({
     setFiles((prev) => {
       const out = [...prev];
       for (const f of valid) {
-        if (!out.some((x) => x.name === f.name && x.size === f.size)) out.push(f);
+        if (!out.some((x) => relativePath(x) === relativePath(f) && x.size === f.size)) out.push(f);
       }
       return out;
     });
@@ -140,6 +142,7 @@ export function UploadDialog({
       hashes: precomputedHashesRef.current,
       existingDocuments,
       maxPartPages: partSize,
+      relativePaths: new Map(files.map((file) => [file, relativePath(file)])),
     });
     setFiles([]);
     toast.success(
@@ -207,6 +210,18 @@ export function UploadDialog({
                 if (inputRef.current) inputRef.current.value = "";
               }}
             />
+            <Input
+              ref={folderInputRef}
+              type="file"
+              multiple
+              accept={ACCEPT_STRING}
+              className="hidden"
+              {...({ webkitdirectory: "", directory: "" } as React.InputHTMLAttributes<HTMLInputElement>)}
+              onChange={(e) => {
+                if (e.target.files) addFiles(Array.from(e.target.files));
+                if (folderInputRef.current) folderInputRef.current.value = "";
+              }}
+            />
 
             {files.length === 0 && (
               <div
@@ -214,12 +229,19 @@ export function UploadDialog({
                   "flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed p-8 text-center cursor-pointer transition-colors",
                   dragOver ? "border-primary bg-primary/10" : "border-muted",
                 )}
-                onClick={() => inputRef.current?.click()}
               >
                 <UploadCloud className="h-10 w-10 text-muted-foreground" />
                 <p className="text-sm text-muted-foreground">
-                  Arraste arquivos ou clique aqui
+                  Arraste arquivos ou uma pasta inteira
                 </p>
+                <div className="mt-2 flex flex-wrap justify-center gap-2">
+                  <Button type="button" variant="outline" size="sm" onClick={() => inputRef.current?.click()}>
+                    <FilePlus2 className="mr-2 size-4" /> Selecionar arquivos
+                  </Button>
+                  <Button type="button" variant="outline" size="sm" onClick={() => folderInputRef.current?.click()}>
+                    <FolderUp className="mr-2 size-4" /> Selecionar pasta
+                  </Button>
+                </div>
               </div>
             )}
 
@@ -229,8 +251,7 @@ export function UploadDialog({
                   <p className="text-sm font-medium">
                     Revisar antes de registrar
                     <span className="ml-1 text-xs font-normal text-muted-foreground">
-                      ({files.length}{" "}
-                      {files.length === 1 ? "arquivo" : "arquivos"})
+                      ({files.length} {files.length === 1 ? "arquivo" : "arquivos"} · {new Set(files.map((f) => relativePath(f).split("/").slice(0, -1).join("/")).filter(Boolean)).size} pasta(s) · {formatSelectionSize(files)})
                     </span>
                   </p>
                   <button
@@ -243,8 +264,9 @@ export function UploadDialog({
                 </div>
                 <div className="max-h-[420px] space-y-2 overflow-auto pr-1">
                   {files.map((f) => (
+                    <div key={`${relativePath(f)}-${f.lastModified}-${f.size}`} className="space-y-1">
+                      {relativePath(f) !== f.name && <p className="truncate px-1 text-xs text-muted-foreground" title={relativePath(f)}>{relativePath(f)}</p>}
                     <FilePreviewCard
-                      key={`${f.name}-${f.lastModified}-${f.size}`}
                       file={f}
                       onRemove={() =>
                         setFiles((prev) => prev.filter((x) => x !== f))
@@ -253,6 +275,7 @@ export function UploadDialog({
                         precomputedHashesRef.current.set(fileKey(f), h)
                       }
                     />
+                    </div>
                   ))}
                 </div>
                 {hasPdf && (
