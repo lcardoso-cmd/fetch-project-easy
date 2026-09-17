@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useRef, useState, type InputHTMLAttributes } from "react";
 import {
   MAX_DOCUMENT_SIZE_BYTES,
   MAX_DOCUMENT_SIZE_LABEL,
@@ -58,6 +58,13 @@ const ACCEPT_STRING = [
 ].join(",");
 // Limite único da aplicação (mesma regra validada no servidor).
 const MAX_SIZE = MAX_DOCUMENT_SIZE_BYTES;
+
+function formatSelectionSize(files: File[]) {
+  const bytes = files.reduce((total, file) => total + file.size, 0);
+  if (bytes >= 1024 * 1024 * 1024) return `${(bytes / (1024 ** 3)).toFixed(1)} GB`;
+  if (bytes >= 1024 * 1024) return `${(bytes / (1024 ** 2)).toFixed(1)} MB`;
+  return `${Math.max(1, Math.round(bytes / 1024))} KB`;
+}
 
 interface ExistingDoc {
   id: string;
@@ -216,7 +223,7 @@ export function UploadDialog({
               multiple
               accept={ACCEPT_STRING}
               className="hidden"
-              {...({ webkitdirectory: "", directory: "" } as React.InputHTMLAttributes<HTMLInputElement>)}
+              {...({ webkitdirectory: "", directory: "" } as InputHTMLAttributes<HTMLInputElement>)}
               onChange={(e) => {
                 if (e.target.files) addFiles(Array.from(e.target.files));
                 if (folderInputRef.current) folderInputRef.current.value = "";
