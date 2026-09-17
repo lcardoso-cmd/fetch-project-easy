@@ -52,6 +52,7 @@ interface EnqueueArgs {
   existingDocuments?: { id: string; filename: string }[];
   /** Páginas por parte ao dividir PDFs grandes. 0 desativa a divisão. */
   maxPartPages?: number;
+  relativePaths?: Map<File, string>;
 }
 
 interface QueueEntry {
@@ -63,6 +64,8 @@ interface QueueEntry {
   hash?: string;
   existing?: { id: string; filename: string }[];
   maxPartPages?: number;
+  relativePath?: string;
+  folderId?: string | null;
   /** Escolha explícita após uma falha: enviar o original sem nova tentativa. */
   skipSplit?: boolean;
   /** Já é uma parte pronta (não tentar dividir de novo). */
@@ -161,6 +164,7 @@ export function UploadManagerProvider({ children }: { children: ReactNode }) {
   const indexFn = useServerFn(indexDocument);
   const deleteFn = useServerFn(deleteDocument);
   const discardFn = useServerFn(discardUploadedObject);
+  const ensureFolderFn = useServerFn(ensureDocumentFolderPath);
 
   const [items, setItems] = useState<CaseUploadItem[]>([]);
   const [replacement, setReplacement] = useState<
@@ -188,7 +192,7 @@ export function UploadManagerProvider({ children }: { children: ReactNode }) {
 
   const uploadOne = useCallback(
     async (entry: QueueEntry) => {
-      const { itemId, caseId, filename, fileType, file, partMeta } = entry;
+      const { itemId, caseId, filename, fileType, file, partMeta, relativePath } = entry;
       const controller = new AbortController();
       abortersRef.current.set(itemId, controller);
       const { signal } = controller;
@@ -206,6 +210,7 @@ export function UploadManagerProvider({ children }: { children: ReactNode }) {
             filename,
             file_type: fileType || "application/octet-stream",
             file_size: file.size,
+            relative_path: relativePath,
           },
         });
         if (signal.aborted) throw new DOMException("cancel", "AbortError");
@@ -221,6 +226,15 @@ export function UploadManagerProvider({ children }: { children: ReactNode }) {
         uploadedPath = path;
 
         patchItem(itemId, { phase: "registering", pct: 100 });
+        let folderId = entry.folderId;
+        if (folderId === undefined && relativePath) {
+          const parts = relativePath.replace(/\\/g, "/").split("/").filter(Boolean);
+          parts.pop();
+          if (parts.length) {
+            folderId = (await ensureFolderFn({ data: { case_id: caseId, path: parts.join("/") } })).folder_id;
+          } else folderId = null;
+          entry.folderId = folderId;
+        }
         const res = await registerFn({
           data: {
             case_id: caseId,
@@ -229,6 +243,8 @@ export function UploadManagerProvider({ children }: { children: ReactNode }) {
             file_size: file.size,
             storage_path: path,
             content_hash: contentHash,
+            folder_id: folderId ?? null,
+            relative_path: relativePath ?? null,
             ...(partMeta
               ? {
                   split_group_id: partMeta.splitGroupId,
@@ -308,7 +324,7 @@ export function UploadManagerProvider({ children }: { children: ReactNode }) {
         abortersRef.current.delete(itemId);
       }
     },
-    [discardFn, indexFn, patchItem, queryClient, registerFn, signFn],
+    [discardFn, ensureFolderFn, indexFn, patchItem, queryClient, registerFn, signFn],
   );
 
   /**
@@ -374,6 +390,8 @@ export function UploadManagerProvider({ children }: { children: ReactNode }) {
               itemId: `${entry.itemId}-p${part.partIndex}`,
               caseId: entry.caseId,
               existing: entry.existing,
+              relativePath: entry.relativePath,
+              folderId: entry.folderId,
               partMeta: {
                 splitGroupId,
                 partIndex: part.partIndex,
@@ -457,7 +475,7 @@ export function UploadManagerProvider({ children }: { children: ReactNode }) {
   }, [patchItem, processEntry]);
 
   const enqueue = useCallback(
-    ({ caseId, files, hashes, existingDocuments, maxPartPages }: EnqueueArgs) => {
+    ({ caseId, files, hashes, existingDocuments, maxPartPages, relativePaths }: EnqueueArgs) => {
       if (files.length === 0) return;
       const created: QueueEntry[] = files.map((file) => ({
         file,
@@ -468,6 +486,7 @@ export function UploadManagerProvider({ children }: { children: ReactNode }) {
         hash: hashes?.get(fileKey(file)),
         existing: existingDocuments,
         maxPartPages,
+        relativePath: relativePaths?.get(file),
       }));
       setItems((prev) => [
         ...prev,

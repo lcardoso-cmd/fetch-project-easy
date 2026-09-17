@@ -161,7 +161,7 @@ export const moveDocument = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => z.object({ document_id: z.string().uuid(), folder_id: z.string().uuid().nullable() }).parse(input))
   .handler(async ({ data, context }) => {
     const { data: doc, error: docError } = await context.supabase.from("documents")
-      .select("id, case_id, folder_id, filename").eq("id", data.document_id)
+      .select("id, case_id, folder_id, filename, split_group_id").eq("id", data.document_id)
       .eq("organization_id", context.organizationId).single();
     if (docError || !doc) throw new Error("Documento não encontrado");
     if (data.folder_id) {
@@ -170,7 +170,9 @@ export const moveDocument = createServerFn({ method: "POST" })
     }
     let update = context.supabase.from("documents").update({ folder_id: data.folder_id })
       .eq("organization_id", context.organizationId);
-    update = doc.id ? update.or(`id.eq.${doc.id},split_group_id.eq.${doc.id}`) : update.eq("id", data.document_id);
+    update = doc.split_group_id
+      ? update.eq("split_group_id", doc.split_group_id)
+      : update.eq("id", data.document_id);
     const { error } = await update;
     if (error) throw error;
     await audit(context.supabase, {
