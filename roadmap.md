@@ -115,4 +115,4 @@ Fonte da verdade: organização é o cliente do SaaS. Sem migração gradual, se
 - [x] Pastas gerenciáveis com criação, renomeação, movimentação e exclusão sem apagar documentos.
 - [x] Visualização hierárquica nos documentos do caso e na Biblioteca geral.
 - [x] Isolamento por organização/caso, auditoria e validação segura de caminhos.
-- [ ] Fechar cadastro público e permitir uso somente a pessoas autorizadas
+- [x] Fechar cadastro público e permitir uso somente a pessoas autorizadas
