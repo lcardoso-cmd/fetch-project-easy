@@ -190,7 +190,10 @@ function LibraryPage() {
           }
         />
       ) : (
-        <DocumentFolderTree documents={filtered} renderDocument={(d) => {
+        <DocumentFolderTree
+          documents={filtered}
+          revealDocuments={search.trim().length > 0 || caseFilter !== "all" || statusFilter !== "all"}
+          renderDocument={(d) => {
             const c = caseOf(d.case_id);
             const group = statusGroup(d.processing_status);
             return (
@@ -252,7 +255,8 @@ function LibraryPage() {
                 </div>
               </li>
             );
-          }} />
+          }}
+        />
       )}
     </div>
   );

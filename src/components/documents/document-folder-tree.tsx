@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ChevronDown, ChevronRight, Folder, FolderOpen, FolderPlus, FolderSymlink, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
@@ -20,11 +20,13 @@ export function DocumentFolderTree<T extends FolderDoc>({
   documents,
   renderDocument,
   emptyMessage = "Nenhum documento nesta pasta.",
+  revealDocuments = false,
 }: {
   caseId?: string | null;
   documents: T[];
   renderDocument: (document: T) => ReactNode;
   emptyMessage?: string;
+  revealDocuments?: boolean;
 }) {
   const queryClient = useQueryClient();
   const listFn = useServerFn(listDocumentFolders);
@@ -47,6 +49,29 @@ export function DocumentFolderTree<T extends FolderDoc>({
     }
     return map;
   }, [folders]);
+
+  const foldersWithVisibleDocuments = useMemo(() => {
+    if (!revealDocuments) return [];
+    const foldersById = new Map(folders.map((folder) => [folder.id, folder]));
+    const visible = new Set<string>();
+    for (const document of documents) {
+      let folderId = document.folder_id ?? null;
+      while (folderId && !visible.has(folderId)) {
+        visible.add(folderId);
+        folderId = foldersById.get(folderId)?.parent_folder_id ?? null;
+      }
+    }
+    return [...visible];
+  }, [documents, folders, revealDocuments]);
+
+  useEffect(() => {
+    if (foldersWithVisibleDocuments.length === 0) return;
+    setExpanded((current) => {
+      const next = new Set(current);
+      foldersWithVisibleDocuments.forEach((folderId) => next.add(folderId));
+      return next;
+    });
+  }, [foldersWithVisibleDocuments]);
 
   const refresh = async () => {
     await Promise.all([
