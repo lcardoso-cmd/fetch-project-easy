@@ -8,6 +8,7 @@ import { useProfile } from "@/hooks/use-profile";
 import { useAccess } from "@/hooks/use-access";
 import { routeRuleFor } from "@/lib/route-permissions";
 import { AccessDenied } from "@/components/access-denied";
+import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/_authenticated")({
   component: AuthenticatedLayout,
