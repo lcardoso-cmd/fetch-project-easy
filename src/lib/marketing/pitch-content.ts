@@ -20,14 +20,14 @@ export interface PitchItem {
 export const PITCH = {
   brand: {
     name: "JurisMind AI",
-    tagline: "Um agente de IA que trabalha para você",
+    tagline: "Cada caso, um agente de IA que trabalha para você",
     company: "B2B Consulting",
     site: "https://jurismind.b2bconsulting.com.br/",
     contact: "contato@b2bconsulting.com.br",
   },
 
   hero: {
-    eyebrow: "Um agente de IA que trabalha para você",
+    eyebrow: "Cada caso, um agente de IA que trabalha para você",
     title: "Transforme cada caso em um agente de IA que trabalha para você.",
     subtitle:
       "O JurisMind conhece os autos e o histórico, consulta andamentos, executa tarefas e produz peças, planilhas e apresentações para apoiar o advogado do início à entrega.",
