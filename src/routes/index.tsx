@@ -37,15 +37,15 @@ import { HeroCarousel } from "@/components/marketing/hero-carousel";
 import { DeckDownloadButton } from "@/components/marketing/deck-download-button";
 import { PITCH } from "@/lib/marketing/pitch-content";
 import { useAuth } from "@/hooks/use-auth";
+import socialImage from "@/assets/jurismind-case-agent-og.jpg.asset.json";
 
 const TRIAL_SEARCH = { modo: "cadastro", origem: "trial30" } as const;
 
 const SITE = "https://jurismind.b2bconsulting.com.br/";
-const OG_IMAGE =
-  "https://storage.googleapis.com/gpt-engineer-file-uploads/Sls90jSFrMa8ECulf4OjLMG7sRB3/social-images/social-1783001247994-LOGO_JURISMIND_16-9.webp";
-const TITLE = "JurisMind AI — A inteligência operacional de cada caso";
+const OG_IMAGE = `https://jurismind.b2bconsulting.com.br${socialImage.url}`;
+const TITLE = "JurisMind AI — transforme cada caso em um agente de IA";
 const DESCRIPTION =
-  "O JurisMind lê os documentos do caso, localiza o trecho exato, produz peça, planilha e apresentação e conduz o trabalho da equipe. Teste grátis por 30 dias.";
+  "Cada caso ganha um agente de IA que conhece os autos, executa tarefas e apoia o advogado do início à entrega.";
 
 export const Route = createFileRoute("/")({
   component: LandingPage,
@@ -58,6 +58,9 @@ export const Route = createFileRoute("/")({
       { property: "og:url", content: SITE },
       { property: "og:type", content: "website" },
       { property: "og:image", content: OG_IMAGE },
+      { property: "og:image:width", content: "1200" },
+      { property: "og:image:height", content: "630" },
+      { property: "og:image:alt", content: "JurisMind AI — cada caso, um agente de IA" },
       { name: "twitter:card", content: "summary_large_image" },
       { name: "twitter:title", content: TITLE },
       { name: "twitter:description", content: DESCRIPTION },

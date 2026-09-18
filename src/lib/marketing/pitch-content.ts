@@ -20,18 +20,18 @@ export interface PitchItem {
 export const PITCH = {
   brand: {
     name: "JurisMind AI",
-    tagline: "A inteligência operacional de cada caso",
+    tagline: "Cada caso, um agente de IA",
     company: "B2B Consulting",
     site: "https://jurismind.b2bconsulting.com.br/",
     contact: "contato@b2bconsulting.com.br",
   },
 
   hero: {
-    eyebrow: "A inteligência operacional de cada caso",
-    title: "Do documento à entrega: um só caso, um só fluxo de trabalho.",
+    eyebrow: "Cada caso, um agente de IA",
+    title: "Transforme cada caso em um agente de IA pronto para trabalhar.",
     subtitle:
-      "O JurisMind lê os documentos do caso, mostra o trecho exato que sustenta cada afirmação e transforma isso em peça, planilha, apresentação e tarefa da equipe — sem recomeçar a conversa a cada pedido.",
-    highlight: "Mais contexto para a IA. Mais controle para o advogado.",
+      "O JurisMind conhece os autos e o histórico, consulta andamentos, executa tarefas e produz peças, planilhas e apresentações para apoiar o advogado do início à entrega.",
+    highlight: "Um agente com o contexto do caso. O advogado sempre no controle.",
   },
 
   flow: {
