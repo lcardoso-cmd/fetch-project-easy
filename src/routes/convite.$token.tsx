@@ -2,8 +2,10 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { peekOrgInvitation, acceptOrgInvitation } from "@/lib/org-team.functions";
+import { peekOrgInvitation, acceptOrgInvitation, createInvitedUser } from "@/lib/org-team.functions";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Card,
   CardContent,
@@ -12,6 +14,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useAuth } from "@/hooks/use-auth";
+import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -43,6 +46,7 @@ function InvitePage() {
   const { user, isLoading: loading } = useAuth();
   const peekFn = useServerFn(peekOrgInvitation);
   const acceptFn = useServerFn(acceptOrgInvitation);
+  const createInvitedUserFn = useServerFn(createInvitedUser);
 
   const { data: inv, isLoading } = useQuery({
     queryKey: ["org-invitation", token],
@@ -50,6 +54,8 @@ function InvitePage() {
   });
 
   const [busy, setBusy] = useState(false);
+  const [fullName, setFullName] = useState("");
+  const [password, setPassword] = useState("");
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -66,6 +72,28 @@ function InvitePage() {
       navigate({ to: "/painel" });
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Falha ao aceitar o convite");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function createAccount(event: React.FormEvent) {
+    event.preventDefault();
+    if (!inv || inv.status !== "pending") return;
+    setBusy(true);
+    try {
+      const created = await createInvitedUserFn({ data: { token, full_name: fullName, password } });
+      const { error } = await supabase.auth.signInWithPassword({
+        email: created.email,
+        password,
+      });
+      if (error) throw error;
+      await acceptFn({ data: { token } });
+      sessionStorage.removeItem("pending_invite_token");
+      toast.success("Conta criada e convite aceito.");
+      navigate({ to: "/painel", replace: true });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Não foi possível criar a conta");
     } finally {
       setBusy(false);
     }
@@ -120,13 +148,30 @@ function InvitePage() {
               </div>
 
               {!user ? (
-                <div className="space-y-2">
+                <div className="space-y-4">
                   <p className="text-ui text-muted-foreground">
-                    Faça login (ou crie sua conta) com o e-mail <strong>{inv.email}</strong>{" "}
-                    para aceitar.
+                    Crie sua conta autorizada com o e-mail <strong>{inv.email}</strong> ou entre se já possuir uma.
                   </p>
-                  <Button className="w-full" onClick={() => navigate({ to: "/entrar" })}>
-                    Entrar / criar conta
+                  <form className="space-y-3" onSubmit={createAccount}>
+                    <div className="space-y-2">
+                      <Label htmlFor="invite-name">Nome completo</Label>
+                      <Input id="invite-name" value={fullName} onChange={(e) => setFullName(e.target.value)} minLength={2} maxLength={160} required />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="invite-password">Crie sua senha</Label>
+                      <Input id="invite-password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} minLength={8} maxLength={128} required />
+                    </div>
+                    <Button className="w-full" type="submit" disabled={busy}>
+                      {busy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                      Criar conta e aceitar convite
+                    </Button>
+                  </form>
+                  <Button
+                    className="w-full"
+                    variant="outline"
+                    onClick={() => navigate({ to: "/entrar", search: { redirect: `/convite/${token}` } })}
+                  >
+                    Já tenho conta
                   </Button>
                 </div>
               ) : user.email?.toLowerCase() !== inv.email.toLowerCase() ? (
