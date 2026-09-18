@@ -9,8 +9,8 @@ import {
 import { type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
-import ogBrain from "@/assets/og-brain.jpg.asset.json";
-const OG_IMAGE_URL = `https://jurismind.b2bconsulting.com.br${ogBrain.url}`;
+import socialImage from "@/assets/jurismind-case-agent-og.jpg.asset.json";
+const OG_IMAGE_URL = `https://jurismind.b2bconsulting.com.br${socialImage.url}`;
 import { AuthProvider } from "@/hooks/use-auth";
 import { ThemeProvider } from "@/hooks/use-theme";
 import { Toaster } from "@/components/ui/sonner";
@@ -52,20 +52,20 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { name: "google-site-verification", content: "p3ExxCrmwEsSNVlYERSKycUlGwJJm3BL7AaCzNGUWJU" },
-      { title: "B2B | JurisMind AI" },
-      { name: "description", content: "B2B | JurisMind AI é uma plataforma jurídica para advogados: RAG de documentos jurídicos e gestão inteligente de prazos." },
+      { title: "JurisMind AI — transforme cada caso em um agente de IA" },
+      { name: "description", content: "Cada caso ganha um agente de IA que conhece os autos, executa tarefas e apoia o advogado do início à entrega." },
       { name: "author", content: "B2B | JurisMind AI" },
       { property: "og:site_name", content: "JurisMind AI" },
       { property: "og:type", content: "website" },
-      { property: "og:title", content: "B2B | JurisMind AI" },
-      { property: "og:description", content: "Plataforma jurídica com IA: RAG de documentos e gestão inteligente de prazos." },
+      { property: "og:title", content: "JurisMind AI — transforme cada caso em um agente de IA" },
+      { property: "og:description", content: "Cada caso ganha um agente de IA que conhece os autos, executa tarefas e apoia o advogado do início à entrega." },
       { property: "og:image", content: OG_IMAGE_URL },
       { property: "og:image:width", content: "1200" },
       { property: "og:image:height", content: "630" },
       { name: "twitter:card", content: "summary_large_image" },
       { name: "twitter:site", content: "@JurisMind" },
-      { name: "twitter:title", content: "B2B | JurisMind AI" },
-      { name: "twitter:description", content: "Plataforma jurídica com IA: RAG de documentos e gestão inteligente de prazos." },
+      { name: "twitter:title", content: "JurisMind AI — transforme cada caso em um agente de IA" },
+      { name: "twitter:description", content: "Cada caso ganha um agente de IA que conhece os autos, executa tarefas e apoia o advogado do início à entrega." },
       { name: "twitter:image", content: OG_IMAGE_URL },
     ],
     links: [
@@ -89,14 +89,14 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
             {
               "@type": "Organization",
               name: "JurisMind AI",
-              url: "https://b2bjurismind.lovable.app",
+              url: "https://jurismind.b2bconsulting.com.br",
               logo: OG_IMAGE_URL,
-              sameAs: ["https://b2bjurismind.lovable.app"],
+              sameAs: ["https://jurismind.b2bconsulting.com.br"],
             },
             {
               "@type": "WebSite",
               name: "JurisMind AI",
-              url: "https://b2bjurismind.lovable.app",
+              url: "https://jurismind.b2bconsulting.com.br",
               inLanguage: "pt-BR",
             },
           ],
