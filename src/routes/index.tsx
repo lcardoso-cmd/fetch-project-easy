@@ -43,7 +43,7 @@ const TRIAL_SEARCH = { modo: "cadastro", origem: "trial30" } as const;
 
 const SITE = "https://jurismind.b2bconsulting.com.br/";
 const OG_IMAGE = `https://jurismind.b2bconsulting.com.br${socialImage.url}`;
-const TITLE = "JurisMind AI — um agente de IA que trabalha para você";
+const TITLE = "JurisMind AI — transforme cada caso em um agente de IA que trabalha para você";
 const DESCRIPTION =
   "Cada caso ganha um agente de IA que conhece os autos, executa tarefas e apoia o advogado do início à entrega.";
 
@@ -60,7 +60,7 @@ export const Route = createFileRoute("/")({
       { property: "og:image", content: OG_IMAGE },
       { property: "og:image:width", content: "1200" },
       { property: "og:image:height", content: "630" },
-      { property: "og:image:alt", content: "JurisMind AI — um agente de IA que trabalha para você" },
+      { property: "og:image:alt", content: "JurisMind AI — transforme cada caso em um agente de IA que trabalha para você" },
       { name: "twitter:card", content: "summary_large_image" },
       { name: "twitter:title", content: TITLE },
       { name: "twitter:description", content: DESCRIPTION },
