@@ -8,6 +8,7 @@ import { useProfile } from "@/hooks/use-profile";
 import { useAccess } from "@/hooks/use-access";
 import { routeRuleFor } from "@/lib/route-permissions";
 import { AccessDenied } from "@/components/access-denied";
+import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/_authenticated")({
   component: AuthenticatedLayout,
@@ -44,6 +45,8 @@ function AuthenticatedLayout() {
 
 function Gate({ path }: { path: string }) {
   const { data: profile, isLoading } = useProfile();
+  const access = useAccess();
+  const { signOut } = useAuth();
   const navigate = useNavigate();
   const isOnboarding = path.startsWith("/boas-vindas");
 
@@ -54,10 +57,32 @@ function Gate({ path }: { path: string }) {
     }
   }, [profile, isLoading, isOnboarding, navigate]);
 
-  if (isLoading || !profile) {
+  if (isLoading || access.isLoading || !profile) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (!access.organization && !access.isPlatformUser) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background p-4">
+        <div className="w-full max-w-md rounded-lg border bg-card p-6 text-center shadow-sm">
+          <h1 className="font-heading text-xl font-semibold text-foreground">Acesso não autorizado</h1>
+          <p className="mt-3 text-base text-muted-foreground">
+            Esta conta não possui um convite aceito para usar o JurisMind.
+          </p>
+          <Button
+            className="mt-6"
+            onClick={async () => {
+              await signOut();
+              navigate({ to: "/entrar", replace: true });
+            }}
+          >
+            Voltar para entrar
+          </Button>
+        </div>
       </div>
     );
   }

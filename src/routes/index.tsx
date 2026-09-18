@@ -39,8 +39,6 @@ import { PITCH } from "@/lib/marketing/pitch-content";
 import { useAuth } from "@/hooks/use-auth";
 import socialImage from "@/assets/jurismind-case-agent-og.jpg.asset.json";
 
-const TRIAL_SEARCH = { modo: "cadastro", origem: "trial30" } as const;
-
 const SITE = "https://jurismind.b2bconsulting.com.br/";
 const OG_IMAGE = `https://jurismind.b2bconsulting.com.br${socialImage.url}`;
 const TITLE = "JurisMind AI — transforme cada caso em um agente de IA que trabalha para você";
@@ -176,7 +174,7 @@ function LoginButton({
 function TrialSignupButton({
   size = "lg",
   className,
-  label = "Testar grátis por 30 dias",
+  label = "Entrar no JurisMind",
 }: {
   size?: "default" | "lg";
   className?: string;
@@ -184,7 +182,7 @@ function TrialSignupButton({
 }) {
   return (
     <Button size={size} asChild className={`whitespace-nowrap ${className ?? ""}`}>
-      <Link to="/entrar" search={TRIAL_SEARCH}>
+      <Link to="/entrar">
         {label}
         <ArrowRight className="ml-2 h-4 w-4" />
       </Link>
@@ -389,7 +387,7 @@ function LandingPage() {
               >
                 <Link
                   to="/entrar"
-                  search={{ modo: "cadastro", origem: "guia_home" }}
+                  search={{ origem: "guia_home" }}
                 >
                   {PITCH.guideHighlight.ctaSecondary}
                 </Link>
@@ -713,8 +711,8 @@ function LandingPage() {
                     </Link>
                   </li>
                   <li>
-                    <Link to="/entrar" search={TRIAL_SEARCH} className="whitespace-nowrap hover:text-foreground">
-                      Criar conta
+                    <Link to="/entrar" className="whitespace-nowrap hover:text-foreground">
+                      Acesso por convite
                     </Link>
                   </li>
                 </>

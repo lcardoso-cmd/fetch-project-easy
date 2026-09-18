@@ -267,11 +267,11 @@ export const PITCH = {
   },
 
   cta: {
-    title: "Experimente em um caso real do seu escritório.",
+    title: "Leve o JurisMind para um caso real do seu escritório.",
     subtitle:
-      "Crie sua conta, organize um caso, inclua os documentos e veja em 30 dias a diferença entre conversar com uma IA e conduzir o caso com ela.",
-    button: "Começar meu teste gratuito",
-    note: "Teste gratuito por 30 dias.",
+      "Com acesso autorizado, organize um caso, inclua os documentos e conduza o trabalho com um agente de IA dedicado.",
+    button: "Entrar no JurisMind",
+    note: "Acesso exclusivo por convite.",
     authenticatedTitle: "Continue seu trabalho no JurisMind.",
     authenticatedSubtitle: "Acesse seus casos, documentos e recursos de inteligência jurídica.",
   },

@@ -75,8 +75,8 @@ function GuidePage() {
             <span className="font-heading text-base font-bold text-foreground">JurisMind AI</span>
           </Link>
           <Button asChild variant="outline" size="sm">
-            <Link to="/entrar" search={{ modo: "cadastro", origem: "guia_peticoes" }}>
-              Criar conta
+            <Link to="/entrar" search={{ origem: "guia_peticoes" }}>
+              Entrar
             </Link>
           </Button>
         </div>
@@ -103,8 +103,8 @@ function GuidePage() {
                 size="lg"
                 className="w-full whitespace-nowrap bg-brand-cyan text-brand-navy hover:bg-brand-cyan/90 lg:w-auto"
               >
-                <Link to="/entrar" search={{ modo: "cadastro", origem: "guia_peticoes" }}>
-                  Testar no meu escritório <ArrowRight className="ml-2 h-4 w-4" />
+                <Link to="/entrar" search={{ origem: "guia_peticoes" }}>
+                  Acessar o JurisMind <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
               </Button>
               <Button
@@ -301,8 +301,7 @@ function GuidePage() {
               Automatize petições sem perder o controle
             </h2>
             <p className="mx-auto mt-4 max-w-2xl text-lg text-muted-foreground">
-              Teste o JurisMind por 30 dias e veja como a IA conectada aos seus documentos acelera a
-              produção de peças jurídicas.
+              Conheça como a IA conectada aos documentos do caso acelera a produção de peças jurídicas.
             </p>
             <div className="mt-8 flex flex-col items-center justify-center gap-3 lg:flex-row lg:flex-nowrap">
               <Button
@@ -310,8 +309,8 @@ function GuidePage() {
                 size="lg"
                 className="w-full whitespace-nowrap bg-brand-cyan text-brand-navy hover:bg-brand-cyan/90 lg:w-auto"
               >
-                <Link to="/entrar" search={{ modo: "cadastro", origem: "guia_peticoes" }}>
-                  Começar teste gratuito <ArrowRight className="ml-2 h-4 w-4" />
+                <Link to="/entrar" search={{ origem: "guia_peticoes" }}>
+                  Entrar no JurisMind <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
               </Button>
               <Button

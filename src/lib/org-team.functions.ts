@@ -381,6 +381,51 @@ export const peekOrgInvitation = createServerFn({ method: "GET" })
     };
   });
 
+export const createInvitedUser = createServerFn({ method: "POST" })
+  .inputValidator((i: unknown) =>
+    z
+      .object({
+        token: z.string().min(10).max(120),
+        full_name: z.string().trim().min(2).max(160),
+        password: z.string().min(8).max(128),
+      })
+      .parse(i),
+  )
+  .handler(async ({ data }) => {
+    const db = await admin();
+    const { data: inv } = await db
+      .from("organization_invitations")
+      .select("id, email, status, expires_at")
+      .eq("token", data.token)
+      .maybeSingle();
+
+    if (!inv || inv.status !== "pending") {
+      throw new Error("Este convite não está disponível.");
+    }
+    if (new Date(inv.expires_at as string).getTime() < Date.now()) {
+      await db.from("organization_invitations").update({ status: "expired" }).eq("id", inv.id);
+      throw new Error("Este convite expirou. Peça um novo ao administrador.");
+    }
+
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: created, error } = await supabaseAdmin.auth.admin.createUser({
+      email: (inv.email as string).toLowerCase(),
+      password: data.password,
+      email_confirm: true,
+      user_metadata: { full_name: data.full_name },
+    });
+    if (error) {
+      const message = error.message.toLowerCase();
+      if (message.includes("already") || message.includes("registered")) {
+        throw new Error("Este e-mail já possui conta. Entre com sua senha para aceitar o convite.");
+      }
+      throw new Error("Não foi possível criar a conta deste convite.");
+    }
+    if (!created.user) throw new Error("Não foi possível criar a conta deste convite.");
+
+    return { email: (inv.email as string).toLowerCase() };
+  });
+
 export const acceptOrgInvitation = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((i: unknown) => z.object({ token: z.string().min(10).max(120) }).parse(i))
@@ -398,7 +443,7 @@ export const acceptOrgInvitation = createServerFn({ method: "POST" })
     }
 
     const email = (context.claims as { email?: string } | undefined)?.email?.toLowerCase() ?? null;
-    if (email && email !== (inv.email as string).toLowerCase()) {
+    if (!email || email !== (inv.email as string).toLowerCase()) {
       throw new Error(
         `Este convite é para ${inv.email}. Entre com esse e-mail para aceitá-lo.`,
       );

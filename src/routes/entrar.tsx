@@ -3,14 +3,13 @@ import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { JurisMindMark, JURISMIND_CONTEXT } from "@/components/brand/jurismind-mark";
 import { IconBox } from "@/components/ui/icon-box";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable";
 import { useNavigate } from "@tanstack/react-router";
-import { ArrowLeft, Mail, Lock, User, LogIn, UserPlus, MailCheck, KeyRound } from "lucide-react";
+import { ArrowLeft, Mail, Lock, LogIn, MailCheck, KeyRound } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -47,11 +46,9 @@ function safeInternalPath(p: unknown): string | null {
 export const Route = createFileRoute("/entrar")({
   validateSearch: (search: Record<string, unknown>) => {
     const redirect = safeInternalPath(search.redirect);
-    const modo = search.modo === "cadastro" ? "cadastro" : undefined;
     const origem = typeof search.origem === "string" ? search.origem.slice(0, 40) : undefined;
     return {
       ...(redirect ? { redirect } : {}),
-      ...(modo ? { modo } : {}),
       ...(origem ? { origem } : {}),
     };
   },
@@ -104,12 +101,9 @@ function AuthPage() {
   const search = Route.useSearch();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [fullName, setFullName] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
-  const isTrialSignup = search.modo === "cadastro";
-  const [mode, setMode] = useState<"login" | "signup">(isTrialSignup ? "signup" : "login");
 
   const [pendingEmail, setPendingEmail] = useState<string | null>(null);
   const [resendCooldown, setResendCooldown] = useState(0);
@@ -380,42 +374,6 @@ function AuthPage() {
 
   };
 
-  const handleSignup = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-    setIsLoading(true);
-    try {
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: { full_name: fullName },
-          emailRedirectTo: window.location.origin,
-        },
-      });
-      if (error) throw error;
-      // Se a confirmação de email estiver ativa, não haverá sessão ainda.
-      if (data.session) {
-        toast.success("Conta criada", {
-          description: "Redirecionando...",
-        });
-        goPostLogin();
-      } else {
-        setPendingEmail(email);
-        toast.success("Confirme seu email", {
-          description: "Enviamos um link de confirmação para " + email + ".",
-        });
-      }
-
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Erro ao criar conta";
-      setError(message);
-      toast.error("Não foi possível criar a conta", { description: message });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   const describeGoogleError = (err: unknown): { title: string; description: string } => {
     const raw = (err instanceof Error ? err.message : typeof err === "string" ? err : "")
       .toString()
@@ -544,12 +502,10 @@ function AuthPage() {
           <div className="text-center">
             <JurisMindMark size={48} context={JURISMIND_CONTEXT.auth} rounded className="mb-4" />
             <h1 className="text-3xl font-bold text-foreground">
-              {isTrialSignup ? "Comece seu teste gratuito" : "Entrar no JurisMind"}
+              Entrar no JurisMind
             </h1>
             <p className="mt-2 text-sm text-muted-foreground">
-              {isTrialSignup
-                ? "Criar sua conta inicia o período gratuito de 30 dias."
-                : "Inteligência para escritórios de advocacia"}
+              Acesso exclusivo para pessoas autorizadas
             </p>
           </div>
 
@@ -605,14 +561,7 @@ function AuthPage() {
 
 
 
-          <Tabs value={mode} onValueChange={(v) => { setMode(v as "login" | "signup"); setError(null); }} className="w-full">
-            <TabsList className="grid w-full grid-cols-2 rounded-2xl">
-              <TabsTrigger value="login" className="rounded-xl">Entrar</TabsTrigger>
-              <TabsTrigger value="signup" className="rounded-xl">Criar conta</TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="login">
-              <form onSubmit={handleLogin} className={cardClass}>
+          <form onSubmit={handleLogin} className={cardClass}>
                 <div className="space-y-2">
                   <FieldLabel htmlFor="email" icon={Mail}>Email</FieldLabel>
                   <Input
@@ -657,77 +606,10 @@ function AuthPage() {
                   {isGoogleLoading ? "Conectando ao Google..." : "Entrar com Google"}
                 </Button>
 
-              </form>
-              <p className="mt-4 text-center text-sm text-muted-foreground">
-                Ainda não tem uma conta?{" "}
-                <button
-                  type="button"
-                  onClick={() => { setMode("signup"); setError(null); }}
-                  className="inline-flex min-h-11 items-center px-1 font-medium text-primary underline-offset-4 hover:underline"
-                >
-                  Criar conta
-                </button>
-              </p>
-            </TabsContent>
-
-            <TabsContent value="signup">
-              <form onSubmit={handleSignup} className={cardClass}>
-                <div className="space-y-2">
-                  <FieldLabel htmlFor="fullName" icon={User}>Nome completo</FieldLabel>
-                  <Input
-                    id="fullName"
-                    placeholder="Dr. João Silva"
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <FieldLabel htmlFor="signupEmail" icon={Mail}>Email</FieldLabel>
-                  <Input
-                    id="signupEmail"
-                    type="email"
-                    placeholder="seu@email.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <FieldLabel htmlFor="signupPassword" icon={Lock}>Senha</FieldLabel>
-                  <Input
-                    id="signupPassword"
-                    type="password"
-                    placeholder="••••••••"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    minLength={6}
-                  />
-                </div>
-                {error && <p className="text-sm text-destructive">{error}</p>}
-                <Button type="submit" className="w-full gap-2" disabled={isLoading}>
-                  <IconBox icon={UserPlus} size="xs" bgColor="bg-primary-foreground/15" iconColor="text-primary-foreground" />
-                  {isLoading ? "Criando..." : "Criar conta"}
-                </Button>
-                <Button type="button" variant="outline" className="w-full gap-2" onClick={handleGoogle} disabled={isGoogleLoading || isLoading}>
-                  <GoogleIcon className="h-4 w-4" />
-                  {isGoogleLoading ? "Conectando ao Google..." : "Criar conta com Google"}
-                </Button>
-
-              </form>
-              <p className="mt-4 text-center text-sm text-muted-foreground">
-                Já tem uma conta?{" "}
-                <button
-                  type="button"
-                  onClick={() => { setMode("login"); setError(null); }}
-                  className="inline-flex min-h-11 items-center px-1 font-medium text-primary underline-offset-4 hover:underline"
-                >
-                  Entrar
-                </button>
-              </p>
-            </TabsContent>
-          </Tabs>
+          </form>
+          <p className="text-center text-sm text-muted-foreground">
+            Novas contas são criadas somente por convite enviado pelo administrador.
+          </p>
         </div>
       </div>
 

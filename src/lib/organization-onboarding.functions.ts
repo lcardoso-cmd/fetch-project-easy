@@ -73,6 +73,12 @@ export const createOrganization = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => createSchema.parse(input))
   .handler(async ({ data, context }): Promise<{ organization_id: string; created: boolean }> => {
+    const { data: platformRole } = await context.supabase
+      .from("platform_user_roles")
+      .select("id")
+      .eq("user_id", context.userId)
+      .limit(1)
+      .maybeSingle();
     const { data: existing, error: existingErr } = await context.supabase
       .from("organization_memberships")
       .select("organization_id")
@@ -84,6 +90,9 @@ export const createOrganization = createServerFn({ method: "POST" })
     if (existingErr) throw existingErr;
     if (existing) {
       return { organization_id: existing.organization_id, created: false };
+    }
+    if (!platformRole) {
+      throw new Error("A criação de organizações é restrita a administradores autorizados.");
     }
 
     const { data: org, error: orgErr } = await context.supabase
