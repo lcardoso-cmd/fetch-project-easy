@@ -174,7 +174,7 @@ function LoginButton({
 function TrialSignupButton({
   size = "lg",
   className,
-  label = "Testar grátis por 30 dias",
+  label = "Entrar no JurisMind",
 }: {
   size?: "default" | "lg";
   className?: string;
@@ -182,7 +182,7 @@ function TrialSignupButton({
 }) {
   return (
     <Button size={size} asChild className={`whitespace-nowrap ${className ?? ""}`}>
-      <Link to="/entrar" search={TRIAL_SEARCH}>
+      <Link to="/entrar">
         {label}
         <ArrowRight className="ml-2 h-4 w-4" />
       </Link>

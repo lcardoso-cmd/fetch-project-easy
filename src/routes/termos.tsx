@@ -8,7 +8,7 @@ export const Route = createFileRoute("/termos")({
       {
         name: "description",
         content:
-          "Condições de utilização da plataforma JurisMind AI: contas, responsabilidades do escritório, uso dos recursos de inteligência artificial e teste gratuito.",
+          "Condições de utilização da plataforma JurisMind AI: acesso autorizado, responsabilidades do escritório e uso dos recursos de inteligência artificial.",
       },
       { property: "og:title", content: "Termos de uso — JurisMind AI" },
       {
