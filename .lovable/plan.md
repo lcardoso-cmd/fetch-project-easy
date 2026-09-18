@@ -11,13 +11,14 @@ Transformar a prévia de WhatsApp e redes sociais em uma apresentação comercia
    - Evitar texto pequeno, excesso de informação e aparência de captura improvisada.
 
 2. **Título mais direto e comercial**
-   - Substituir o título genérico por uma promessa objetiva sobre o produto atual.
-   - Direção proposta: **“JurisMind AI — transforme documentos do caso em trabalho jurídico pronto”**.
+   - Posicionar o diferencial central do produto: cada caso se transforma em um agente de IA com contexto próprio.
+   - Direção proposta: **“JurisMind AI — transforme cada caso em um agente de IA”**.
 
 3. **Descrição alinhada às funções atuais**
-   - Destacar análise documental com fontes, consulta processual, produção de peças e materiais, organização do caso e continuidade das conversas.
+   - Explicar que esse agente conhece os documentos e o histórico do caso, executa tarefas e presta suporte jurídico ao advogado.
+   - Destacar análise documental com fontes, consulta processual, produção de peças e materiais e organização do trabalho.
    - Texto curto o suficiente para não ficar cortado no WhatsApp.
-   - Direção proposta: **“Analise autos com fontes, consulte andamentos e produza peças, planilhas e apresentações no mesmo ambiente jurídico.”**
+   - Direção proposta: **“Cada caso ganha um agente de IA que conhece os autos, executa tarefas e apoia o advogado do início à entrega.”**
 
 4. **Aplicação consistente**
    - Atualizar a página inicial para usar a nova imagem e os novos textos em Open Graph e Twitter.
