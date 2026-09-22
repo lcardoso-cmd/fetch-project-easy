@@ -22,7 +22,7 @@ const IntakePartSchema = z.object({
   file_size: z.number().int().positive().max(MAX_DOCUMENT_SIZE_BYTES),
   split_group_id: z.string().uuid(),
   part_index: z.number().int().positive(),
-  part_count: z.number().int().min(2).max(64),
+  part_count: z.number().int().min(2).max(256),
   page_offset: z.number().int().nonnegative(),
   page_count: z.number().int().positive(),
 });
