@@ -4,7 +4,7 @@
  * O arquivo original é transferido (não clonado) para o worker. Cada parte é
  * produzida e devolvida isoladamente; a seguinte só é criada quando a thread
  * principal confirma que terminou de consumir a atual. Isso limita o pico de
- * memória mesmo para arquivos próximos de 250 MiB.
+ * memória das partes geradas, inclusive quando o PDF original é muito grande.
  */
 
 import {

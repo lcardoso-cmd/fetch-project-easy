@@ -49,7 +49,7 @@ import {
   type IntakeStatus,
 } from "@/lib/intake/intake-core";
 import {
-  MAX_DOCUMENT_SIZE_LABEL,
+  DOCUMENT_SIZE_LIMITS_LABEL,
   DOCUMENT_ACCEPT_ATTR,
   validateDocumentUpload,
 } from "@/lib/documents-limits";
@@ -986,7 +986,7 @@ function NewCasePage() {
                     <div>
                       <p className="font-medium">Arraste o documento aqui</p>
                       <p className="text-sm text-muted-foreground">
-                        PDF, DOCX, XLSX, CSV, TXT ou imagem — até {MAX_DOCUMENT_SIZE_LABEL}
+                        PDF, DOCX, XLSX, CSV, TXT ou imagem — {DOCUMENT_SIZE_LIMITS_LABEL}
                       </p>
                     </div>
                     <Button

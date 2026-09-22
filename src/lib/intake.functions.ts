@@ -6,7 +6,11 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireOrg, requireOrgPermission } from "@/lib/org-middleware";
-import { MAX_DOCUMENT_SIZE_BYTES, validateDocumentUpload } from "@/lib/documents-limits";
+import {
+  MAX_DOCUMENT_SIZE_BYTES,
+  MAX_PDF_SIZE_BYTES,
+  validateDocumentUpload,
+} from "@/lib/documents-limits";
 import { storagePathBelongsToOrg } from "@/lib/intake/intake-core";
 
 const IntakeRefSchema = z.object({ id: z.string().uuid() });
@@ -18,7 +22,7 @@ const IntakePartSchema = z.object({
   file_size: z.number().int().positive().max(MAX_DOCUMENT_SIZE_BYTES),
   split_group_id: z.string().uuid(),
   part_index: z.number().int().positive(),
-  part_count: z.number().int().min(2).max(64),
+  part_count: z.number().int().min(2).max(256),
   page_offset: z.number().int().nonnegative(),
   page_count: z.number().int().positive(),
 });
@@ -66,8 +70,8 @@ export const registerIntakeDocument = createServerFn({ method: "POST" })
         filename: z.string().min(1).max(300),
         file_type: z.string().max(160).default("application/octet-stream"),
         file_size: z.number().int().positive().max(MAX_DOCUMENT_SIZE_BYTES),
-        original_file_size: z.number().int().positive().max(MAX_DOCUMENT_SIZE_BYTES).optional(),
-        parts: z.array(IntakePartSchema).min(2).max(64).optional(),
+        original_file_size: z.number().int().positive().max(MAX_PDF_SIZE_BYTES).optional(),
+        parts: z.array(IntakePartSchema).min(2).max(256).optional(),
       })
       .parse(i),
   )
@@ -80,6 +84,14 @@ export const registerIntakeDocument = createServerFn({ method: "POST" })
       file_size: data.file_size,
     });
     if (!check.ok) throw new Error(check.message);
+
+    if (typeof data.original_file_size === "number") {
+      const originalCheck = validateDocumentUpload({
+        filename: data.filename,
+        file_size: data.original_file_size,
+      });
+      if (!originalCheck.ok) throw new Error(originalCheck.message);
+    }
 
     const parts = data.parts ?? [];
     if (parts.length > 0) {
@@ -123,7 +135,7 @@ export const registerIntakeDocument = createServerFn({ method: "POST" })
     const realSize = Number((found.metadata as { size?: number } | null)?.size ?? data.file_size);
     if (realSize > MAX_DOCUMENT_SIZE_BYTES) {
       await context.supabase.storage.from("documents").remove([data.storage_path]);
-      throw new Error("O arquivo excede o limite de 250 MB.");
+      throw new Error("Uma das partes do PDF excede o limite de 250 MB.");
     }
 
     if (parts.length > 0 && realSize !== parts[0].file_size) {

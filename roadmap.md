@@ -66,7 +66,7 @@ Fonte da verdade: organização é o cliente do SaaS. Sem migração gradual, se
 - [x] Auditoria de navegação: sem Marketing/Conversas/Peças no menu, sem "Ajuda" duplicada no rodapé.
 
 ## Upload e leitura de documentos no Novo caso (concluído)
-- Limite único de 250 MB (`src/lib/documents-limits.ts`), validado também no servidor ao gerar o link de envio.
+- PDFs aceitos até 2 GB e divididos antes do envio; demais formatos até 250 MB, com validação também no servidor.
 - Documento enviado passa a ter registro próprio (`case_intake_documents`): a leitura roda no servidor, sobrevive a fechar a página e é retomada se travar.
 - Leitura de PDF por faixas (`src/lib/rag/pdf-range.server.ts`): até 20 páginas para preencher o formulário, sem baixar o arquivo inteiro.
 - Reconhecimento de imagem progressivo apenas nas páginas sem texto; botão "Ler como imagem" para digitalizados.

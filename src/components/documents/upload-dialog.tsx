@@ -1,7 +1,7 @@
 import { useRef, useState, type InputHTMLAttributes } from "react";
 import {
-  MAX_DOCUMENT_SIZE_BYTES,
-  MAX_DOCUMENT_SIZE_LABEL,
+  DOCUMENT_SIZE_LIMITS_LABEL,
+  validateDocumentUpload,
 } from "@/lib/documents-limits";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -56,9 +56,6 @@ const ACCEPT_STRING = [
   ".jpeg",
   ...ACCEPTED_TYPES,
 ].join(",");
-// Limite único da aplicação (mesma regra validada no servidor).
-const MAX_SIZE = MAX_DOCUMENT_SIZE_BYTES;
-
 function formatSelectionSize(files: File[]) {
   const bytes = files.reduce((total, file) => total + file.size, 0);
   if (bytes >= 1024 * 1024 * 1024) return `${(bytes / (1024 ** 3)).toFixed(1)} GB`;
@@ -145,7 +142,8 @@ export function UploadDialog({
     const oversized: string[] = [];
     const invalid: string[] = [];
     for (const f of incoming) {
-      if (f.size > MAX_SIZE) {
+      const check = validateDocumentUpload({ filename: f.name, file_size: f.size });
+      if (!check.ok && check.message.includes("limite")) {
         oversized.push(f.name);
         continue;
       }
@@ -160,7 +158,7 @@ export function UploadDialog({
     }
     if (oversized.length)
       toast.error(
-        `Arquivos acima de ${MAX_DOCUMENT_SIZE_LABEL} ignorados: ${oversized.join(", ")}`,
+        `Arquivos acima do limite ignorados (${DOCUMENT_SIZE_LIMITS_LABEL}): ${oversized.join(", ")}`,
       );
     if (invalid.length)
       toast.error(`Tipo não suportado: ${invalid.join(", ")}`);
@@ -239,7 +237,7 @@ export function UploadDialog({
             <DialogHeader>
               <DialogTitle>Carregar documentos</DialogTitle>
               <DialogDescription>
-                Arraste ou selecione PDF, DOCX, XLSX, CSV, TXT, PNG, JPG (até {MAX_DOCUMENT_SIZE_LABEL} cada).
+                Arraste ou selecione PDF, DOCX, XLSX, CSV, TXT, PNG ou JPG. {DOCUMENT_SIZE_LIMITS_LABEL}.
               </DialogDescription>
             </DialogHeader>
 
