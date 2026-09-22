@@ -23,7 +23,7 @@ import {
   createB2bRequest,
   registerB2bAttachment,
 } from "@/lib/b2b-services.functions";
-import { supabase } from "@/integrations/supabase/client";
+import { createUploadSignedUrl } from "@/lib/documents.functions";
 
 const searchSchema = z.object({
   service: z.string().optional(),
@@ -48,6 +48,7 @@ function HireB2bRequestForm() {
   const catalogFn = useServerFn(listB2bCatalog);
   const createFn = useServerFn(createB2bRequest);
   const registerAttFn = useServerFn(registerB2bAttachment);
+  const signUploadFn = useServerFn(createUploadSignedUrl);
 
   const { data: catalog = [] } = useQuery({
     queryKey: ["b2b-catalog"],
@@ -241,13 +242,23 @@ function HireB2bRequestForm() {
 
       // Sobe os anexos, se houver
       for (const file of files) {
-        const safeName = file.name.replace(/[^\w.\-]+/g, "_");
-        const path = `${user.id}/b2b-requests/${created.id}/${Date.now()}-${safeName}`;
-        const { error: upErr } = await supabase.storage
-          .from("documents")
-          .upload(path, file, { upsert: false, contentType: file.type });
-        if (upErr) {
-          toast.error(`Falha ao enviar ${file.name}: ${upErr.message}`);
+        const contentType = file.type || "application/octet-stream";
+        const { path, signedUrl } = await signUploadFn({
+          data: {
+            case_id: search.case_id,
+            filename: file.name,
+            file_type: contentType,
+            file_size: file.size,
+            relative_path: `b2b-requests/${created.id}/${file.name}`,
+          },
+        });
+        const uploadResponse = await fetch(signedUrl, {
+          method: "PUT",
+          headers: { "Content-Type": contentType },
+          body: file,
+        });
+        if (!uploadResponse.ok) {
+          toast.error(`Falha ao enviar ${file.name} (HTTP ${uploadResponse.status})`);
           continue;
         }
         await registerAttFn({
@@ -255,7 +266,7 @@ function HireB2bRequestForm() {
             request_id: created.id,
             file_name: file.name,
             storage_path: path,
-            mime_type: file.type || null,
+            mime_type: contentType,
             size_bytes: file.size,
             visibility: "client",
           },
