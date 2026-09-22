@@ -187,7 +187,7 @@ function BulkUploadPage() {
         const isPdf = d.file.type === "application/pdf" || d.file.name.toLowerCase().endsWith(".pdf");
         const splitGroupId = crypto.randomUUID();
         const parts: Awaited<ReturnType<typeof uploadPart>>[] = [];
-        if (isPdf) {
+        if (isPdf && d.file.size <= 250 * 1024 * 1024) {
           await splitPdfStream({
             file: d.file,
             maxPartPages: DEFAULT_MAX_PART_PAGES,

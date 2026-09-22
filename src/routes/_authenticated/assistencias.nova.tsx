@@ -418,7 +418,7 @@ function NewCasePage() {
         });
       };
 
-      if (isPdf) {
+      if (isPdf && file.size <= 250 * 1024 * 1024) {
         await splitPdfStream({
           file,
           maxPartPages: DEFAULT_MAX_PART_PAGES,
