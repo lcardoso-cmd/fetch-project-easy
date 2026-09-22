@@ -72,7 +72,7 @@ Fonte da verdade: organização é o cliente do SaaS. Sem migração gradual, se
 - Reconhecimento de imagem progressivo apenas nas páginas sem texto; botão "Ler como imagem" para digitalizados.
 - Fila durável de leitura completa (`document_index_jobs`) acionada na criação do trabalho, sem verificação periódica do banco; processador em `/api/public/jobs/run` protegido por chave interna.
 - Conversão do documento em documento do caso reaproveita o mesmo arquivo (sem novo envio ou download).
-- Criação em lote usa o mesmo intake durável, com caminhos da organização, partes preservadas e conversão sem uma segunda extração integral.
+- Criação em lote usa o mesmo intake durável, envia o arquivo original para leitura segura por faixas e converte sem uma segunda extração integral.
 - Verificado de ponta a ponta em ambiente real: fila → leitura → extração dos dados do processo → indexação (status "pronto").
 
 ## Correção incremental — intake de documentos grandes
@@ -84,6 +84,7 @@ Fonte da verdade: organização é o cliente do SaaS. Sem migração gradual, se
 - [x] Validação real do PDF grande: parte 1 reservada e retomada com afinidade, 191 páginas verificadas e partes 2–11 mantidas aguardando.
 - [x] Texto primeiro: página com carimbo, logotipo ou imagem de fundo sobre texto legível não vai mais para leitura de imagem; o documento conclui com o texto e informa quantas páginas são só imagem.
 - [x] Leitura de imagem apenas sob pedido, com botão confirmado por documento e reinício limpo de leituras antigas classificadas pela regra anterior.
+- [x] Envio em lote sem divisão local sujeita a falha e com “Tentar novamente” reutilizando o arquivo já enviado.
 
 
 ## Ajustes homepage (concluídos)
