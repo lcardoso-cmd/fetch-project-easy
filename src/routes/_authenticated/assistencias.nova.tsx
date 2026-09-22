@@ -933,7 +933,7 @@ function NewCasePage() {
 
                 {intakeId && !(intakeStatus && isIntakeActive(intakeStatus)) && (
                   <div className="flex flex-wrap gap-2">
-                    {intakeError?.includes("memória segura") ? (
+                    {/invalid typed array length|memória segura/i.test(intakeError ?? "") ? (
                       <Button
                         type="button"
                         variant="outline"
