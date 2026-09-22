@@ -1,7 +1,6 @@
 import { useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -25,6 +24,7 @@ import {
   type ExtractedProposalFields,
   type ProposalAttachment,
 } from "@/lib/proposal-attachments.functions";
+import { createUploadSignedUrl } from "@/lib/documents.functions";
 
 type Props = {
   caseId: string | null;
@@ -55,6 +55,7 @@ export function ProposalAttachmentsPanel({ caseId, userId, onSuggestFields }: Pr
   const registerFn = useServerFn(registerProposalAttachment);
   const extractFn = useServerFn(extractProposalAttachment);
   const deleteFn = useServerFn(deleteProposalAttachment);
+  const signUploadFn = useServerFn(createUploadSignedUrl);
   const [uploading, setUploading] = useState(false);
   const [extractingId, setExtractingId] = useState<string | null>(null);
   const [showList, setShowList] = useState(false);
@@ -107,20 +108,30 @@ export function ProposalAttachmentsPanel({ caseId, userId, onSuggestFields }: Pr
           toast.error(`${file.name} excede 250 MB e foi ignorado.`);
           continue;
         }
-        const safeName = file.name.replace(/[^\w.\-]+/g, "_");
-        const path = `${userId}/proposals/${Date.now()}-${Math.random().toString(36).slice(2, 8)}-${safeName}`;
-        const { error: upErr } = await supabase.storage
-          .from("documents")
-          .upload(path, file, { upsert: false, contentType: file.type });
-        if (upErr) {
-          toast.error(`Falha ao enviar ${file.name}: ${upErr.message}`);
+        const contentType = file.type || "application/octet-stream";
+        const { path, signedUrl } = await signUploadFn({
+          data: {
+            case_id: caseId ?? undefined,
+            filename: file.name,
+            file_type: contentType,
+            file_size: file.size,
+            relative_path: `proposals/${file.name}`,
+          },
+        });
+        const uploadResponse = await fetch(signedUrl, {
+          method: "PUT",
+          headers: { "Content-Type": contentType },
+          body: file,
+        });
+        if (!uploadResponse.ok) {
+          toast.error(`Falha ao enviar ${file.name} (HTTP ${uploadResponse.status})`);
           continue;
         }
         const registered = await registerFn({
           data: {
             case_id: caseId,
             filename: file.name,
-            file_type: file.type || "application/octet-stream",
+            file_type: contentType,
             file_size: file.size,
             storage_path: path,
           },
