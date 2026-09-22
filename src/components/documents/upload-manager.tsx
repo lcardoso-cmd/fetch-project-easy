@@ -36,6 +36,7 @@ import {
   DEFAULT_MAX_PART_PAGES,
 } from "@/lib/documents/pdf-splitter";
 import { partFilename } from "@/lib/documents/pdf-splitter.core";
+import { MAX_DOCUMENT_SIZE_BYTES } from "@/lib/documents-limits";
 
 import { UploadProgressList, type UploadItem } from "./upload-progress-list";
 
@@ -202,7 +203,9 @@ export function UploadManagerProvider({ children }: { children: ReactNode }) {
         signal.aborted || (e instanceof DOMException && e.name === "AbortError");
       try {
         patchItem(itemId, { phase: "hashing", pct: 0 });
-        const contentHash = entry.hash ?? (await hashBlob(file));
+        // Não materializa PDFs gigantes na memória apenas para calcular hash.
+        const contentHash =
+          entry.hash ?? (file.size <= MAX_DOCUMENT_SIZE_BYTES ? await hashBlob(file) : undefined);
         if (signal.aborted) throw new DOMException("cancel", "AbortError");
 
         const { signedUrl, path } = await signFn({
@@ -339,6 +342,7 @@ export function UploadManagerProvider({ children }: { children: ReactNode }) {
       if (
         entry.partMeta ||
         entry.skipSplit ||
+        entry.file.size > MAX_DOCUMENT_SIZE_BYTES ||
         !(entry.file instanceof File) ||
         !shouldSplitPdf(entry.file)
       ) {

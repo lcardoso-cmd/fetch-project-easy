@@ -9,6 +9,7 @@ import { requireOrg, requireOrgPermission } from "@/lib/org-middleware";
 import {
   MAX_DOCUMENT_SIZE_BYTES,
   MAX_PDF_SIZE_BYTES,
+  maxDocumentSizeFor,
   validateDocumentUpload,
 } from "@/lib/documents-limits";
 import { storagePathBelongsToOrg } from "@/lib/intake/intake-core";
@@ -69,7 +70,7 @@ export const registerIntakeDocument = createServerFn({ method: "POST" })
         storage_path: z.string().min(1).max(600),
         filename: z.string().min(1).max(300),
         file_type: z.string().max(160).default("application/octet-stream"),
-        file_size: z.number().int().positive().max(MAX_DOCUMENT_SIZE_BYTES),
+        file_size: z.number().int().positive().max(MAX_PDF_SIZE_BYTES),
         original_file_size: z.number().int().positive().max(MAX_PDF_SIZE_BYTES).optional(),
         parts: z.array(IntakePartSchema).min(2).max(256).optional(),
       })
@@ -133,9 +134,9 @@ export const registerIntakeDocument = createServerFn({ method: "POST" })
       throw new Error("O arquivo não chegou ao servidor. Envie novamente.");
     }
     const realSize = Number((found.metadata as { size?: number } | null)?.size ?? data.file_size);
-    if (realSize > MAX_DOCUMENT_SIZE_BYTES) {
+    if (realSize > maxDocumentSizeFor(data.filename)) {
       await context.supabase.storage.from("documents").remove([data.storage_path]);
-      throw new Error("Uma das partes do PDF excede o limite de 250 MB.");
+      throw new Error("O arquivo excede o limite permitido para este formato.");
     }
 
     if (parts.length > 0 && realSize !== parts[0].file_size) {

@@ -18,16 +18,40 @@ import {
   Trash2,
   Plus,
 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
 import {
   createCase,
-  extractCaseDataFromDocument,
-  attachDocumentToCase,
   type ExtractedCaseData,
 } from "@/lib/cases.functions";
-import { indexDocument } from "@/lib/rag.functions";
+import { createUploadSignedUrl, discardUploadedObject } from "@/lib/documents.functions";
+import {
+  convertIntakeToCaseDocument,
+  getIntakeDocument,
+  registerIntakeDocument,
+} from "@/lib/intake.functions";
+import { validateDocumentUpload } from "@/lib/documents-limits";
+import {
+  DEFAULT_MAX_PART_PAGES,
+  splitPdfStream,
+  type SplitPdfPart,
+} from "@/lib/documents/pdf-splitter";
 
 export const Route = createFileRoute("/_authenticated/assistencias/lote")({
+  head: () => ({
+    meta: [
+      { title: "Criar casos em lote | JurisMind" },
+      {
+        name: "description",
+        content: "Envie documentos, revise os dados identificados e crie casos em lote no JurisMind.",
+      },
+      { property: "og:title", content: "Criar casos em lote | JurisMind" },
+      {
+        property: "og:description",
+        content: "Envie documentos, revise os dados identificados e crie casos em lote no JurisMind.",
+      },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+    ],
+  }),
   component: BulkUploadPage,
 });
 
@@ -40,6 +64,7 @@ type Draft = {
   id: string;
   file: File;
   storagePath?: string;
+  intakeId?: string;
   extractStatus: ExtractStatus;
   extractError?: string;
   saveStatus: SaveStatus;
@@ -78,9 +103,11 @@ function BulkUploadPage() {
   const [drafts, setDrafts] = useState<Draft[]>([]);
 
   const createCaseFn = useServerFn(createCase);
-  const extractFn = useServerFn(extractCaseDataFromDocument);
-  const attachFn = useServerFn(attachDocumentToCase);
-  const indexFn = useServerFn(indexDocument);
+  const signUploadFn = useServerFn(createUploadSignedUrl);
+  const discardUploadFn = useServerFn(discardUploadedObject);
+  const registerIntakeFn = useServerFn(registerIntakeDocument);
+  const getIntakeFn = useServerFn(getIntakeDocument);
+  const convertIntakeFn = useServerFn(convertIntakeToCaseDocument);
 
   const update = (id: string, patch: Partial<Draft>) =>
     setDrafts((prev) => prev.map((d) => (d.id === id ? { ...d, ...patch } : d)));
@@ -92,7 +119,12 @@ function BulkUploadPage() {
 
   const addFiles = (files: FileList | null) => {
     if (!files) return;
-    const next: Draft[] = Array.from(files).map((f) => ({
+    const accepted = Array.from(files).filter((file) => {
+      const check = validateDocumentUpload({ filename: file.name, file_size: file.size });
+      if (!check.ok) toast.error(check.message);
+      return check.ok;
+    });
+    const next: Draft[] = accepted.map((f) => ({
       id: crypto.randomUUID(),
       file: f,
       extractStatus: "pending",
@@ -104,49 +136,117 @@ function BulkUploadPage() {
     setDrafts((prev) => [...prev, ...next]);
   };
 
+  const uploadPart = async (part: SplitPdfPart): Promise<{ storage_path: string; filename: string; file_type: string; file_size: number; page_count: number; part_index: number; part_count: number; page_offset: number }> => {
+    const fileType = part.blob.type || "application/pdf";
+    const { signedUrl, path } = await signUploadFn({
+      data: { filename: part.filename, file_type: fileType, file_size: part.blob.size },
+    });
+    const response = await fetch(signedUrl, {
+      method: "PUT",
+      headers: { "Content-Type": fileType },
+      body: part.blob,
+    });
+    if (!response.ok) throw new Error(`O envio falhou (HTTP ${response.status}).`);
+    return {
+      storage_path: path,
+      filename: part.filename,
+      file_type: fileType,
+      file_size: part.blob.size,
+      page_count: part.pageCount,
+      part_index: part.partIndex,
+      part_count: part.partCount,
+      page_offset: part.pageOffset,
+    };
+  };
+
+  const waitForExtraction = async (id: string) => {
+    const deadline = Date.now() + 10 * 60_000;
+    while (Date.now() < deadline) {
+      const row = await getIntakeFn({ data: { id } });
+      if (!row) throw new Error("O documento enviado não foi encontrado.");
+      if (row.status === "ready" || row.status === "partial") return row;
+      if (row.status === "error") {
+        throw new Error(row.last_error_message || "Não foi possível ler este documento.");
+      }
+      await new Promise((resolve) => setTimeout(resolve, 2_500));
+    }
+    throw new Error("A leitura continua no servidor. Tente novamente em alguns minutos.");
+  };
+
   // Step 1: upload + extract all → review
   const extractAll = async () => {
     if (!drafts.length) return;
     setPhase("extracting");
 
-    const { data: userData } = await supabase.auth.getUser();
-    const userId = userData.user?.id;
-    if (!userId) {
-      toast.error("Sessão expirada");
-      setPhase("select");
-      return;
-    }
-
     for (const d of drafts) {
       if (d.extractStatus === "ready") continue;
+      const uploadedPaths: string[] = [];
+      let registered = false;
       try {
         update(d.id, { extractStatus: "uploading", extractError: undefined });
-        const safe = d.file.name.replace(/[^\w.\-]+/g, "_");
-        const path = `${userId}/_bulk/${Date.now()}_${safe}`;
-        // eslint-disable-next-line no-await-in-loop
-        const { error: upErr } = await supabase.storage
-          .from("documents")
-          .upload(path, d.file, { upsert: false, contentType: d.file.type });
-        if (upErr) throw upErr;
-
-        update(d.id, { storagePath: path, extractStatus: "extracting" });
-        // eslint-disable-next-line no-await-in-loop
-        const { extracted, missing, warnings } = await extractFn({
+        const isPdf = d.file.type === "application/pdf" || d.file.name.toLowerCase().endsWith(".pdf");
+        const splitGroupId = crypto.randomUUID();
+        const parts: Awaited<ReturnType<typeof uploadPart>>[] = [];
+        if (isPdf && d.file.size <= 250 * 1024 * 1024) {
+          await splitPdfStream({
+            file: d.file,
+            maxPartPages: DEFAULT_MAX_PART_PAGES,
+            onPart: async (part) => {
+              const uploaded = await uploadPart(part);
+              uploadedPaths.push(uploaded.storage_path);
+              parts.push(uploaded);
+            },
+          });
+        } else {
+          const uploaded = await uploadPart({
+            blob: d.file,
+            filename: d.file.name,
+            pageCount: 1,
+            partIndex: 1,
+            partCount: 1,
+            pageOffset: 0,
+          });
+          uploadedPaths.push(uploaded.storage_path);
+          parts.push(uploaded);
+        }
+        const first = parts[0];
+        if (!first) throw new Error("Nenhuma parte do documento foi enviada.");
+        update(d.id, { storagePath: first.storage_path, extractStatus: "extracting" });
+        const intake = await registerIntakeFn({
           data: {
-            storage_path: path,
+            storage_path: first.storage_path,
             filename: d.file.name,
             file_type: d.file.type || "application/octet-stream",
-            file_size: d.file.size,
+            file_size: first.file_size,
+            original_file_size: d.file.size,
+            ...(parts.length > 1
+              ? {
+                  parts: parts.map((part) => ({
+                    ...part,
+                    split_group_id: splitGroupId,
+                  })),
+                }
+              : {}),
           },
         });
+        registered = true;
+        update(d.id, { intakeId: intake.id });
+        const row = await waitForExtraction(intake.id);
         update(d.id, {
           extractStatus: "ready",
-          data: extracted,
-          missing: missing ?? [],
-          warnings: warnings ?? [],
+          data: (row.extracted_data as unknown as ExtractedCaseData) ?? emptyExtracted(d.file.name),
+          missing: row.missing_fields ?? [],
+          warnings: row.warnings ?? [],
         });
       } catch (e) {
         console.error(e);
+        if (!registered) {
+          await Promise.all(
+            uploadedPaths.map((storagePath) =>
+              discardUploadFn({ data: { storage_path: storagePath } }).catch(() => undefined),
+            ),
+          );
+        }
         update(d.id, {
           extractStatus: "error",
           extractError: e instanceof Error ? e.message : "Falha ao extrair",
@@ -185,23 +285,9 @@ function BulkUploadPage() {
           },
         });
         // eslint-disable-next-line no-await-in-loop
-        const { document_id } = await attachFn({
-          data: {
-            storage_path: d.storagePath!,
-            filename: d.file.name,
-            file_type: d.file.type || "application/octet-stream",
-            file_size: d.file.size,
-            case_id: newCase.id,
-          },
-        });
-
+        if (!d.intakeId) throw new Error("A leitura do documento precisa ser concluída novamente.");
         update(d.id, { saveStatus: "indexing", caseId: newCase.id });
-        try {
-          // eslint-disable-next-line no-await-in-loop
-          await indexFn({ data: { document_id } });
-        } catch (e) {
-          console.warn("Indexação falhou", e);
-        }
+        await convertIntakeFn({ data: { id: d.intakeId, case_id: newCase.id } });
         update(d.id, { saveStatus: "saved" });
       } catch (e) {
         console.error(e);
