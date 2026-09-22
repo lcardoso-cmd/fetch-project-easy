@@ -17,6 +17,7 @@ import {
   Loader2,
   Trash2,
   Plus,
+  RotateCcw,
 } from "lucide-react";
 import {
   createCase,
@@ -27,13 +28,9 @@ import {
   convertIntakeToCaseDocument,
   getIntakeDocument,
   registerIntakeDocument,
+  reprocessIntakeDocument,
 } from "@/lib/intake.functions";
 import { validateDocumentUpload } from "@/lib/documents-limits";
-import {
-  DEFAULT_MAX_PART_PAGES,
-  splitPdfStream,
-  type SplitPdfPart,
-} from "@/lib/documents/pdf-splitter";
 
 export const Route = createFileRoute("/_authenticated/assistencias/lote")({
   head: () => ({
@@ -107,6 +104,7 @@ function BulkUploadPage() {
   const discardUploadFn = useServerFn(discardUploadedObject);
   const registerIntakeFn = useServerFn(registerIntakeDocument);
   const getIntakeFn = useServerFn(getIntakeDocument);
+  const reprocessIntakeFn = useServerFn(reprocessIntakeDocument);
   const convertIntakeFn = useServerFn(convertIntakeToCaseDocument);
 
   const update = (id: string, patch: Partial<Draft>) =>
@@ -136,26 +134,22 @@ function BulkUploadPage() {
     setDrafts((prev) => [...prev, ...next]);
   };
 
-  const uploadPart = async (part: SplitPdfPart): Promise<{ storage_path: string; filename: string; file_type: string; file_size: number; page_count: number; part_index: number; part_count: number; page_offset: number }> => {
-    const fileType = part.blob.type || "application/pdf";
+  const uploadFile = async (file: File) => {
+    const fileType = file.type || "application/octet-stream";
     const { signedUrl, path } = await signUploadFn({
-      data: { filename: part.filename, file_type: fileType, file_size: part.blob.size },
+      data: { filename: file.name, file_type: fileType, file_size: file.size },
     });
     const response = await fetch(signedUrl, {
       method: "PUT",
       headers: { "Content-Type": fileType },
-      body: part.blob,
+      body: file,
     });
     if (!response.ok) throw new Error(`O envio falhou (HTTP ${response.status}).`);
     return {
       storage_path: path,
-      filename: part.filename,
+      filename: file.name,
       file_type: fileType,
-      file_size: part.blob.size,
-      page_count: part.pageCount,
-      part_index: part.partIndex,
-      part_count: part.partCount,
-      page_offset: part.pageOffset,
+      file_size: file.size,
     };
   };
 
@@ -173,88 +167,72 @@ function BulkUploadPage() {
     throw new Error("A leitura continua no servidor. Tente novamente em alguns minutos.");
   };
 
+  const extractDraft = async (d: Draft, reuseIntake = false) => {
+    let uploadedPath: string | undefined;
+    let registered = reuseIntake && Boolean(d.intakeId);
+    try {
+      update(d.id, {
+        extractStatus: reuseIntake ? "extracting" : "uploading",
+        extractError: undefined,
+      });
+
+      let intakeId = d.intakeId;
+      if (registered && intakeId) {
+        await reprocessIntakeFn({ data: { id: intakeId, mode: "auto" } });
+      } else {
+        // A leitura por faixas no servidor suporta o PDF original. Evitamos o
+        // divisor local, que era justamente onde arquivos válidos falhavam
+        // antes de ganhar um registro e uma opção de nova tentativa.
+        const uploaded = await uploadFile(d.file);
+        uploadedPath = uploaded.storage_path;
+        update(d.id, { storagePath: uploaded.storage_path, extractStatus: "extracting" });
+        const intake = await registerIntakeFn({
+          data: {
+            storage_path: uploaded.storage_path,
+            filename: d.file.name,
+            file_type: uploaded.file_type,
+            file_size: uploaded.file_size,
+            original_file_size: d.file.size,
+          },
+        });
+        registered = true;
+        intakeId = intake.id;
+        update(d.id, { intakeId });
+      }
+
+      if (!intakeId) throw new Error("A leitura não pôde ser iniciada.");
+      const row = await waitForExtraction(intakeId);
+      update(d.id, {
+        extractStatus: "ready",
+        extractError: undefined,
+        data: (row.extracted_data as unknown as ExtractedCaseData) ?? emptyExtracted(d.file.name),
+        missing: row.missing_fields ?? [],
+        warnings: row.warnings ?? [],
+      });
+    } catch (e) {
+      console.error(e);
+      if (!registered && uploadedPath) {
+        await discardUploadFn({ data: { storage_path: uploadedPath } }).catch(() => undefined);
+      }
+      update(d.id, {
+        extractStatus: "error",
+        extractError: e instanceof Error ? e.message : "Falha ao extrair",
+      });
+    }
+  };
+
   // Step 1: upload + extract all → review
   const extractAll = async () => {
     if (!drafts.length) return;
     setPhase("extracting");
-
     for (const d of drafts) {
-      if (d.extractStatus === "ready") continue;
-      const uploadedPaths: string[] = [];
-      let registered = false;
-      try {
-        update(d.id, { extractStatus: "uploading", extractError: undefined });
-        const isPdf = d.file.type === "application/pdf" || d.file.name.toLowerCase().endsWith(".pdf");
-        const splitGroupId = crypto.randomUUID();
-        const parts: Awaited<ReturnType<typeof uploadPart>>[] = [];
-        if (isPdf && d.file.size <= 250 * 1024 * 1024) {
-          await splitPdfStream({
-            file: d.file,
-            maxPartPages: DEFAULT_MAX_PART_PAGES,
-            onPart: async (part) => {
-              const uploaded = await uploadPart(part);
-              uploadedPaths.push(uploaded.storage_path);
-              parts.push(uploaded);
-            },
-          });
-        } else {
-          const uploaded = await uploadPart({
-            blob: d.file,
-            filename: d.file.name,
-            pageCount: 1,
-            partIndex: 1,
-            partCount: 1,
-            pageOffset: 0,
-          });
-          uploadedPaths.push(uploaded.storage_path);
-          parts.push(uploaded);
-        }
-        const first = parts[0];
-        if (!first) throw new Error("Nenhuma parte do documento foi enviada.");
-        update(d.id, { storagePath: first.storage_path, extractStatus: "extracting" });
-        const intake = await registerIntakeFn({
-          data: {
-            storage_path: first.storage_path,
-            filename: d.file.name,
-            file_type: d.file.type || "application/octet-stream",
-            file_size: first.file_size,
-            original_file_size: d.file.size,
-            ...(parts.length > 1
-              ? {
-                  parts: parts.map((part) => ({
-                    ...part,
-                    split_group_id: splitGroupId,
-                  })),
-                }
-              : {}),
-          },
-        });
-        registered = true;
-        update(d.id, { intakeId: intake.id });
-        const row = await waitForExtraction(intake.id);
-        update(d.id, {
-          extractStatus: "ready",
-          data: (row.extracted_data as unknown as ExtractedCaseData) ?? emptyExtracted(d.file.name),
-          missing: row.missing_fields ?? [],
-          warnings: row.warnings ?? [],
-        });
-      } catch (e) {
-        console.error(e);
-        if (!registered) {
-          await Promise.all(
-            uploadedPaths.map((storagePath) =>
-              discardUploadFn({ data: { storage_path: storagePath } }).catch(() => undefined),
-            ),
-          );
-        }
-        update(d.id, {
-          extractStatus: "error",
-          extractError: e instanceof Error ? e.message : "Falha ao extrair",
-        });
-      }
+      if (d.extractStatus !== "ready") await extractDraft(d, Boolean(d.intakeId));
     }
-
     setPhase("review");
+  };
+
+  const retryDraft = async (draft: Draft) => {
+    await extractDraft(draft, Boolean(draft.intakeId));
   };
 
   // Step 2: review → create + index
@@ -405,6 +383,7 @@ function BulkUploadPage() {
                 disabled={phase !== "review"}
                 onChange={(patch) => patchData(d.id, patch)}
                 onRemove={() => remove(d.id)}
+                onRetry={() => retryDraft(d)}
               />
             ))}
           </div>
@@ -499,12 +478,14 @@ function DraftCard({
   disabled,
   onChange,
   onRemove,
+  onRetry,
 }: {
   index: number;
   draft: Draft;
   disabled: boolean;
   onChange: (patch: Partial<ExtractedCaseData>) => void;
   onRemove: () => void;
+  onRetry: () => void;
 }) {
   const { data } = draft;
 
@@ -579,9 +560,21 @@ function DraftCard({
         )}
 
       {draft.extractStatus === "error" ? (
-        <p className="text-sm text-muted-foreground">
-          Não foi possível ler este documento. Remova ou tente novamente.
-        </p>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="text-sm text-muted-foreground">Não foi possível ler este documento.</p>
+            {draft.extractError && (
+              <p className="mt-1 text-sm text-destructive">{draft.extractError}</p>
+            )}
+          </div>
+          <Button type="button" variant="outline" onClick={onRetry}>
+            <RotateCcw className="mr-2 h-4 w-4" /> Tentar novamente
+          </Button>
+        </div>
+      ) : draft.extractStatus === "extracting" || draft.extractStatus === "uploading" ? (
+        <div className="inline-flex items-center gap-2 text-sm text-muted-foreground">
+          <Loader2 className="h-4 w-4 animate-spin" /> Lendo documento novamente...
+        </div>
       ) : (
         <div className="grid gap-4 md:grid-cols-2">
           <div className="md:col-span-2">
