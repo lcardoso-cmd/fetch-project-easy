@@ -4,9 +4,12 @@
  * quanto pelo servidor (validação real antes de gerar a URL de upload).
  */
 
-/** Limite único de tamanho por arquivo: 250 MB. */
+/** Arquivos comuns permanecem limitados a 250 MB. PDFs são divididos no navegador. */
 export const MAX_DOCUMENT_SIZE_BYTES = 250 * 1024 * 1024;
 export const MAX_DOCUMENT_SIZE_LABEL = "250 MB";
+export const MAX_PDF_SIZE_BYTES = 2 * 1024 * 1024 * 1024;
+export const MAX_PDF_SIZE_LABEL = "2 GB";
+export const DOCUMENT_SIZE_LIMITS_LABEL = "PDF até 2 GB; demais arquivos até 250 MB";
 
 /** Extensões aceitas (minúsculas, com ponto). */
 export const ALLOWED_DOCUMENT_EXTENSIONS = [
@@ -62,6 +65,14 @@ export function isAllowedDocumentName(filename: string): boolean {
   );
 }
 
+export function isPdfDocumentName(filename: string): boolean {
+  return documentExtension(filename) === ".pdf";
+}
+
+export function maxDocumentSizeFor(filename: string): number {
+  return isPdfDocumentName(filename) ? MAX_PDF_SIZE_BYTES : MAX_DOCUMENT_SIZE_BYTES;
+}
+
 /** Nome seguro para uso como sufixo do caminho no Storage. */
 export function sanitizeStorageFilename(filename: string): string {
   const clean = filename
@@ -91,10 +102,11 @@ export function validateDocumentUpload(input: {
   if (input.file_size <= 0) {
     return { ok: false, message: "O arquivo está vazio." };
   }
-  if (input.file_size > MAX_DOCUMENT_SIZE_BYTES) {
+  const sizeLimit = maxDocumentSizeFor(input.filename);
+  if (input.file_size > sizeLimit) {
     return {
       ok: false,
-      message: `O arquivo tem ${formatBytes(input.file_size)} e o limite por arquivo é ${MAX_DOCUMENT_SIZE_LABEL}.`,
+      message: `O arquivo tem ${formatBytes(input.file_size)} e o limite para este formato é ${isPdfDocumentName(input.filename) ? MAX_PDF_SIZE_LABEL : MAX_DOCUMENT_SIZE_LABEL}.`,
     };
   }
   return { ok: true };

@@ -13,6 +13,7 @@ import {
 } from "@/lib/intake/intake-core";
 import {
   MAX_DOCUMENT_SIZE_BYTES,
+  MAX_PDF_SIZE_BYTES,
   sanitizeStorageFilename,
   validateDocumentUpload,
 } from "@/lib/documents-limits";
@@ -88,9 +89,9 @@ describe("segurança de caminhos e envio", () => {
 
   it("valida tamanho e formato do arquivo", () => {
     expect(validateDocumentUpload({ filename: "a.pdf", file_size: 1000 }).ok).toBe(true);
-    expect(
-      validateDocumentUpload({ filename: "a.pdf", file_size: MAX_DOCUMENT_SIZE_BYTES + 1 }).ok,
-    ).toBe(false);
+    expect(validateDocumentUpload({ filename: "a.pdf", file_size: MAX_DOCUMENT_SIZE_BYTES + 1 }).ok).toBe(true);
+    expect(validateDocumentUpload({ filename: "a.pdf", file_size: MAX_PDF_SIZE_BYTES + 1 }).ok).toBe(false);
+    expect(validateDocumentUpload({ filename: "a.docx", file_size: MAX_DOCUMENT_SIZE_BYTES + 1 }).ok).toBe(false);
     expect(validateDocumentUpload({ filename: "a.exe", file_size: 10 }).ok).toBe(false);
   });
 
