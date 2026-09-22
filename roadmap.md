@@ -85,6 +85,7 @@ Fonte da verdade: organização é o cliente do SaaS. Sem migração gradual, se
 - [x] Texto primeiro: página com carimbo, logotipo ou imagem de fundo sobre texto legível não vai mais para leitura de imagem; o documento conclui com o texto e informa quantas páginas são só imagem.
 - [x] Leitura de imagem apenas sob pedido, com botão confirmado por documento e reinício limpo de leituras antigas classificadas pela regra anterior.
 - [x] Envio em lote sem divisão local sujeita a falha e com “Tentar novamente” reutilizando o arquivo já enviado.
+- [x] PDFs de até 512 MB são divididos antes do envio para evitar a reserva integral de memória do leitor do servidor.
 
 
 ## Ajustes homepage (concluídos)

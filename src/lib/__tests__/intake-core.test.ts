@@ -46,6 +46,13 @@ describe("intake-core: erros", () => {
     const c = classifyIntakeError(new Error("network timeout"));
     expect(c.retryable).toBe(true);
   });
+
+  it("classifica estouro de buffer como definitivo e orienta novo envio", () => {
+    const c = classifyIntakeError(new Error("Invalid typed array length: 312229573"));
+    expect(c.code).toBe("file_too_large");
+    expect(c.retryable).toBe(false);
+    expect(c.message).toContain("partes");
+  });
 });
 
 describe("intake-core: estado e dados", () => {

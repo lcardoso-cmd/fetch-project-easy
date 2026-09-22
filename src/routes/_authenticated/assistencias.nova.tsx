@@ -60,6 +60,7 @@ import { Progress } from "@/components/ui/progress";
 import { useUnsavedChangesGuard } from "@/hooks/use-unsaved-changes-guard";
 import {
   DEFAULT_MAX_PART_PAGES,
+  MAX_IN_BROWSER_SPLIT_BYTES,
   splitPdfStream,
   type SplitPdfPart,
 } from "@/lib/documents/pdf-splitter";
@@ -418,7 +419,7 @@ function NewCasePage() {
         });
       };
 
-      if (isPdf && file.size <= 250 * 1024 * 1024) {
+      if (isPdf && file.size <= MAX_IN_BROWSER_SPLIT_BYTES) {
         await splitPdfStream({
           file,
           maxPartPages: DEFAULT_MAX_PART_PAGES,
