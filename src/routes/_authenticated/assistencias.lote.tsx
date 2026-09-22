@@ -26,6 +26,7 @@ import {
 import { createUploadSignedUrl, discardUploadedObject } from "@/lib/documents.functions";
 import {
   convertIntakeToCaseDocument,
+  discardIntakeDocument,
   getIntakeDocument,
   registerIntakeDocument,
   reprocessIntakeDocument,
@@ -118,6 +119,7 @@ function BulkUploadPage() {
   const registerIntakeFn = useServerFn(registerIntakeDocument);
   const getIntakeFn = useServerFn(getIntakeDocument);
   const reprocessIntakeFn = useServerFn(reprocessIntakeDocument);
+  const discardIntakeFn = useServerFn(discardIntakeDocument);
   const convertIntakeFn = useServerFn(convertIntakeToCaseDocument);
 
   const update = (id: string, patch: Partial<Draft>) =>
@@ -295,6 +297,15 @@ function BulkUploadPage() {
   };
 
   const retryDraft = async (draft: Draft) => {
+    const mustSplitAgain =
+      draft.file.size <= MAX_IN_BROWSER_SPLIT_BYTES &&
+      /invalid typed array length|memória segura|grande demais/i.test(draft.extractError ?? "");
+    if (mustSplitAgain && draft.intakeId) {
+      await discardIntakeFn({ data: { id: draft.intakeId } }).catch(() => undefined);
+      update(draft.id, { intakeId: undefined, storagePath: undefined });
+      await extractDraft({ ...draft, intakeId: undefined, storagePath: undefined }, false);
+      return;
+    }
     await extractDraft(draft, Boolean(draft.intakeId));
   };
 
