@@ -540,6 +540,11 @@ function NewCasePage() {
     }
   };
 
+  const selectAgainForSafeSplit = async () => {
+    await removeUpload();
+    fileInputRef.current?.click();
+  };
+
   // Acompanha a leitura em andamento. O trabalho roda no servidor; aqui só
   // consultamos o andamento e aplicamos o resultado quando ele fica pronto.
   useEffect(() => {
@@ -928,22 +933,35 @@ function NewCasePage() {
 
                 {intakeId && !(intakeStatus && isIntakeActive(intakeStatus)) && (
                   <div className="flex flex-wrap gap-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => retryIntake("auto")}
-                    >
-                      Tentar ler de novo
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => retryIntake("ocr")}
-                    >
-                      Ler como imagem (documento digitalizado)
-                    </Button>
+                    {intakeError?.includes("memória segura") ? (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={selectAgainForSafeSplit}
+                      >
+                        Selecionar novamente e dividir
+                      </Button>
+                    ) : (
+                      <>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => retryIntake("auto")}
+                        >
+                          Tentar ler de novo
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => retryIntake("ocr")}
+                        >
+                          Ler como imagem (documento digitalizado)
+                        </Button>
+                      </>
+                    )}
                   </div>
                 )}
               </div>
