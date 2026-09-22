@@ -77,6 +77,7 @@ export type IntakeErrorCode =
   | "model_quota"
   | "model_rate_limited"
   | "timeout"
+  | "file_too_large"
   | "unknown";
 
 export interface ClassifiedIntakeError {
@@ -175,6 +176,14 @@ export function classifyIntakeError(err: unknown): ClassifiedIntakeError {
       code: "timeout",
       message: "A leitura do documento demorou demais. Tente novamente ou envie um arquivo menor.",
       retryable: true,
+    };
+  }
+  if (m.includes("invalid typed array length") || m.includes("memory limit")) {
+    return {
+      code: "file_too_large",
+      message:
+        "Este PDF inteiro excedeu a memória segura de leitura. Selecione o arquivo novamente para enviá-lo em partes.",
+      retryable: false,
     };
   }
   return {

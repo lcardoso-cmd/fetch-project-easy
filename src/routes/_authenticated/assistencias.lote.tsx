@@ -26,11 +26,18 @@ import {
 import { createUploadSignedUrl, discardUploadedObject } from "@/lib/documents.functions";
 import {
   convertIntakeToCaseDocument,
+  discardIntakeDocument,
   getIntakeDocument,
   registerIntakeDocument,
   reprocessIntakeDocument,
 } from "@/lib/intake.functions";
 import { validateDocumentUpload } from "@/lib/documents-limits";
+import {
+  DEFAULT_MAX_PART_PAGES,
+  MAX_IN_BROWSER_SPLIT_BYTES,
+  splitPdfStream,
+  type SplitPdfPart,
+} from "@/lib/documents/pdf-splitter";
 
 export const Route = createFileRoute("/_authenticated/assistencias/lote")({
   head: () => ({
@@ -72,6 +79,13 @@ type Draft = {
   warnings: { field: string | null; message: string }[];
 };
 
+type UploadedSplitPart = Omit<SplitPdfPart, "blob"> & {
+  storage_path: string;
+  file_type: string;
+  file_size: number;
+  split_group_id: string;
+};
+
 const FIELD_LABELS: Record<string, string> = {
   client_name: "Cliente",
   case_number: "Número do processo",
@@ -105,6 +119,7 @@ function BulkUploadPage() {
   const registerIntakeFn = useServerFn(registerIntakeDocument);
   const getIntakeFn = useServerFn(getIntakeDocument);
   const reprocessIntakeFn = useServerFn(reprocessIntakeDocument);
+  const discardIntakeFn = useServerFn(discardIntakeDocument);
   const convertIntakeFn = useServerFn(convertIntakeToCaseDocument);
 
   const update = (id: string, patch: Partial<Draft>) =>
@@ -134,22 +149,22 @@ function BulkUploadPage() {
     setDrafts((prev) => [...prev, ...next]);
   };
 
-  const uploadFile = async (file: File) => {
-    const fileType = file.type || "application/octet-stream";
+  const uploadFile = async (blob: Blob, filename: string) => {
+    const fileType = blob.type || "application/octet-stream";
     const { signedUrl, path } = await signUploadFn({
-      data: { filename: file.name, file_type: fileType, file_size: file.size },
+      data: { filename, file_type: fileType, file_size: blob.size },
     });
     const response = await fetch(signedUrl, {
       method: "PUT",
       headers: { "Content-Type": fileType },
-      body: file,
+      body: blob,
     });
     if (!response.ok) throw new Error(`O envio falhou (HTTP ${response.status}).`);
     return {
       storage_path: path,
-      filename: file.name,
+      filename,
       file_type: fileType,
-      file_size: file.size,
+      file_size: blob.size,
     };
   };
 
@@ -168,7 +183,7 @@ function BulkUploadPage() {
   };
 
   const extractDraft = async (d: Draft, reuseIntake = false) => {
-    let uploadedPath: string | undefined;
+    const uploadedPaths: string[] = [];
     let registered = reuseIntake && Boolean(d.intakeId);
     try {
       update(d.id, {
@@ -180,19 +195,65 @@ function BulkUploadPage() {
       if (registered && intakeId) {
         await reprocessIntakeFn({ data: { id: intakeId, mode: "auto" } });
       } else {
-        // A leitura por faixas no servidor suporta o PDF original. Evitamos o
-        // divisor local, que era justamente onde arquivos válidos falhavam
-        // antes de ganhar um registro e uma opção de nova tentativa.
-        const uploaded = await uploadFile(d.file);
-        uploadedPath = uploaded.storage_path;
-        update(d.id, { storagePath: uploaded.storage_path, extractStatus: "extracting" });
+        const isPdf = d.file.type === "application/pdf" || d.file.name.toLowerCase().endsWith(".pdf");
+        const splitGroupId = crypto.randomUUID();
+        const uploadedParts: UploadedSplitPart[] = [];
+        const uploadPart = async (part: SplitPdfPart) => {
+          const uploaded = await uploadFile(part.blob, part.filename);
+          uploadedPaths.push(uploaded.storage_path);
+          uploadedParts.push({
+            ...uploaded,
+            split_group_id: splitGroupId,
+            pageCount: part.pageCount,
+            partIndex: part.partIndex,
+            partCount: part.partCount,
+            pageOffset: part.pageOffset,
+          });
+        };
+
+        if (isPdf && d.file.size <= MAX_IN_BROWSER_SPLIT_BYTES) {
+          await splitPdfStream({
+            file: d.file,
+            maxPartPages: DEFAULT_MAX_PART_PAGES,
+            onPart: uploadPart,
+          });
+        } else {
+          await uploadPart({
+            blob: d.file,
+            filename: d.file.name,
+            pageCount: 1,
+            partIndex: 1,
+            partCount: 1,
+            pageOffset: 0,
+          });
+        }
+
+        uploadedParts.sort((a, b) => a.partIndex - b.partIndex);
+        const firstPart = uploadedParts[0];
+        if (!firstPart) throw new Error("Nenhuma parte do arquivo foi enviada.");
+        update(d.id, { storagePath: firstPart.storage_path, extractStatus: "extracting" });
         const intake = await registerIntakeFn({
           data: {
-            storage_path: uploaded.storage_path,
+            storage_path: firstPart.storage_path,
             filename: d.file.name,
-            file_type: uploaded.file_type,
-            file_size: uploaded.file_size,
+            file_type: firstPart.file_type,
+            file_size: firstPart.file_size,
             original_file_size: d.file.size,
+            ...(uploadedParts.length > 1
+              ? {
+                  parts: uploadedParts.map((part) => ({
+                    storage_path: part.storage_path,
+                    filename: part.filename,
+                    file_type: part.file_type,
+                    file_size: part.file_size,
+                    split_group_id: part.split_group_id,
+                    part_index: part.partIndex,
+                    part_count: part.partCount,
+                    page_offset: part.pageOffset,
+                    page_count: part.pageCount,
+                  })),
+                }
+              : {}),
           },
         });
         registered = true;
@@ -211,8 +272,12 @@ function BulkUploadPage() {
       });
     } catch (e) {
       console.error(e);
-      if (!registered && uploadedPath) {
-        await discardUploadFn({ data: { storage_path: uploadedPath } }).catch(() => undefined);
+      if (!registered && uploadedPaths.length > 0) {
+        await Promise.all(
+          uploadedPaths.map((storagePath) =>
+            discardUploadFn({ data: { storage_path: storagePath } }).catch(() => undefined),
+          ),
+        );
       }
       update(d.id, {
         extractStatus: "error",
@@ -232,6 +297,15 @@ function BulkUploadPage() {
   };
 
   const retryDraft = async (draft: Draft) => {
+    const mustSplitAgain =
+      draft.file.size <= MAX_IN_BROWSER_SPLIT_BYTES &&
+      /invalid typed array length|memória segura|grande demais/i.test(draft.extractError ?? "");
+    if (mustSplitAgain && draft.intakeId) {
+      await discardIntakeFn({ data: { id: draft.intakeId } }).catch(() => undefined);
+      update(draft.id, { intakeId: undefined, storagePath: undefined });
+      await extractDraft({ ...draft, intakeId: undefined, storagePath: undefined }, false);
+      return;
+    }
     await extractDraft(draft, Boolean(draft.intakeId));
   };
 

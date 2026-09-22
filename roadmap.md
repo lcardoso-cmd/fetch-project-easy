@@ -66,13 +66,13 @@ Fonte da verdade: organização é o cliente do SaaS. Sem migração gradual, se
 - [x] Auditoria de navegação: sem Marketing/Conversas/Peças no menu, sem "Ajuda" duplicada no rodapé.
 
 ## Upload e leitura de documentos no Novo caso (concluído)
-- PDFs aceitos até 2 GB: até 250 MB podem ser divididos no navegador; acima disso seguem inteiros para leitura por faixas no servidor, sem cópia integral em memória. Demais formatos ficam em 250 MB, com validação também no servidor.
+- PDFs aceitos até 2 GB: até 512 MB são divididos no navegador; acima disso seguem inteiros para leitura por faixas no servidor. Demais formatos ficam em 250 MB, com validação também no servidor.
 - Documento enviado passa a ter registro próprio (`case_intake_documents`): a leitura roda no servidor, sobrevive a fechar a página e é retomada se travar.
 - Leitura de PDF por faixas (`src/lib/rag/pdf-range.server.ts`): até 20 páginas para preencher o formulário, sem baixar o arquivo inteiro.
 - Reconhecimento de imagem progressivo apenas nas páginas sem texto; botão "Ler como imagem" para digitalizados.
 - Fila durável de leitura completa (`document_index_jobs`) acionada na criação do trabalho, sem verificação periódica do banco; processador em `/api/public/jobs/run` protegido por chave interna.
 - Conversão do documento em documento do caso reaproveita o mesmo arquivo (sem novo envio ou download).
-- Criação em lote usa o mesmo intake durável, envia o arquivo original para leitura segura por faixas e converte sem uma segunda extração integral.
+- Criação em lote usa o mesmo intake durável, divide PDFs de até 512 MB antes do envio e converte sem uma segunda extração integral.
 - Verificado de ponta a ponta em ambiente real: fila → leitura → extração dos dados do processo → indexação (status "pronto").
 
 ## Correção incremental — intake de documentos grandes
@@ -85,6 +85,7 @@ Fonte da verdade: organização é o cliente do SaaS. Sem migração gradual, se
 - [x] Texto primeiro: página com carimbo, logotipo ou imagem de fundo sobre texto legível não vai mais para leitura de imagem; o documento conclui com o texto e informa quantas páginas são só imagem.
 - [x] Leitura de imagem apenas sob pedido, com botão confirmado por documento e reinício limpo de leituras antigas classificadas pela regra anterior.
 - [x] Envio em lote sem divisão local sujeita a falha e com “Tentar novamente” reutilizando o arquivo já enviado.
+- [x] PDFs de até 512 MB são divididos antes do envio para evitar a reserva integral de memória do leitor do servidor.
 
 
 ## Ajustes homepage (concluídos)

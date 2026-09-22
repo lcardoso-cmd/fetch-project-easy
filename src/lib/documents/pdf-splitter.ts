@@ -48,8 +48,12 @@ export interface SplitPdfStreamResult {
 
 export const DEFAULT_MAX_PART_PAGES = 200;
 export const DEFAULT_MIN_SPLIT_PAGES = 60;
-/** Acima deste tamanho o PDF segue inteiro para leitura por faixas no servidor. */
-export const MAX_IN_BROWSER_SPLIT_BYTES = 250 * 1024 * 1024;
+/**
+ * Até este tamanho o navegador fragmenta o PDF antes do envio. O leitor do
+ * servidor ainda reserva um buffer do tamanho lógico do arquivo mesmo quando
+ * busca os bytes por faixas, então PDFs médios não devem seguir inteiros.
+ */
+export const MAX_IN_BROWSER_SPLIT_BYTES = 512 * 1024 * 1024;
 
 /** Opções de tamanho de parte oferecidas no envio. */
 export const PART_SIZE_OPTIONS = [

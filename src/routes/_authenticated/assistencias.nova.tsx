@@ -60,6 +60,7 @@ import { Progress } from "@/components/ui/progress";
 import { useUnsavedChangesGuard } from "@/hooks/use-unsaved-changes-guard";
 import {
   DEFAULT_MAX_PART_PAGES,
+  MAX_IN_BROWSER_SPLIT_BYTES,
   splitPdfStream,
   type SplitPdfPart,
 } from "@/lib/documents/pdf-splitter";
@@ -418,7 +419,7 @@ function NewCasePage() {
         });
       };
 
-      if (isPdf && file.size <= 250 * 1024 * 1024) {
+      if (isPdf && file.size <= MAX_IN_BROWSER_SPLIT_BYTES) {
         await splitPdfStream({
           file,
           maxPartPages: DEFAULT_MAX_PART_PAGES,
@@ -537,6 +538,11 @@ function NewCasePage() {
     } catch (e) {
       toast.error(e instanceof Error ? e.message : String(e));
     }
+  };
+
+  const selectAgainForSafeSplit = async () => {
+    await removeUpload();
+    fileInputRef.current?.click();
   };
 
   // Acompanha a leitura em andamento. O trabalho roda no servidor; aqui só
@@ -927,22 +933,35 @@ function NewCasePage() {
 
                 {intakeId && !(intakeStatus && isIntakeActive(intakeStatus)) && (
                   <div className="flex flex-wrap gap-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => retryIntake("auto")}
-                    >
-                      Tentar ler de novo
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => retryIntake("ocr")}
-                    >
-                      Ler como imagem (documento digitalizado)
-                    </Button>
+                    {/invalid typed array length|memória segura/i.test(intakeError ?? "") ? (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={selectAgainForSafeSplit}
+                      >
+                        Selecionar novamente e dividir
+                      </Button>
+                    ) : (
+                      <>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => retryIntake("auto")}
+                        >
+                          Tentar ler de novo
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => retryIntake("ocr")}
+                        >
+                          Ler como imagem (documento digitalizado)
+                        </Button>
+                      </>
+                    )}
                   </div>
                 )}
               </div>

@@ -31,6 +31,7 @@ import {
 import { indexDocument } from "@/lib/rag.functions";
 import { ensureDocumentFolderPath } from "@/lib/document-folders.functions";
 import {
+  MAX_IN_BROWSER_SPLIT_BYTES,
   splitPdfStream,
   shouldSplitPdf,
   DEFAULT_MAX_PART_PAGES,
@@ -342,7 +343,7 @@ export function UploadManagerProvider({ children }: { children: ReactNode }) {
       if (
         entry.partMeta ||
         entry.skipSplit ||
-        entry.file.size > MAX_DOCUMENT_SIZE_BYTES ||
+        entry.file.size > MAX_IN_BROWSER_SPLIT_BYTES ||
         !(entry.file instanceof File) ||
         !shouldSplitPdf(entry.file)
       ) {
